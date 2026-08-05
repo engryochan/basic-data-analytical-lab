@@ -30,3 +30,7 @@ jupyter_runtime/
 !*.zip
 !*.rds
 !*.RData
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
