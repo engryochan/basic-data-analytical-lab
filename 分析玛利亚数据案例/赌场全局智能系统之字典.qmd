@@ -134,3 +134,4 @@ GROUP_CONCAT 默认长度上限通常是 1024 字节，字段多的表（比如 
 
 Step 1 现在就能跑；Step 2 生成结果出来后，把每张表那一条 generated_sql_per_table 复制出来单独执行，两层结果按 table_name + column_name 对齐，就是你要的 ODS_ENCYCLOPEDIA_MASTER 第一个可用版本。
 
+

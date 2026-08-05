@@ -3,6 +3,8 @@ title: "Untitled"
 format: html
 ---
 
+## 字典
+
 ```{sql}
 -- ============================================================
 -- ods_encyclopedia_structural_layer_a168.sql
@@ -92,4 +94,294 @@ WHERE c.TABLE_SCHEMA IN ('a168', 'a168_log')
 ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.ORDINAL_POSITION;
 ```
 
+
+## 升级版
+
+```{sql}
+SELECT
+    c.TABLE_SCHEMA,
+    c.TABLE_NAME,
+    t.TABLE_TYPE,
+    t.TABLE_ROWS AS estimated_table_rows,
+    t.TABLE_COMMENT,
+
+    c.ORDINAL_POSITION,
+    c.COLUMN_NAME,
+    c.DATA_TYPE,
+    c.COLUMN_TYPE,
+    c.IS_NULLABLE,
+    c.COLUMN_KEY,
+    c.COLUMN_DEFAULT,
+    c.EXTRA,
+    c.COLUMN_COMMENT,
+
+    /* =========================================================
+       1. 证据等级
+       ========================================================= */
+
+    CASE
+        WHEN c.COLUMN_COMMENT IS NOT NULL
+             AND TRIM(c.COLUMN_COMMENT) <> ''
+             AND c.COLUMN_KEY IN ('PRI','UNI')
+            THEN 'L4_KEY_DOCUMENTED'
+
+        WHEN c.COLUMN_COMMENT IS NOT NULL
+             AND TRIM(c.COLUMN_COMMENT) <> ''
+            THEN 'L3_DOCUMENTED'
+
+        WHEN c.COLUMN_KEY IN ('PRI','UNI')
+            THEN 'L3_KEY_CONFIRMED'
+
+        WHEN c.COLUMN_KEY = 'MUL'
+            THEN 'L2_INDEXED'
+
+        ELSE 'L1_NAME_TYPE_INFERENCE'
+    END AS evidence_level,
+
+    /* =========================================================
+       2. Key 候选
+       ========================================================= */
+
+    CASE
+        WHEN c.COLUMN_KEY = 'PRI'
+            THEN 'PRIMARY_KEY_CONFIRMED'
+
+        WHEN c.COLUMN_KEY = 'UNI'
+            THEN 'UNIQUE_KEY_CONFIRMED'
+
+        WHEN c.COLUMN_KEY = 'MUL'
+            THEN 'INDEXED_CANDIDATE'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(^id$|_id$|^eid$|^uid$|_no$|_code$|uuid|guid)'
+            THEN 'IDENTIFIER_CANDIDATE'
+
+        ELSE NULL
+    END AS key_candidate,
+
+    /* =========================================================
+       3. 时间维度
+       ========================================================= */
+
+    CASE
+        WHEN LOWER(c.COLUMN_NAME) = 'dt'
+            THEN 'BUSINESS_DATE_CANDIDATE'
+
+        WHEN c.DATA_TYPE IN ('datetime','timestamp')
+            THEN 'DATETIME_CONFIRMED'
+
+        WHEN c.DATA_TYPE = 'date'
+            THEN 'DATE_CONFIRMED'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(^|_)(time|date|datetime|timestamp|created|updated|create|update)($|_)'
+            THEN 'TIME_NAME_CANDIDATE'
+
+        ELSE NULL
+    END AS time_candidate,
+
+    /* =========================================================
+       4. 金额 / 数值指标
+       ========================================================= */
+
+    CASE
+        WHEN c.DATA_TYPE IN
+             ('decimal','double','float')
+         AND LOWER(c.COLUMN_NAME) REGEXP
+             '(amount|amt|stake|bet|wager|turnover|win|loss|profit|rebate|commission|fee|balance|deposit|withdraw|ggr|ngr|payout)'
+            THEN 'NUMERIC_MEASURE_HIGH'
+
+        WHEN c.DATA_TYPE IN
+             ('int','bigint','smallint','tinyint')
+         AND LOWER(c.COLUMN_NAME) REGEXP
+             '(amount|amt|count|number|qty|quantity|balance|score|level|bet|win|loss)'
+            THEN 'NUMERIC_MEASURE_MEDIUM'
+
+        WHEN c.DATA_TYPE IN
+             ('decimal','double','float')
+            THEN 'NUMERIC_MEASURE_GENERIC'
+
+        ELSE NULL
+    END AS measure_candidate,
+
+    /* =========================================================
+       5. 维度
+       ========================================================= */
+
+    CASE
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(^|_)(type|status|state|flag|category|channel|mode|kind)($|_)'
+            THEN 'BEHAVIORAL_DIMENSION'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(game|room|table|dealer|agent|member|player|user|currency|country|region)'
+            THEN 'BUSINESS_DIMENSION'
+
+        WHEN c.DATA_TYPE IN
+             ('varchar','char','text','enum')
+            THEN 'TEXT_DIMENSION'
+
+        ELSE NULL
+    END AS dimension_candidate,
+
+    /* =========================================================
+       6. 公式字段候选
+       ========================================================= */
+
+    CASE
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(rate|ratio|pct|percent|percentage|roi|margin|ggr|ngr)'
+            THEN 'RATE_RATIO_FORMULA_CANDIDATE'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(profit|loss|rebate|commission|payout)'
+            THEN 'DERIVED_FINANCIAL_CANDIDATE'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(score|risk|rating|rank)'
+            THEN 'MODEL_SCORE_CANDIDATE'
+
+        ELSE NULL
+    END AS formula_candidate,
+
+    /* =========================================================
+       7. 初步 semantic role
+       ========================================================= */
+
+    CASE
+
+        WHEN c.COLUMN_KEY = 'PRI'
+            THEN 'PRIMARY_IDENTIFIER'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(^|_)(member|player|uid|user)($|_)'
+            THEN 'PLAYER_IDENTIFIER'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(dealer|croupier|eid)'
+            THEN 'DEALER_IDENTIFIER'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(agent|affiliate|lv[1-5])'
+            THEN 'AGENT_HIERARCHY'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(game|game_type)'
+            THEN 'GAME_DIMENSION'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(table|table_id)'
+            THEN 'TABLE_DIMENSION'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(room|room_id)'
+            THEN 'ROOM_DIMENSION'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(currency|fx|exchange|rate)'
+            THEN 'CURRENCY_FX'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(bet|stake|wager|turnover)'
+            THEN 'BETTING_MEASURE'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(win|payout|pay)'
+            THEN 'PAYOUT_MEASURE'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(rebate|commission)'
+            THEN 'REBATE_COMMISSION'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(deposit|withdraw)'
+            THEN 'CASHFLOW_MEASURE'
+
+        WHEN LOWER(c.COLUMN_NAME) REGEXP
+             '(time|date|dt)'
+            THEN 'TIME_DIMENSION'
+
+        WHEN c.DATA_TYPE IN
+             ('varchar','char','text','enum')
+            THEN 'TEXT_ATTRIBUTE'
+
+        WHEN c.DATA_TYPE IN
+             ('decimal','double','float','int','bigint','smallint','tinyint')
+            THEN 'NUMERIC_ATTRIBUTE'
+
+        ELSE 'UNKNOWN'
+
+    END AS semantic_role,
+
+    /* =========================================================
+       8. 可解释置信度
+       ========================================================= */
+
+    (
+        CASE
+            WHEN c.COLUMN_KEY = 'PRI' THEN 35
+            WHEN c.COLUMN_KEY = 'UNI' THEN 30
+            WHEN c.COLUMN_KEY = 'MUL' THEN 10
+            ELSE 0
+        END
+
+        +
+
+        CASE
+            WHEN c.COLUMN_COMMENT IS NOT NULL
+                 AND TRIM(c.COLUMN_COMMENT) <> ''
+                THEN 20
+            ELSE 0
+        END
+
+        +
+
+        CASE
+            WHEN c.DATA_TYPE IN
+                 ('datetime','timestamp','date')
+                THEN 15
+            ELSE 0
+        END
+
+        +
+
+        CASE
+            WHEN LOWER(c.COLUMN_NAME) REGEXP
+                 '(^id$|_id$|^uid$|^eid$|_no$|_code$|uuid|guid)'
+                THEN 10
+            ELSE 0
+        END
+
+        +
+
+        CASE
+            WHEN LOWER(c.COLUMN_NAME) REGEXP
+                 '(member|player|dealer|agent|game|table|room|currency|bet|stake|win|payout|deposit|withdraw)'
+                THEN 10
+            ELSE 0
+        END
+
+        +
+
+        CASE
+            WHEN c.DATA_TYPE IN
+                 ('decimal','double','float','int','bigint')
+                THEN 5
+            ELSE 0
+        END
+    ) AS confidence_score
+
+FROM information_schema.columns c
+
+JOIN information_schema.tables t
+    ON t.TABLE_SCHEMA = c.TABLE_SCHEMA
+   AND t.TABLE_NAME = c.TABLE_NAME
+
+WHERE c.TABLE_SCHEMA IN ('a168','a168_log')
+
+ORDER BY
+    c.TABLE_SCHEMA,
+    c.TABLE_NAME,
+    c.ORDINAL_POSITION;
+```
 
