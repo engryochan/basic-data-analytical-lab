@@ -1,0 +1,20 @@
+DELETE FROM ${BUSINESS_RISK_TARGET_DATABASE}.business_risk_late_bet_snapshot
+WHERE as_of_time < DATE_SUB(
+        CURRENT_TIMESTAMP,
+        INTERVAL ${BUSINESS_RISK_SNAPSHOT_RETENTION_DAYS} DAY
+      )
+  AND as_of_time <> TIMESTAMP('${READY_AS_OF_TIME}');
+
+DELETE FROM ${BUSINESS_RISK_TARGET_DATABASE}.business_risk_same_table_pair_snapshot
+WHERE as_of_time < DATE_SUB(
+        CURRENT_TIMESTAMP,
+        INTERVAL ${BUSINESS_RISK_SNAPSHOT_RETENTION_DAYS} DAY
+      )
+  AND as_of_time <> TIMESTAMP('${READY_AS_OF_TIME}');
+
+DELETE FROM ${BUSINESS_RISK_TARGET_DATABASE}.business_risk_player_dealer_snapshot
+WHERE as_of_time < DATE_SUB(
+        CURRENT_TIMESTAMP,
+        INTERVAL ${BUSINESS_RISK_SNAPSHOT_RETENTION_DAYS} DAY
+      )
+  AND as_of_time <> TIMESTAMP('${READY_AS_OF_TIME}');
