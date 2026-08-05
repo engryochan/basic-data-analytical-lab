@@ -1,3 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+
 # === Python 绝对不上 - 核心 ===
 .venv/
 venv/
