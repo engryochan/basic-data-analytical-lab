@@ -1,0 +1,331 @@
+---
+title: "玩家同桌关系风控Claude草稿（player_pair_stat_draft_Cluade）"
+format: html
+---
+
+## SQL解答一
+
+好眼力——你之前给的字段类型是`BIGINT`、`DOUBLE`、`DATETIME`，这是标准SQL类型体系（MongoDB原生类型是int64/double/date，写法不一样），说明这份数据实际上是存在关系型数据库里（很可能是MySQL/TiDB/ClickHouse之类），而不是MongoDB原生BSON。这正好说明用SQL做才是更贴合实际存储方式的正确路径——Superset本身的核心工作模式就是"虚拟数据集(Virtual Dataset)"，即一段SQL查询直接定义成一个可视化数据源，比额外跑Python脚本更符合Superset原生工作流。
+下面给你六段SQL，分别对应之前六张图表所需的数据源，全部可以直接粘贴到Superset的SQL Lab里，跑通后点"Save as Virtual Dataset"，再挂到对应图表类型上。
+
+### 基础CTE：衍生指标计算（后面所有查询共用）
+
+```{sql}
+WITH base AS (
+    SELECT
+        player_a,
+        player_b,
+        same_round_count,
+        player_a_rounds,
+        player_b_rounds,
+        same_rate,
+        first_game_time,
+        last_game_time,
+        created_time,
+        update_time,
+        -- 双向依赖率
+        same_round_count / NULLIF(player_a_rounds, 0) AS a_dependency,
+        same_round_count / NULLIF(player_b_rounds, 0) AS b_dependency,
+        -- 持续天数
+        DATEDIFF(last_game_time, first_game_time) AS duration_days,
+        -- 距今天数
+        DATEDIFF(NOW(), last_game_time) AS days_since_last
+    FROM player_pair_stat
+),
+scored AS (
+    SELECT
+        *,
+        GREATEST(a_dependency, b_dependency) AS max_dependency,
+        -- 综合风险分：用窗口函数做min-max归一化后加权
+        (
+            0.35 * (same_rate - MIN(same_rate) OVER()) / NULLIF(MAX(same_rate) OVER() - MIN(same_rate) OVER(), 0) +
+            0.30 * (GREATEST(a_dependency, b_dependency) - MIN(GREATEST(a_dependency, b_dependency)) OVER()) /
+                   NULLIF(MAX(GREATEST(a_dependency, b_dependency)) OVER() - MIN(GREATEST(a_dependency, b_dependency)) OVER(), 0) +
+            0.20 * (same_round_count - MIN(same_round_count) OVER()) / NULLIF(MAX(same_round_count) OVER() - MIN(same_round_count) OVER(), 0) +
+            0.15 * (duration_days - MIN(duration_days) OVER()) / NULLIF(MAX(duration_days) OVER() - MIN(duration_days) OVER(), 0)
+        ) * 100 AS risk_score
+    FROM base
+)
+SELECT * FROM scored
+```
+
+将这段存成一个虚拟数据集，命名类似player_pair_stat_scored，后面所有图表都直接基于这一个数据集配置，不用重复写衍生逻辑。
+
+#### 图1：Big Number with Trendline（KPI卡片）
+
+Superset的Big Number图表本身在图表配置面板里选好时间列和指标就行，不需要单独SQL，但如果你想在SQL Lab先验证数字对不对：
+
+```{sql}
+SELECT
+    COUNT(*) AS 候选配对总数,
+    SUM(CASE WHEN risk_score > 80 THEN 1 ELSE 0 END) AS 高风险配对数,
+    SUM(CASE WHEN days_since_last <= 7 THEN 1 ELSE 0 END) AS 近7天活跃配对数,
+    SUM(CASE WHEN duration_days >= 30 THEN 1 ELSE 0 END) AS 持续超30天配对数
+FROM player_pair_stat_scored
+```
+
+Superset图表配置：Time Column选first_game_time，Metric选COUNT(*)，Time Grain选Day或Week，即可自动生成带趋势线的KPI卡片。
+
+#### 图2：Box Plot（多维分布对比）
+
+Box Plot图表需要**长格式(long format)**数据——把多个指标"竖起来"变成一列指标名+一列数值：
+
+```{sql}
+SELECT 'a_dependency' AS metric_name, a_dependency AS value FROM player_pair_stat_scored
+UNION ALL
+SELECT 'b_dependency', b_dependency FROM player_pair_stat_scored
+UNION ALL
+SELECT 'same_rate', same_rate FROM player_pair_stat_scored
+UNION ALL
+SELECT 'duration_days', duration_days FROM player_pair_stat_scored
+```
+
+Superset图表配置：Group by选metric_name，Metric选value，Box Plot会自动按metric_name分组画出并排箱线图。
+
+#### 图3：Parallel Coordinates（多因子平行坐标图）
+
+```{sql}
+SELECT
+    CONCAT(player_a, '-', player_b) AS pair_label,
+    same_rate,
+    max_dependency,
+    same_round_count,
+    duration_days,
+    risk_score
+FROM player_pair_stat_scored
+ORDER BY risk_score DESC
+LIMIT 100
+```
+
+Superset图表配置：Line Column选pair_label，Metrics依次加入same_rate、max_dependency、same_round_count、duration_days、risk_score这五个，Color Metric选risk_score做渐变着色。LIMIT 100是关键——平行坐标图超过一两百条线会糊成一团，必须限制条数。
+
+#### 图4：Graph Chart（关系网络图）
+
+网络图需要**边列表(edge list)**格式：源节点、目标节点、权重：
+
+```{sql}
+SELECT
+    player_a AS source,
+    player_b AS target,
+    same_round_count AS weight,
+    risk_score
+FROM player_pair_stat_scored
+WHERE risk_score > 60   -- 只取中高风险以上，避免节点过多图形糊成一团
+ORDER BY risk_score DESC
+```
+
+Superset图表配置：Source选source，Target选target，Edge Weight选weight，Superset的Graph Chart会自动布局成力导向网络图，连通度高的小圈子会自然聚拢在一起，一眼能看出疑似团伙。
+
+#### 图5：Calendar Heatmap（日历热力图）
+
+```{sql}
+SELECT
+    DATE(first_game_time) AS event_date,
+    COUNT(*) AS new_pair_count
+FROM player_pair_stat_scored
+GROUP BY DATE(first_game_time)
+ORDER BY event_date
+```
+
+Superset图表配置：Time Column选event_date，Metric选new_pair_count，Calendar Heatmap会按日历格子自动铺开，颜色深浅代表当天新增数量。
+
+#### 图6：Table（条件格式排行榜）
+
+```{sql}
+SELECT
+    player_a,
+    player_b,
+    same_round_count,
+    ROUND(same_rate, 4) AS same_rate,
+    ROUND(max_dependency, 4) AS max_dependency,
+    duration_days,
+    days_since_last,
+    ROUND(risk_score, 1) AS risk_score
+FROM player_pair_stat_scored
+ORDER BY risk_score DESC
+LIMIT 50
+```
+
+Superset图表配置：在Table图表的Customize面板里，给risk_score、same_rate、max_dependency这几列启用Conditional Formatting，设置颜色渐变规则（比如risk_score从绿到红映射0-100），保存后就是一张给风控团队每日巡检用的高亮排行表。
+
+#### 补充：如果你的SQL方言不是MySQL
+
+上面用了DATEDIFF、NOW()这类MySQL语法，如果实际是ClickHouse（DATEDIFF语法有差异，需要写成DATEDIFF(day, first_game_time, last_game_time)，且窗口函数写法略有不同）或PostgreSQL（NOW()一样但NULLIF用法一致，基本兼容），告诉我具体是哪个数据库，我可以帮你把这几段SQL精确调整成对应方言的语法。
+
+*出处：[]()*
+
+## 提问
+
+> 先详细道明是将现有的数据参数搭配最优化至顶级电商与量化科技的规格与概念，首先从第一个数据“player_pair_stat  玩家同桌关系风控候选表”着手，基本参数如下：
+> 
+player_a         BIGINT   玩家A
+player_b         BIGINT   玩家B
+same_round_count BIGINT   同桌局数
+player_a_rounds  BIGINT   玩家A总局数
+player_b_rounds  BIGINT   玩家B总局数
+same_rate        DOUBLE   同桌率
+first_game_time  DATETIME 首次同桌时间
+last_game_time   DATETIME 最近同桌时间
+created_time     DATETIME 创建时间
+update_time      DATETIME 更新时间
+> 
+请根据Apache Superset 6.0.0版本以上现有提供的数据资源搭配，将数据分析风控统计模型最优化并绘图与详细阐释，然后请详细解说如何搭配设置绘图先生您的方案~
+
+## 解答二
+
+这次要求更深一层——不只是"选图表"，而是要讲清楚**这套字段设计背后对应的是哪些电商/量化领域的成熟分析框架**，以及**在Superset界面里逐步怎么点、怎么配**。分两大部分说。
+
+---
+
+### 第一部分：数据参数与顶级电商/量化框架的对应关系
+
+#### 1. RFM模型的风控变体（电商精细化运营的核心框架）
+
+电商领域最经典的用户分层模型是**RFM**（Recency最近一次、Frequency频次、Monetary金额），这套逻辑可以完整映射到你这份风控数据上：
+
+| RFM原始维度 | 电商含义 | 本数据对应字段/衍生指标 | 风控含义 |
+|---|---|---|---|
+| **R**ecency | 最近一次消费距今多久 | `days_since_last`（由`last_game_time`衍生） | 这对组合是否还在活跃作案，还是已经"金盆洗手" |
+| **F**requency | 消费频次 | `same_round_count`、`same_rate` | 同桌配合的密集程度 |
+| **M**onetary | 消费金额 | （若表里未来加入`total_amount`类字段） | 这对组合涉及的资金规模，决定风险优先级的"金额权重" |
+
+**为什么这是"顶级"做法而不是普通做法**：普通风控只看`same_rate`单一指标做阈值判断（"超过0.8就标记"），这是**规则引擎(rule-based)**思维；RFM式的**多维分层(segmentation)**才是电商大厂精细化运营的标准做法——不是简单二分"可疑/不可疑"，而是把候选名单分成"高频剧烈期"、"低频但仍活跃"、"已沉寂但历史严重"等多个象限，对应不同的处置优先级和资源投入。
+
+#### 2. 量化金融的"因子模型"框架（Multi-Factor Model）
+
+你之前脚本里的`risk_score`加权公式，本质上就是量化对冲基金做**选股因子模型**的同一套方法论：
+
+```
+risk_score = w1×same_rate + w2×max_dependency + w3×same_round_count + w4×duration_days
+```
+
+这跟量化基金的**Alpha合成模型**结构完全一致：
+```
+Alpha = w1×动量因子 + w2×估值因子 + w3×质量因子 + w4×流动性因子
+```
+
+**顶级量化团队在这里会做的额外优化**（普通做法不会做）：
+- **因子正交化(orthogonalization)**：`same_rate`和`max_dependency`可能高度相关（同桌率高，依赖率通常也高），直接加权会导致**重复计权同一个信号**，量化上的标准做法是先做相关性检验，剔除或降权高度共线的因子
+- **因子有效性回测(backtesting)**：如果历史上有"已确认作弊"的标签数据，应该反过来验证`risk_score`排名前N的候选，历史命中率是否真的高于随机抽样——这是量化因子挖掘的核心纪律，"有信号假设"必须被"历史数据验证"，不能凭直觉定权重
+
+#### 3. 图论/网络科学框架（Fraud Ring Detection）
+
+`player_a`-`player_b`这种两两配对数据，天然就是一张**图(Graph)**的边列表——这正是量化金融**关联方风险网络分析**和电商**刷单团伙挖掘**共用的底层数学工具。关键概念：
+
+- **度中心性(Degree Centrality)**：某个玩家连接了多少个"高风险配对"——度数异常高的节点，可能是团伙的"组织者"
+- **连通分量(Connected Components)**：把风险图拆解成一个个独立的"小圈子"，每个连通分量就是一个疑似独立团伙
+- **聚类系数(Clustering Coefficient)**：衡量一个小圈子内部"你连我我连你"的紧密程度，系数越高越像是**有组织的团伙**而非松散的巧合关系
+
+#### 4. 电商"漏斗模型"（Funnel）视角看候选处置流程
+
+`player_pair_stat`（候选表）本身应该是从`player_pair_stat_hourly`（原始快照）**层层筛选**而来的，这个筛选过程本身就是一个电商增长团队最熟悉的**转化漏斗**：
+
+```
+全量同桌记录(hourly快照)
+    ↓ 过滤: same_round_count >= 阈值
+初筛候选
+    ↓ 过滤: risk_score >= 阈值
+候选表(player_pair_stat)
+    ↓ 人工复核
+确认可疑 / 排除误报
+```
+
+把这个漏斗做成可视化，能直接回答"我们的风控规则损耗率是多少"、"每一层过滤掉了多少候选"——这是电商增长分析里最常见的**漏斗转化率(funnel conversion rate)**监控手法，用在风控场景同样有效。
+
+---
+
+### 第二部分：Superset 6.0.0 界面详细配置步骤
+
+#### 前置：建立虚拟数据集
+
+1. 左侧导航栏 **SQL Lab → SQL Editor**
+2. 选择对应的数据库连接
+3. 粘贴之前给你的那段带`WITH base AS (...) scored AS (...)`的完整SQL
+4. 点击**Run**验证跑通无误
+5. 点击结果表格上方的 **"Save"** 下拉按钮 → **"Save dataset"**
+6. 命名为`player_pair_stat_scored`，保存
+
+之后所有图表都基于这一个虚拟数据集创建，不用重复写SQL。
+
+## 图表1：Big Number with Trendline
+
+1. **Charts → + Chart**
+2. Dataset选`player_pair_stat_scored`
+3. Chart Type搜索选择 **"Big Number with Trendline"**
+4. **Data**面板：
+   - `Metric`：点击选择器，选`COUNT(*)`（或如果要看高风险数，用自定义SQL指标`SUM(CASE WHEN risk_score>80 THEN 1 ELSE 0 END)`）
+   - `Time Column`：选`first_game_time`
+   - `Time Grain`：选`Day`
+   - `Time Range`：设为`Last 30 days`
+5. **Customize**面板：
+   - `Subheader`：填"近30天候选新增趋势"
+   - 可开启`Comparison Period`做同比/环比
+
+## 图表2：Box Plot
+
+1. 新建Chart，Chart Type选 **"Box Plot"**
+2. **Data**面板：
+   - `Query Mode`选`Raw Records`
+   - `Columns`（分组维度）：拖入`metric_name`
+   - `Metrics`：拖入`value`
+3. 由于Box Plot需要长格式数据，这一步建议**直接换一段专用SQL存成第二个虚拟数据集**（就是我上一条给你的`UNION ALL`那段），单独命名为`player_pair_stat_boxplot_long`，再挂到这个图表上
+4. **Customize**面板：
+   - `Whisker/outlier options`选`Tukey`（标准四分位距异常值判定，学术上最常用的箱线图定义）
+
+#### 图表3：Parallel Coordinates
+
+1. 新建Chart，Chart Type搜索 **"Parallel Coordinates"**（注：这个图表类型在Superset里可能需要先在`Settings → Feature Flags`或管理员配置里确认已启用，部分插件图表默认关闭）
+2. **Data**面板：
+   - `Line Column`：选`pair_label`（即`player_a`-`player_b`拼接字段）
+   - `Metrics`：依次添加`same_rate`、`max_dependency`、`same_round_count`、`duration_days`、`risk_score`共5个
+   - `Row Limit`：设为**100**（关键！超过这个数线条会糊成一团，之前SQL里也用`LIMIT 100`提前限制了）
+3. **Customize**面板：
+   - `Color Metric`选`risk_score`，`Linear Color Scheme`选一个从冷到暖的渐变色系（比如"Superset Sequential"或"Red-Yellow-Blue"反转），这样risk_score越高的线颜色越显眼
+
+#### 图表4：Graph Chart（网络关系图）
+
+1. 新建Chart，Chart Type搜索 **"Graph Chart"**
+2. **Data**面板：
+   - `Source`：选`source`（即`player_a`）
+   - `Target`：选`target`（即`player_b`）
+   - `Edge Length`：可选择用`weight`（`same_round_count`）反向映射，权重越大连线越短（关系越紧密）
+   - `Metric`（节点大小依据）：可选`COUNT(*)`让连接数越多的节点显示得越大
+3. **Customize**面板：
+   - `Layout`：选`Force`（力导向布局，让连通的小圈子自然聚拢）
+   - `Enable Node Dragging`：打开，方便复核人员手动拖拽调整查看细节
+   - `Category`：如果有玩家分组/等级字段，可以按类别给节点上色区分
+
+#### 图表5：Calendar Heatmap
+
+1. 新建Chart，Chart Type搜索 **"Calendar Heatmap"**
+2. **Data**面板：
+   - `Time Column`：选`event_date`
+   - `Metric`：选`new_pair_count`（即`COUNT(*)`按日聚合）
+3. **Customize**面板：
+   - `Linear Color Scheme`：选一个单色渐变（比如GitHub式的绿色深浅），越深代表当天新增越多，符合大家熟悉的"贡献日历"视觉直觉
+
+#### 图表6：Table + 条件格式
+
+1. 新建Chart，Chart Type选 **"Table"**
+2. **Data**面板：
+   - `Columns`：依次加入`player_a`、`player_b`、`same_round_count`、`same_rate`、`max_dependency`、`duration_days`、`days_since_last`、`risk_score`
+   - `Sort by`：`risk_score`降序
+   - `Row Limit`：50
+3. **Customize**面板：
+   - 找到 **"Conditional Formatting"** 区块，点`+ Add`
+   - Column选`risk_score`，Color Scheme选渐变（比如白→红），Operator选`>=` 并设定几个分段阈值（比如60/80两档，分别给不同深浅的红色警示）
+   - 对`same_rate`、`max_dependency`重复同样操作
+
+#### 最后一步：组装成Dashboard
+
+1. **Dashboards → + Dashboard**
+2. 把上面6个图表依次拖入画布，按之前建议的布局排布（第一排KPI横向铺开，第二排Graph+Parallel Coordinates并排，第三排Box Plot+Calendar Heatmap并排，最下面整行放Table）
+3. 顶部可以加一个**时间范围筛选器(Filter Box)**，让整个Dashboard的所有图表联动，方便复核人员按不同时间窗口切换查看
+
+---
+
+这样从"为什么这么设计"到"具体怎么点"就完整闭环了。接下来如果你想深入某一块（比如因子正交化的具体计算方法、或者网络图里连通分量的SQL/Python实现细节），告诉我具体方向，我可以针对那一块再往深挖。
+
+*出处：[]()*
+
+

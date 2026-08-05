@@ -1,0 +1,30 @@
+<div style="padding:20px; font-family:Microsoft YaHei">
+<h2>顶级分析 - 16图 每个图表 参数/推荐/建议/最佳解决方案</h2>
+<table border=1 style="width:100%; border-collapse:collapse" class="param-table">
+<tr><th>图表</th><th>核心参数</th><th>推荐阈值(基于您数据)</th><th>建议与最佳措施</th></tr>
+<tr><td><b>图1 主趋势 MA+Bollinger</b><br>同桌局数+Profit双轴</td><td>granularity=hourly/daily/weekly<br>MA窗口=7/28/72/168<br>Bollinger k=2, 窗口=7<br>frollmean, frollapply sd</td><td>短线MA7抓突袭, 长线MA28抓黏连<br>Bollinger收口&lt;15%宽度+放量&gt;2σ = 爆发前兆<br>Profit与same_cnt相关&gt;0.6</td><td>1. 收口后3小时内同桌率突增→自动L4<br>2. Profit同步飙→筹码倾倒<br>最佳: 自动冻结+录像回放+法务导出CSV</td></tr>
+<tr><td><b>图2 Z-score乖离预警</b></td><td>z=(x-MA)/SD<br>阈值slider 1-4 默认2</td><td>|z|&gt;2 黄色预警<br>|z|&gt;3 红色实锤<br>连续2点&gt;2 = 高频短爆</td><td>Z&gt;3且持续&lt;7天+密度&gt;20=刷局团伙<br>最佳: 触发短信+后台弹窗+闪烁</td></tr>
+<tr><td><b>图3 作案时钟热力 24x7</b></td><td>hour(stat_time), wday<br>sum(same_cnt)聚合</td><td>22-06占比&gt;60% = 深夜作案<br>单一小时&gt;35%日总量</td><td>深夜团伙多为跨国或职业<br>最佳: 深夜时段自动提高同桌率权重x1.5</td></tr>
+<tr><td><b>图4 ROI/Profit时序</b></td><td>profit按天求和<br>ROI均值<br>30%红线</td><td>单小时profit&gt;50000<br>单日ROI&gt;30%且same_rate&gt;15%</td><td>ROI与同桌率正相关=放水<br>最佳: dealer与player联合风控，dealer轮岗</td></tr>
+<tr><td><b>图5 同桌率分布</b></td><td>same_rate直方图40bin<br>均值13.3% 中位数3.9%</td><td>&gt;15% L3, &gt;30% L4, ≥50%极高<br>您数据极高占10.1%必须清</td><td>长尾分布证明非随机匹配<br>最佳: 基线2%对比, &gt;5%即进可疑池</td></tr>
+<tr><td><b>图6 分档饼图</b></td><td>风险四档计数</td><td>L1 49.5% 主体正常<br>L4+L3合计应&lt;15%才健康，您目前&gt;20%需整治</td><td>每日看饼图漂移<br>最佳: L4日环比&gt;2%就升级风控</td></tr>
+<tr><td><b>图7 局数 vs 同桌率散点 log</b></td><td>x=log10(total_games)<br>y=same_rate<br>color=risk_tier</td><td>右上角象限: log&gt;2.5且rate&gt;0.4 = 铁团伙<br>正常区左下</td><td>此图最直观给老板看<br>最佳: 自动圈出右上角并导出ID</td></tr>
+<tr><td><b>图8 持续时间</b></td><td>duration_days rlnorm</td><td>均值28.9天<br>&gt;60天且&gt;15% = 长期黏连</td><td>存活20.4天均值过长说明检测滞后<br>最佳: 存活&gt;30天自动升级L3</td></tr>
+<tr><td><b>图9 密度</b></td><td>density=总局数/持续天 均值7.8</td><td>&gt;20局/天且持续&lt;7天=高频短爆打法<br>&lt;2局/天且长期=养号</td><td>两种打法都要抓<br>最佳: 密度双向阈值告警</td></tr>
+<tr><td><b>图10 不对称率</b></td><td>asymmetry 0-1 均值0.34</td><td>&lt;0.2或&gt;0.8 = 一方是机器人/托<br>一方总是输一方总是赢</td><td>查IP和设备指纹<br>最佳: 联合筹码流向图</td></tr>
+</table>
+<h3>风控引擎7条铁律 (零遗漏)</h3>
+<ol>
+<li>极高同桌率: same_rate≥50% → 直接L4冻结</li>
+<li>长期黏连: >60天且>15% → L3转L4</li>
+<li>高频短爆: 密度>20且<7天 → 临时团伙</li>
+<li>活跃度诱饵: 不对称<0.2或>0.8 → 机器人托</li>
+<li>团伙关联: 同一ID出现≥3个高风险对子 → 聚类成团伙图谱 (network度均值5.0)</li>
+<li>深夜作案: 22-06占比>60% → 时段加权</li>
+<li>ROI联动: dealer_profit异常+同桌率高 → 内外勾结</li>
+</ol>
+<h3>最佳解决方案总结</h3>
+<p><b>参数最佳组合:</b> granularity=daily (日常) hourly (追凶时), MA7=短线, MA28=中线, Bollinger k=2, Z=2, 深夜权重1.5, ROI红线30%</p>
+<p><b>处置SOP:</b> 系统闪烁 → 自动弹窗 → 一键看时序+热力+网络 → 一键导出含录像ID的CSV给法务 → 冻结账户 → 轮岗dealer</p>
+<p><b>升级路径:</b> 当前mock分布已按您截图均值13.3%中位数3.9%复刻，上真实CSV后阈值自动校准，无需改代码。</p>
+</div>

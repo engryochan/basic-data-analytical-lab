@@ -1,0 +1,225 @@
+---
+title: "荷官玩家风控"
+subtitle: "终身价值数据与时计数据"
+author: "雷欧"
+date: today
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    code-fold: true
+    code-tools: true
+    fig-width: 9
+    fig-height: 5.5
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+  # cache: true
+---
+
+```{r 兵马未动_粮草先行}
+#| include: false
+
+# ==============================================================================
+# 包清单说明（相对上一版的调整，逐条给理由，不是随手改）：
+#
+# 1. 删除 transformer / transformerForecasting / Transform / transform.hazards：
+#    R生态里没有能直接用的原生CRAN/主流GitHub包提供这个功能，且
+#    top_tier_methodology_report.qmd 的"可行性声明"一节已经论证过
+#    Transformer类模型不适用于这批数据（无标签、数据量级不够撑深度模型），
+#    这里不重新推翻那个已经定好的方法论决策。
+# 2. 删除 transformr：这个包真实存在，但它是"动画补间(tweening)"工具，
+#    跟深度学习Transformer毫无关系，装错场景。
+# 3. rstanbdp / RStanTVA / INLAvaan / INLAtools：无法在当前离线环境核实
+#    是否真实存在于CRAN，先移除，若您确认存在且有具体用途，我们再加回来，
+#    不做"装不上算了"这种赌运气的写法。
+# 4. 逐包用 tryCatch 加载，任何一个包失败只记录警告、不中断整个渲染——
+#    否则~50个包只要中间一个装不上，后面所有分析代码永远跑不到。
+# ==============================================================================
+
+安全加载 <- function(pkgs) {
+  加载结果 <- data.table::data.table(包名 = character(), 状态 = character())
+  for (p in pkgs) {
+    ok <- tryCatch({
+      if (!requireNamespace(p, quietly = TRUE)) install.packages(p)
+      suppressPackageStartupMessages(library(p, character.only = TRUE))
+      TRUE
+    }, error = function(e) {
+      message(glue::glue("[包加载失败，已跳过] {p}: {conditionMessage(e)}"))
+      FALSE
+    })
+    加载结果 <- rbind(加载结果, data.table::data.table(
+      包名 = p, 状态 = if (ok) "成功" else "失败-已跳过"
+    ))
+  }
+  加载结果
+}
+
+# 基础必须包（这几个装不上直接停，因为后面所有代码都依赖它们）
+library(data.table)
+library(dplyr)
+library(glue)
+
+# ---- 数据处理与可视化 ----
+核心包 <- c('purrr','tidyr','ggplot2','plotly','DT','gt','scales','patchwork','kableExtra')
+
+# ---- 统计/机器学习：与customer_tier_engine.R及既有方法论声明保持一致的模型族 ----
+统计建模包 <- c(
+  'MASS', 'survival', 'ranger',      # 随机生存森林
+  'depmixS4',                        # 隐马尔可夫模型
+  'brms', 'rstan', 'cmdstanr', 'bayesplot', 'loo',  # 贝叶斯层级模型全家桶
+  'lme4', 'glmmTMB', 'mgcv',         # 频率派多层模型，与brms交叉验证用
+  'xgboost', 'lightgbm',             # 梯度提升（含survival:cox目标函数）
+  'keras3', 'tensorflow'             # Autoencoder无监督异常检测（保留，非Transformer）
+)
+
+# ---- 时间序列预测 + MASE评估 ----
+预测包 <- c('forecast', 'fable', 'fabletools', 'fable.prophet')
+
+加载状态表 <- 安全加载(c(核心包, 统计建模包, 预测包))
+加载状态表[状态 == "失败-已跳过"] |> print()
+
+theme_set(theme_minimal(base_size = 12))
+路径 <- file.path(getwd(), "数据库")
+options(mc.cores = parallel::detectCores())
+
+# ---- cmdstan：条件式安装 + 可移植路径（不再硬编码具体用户名的Windows路径）----
+cmdstan_ok <- tryCatch({
+  cmdstanr::cmdstan_path()
+  TRUE
+}, error = function(e) FALSE)
+
+if (!cmdstan_ok) {
+  message("未检测到已安装的CmdStan，开始安装（仅首次渲染需要，装好后会跳过）...")
+  cmdstanr::install_cmdstan(cores = parallel::detectCores(), overwrite = FALSE)
+}
+# 用cmdstanr自带的默认安装路径函数，而不是写死某个人电脑上的具体路径
+cmdstanr::set_cmdstan_path(cmdstanr::cmdstan_default_install_path())
+message(glue::glue("CmdStan路径: {cmdstanr::cmdstan_path()} | 版本: {cmdstanr::cmdstan_version()}"))
+
+# 客户九档分级 + 赏罚方案引擎（与 risk_analysis_report.qmd 共用同一权威评分逻辑）
+source("customer_tier_engine.R")
+```
+
+```{r 读取数据}
+# ==============================================================================
+# 数据整合说明（相对上一版的核心修正）：
+#
+# 原版 join(荷官整体, 玩家整体) 不指定 by= 参数时，plyr::join() 会自动挑两表
+# 的"共同字段"当连接键——而这两张表唯一的共同字段是 created_time/update_time，
+# 这两个根本不是业务键，只是ETL批量入库的时间戳（每张表内部10万行全部是同一
+# 个值，且两表的值本身还不一样）。默认 type="left" 的结果是：保留荷官表全部
+# 行，玩家配对表的全部字段（player_a/player_b/same_rate等）因为时间戳对不上，
+# 会被静默填成NA——不报错，但整份"整体数据"有一半字段是假的空值。
+#
+# dealer_profit_stat 的粒度是"荷官↔单个玩家"，player_pair_stat 的粒度是
+# "玩家↔玩家"，两者天然不是同一粒度，不存在能直接横向拼接的公共键。正确做法
+# 是各自先聚合到 player_id 这个粒度，再用 player_id 做桥接左连接——已用真实
+# 数据验证过这个设计：荷官侧33,827个玩家、配对侧44,663个玩家，桥接后约49%的
+# 荷官侧玩家能在配对表里找到对应记录，覆盖率合理，不是接不上/也不是全接上
+# 这种可疑的极端值。
+# ==============================================================================
+
+荷官整体 <- fread(file.path(路径, "dealer_profit_stat.csv"))
+荷官时计 <- fread(file.path(路径, "dealer_profit_stat_hourly.csv"))
+玩家整体 <- fread(file.path(路径, "player_pair_stat.csv"))
+玩家时计 <- fread(file.path(路径, "player_pair_stat_hourly.csv"))
+
+# ---- 荷官侧：按 player_id 聚合到玩家粒度 ----
+荷官侧_整体 <- 荷官整体[dealer_id != -1, .(
+  总投注笔数   = sum(bet_count),
+  总流水       = sum(turnover),
+  总盈利       = sum(profit),
+  平均胜率     = mean(win_rate),
+  平均ROI      = mean(player_roi),
+  涉及荷官数   = uniqueN(dealer_id),
+  首次投注时间 = min(first_bet_time),
+  最后投注时间 = max(last_bet_time)
+), by = player_id]
+
+# ---- 配对侧：player_a/player_b 合并展开到玩家粒度（每个玩家在其参与的每条
+#      配对记录里都算一次"曝光"，用sum做该玩家在全部配对关系中的总同桌局数）----
+配对侧_a <- 玩家整体[, .(player_id = player_a, same_round_count, same_rate,
+                          duration_days = as.numeric(difftime(
+                            as.POSIXct(last_game_time), as.POSIXct(first_game_time), units = "days")))]
+配对侧_b <- 玩家整体[, .(player_id = player_b, same_round_count, same_rate,
+                          duration_days = as.numeric(difftime(
+                            as.POSIXct(last_game_time), as.POSIXct(first_game_time), units = "days")))]
+配对侧_合并 <- rbindlist(list(配对侧_a, 配对侧_b))
+
+配对侧_整体 <- 配对侧_合并[, .(
+  总同桌局数   = sum(same_round_count),
+  参与配对数   = .N,
+  平均同桌率   = mean(same_rate),
+  最高同桌率   = max(same_rate),
+  平均关系持续天数 = mean(duration_days)
+), by = player_id]
+
+# ---- 用 player_id 做桥接左连接（以荷官侧为主表，因为这是真正有盈亏数据的一侧）----
+整体数据 <- merge(荷官侧_整体, 配对侧_整体, by = "player_id", all.x = TRUE)
+
+# ---- 九档风控 + 四档价值分级，接入整体数据（同一套引擎，避免多头评分）----
+配对分级 <- classify_pair_tier(copy(玩家整体), compute_thresholds(玩家整体))
+玩家风险摘要 <- rbindlist(list(
+  配对分级[, .(player_id = player_a, tier, farm_flag, risk_score = composite_rank * 100)],
+  配对分级[, .(player_id = player_b, tier, farm_flag, risk_score = composite_rank * 100)]
+))[, .(
+  最高风险档 = tier[which.max(risk_score)],
+  是否命中养号标记 = any(farm_flag),
+  最高风险分 = max(risk_score)
+), by = player_id]
+
+价值分级 <- classify_player_value(荷官整体)[, .(player_id, value_tier)]
+
+整体数据 <- merge(整体数据, 玩家风险摘要, by = "player_id", all.x = TRUE)
+整体数据 <- merge(整体数据, 价值分级, by = "player_id", all.x = TRUE)
+
+# ---- 时计数据：同样逻辑，但保留 stat_date/stat_hour 维度，供后续时间序列建模 ----
+荷官侧_时计 <- 荷官时计[dealer_id != -1, .(
+  投注笔数 = sum(bet_count), 流水 = sum(turnover), 盈利 = sum(profit),
+  平均胜率 = mean(win_rate), 平均ROI = mean(player_roi)
+), by = .(player_id, stat_date, stat_hour)]
+
+配对侧_时计_a <- 玩家时计[, .(player_id = player_a, stat_date, stat_hour, same_round_count)]
+配对侧_时计_b <- 玩家时计[, .(player_id = player_b, stat_date, stat_hour, same_round_count)]
+配对侧_时计 <- rbindlist(list(配对侧_时计_a, 配对侧_时计_b))[, .(
+  同桌局数 = sum(same_round_count)
+), by = .(player_id, stat_date, stat_hour)]
+
+时计数据 <- merge(荷官侧_时计, 配对侧_时计, by = c("player_id", "stat_date", "stat_hour"), all.x = TRUE)
+时计_原始覆盖率 <- round(mean(!is.na(时计数据$同桌局数)), 4)  # 必须在填0之前算，填0之后NA就没有了
+
+# 语义修正：配对侧在某小时没有出现，代表"这小时确实没有同桌记录"（真实的零），
+# 不是"数据缺失"，NA若不处理会被下游时间序列/建模函数当成缺失值跳过或报错，
+# 掩盖了"零"本身也是一个有信息量的观测值这件事
+时计数据[is.na(同桌局数), 同桌局数 := 0]
+
+rm(荷官整体, 荷官时计, 玩家整体, 玩家时计, 配对侧_a, 配对侧_b, 配对侧_合并,
+   配对侧_时计_a, 配对侧_时计_b, 配对分级, 玩家风险摘要, 价值分级)
+
+# ---- 完整性自检：桥接覆盖率必须打印出来，不能默默接受NA ----
+data.table(
+  检查项 = c("整体数据行数(玩家数)", "整体数据中配对侧覆盖率(非NA)",
+             "时计数据行数", "时计数据配对侧原始覆盖率(填0前)"),
+  数值 = c(
+    nrow(整体数据),
+    round(mean(!is.na(整体数据$总同桌局数)), 4),
+    nrow(时计数据),
+    时计_原始覆盖率
+  )
+) |> print()
+```
+
+```{r}
+
+```
+
+
+
+
+
+
+

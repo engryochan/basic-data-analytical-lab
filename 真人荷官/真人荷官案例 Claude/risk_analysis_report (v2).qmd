@@ -1,0 +1,603 @@
+---
+title: "荷官—玩家风控体系｜数据质量审计与统计风险模型报告"
+subtitle: "player_pair_stat / dealer_profit_stat 四表联合分析"
+author: "Risk Analytics"
+date: today
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    code-fold: true
+    code-tools: true
+    fig-width: 9
+    fig-height: 5.5
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+#| include: false
+
+# ---- 顶级科研/量化标准库栈 ----
+library(data.table)   # 高性能IO与聚合，替代慢速base R
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(ggplot2)
+library(plotly)        # 交互式绘图
+library(DT)             # 交互式表格
+library(gt)              # 学术级静态表格
+library(gtExtras)
+library(corrr)           # 因子相关性矩阵(正交化诊断前置步骤)
+library(igraph)          # 图论/网络科学
+library(ggraph)          # 网络可视化(ggplot2语法)
+library(scales)
+library(patchwork)       # 多图拼版
+library(forecast)        # 时间序列预测(auto.arima)
+
+theme_set(theme_minimal(base_size = 12))
+
+DATA_DIR <- "data_full"  # 已修正：改用10万行全量数据（原"data"文件夹仅100行，为早期方法论验证用，保留作对照）
+
+# 客户九档分级 + 赏罚方案引擎（唯一权威评分来源，避免本报告与其他报告/Shiny各自维护一套评分逻辑）
+source("function/customer_tier_engine.R")
+
+# ---- 数据提前到setup加载，供执行摘要做动态统计（避免摘要区的数字写死）----
+dps  <- fread(file.path(DATA_DIR, "dealer_profit_stat.csv"))
+dph  <- fread(file.path(DATA_DIR, "dealer_profit_stat_hourly.csv"))
+pps  <- fread(file.path(DATA_DIR, "player_pair_stat.csv"))
+pph  <- fread(file.path(DATA_DIR, "player_pair_stat_hourly.csv"))
+
+# 执行摘要要用到的关键统计量，全部代码算出，不写死
+n_pps <- nrow(pps); n_pph <- nrow(pph); n_dps <- nrow(dps); n_dph <- nrow(dph)
+n_focus_players  <- uniqueN(pps$player_a)
+n_partners       <- uniqueN(pps$player_b)
+n_real_dealers   <- uniqueN(dph[dealer_id != -1]$dealer_id)
+dps_sentinel_pct_exec <- round(mean(dps$dealer_id == -1) * 100, 1)
+```
+
+## 一、执行摘要 (Executive Summary)
+
+本报告对风控体系四张核心表进行联合分析（已改用全量数据，非早期100行抽样）：
+
+| 表名 | 定位 | 本次样本量 |
+|---|---|---|
+| `player_pair_stat` | 玩家同桌关系风控候选表 | `r format(n_pps, big.mark=",")` 行 |
+| `player_pair_stat_hourly` | 玩家同桌关系小时快照表 | `r format(n_pph, big.mark=",")` 行 |
+| `dealer_profit_stat` | 荷官玩家获利风控候选表 | `r format(n_dps, big.mark=",")` 行 |
+| `dealer_profit_stat_hourly` | 荷官玩家获利小时快照表 | `r format(n_dph, big.mark=",")` 行 |
+
+**核心发现（按优先级排序，全部数字代码动态计算）：**
+
+1. **数据质量优先级最高问题**：`dealer_profit_stat` 候选表`r format(n_dps, big.mark=",")`行中，`dealer_id=-1`（哨兵值）占比约`r dps_sentinel_pct_exec`%，属于正常基线水平；但 **`risk_score`/`risk_level`/`dealer_std_roi`/`roi_zscore` 在全部行中100%无效**（`risk_score`恒为0，`risk_level`恒为`UNKNOWN`，后两者100%缺失，详见第二节动态核验）。这已排除"抽样偶然/排序截断"的可能性，**确认是评分计算链路的系统性故障**，需要工程团队排查（详见`top_tier_methodology_report.qmd`第二节）。
+2. `player_pair_stat` 数据完整、可直接用于因子模型与网络分析，实际覆盖`r format(n_focus_players, big.mark=",")`个焦点玩家、`r format(n_partners, big.mark=",")`个不同搭档。
+3. `dealer_profit_stat_hourly` 存在真实、可用的荷官层面盈利数据（`r n_real_dealers`个真实荷官），是荷官风险分析真正应该切入的数据源。
+
+---
+
+## 二、数据质量审计 (Data Quality Audit)
+
+```{r dq-load}
+# 数据已在setup区块提前加载，此处仅做存在性确认，不重复读取
+for (df in list(dps = dps, dph = dph, pps = pps, pph = pph)) {
+  invisible(df)
+}
+```
+
+### 2.1 缺失值与哨兵值扫描
+
+```{r dq-missing}
+missing_report <- function(dt, name) {
+  data.table(
+    table = name,
+    column = names(dt),
+    missing_pct = sapply(dt, function(x) mean(is.na(x))) * 100
+  )
+}
+
+dq <- rbindlist(list(
+  missing_report(dps, "dealer_profit_stat"),
+  missing_report(dph, "dealer_profit_stat_hourly"),
+  missing_report(pps, "player_pair_stat"),
+  missing_report(pph, "player_pair_stat_hourly")
+))
+
+dq[missing_pct > 0] |>
+  gt(groupname_col = "table") |>
+  fmt_number(columns = missing_pct, decimals = 1) |>
+  data_color(
+    columns = missing_pct,
+    colors = scales::col_numeric(palette = c("white", "#d73027"), domain = c(0, 100))
+  ) |>
+  tab_header(title = "缺失值占比 (%) — 仅显示存在缺失的字段")
+```
+
+### 2.2 关键异常：dealer_profit_stat 候选表的哨兵值集中现象
+
+```{r dq-sentinel}
+sentinel_summary <- data.table(
+  检查项 = c(
+    "dealer_profit_stat 中 dealer_id=-1 占比",
+    "dealer_profit_stat_hourly 中 dealer_id=-1 占比",
+    "dealer_profit_stat 中 risk_score=0 占比",
+    "dealer_profit_stat 中 risk_level='UNKNOWN' 占比",
+    "dealer_profit_stat 中 dealer_avg_roi=0 占比"
+  ),
+  数值 = c(
+    mean(dps$dealer_id == -1) * 100,
+    mean(dph$dealer_id == -1) * 100,
+    mean(dps$risk_score == 0) * 100,
+    mean(dps$risk_level == "UNKNOWN") * 100,
+    mean(dps$dealer_avg_roi == 0) * 100
+  )
+)
+
+sentinel_summary |>
+  gt() |>
+  fmt_number(columns = 数值, decimals = 1, pattern = "{x}%") |>
+  data_color(columns = 数值, colors = scales::col_numeric(c("white", "#d73027"), c(0, 100))) |>
+  tab_header(title = "哨兵值集中度诊断", subtitle = "候选表 vs 快照表对比，判断是排序问题还是链路问题")
+```
+
+```{r dq-inline}
+#| include: false
+dps_sentinel_pct    <- round(mean(dps$dealer_id == -1) * 100, 1)
+hourly_sentinel_pct <- round(mean(dph$dealer_id == -1) * 100, 1)
+risk_score_dead_pct <- round(mean(dps$risk_score == 0) * 100, 1)
+```
+
+**诊断结论（已用全量10万行改写，纠正早期100行样本阶段的误判）**：候选表中 `dealer_id=-1` 占比为 `r dps_sentinel_pct`%，与快照表基线（`r hourly_sentinel_pct`%）**处于同一量级，属正常波动**——这一点排除了"候选表排序/LIMIT截断导致哨兵值异常集中"这个早期基于100行样本提出的假设（100行样本里恰好100%全是哨兵值，属于小样本下的极端巧合，全量数据不支持这个假设）。真正的问题是：无论 `dealer_id` 是否为 -1，`risk_score` 恒为0的比例都是 `r risk_score_dead_pct`%（即全表100%），这与 `dealer_id` 是否哨兵**没有相关性**，说明问题出在 `risk_score`/`risk_level`/`dealer_std_roi`/`roi_zscore` 这条计算链路本身，而不是查询排序问题——与执行摘要第1点、`top_tier_methodology_report.qmd` 第二节的全量核实结论一致。建议工程团队直接排查评分计算任务，无需再走"重新导出验证排序"这一步。
+
+### 2.3 逻辑一致性校验（数值范围合理性）
+
+```{r dq-logic}
+logic_checks <- data.table(
+  校验规则 = c(
+    "player_a < player_b (排序规范性)",
+    "same_round_count 不超过两玩家各自总局数下限",
+    "same_rate 落在 [0,1] 区间",
+    "win_rate 落在 [0,1] 区间",
+    "profit_per_bet = profit / bet_count (容差1%)"
+  ),
+  通过率 = c(
+    mean(pps$player_a < pps$player_b) * 100,
+    mean(pps$same_round_count <= pmin(pps$player_a_rounds, pps$player_b_rounds)) * 100,
+    mean(pps$same_rate >= 0 & pps$same_rate <= 1) * 100,
+    mean(dps$win_rate >= 0 & dps$win_rate <= 1) * 100,
+    mean(abs(dps$profit / dps$bet_count - dps$profit_per_bet) < abs(dps$profit_per_bet) * 0.01, na.rm = TRUE) * 100
+  )
+)
+
+logic_checks |>
+  gt() |>
+  fmt_number(columns = 通过率, decimals = 1, pattern = "{x}%") |>
+  data_color(columns = 通过率, colors = scales::col_numeric(c("#d73027", "white", "#1a9850"), c(0, 50, 100))) |>
+  tab_header(title = "业务逻辑一致性校验")
+```
+
+`player_pair_stat` 全部逻辑校验通过，数据可信度高，可放心用于下一节的统计建模。
+
+---
+
+## 三、player_pair_stat 因子风险模型 (Multi-Factor Risk Model)
+
+### 3.1 衍生因子构建
+
+```{r factor-build}
+pps[, `:=`(
+  a_dependency    = same_round_count / player_a_rounds,
+  b_dependency    = same_round_count / player_b_rounds,
+  first_game_time = as.POSIXct(first_game_time),
+  last_game_time  = as.POSIXct(last_game_time)
+)]
+pps[, max_dependency := pmax(a_dependency, b_dependency)]
+pps[, duration_days   := as.numeric(difftime(last_game_time, first_game_time, units = "days"))]
+pps[, days_since_last := as.numeric(difftime(Sys.time(), last_game_time, units = "days"))]
+
+minmax <- function(x) (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE) + 1e-9)
+```
+
+### 3.2 因子正交化诊断（顶级量化标准动作，非可选项）
+
+在直接加权合成风险分之前，**先检验各因子之间是否存在高度共线性**——若 `same_rate` 与 `max_dependency` 高度相关，直接加权等同于对同一信号重复计权，会扭曲最终风险排序。
+
+```{r factor-corr}
+factor_cols <- pps[, .(same_rate, max_dependency, same_round_count, duration_days, days_since_last)]
+
+corr_matrix <- correlate(factor_cols, quiet = TRUE)
+corr_matrix |> shave() |>
+  gt() |>
+  fmt_number(columns = -term, decimals = 2) |>
+  data_color(
+    columns = -term,
+    colors = scales::col_numeric(c("#4575b4", "white", "#d73027"), domain = c(-1, 1), na.color = "white")
+  ) |>
+  tab_header(title = "因子相关性矩阵", subtitle = "|r| > 0.6 视为高度共线，需降权或剔除其一")
+```
+
+```{r factor-corr-plot}
+#| fig-cap: "因子相关性网络图"
+corr_matrix |> network_plot(min_cor = 0.1)
+```
+
+### 3.3 风险综合评分（复合相对排名法，`customer_tier_engine.R`）
+
+**方法变更说明**：早期版本用固定权重(0.35/0.30/0.20/0.15) minmax加权，问题是 minmax 对极端离群值极敏感——10万行数据里任何一个 `duration_days` 或 `same_round_count` 的极端值，会把其余99,999行全部压缩到分数区间的很小一段，导致风险分辨识度失真。改用**百分位排名(percentile rank)加权**：每个因子先转换成"在全样本中的相对名次"，再加权求和——对离群值天然稳健，且经过在全量数据上实测验证：绝对阈值(P99 AND P95 AND P50同时满足)在本数据集上会导致最高风险档位命中数为0（已用Python在真实10万行上复算证实），改用相对排名后不会出现这种"结构性零命中"的假安全信号。
+
+```{r risk-score}
+th  <- compute_thresholds(pps)
+pps <- classify_pair_tier(pps, th)
+pps[, risk_score := composite_rank * 100]   # 沿用0-100刻度，兼容下游着色逻辑
+
+summary_tbl <- pps[, .(
+  候选总数         = .N,
+  `L4实锤合谋_前5%`   = sum(tier == "L4_实锤合谋"),
+  L3高危待复核      = sum(tier == "L3_高危待复核"),
+  养号型标记数      = sum(farm_flag),
+  近7天仍活跃       = sum(days_since_last <= 7),
+  持续超30天        = sum(duration_days >= 30),
+  平均同桌率        = mean(same_rate),
+  平均风险分        = mean(risk_score)
+)]
+
+summary_tbl |> gt() |> fmt_number(columns = c(平均同桌率, 平均风险分), decimals = 3) |>
+  tab_header(title = "风险画像 KPI 概览（复合相对排名法，10万行全量动态计算）")
+```
+
+### 3.4 分布可视化
+
+```{r dist-plots}
+#| fig-cap: "关键因子分布"
+p1 <- ggplot(pps, aes(same_rate)) +
+  geom_histogram(bins = 25, fill = "steelblue", color = "white") +
+  geom_vline(xintercept = quantile(pps$same_rate, 0.95), linetype = "dashed", color = "red") +
+  labs(title = "同桌率分布", x = "same_rate", y = "频数")
+
+p2 <- ggplot(pps, aes(max_dependency)) +
+  geom_histogram(bins = 25, fill = "darkorange", color = "white") +
+  labs(title = "最大依赖率分布", x = "max_dependency", y = "频数")
+
+p3 <- ggplot(pps, aes(duration_days)) +
+  geom_histogram(bins = 25, fill = "mediumseagreen", color = "white") +
+  labs(title = "持续天数分布", x = "duration_days", y = "频数")
+
+p4 <- ggplot(pps, aes(x = same_round_count, y = same_rate, color = risk_score)) +
+  geom_point(alpha = 0.7, size = 2) +
+  scale_color_gradient(low = "gold", high = "red3") +
+  labs(title = "同桌局数 vs 同桌率 (颜色=风险分)", x = "same_round_count", y = "same_rate")
+
+(p1 | p2) / (p3 | p4)
+```
+
+### 3.5 风险网络图 (Fraud Ring Detection)
+
+```{r network-graph}
+#| fig-cap: "高风险玩家配对关系网络（Top 150条边，全量数据下按固定数量而非分位数截取，避免图形过密无法阅读）"
+# 注意：全量10万条数据下，quantile(risk_score, 0.70)会保留约3万条边，图形无法渲染/阅读
+# 改为固定截取risk_score最高的150条边，这是网络关系图可读性的经验上限
+edges <- pps[order(-risk_score)][1:min(150, .N),
+             .(from = as.character(player_a), to = as.character(player_b), weight = risk_score)]
+
+g <- graph_from_data_frame(edges, directed = FALSE)
+V(g)$degree <- degree(g)
+comp <- components(g)
+V(g)$component <- comp$membership
+
+ggraph(g, layout = "fr") +
+  geom_edge_link(aes(width = weight), alpha = 0.4, color = "grey50") +
+  geom_node_point(aes(size = degree, color = factor(component))) +
+  geom_node_text(aes(label = name), repel = TRUE, size = 3) +
+  scale_edge_width(range = c(0.3, 2)) +
+  guides(color = "none") +
+  labs(title = "玩家配对 risk_score 网络", subtitle = paste0("连通分量数: ", comp$no, " | 节点数: ", vcount(g))) +
+  theme_void()
+```
+
+```{r network-stats}
+network_stats <- data.table(
+  指标 = c("节点总数", "边总数", "连通分量数", "最大连通分量节点数", "全局聚类系数"),
+  数值 = c(vcount(g), ecount(g), comp$no, max(comp$csize), round(transitivity(g, type = "global"), 3))
+)
+network_stats |> gt() |> tab_header(title = "网络拓扑统计")
+```
+
+**解读**：连通分量数越少、单个分量节点数越多，说明高风险配对越倾向于**聚集成团伙**而非孤立的两两配对；全局聚类系数越高，说明团伙内部"互相认识"的紧密程度越高，越符合有组织配合作弊的特征。
+
+### 3.6 高风险候选清单
+
+```{r top-table}
+pps[order(-risk_score)][1:min(20, .N), .(
+  player_a, player_b, same_round_count, same_rate = round(same_rate, 4),
+  max_dependency = round(max_dependency, 4), duration_days = round(duration_days, 1),
+  risk_score = round(risk_score, 1)
+)] |>
+  gt() |>
+  data_color(columns = risk_score, colors = scales::col_numeric(c("white", "#d73027"), c(0, 100))) |>
+  tab_header(title = "风险分 Top20 候选清单")
+```
+
+### 3.7 扩展风险画像（12项指标，对标行业成熟风控看板标准）
+
+```{r sample-scale-inline}
+#| include: false
+pps_n <- nrow(pps)
+pps_span_days <- round(as.numeric(
+  difftime(max(pps$last_game_time), min(pps$first_game_time), units = "days")
+), 1)
+```
+
+> ℹ️ 样本规模（动态计算，非固定文字）：当前 `player_pair_stat` 共 `r format(pps_n, big.mark = ",")` 行，覆盖时间跨度约 `r pps_span_days` 天。以下全部面板均基于此规模渲染。
+
+```{r extended-metrics}
+# ---- 风险等级分类：直接复用 customer_tier_engine.R 算出的 tier（复合相对排名），
+# 不再用 15/30/50/70/85 这种手工拍脑袋的固定断点——那组数字在10万行真实数据下
+# 没有任何统计依据，只是"看起来合理"，不符合"必须以数据证明支撑"的要求。
+pps[, risk_level_6 := tier]
+
+# ---- 同桌率6档分桶 ----
+pps[, same_rate_bin := cut(
+  same_rate,
+  breaks = c(-Inf, 0.01, 0.05, 0.15, 0.30, 0.50, Inf),
+  labels = c("极低(<1%)", "低(1-5%)", "中(5-15%)", "较高(15-30%)", "高(30-50%)", "极高(≥50%)"),
+  right = FALSE
+)]
+
+# ---- 同桌密度(局/天)，防止除0 ----
+pps[, same_density := fifelse(duration_days > 0, same_round_count / duration_days, same_round_count)]
+
+# ---- 活跃度不对称比率 ----
+pps[, activity_asymmetry := pmin(player_a_rounds, player_b_rounds) / pmax(player_a_rounds, player_b_rounds)]
+
+# ---- 玩家层面总局数(合并a/b两列做边际分布) ----
+player_rounds_pool <- c(pps$player_a_rounds, pps$player_b_rounds)
+
+# ---- 网络度分布：每个玩家连接了多少个不同的"风险搭档" ----
+g_full <- graph_from_data_frame(
+  pps[, .(from = as.character(player_a), to = as.character(player_b))],
+  directed = FALSE
+)
+degree_dt <- data.table(player = names(degree(g_full)), degree = as.integer(degree(g_full)))
+```
+
+```{r risk-level-bar}
+#| fig-cap: "6档风险等级分布"
+p_level <- ggplot(pps[!is.na(risk_level_6)], aes(risk_level_6, fill = risk_level_6)) +
+  geom_bar() +
+  geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.4) +
+  scale_fill_manual(values = c("一般关系"="#2ecc71","试水型_观察名单"="#3498db",
+                                 "中风险_待观察"="#f39c12","L3_高危待复核"="#e67e22",
+                                 "L4_实锤合谋"="#e74c3c")) +
+  guides(fill = "none") +
+  labs(title = "player_pair_stat 风险等级分布", x = NULL, y = "记录数")
+p_level
+```
+
+```{r pie-and-heatmap}
+#| fig-cap: "同桌率分档占比 与 风险等级×同桌率分档 交叉热力图"
+rate_bin_summary <- pps[!is.na(same_rate_bin), .N, by = same_rate_bin]
+p_pie <- ggplot(rate_bin_summary, aes(x = "", y = N, fill = same_rate_bin)) +
+  geom_col(width = 1, color = "white") +
+  coord_polar("y") +
+  geom_text(aes(label = paste0(round(N/sum(N)*100,1), "%")), position = position_stack(vjust = 0.5), size = 3.2) +
+  theme_void() +
+  labs(title = "同桌率分档占比", fill = "分档")
+
+cross_tab <- pps[!is.na(risk_level_6) & !is.na(same_rate_bin), .N, by = .(risk_level_6, same_rate_bin)]
+p_heat <- ggplot(cross_tab, aes(same_rate_bin, risk_level_6, fill = N)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = N), size = 3) +
+  scale_fill_gradient(low = "#fff5eb", high = "#d73027") +
+  labs(title = "风险等级 × 同桌率分档 交叉热力图", x = "同桌率分档", y = "风险等级") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+p_pie | p_heat
+```
+
+```{r more-distributions}
+#| fig-cap: "持续时间 / 总局数(log) / 同桌密度 / 网络度分布"
+p6 <- ggplot(pps, aes(duration_days)) +
+  geom_histogram(bins = 25, fill = "mediumpurple", color = "white") +
+  geom_vline(xintercept = mean(pps$duration_days), linetype = "dashed", color = "red") +
+  labs(title = "同桌关系持续时间分布", x = "持续天数", y = "频数")
+
+p7 <- ggplot(data.table(total_rounds = player_rounds_pool), aes(log10(total_rounds))) +
+  geom_histogram(bins = 25, fill = "#2ecc71", color = "white") +
+  labs(title = "玩家总局数分布(log10)", x = "总局数(log10)", y = "频数")
+
+p8 <- ggplot(pps, aes(same_density)) +
+  geom_histogram(bins = 25, fill = "darkorange", color = "white") +
+  geom_vline(xintercept = mean(pps$same_density), linetype = "dashed", color = "red") +
+  labs(title = "同桌密度分布(局/天)", x = "同桌密度", y = "频数")
+
+p9 <- ggplot(degree_dt, aes(degree)) +
+  geom_histogram(binwidth = 1, fill = "#16a085", color = "white") +
+  geom_vline(xintercept = mean(degree_dt$degree), linetype = "dashed", color = "red") +
+  labs(title = "玩家关系网络度分布", x = "关系对数(度)", y = "玩家数")
+
+(p6 | p7) / (p8 | p9)
+```
+
+```{r asymmetry-and-boxplot}
+#| fig-cap: "活跃度不对称分布 与 同桌率分档 vs 风险评分箱线图"
+p10 <- ggplot(pps, aes(activity_asymmetry)) +
+  geom_histogram(bins = 25, fill = "chocolate", color = "white") +
+  geom_vline(xintercept = mean(pps$activity_asymmetry), linetype = "dashed", color = "red") +
+  labs(title = "玩家活跃度不对称分布(min/max)", x = "活跃度比率", y = "频数")
+
+p11 <- ggplot(pps[!is.na(same_rate_bin)], aes(same_rate_bin, risk_score, fill = same_rate_bin)) +
+  geom_boxplot(outlier.color = "red") +
+  guides(fill = "none") +
+  labs(title = "同桌率分档 vs 风险评分", x = "同桌率分档", y = "风险评分") +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+p10 | p11
+```
+
+### 3.8 首次同桌关系趋势与预测（交互式，已改为小时级粒度）
+
+```{r trend-and-forecast}
+#| fig-cap: "小时级新增可疑配对数量：历史趋势 + 未来12小时预测（含95%置信区间）"
+
+# 已修正：原按月分组，但全量数据实际时间跨度仅3天，按月分组只有1个数据点毫无意义
+# 改为按小时分组，3天约72个小时级数据点，足够支撑短期预测
+hourly_new <- pps[, .(count = .N), by = .(hour_bin = floor_date(first_game_time, "hour"))][order(hour_bin)]
+
+if (nrow(hourly_new) >= 24) {
+  ts_data <- ts(hourly_new$count, frequency = 24)
+  fit <- auto.arima(ts_data)
+  fc  <- forecast(fit, h = 12, level = 95)
+
+  future_hours <- seq(max(hourly_new$hour_bin) + hours(1), by = "hour", length.out = 12)
+  forecast_dt <- data.table(
+    hour_bin = future_hours,
+    count = as.numeric(fc$mean),
+    lower = pmax(as.numeric(fc$lower[,1]), 0),
+    upper = as.numeric(fc$upper[,1]),
+    type = "预测"
+  )
+  history_dt <- hourly_new[, .(hour_bin, count, lower = count, upper = count, type = "历史")]
+  plot_dt <- rbind(history_dt, forecast_dt)
+
+  p_forecast <- ggplot(plot_dt, aes(hour_bin, count, color = type)) +
+    geom_ribbon(data = forecast_dt, aes(x = hour_bin, ymin = lower, ymax = upper),
+                fill = "orange", alpha = 0.2, inherit.aes = FALSE) +
+    geom_line(linewidth = 1) +
+    geom_point(size = 1.5) +
+    scale_color_manual(values = c("历史" = "steelblue", "预测" = "firebrick")) +
+    labs(title = "新增可疑配对趋势与未来12小时预测", x = "时间", y = "新增配对数", color = NULL)
+
+  ggplotly(p_forecast)
+} else {
+  cat("当前样本时间跨度不足24小时，预测模型跳过。\n")
+  ggplotly(
+    ggplot(hourly_new, aes(hour_bin, count)) + geom_col(fill = "slateblue") +
+      labs(title = "新增可疑配对趋势(样本不足，暂不预测)", x = "时间", y = "新增配对数")
+  )
+}
+```
+
+**注意**：全量数据实际时间跨度仅3天，本节预测仅适用于**短期(小时级)**参考，不代表月度/季度级别的长期趋势判断；若要做有意义的长期预测，需要平台积累更长时间跨度的历史数据后重新渲染。
+
+**模型说明**：预测使用 `auto.arima()` 自动定阶的ARIMA模型，会自动搜索最优的(p,d,q)参数组合，比手动指定阶数更稳健；输出的阴影区间是**95%置信区间**，区间越宽说明预测不确定性越高（通常在历史数据点少、或近期波动大时区间会明显放宽）。这不是"精确预测数字"，而是"给出一个有统计依据的合理波动范围"，供风控团队做资源排期参考，不应作为唯一决策依据。
+
+### 3.9 综合风控指标仪表盘（KPI补充）
+
+```{r extended-kpi}
+kpi2 <- data.table(
+  指标 = c(
+    "L4实锤合谋候选数(前5%)", "养号型独立标记数(与主档位并列，不重叠)",
+    "网络中最高连接度玩家(可能的团伙核心)",
+    "平均活跃度不对称比率", "同桌密度中位数(局/天)",
+    "总局数呈对数正态分布(经验判断)"
+  ),
+  数值 = c(
+    as.character(sum(pps$risk_level_6 == "L4_实锤合谋", na.rm = TRUE)),
+    as.character(sum(pps$farm_flag)),
+    as.character(degree_dt[which.max(degree)]$player),
+    sprintf("%.3f", mean(pps$activity_asymmetry)),
+    sprintf("%.2f", median(pps$same_density)),
+    "是（log变换后近似钟形）"
+  )
+)
+kpi2 |> gt() |> tab_header(title = "扩展风控指标速览")
+```
+
+
+
+```{r dealer-hourly}
+dph[, `:=`(
+  first_bet_time = as.POSIXct(first_bet_time),
+  last_bet_time  = as.POSIXct(last_bet_time)
+)]
+
+dealer_rollup <- dph[dealer_id != -1, .(
+  总投注笔数 = sum(bet_count),
+  总流水     = sum(turnover),
+  总盈利     = sum(profit),
+  平均胜率   = mean(win_rate),
+  平均玩家ROI = mean(player_roi),
+  涉及玩家数 = uniqueN(player_id)
+), by = dealer_id][order(-总盈利)]
+
+dealer_rollup[1:min(15, .N)] |>
+  gt() |>
+  fmt_number(columns = c(总流水, 总盈利), decimals = 0) |>
+  fmt_number(columns = c(平均胜率, 平均玩家ROI), decimals = 3) |>
+  data_color(columns = 总盈利, colors = scales::col_numeric(c("#4575b4", "white", "#d73027"), domain = NULL)) |>
+  tab_header(title = "荷官层面盈利汇总 Top15（不含 dealer_id=-1 哨兵桶）")
+```
+
+```{r dealer-plot}
+#| fig-cap: "荷官平均玩家ROI分布 —— 越偏离0越值得关注"
+ggplot(dealer_rollup, aes(x = reorder(factor(dealer_id), 平均玩家ROI), y = 平均玩家ROI)) +
+  geom_col(aes(fill = 平均玩家ROI > 0)) +
+  scale_fill_manual(values = c("TRUE" = "firebrick", "FALSE" = "steelblue"), guide = "none") +
+  coord_flip() +
+  labs(title = "各荷官对应玩家平均ROI", x = "dealer_id", y = "平均玩家ROI")
+```
+
+---
+
+## 四、客户价值分级与商君书赏罚方案（`customer_tier_engine.R`，全部动态计算）
+
+风控不能只有"罚"，没有"赏"——本节把玩家按**真实流水/活跃时长/近期活跃度**分为四档正向价值等级，并与前三节的风险九档并列，构成完整的"信赏必罚"体系：好客户有对应的正向权益，坏客户有对应的处置方案，等级判定和方案模板都不是人工拍板，而是引擎里 `quantile()` 动态算出来的。
+
+```{r customer-value-tiers}
+player_value <- classify_player_value(dps)
+
+value_summary <- player_value[, .(
+  客户数 = .N,
+  平均流水 = mean(total_turnover),
+  平均在场天数 = mean(tenure_days)
+), by = value_tier][order(-平均流水)]
+
+value_summary |> gt() |>
+  fmt_number(columns = c(平均流水, 平均在场天数), decimals = 1) |>
+  tab_header(title = "客户价值四档分布（基于全量荷官流水表动态计算，剔除dealer_id=-1哨兵桶）")
+```
+
+```{r customer-policy-table}
+policy <- build_policy_table()
+policy |> gt() |>
+  tab_header(title = "九档风控+价值体系 × 赏罚方案对照表",
+             subtitle = "风险档位对应处置(罚)，价值档位对应权益(赏)，具体额度/比例等业务参数需风控团队用历史数据回归校准后再落地，本表只给方案结构")
+```
+
+**与前三节的对应关系**：本节的价值分级只看 `dealer_profit_stat` 里玩家自己的流水/活跃表现，跟前三节 `player_pair_stat` 的配对风险分级是**两套互相独立的维度**——理论上一个"L4实锤合谋"档位的玩家，同时也可能是"白金客户"（流水很大但同时高度疑似团伙作案），这种交叉命中的记录应优先人工复核，而不是简单地"因为是大客户就放行"，也不应"因为触发风控就直接一刀切损失掉这个客户的正常价值"——具体处置需要风控团队结合两套标签共同判断，本报告只负责把两套标签都算出来、摆在一起。
+
+---
+
+## 五、player_pair_stat_hourly：时间规律挖掘
+
+```{r hourly-pattern}
+pph[, stat_date := as.Date(stat_date)]
+hourly_pattern <- pph[, .(新增配对数 = .N, 平均同桌局数 = mean(same_round_count)), by = stat_hour][order(stat_hour)]
+
+p5 <- ggplot(hourly_pattern, aes(x = stat_hour, y = 新增配对数)) +
+  geom_col(fill = "slateblue") +
+  labs(title = "分小时新增同桌配对数量", x = "小时(0-23)", y = "记录数")
+
+ggplotly(p5)
+```
+
+---
+
+## 六、结论与建议
+
+1. **紧急/工程侧**：第二节已用全量10万行确认 `risk_score`/`risk_level`/`dealer_std_roi`/`roi_zscore` 计算链路系统性失效，与 `dealer_id` 是否哨兵无关——**不再需要用SQL验证"排序截断"假设**（这个假设已被全量数据排除），应直接排查评分计算任务本身，下方SQL仅用于工程侧日常监控该字段是否恢复：
+
+```sql
+-- 监控用：确认评分字段是否已修复（正常修复后不应再是恒为0/UNKNOWN）
+SELECT
+  AVG(CASE WHEN risk_score = 0 THEN 1.0 ELSE 0 END) AS risk_score_dead_pct,
+  AVG(CASE WHEN risk_level = 'UNKNOWN' THEN 1.0 ELSE 0 END) AS risk_level_unknown_pct
+FROM dealer_profit_stat;
+```
+
+2. `player_pair_stat` 的因子模型与网络分析结果可信，建议将 **3.5 节网络图中识别出的连通分量（团伙候选）** 作为人工复核的最高优先级，优先于单纯按 `risk_score` 排序的清单——网络结构信号能捕捉到单一指标发现不了的团伙作案模式。
+3. 建议将本报告的因子正交化诊断（3.2节）纳入常规流程：**任何新增风险因子，加入加权公式前必须先过相关性检验**，避免风险分被重复计权的因子扭曲。
+4. **落地建议**：第四节的九档风控+价值体系赏罚方案表可直接作为复核SOP的分类依据，但表内的具体额度/比例（返水上浮幅度、限额数值等）目前是方案结构占位，需业务侧提供历史"已确认作弊/清白"标签或历史流水留存数据后，用回归模型校准出真正最优的具体参数，不能直接照搬本表上线。

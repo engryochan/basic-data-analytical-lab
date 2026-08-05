@@ -1,0 +1,208 @@
+---
+title: "大数据数据库入门心得"
+format: html
+---
+
+查询平台上所有数据库信息蓝图
+
+```{sql}
+SELECT * FROM information_schema.schemata;
+```
+
+查看所有数据库
+
+```{sql}
+SELECT
+    schema_name
+FROM information_schema.schemata
+ORDER BY schema_name;
+```
+
+查看所有表
+
+```{sql}
+SELECT
+    table_schema,
+    table_name
+FROM information_schema.tables
+ORDER BY table_schema,
+         table_name;
+```
+
+查看某个 Schema
+
+```{sql}
+SELECT
+    table_name
+FROM information_schema.tables
+WHERE table_schema='ods_mariadb_2b'
+ORDER BY table_name;
+```
+
+查看所有字段
+
+```{sql}
+SELECT
+    table_schema,
+    table_name,
+    ordinal_position,
+    column_name,
+    data_type,
+    column_type,
+    is_nullable,
+    column_key,
+    extra,
+    column_comment
+FROM information_schema.columns
+ORDER BY
+    table_schema,
+    table_name,
+    ordinal_position;
+```
+
+添加一列正名
+
+```{sql}
+WITH conflict_check AS (
+    -- 找出"同一个column_name，在不同表里column_comment不一样"的冲突字段
+    -- (排除id/status/type这类通用字段名——不同表本来就该不同，不算陷阱，
+    --  跟之前R/Python版本用的排除清单完全一致)
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema = 'ods_mariadb_2b'   -- 视实际要查的库调整
+      AND column_name NOT IN (
+          '__source_pk','dt','source_db','source_table','ods_table_name','sync_time',
+          'id','status','type','name','time','remark','code','currency','sn',
+          'operator','url','money','addtime','lastmodifytime','ip','category','gid','mid'
+      )
+    GROUP BY column_name
+    HAVING COUNT(DISTINCT column_comment) > 1
+)
+SELECT
+    c.table_schema,
+    c.table_name,
+    c.ordinal_position,
+    c.column_name,
+    c.data_type,
+    c.column_type,
+    c.is_nullable,
+    c.column_key,
+    c.extra,
+    c.column_comment,
+    CASE
+        -- 已在方案里标准化使用的字段(对照qmd 1.5节构建global_data的真实映射)
+        WHEN c.table_name='ods_a168_bet02' AND c.column_name='bet01' THEN '✅bet_id(注單編號)'
+        WHEN c.table_name='ods_a168_bet02' AND c.column_name='bet02' THEN '✅game_type(遊戲類別編號)'
+        WHEN c.table_name='ods_a168_bet02' AND c.column_name='bet05' THEN '✅player_id(會員編號)'
+        WHEN c.table_name='ods_a168_bet02' AND c.column_name='bet08' THEN '✅start_time(下注時間)'
+        WHEN c.table_name='ods_a168_bet02' AND c.column_name='bet13' THEN '✅bet_amount(下注金額)'
+        WHEN c.table_name='ods_a168_bet02' AND c.column_name='bet14' THEN '✅win_amount(派彩)'
+        WHEN c.table_name='ods_a168_bet02' AND c.column_name='bet39' THEN '✅table_id(桌子編號)'
+        WHEN c.table_name='ods_a168_bet02' AND c.column_name='eid'   THEN '✅dealer_id(荷官)'
+        WHEN c.table_name='ods_a168_bet01' AND c.column_name='bet14' THEN '✅退水％數(注意:與bet02同編號但含義不同,非win_amount)'
+        WHEN c.table_name='ods_a168_bet01' AND c.column_name='bet30' THEN '✅取消單(注意:與bet02同編號但含義不同,非LV3退水%數)'
+        WHEN c.table_name='ods_a168_bet01' AND c.column_name='bet31' THEN '✅桌子編號(注意:bet02的table_id用的是bet39)'
+        WHEN c.table_name='ods_a168_payment_order' AND c.column_name='mid' THEN '✅player_id候選橋接欄位(數值型mid,尚未實測驗證覆蓋率)'
+        WHEN c.table_name='ods_a168_wallet_dtl' AND c.column_name='user' THEN '✅帳號字串(已實測與player_id交集0%,不可直接join)'
+        -- 同名异义冲突字段：标明是哪张表专属含义
+        WHEN cc.column_name IS NOT NULL THEN
+            CONCAT('⚠️[', c.table_name, '专属]',
+                   TRIM(REGEXP_REPLACE(COALESCE(c.column_comment,''), '^source_type=[^;]*;\\s*', '')))
+        -- 其余：清掉技术前缀，只留人看得懂的说明；没注释的就标"未注释"
+        ELSE NULLIF(TRIM(REGEXP_REPLACE(COALESCE(c.column_comment,''), '^source_type=[^;]*;\\s*', '')), '')
+    END AS 正名
+FROM information_schema.columns c
+LEFT JOIN conflict_check cc ON cc.column_name = c.column_name
+WHERE c.table_schema = 'ods_mariadb_2b'
+ORDER BY c.table_schema, c.table_name, c.ordinal_position;
+```
+
+查看索引
+
+```{sql}
+SELECT * FROM information_schema.statistics;
+```
+
+查看主键
+
+```{sql}
+SELECT * FROM information_schema.key_column_usage;
+```
+
+第一版：扫描全部 ODS 表的同名字段
+
+在 Superset SQL Lab / StarRocks 中可以先用这一版：
+
+```{sql}
+
+SELECT
+    column_name,
+
+    COUNT(DISTINCT table_name) AS table_count,
+
+    GROUP_CONCAT(
+        DISTINCT CONCAT(
+            table_name,
+            ' → ',
+            COALESCE(column_comment, '无字段注释')
+        )
+        SEPARATOR ' | '
+    ) AS definitions
+
+FROM information_schema.columns
+
+WHERE table_schema = 'ods_mariadb_2b'
+
+GROUP BY
+    column_name
+
+HAVING
+    COUNT(DISTINCT table_name) > 1
+
+ORDER BY
+    table_count DESC,
+    column_name;
+```
+
+```{sql}
+
+
+```
+
+```{sql}
+
+
+```
+
+```{sql}
+
+
+```
+
+```{sql}
+
+
+```
+
+```{sql}
+
+
+```
+
+```{sql}
+
+
+```
+
+```{sql}
+
+
+```
+
+```{sql}
+
+
+```
+
+
+

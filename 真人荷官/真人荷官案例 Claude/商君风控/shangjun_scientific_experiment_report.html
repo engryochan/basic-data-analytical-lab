@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>商君风控科学实验报告：时间外回测、多模型评价与商业政策模拟</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="shangjun_scientific_experiment_report_files/libs/clipboard/clipboard.min.js"></script>
+<script src="shangjun_scientific_experiment_report_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="shangjun_scientific_experiment_report_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="shangjun_scientific_experiment_report_files/libs/quarto-html/popper.min.js"></script>
+<script src="shangjun_scientific_experiment_report_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="shangjun_scientific_experiment_report_files/libs/quarto-html/anchor.min.js"></script>
+<link href="shangjun_scientific_experiment_report_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="shangjun_scientific_experiment_report_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="shangjun_scientific_experiment_report_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="shangjun_scientific_experiment_report_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="shangjun_scientific_experiment_report_files/libs/bootstrap/bootstrap-efbb37e9afcc02144ebbc7afd12a776f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#摘要" id="toc-摘要" class="nav-link active" data-scroll-target="#摘要">摘要</a></li>
+  <li><a href="#实验原则" id="toc-实验原则" class="nav-link" data-scroll-target="#实验原则">1. 实验原则</a>
+  <ul class="collapse">
+  <li><a href="#时间外测试" id="toc-时间外测试" class="nav-link" data-scroll-target="#时间外测试">1.1 时间外测试</a></li>
+  <li><a href="#mase-的适用边界" id="toc-mase-的适用边界" class="nav-link" data-scroll-target="#mase-的适用边界">1.2 MASE 的适用边界</a></li>
+  </ul></li>
+  <li><a href="#现有模型体系的定位" id="toc-现有模型体系的定位" class="nav-link" data-scroll-target="#现有模型体系的定位">2. 现有模型体系的定位</a></li>
+  <li><a href="#对已有实验结果的科学判断" id="toc-对已有实验结果的科学判断" class="nav-link" data-scroll-target="#对已有实验结果的科学判断">3. 对已有实验结果的科学判断</a></li>
+  <li><a href="#商业政策模拟" id="toc-商业政策模拟" class="nav-link" data-scroll-target="#商业政策模拟">4. 商业政策模拟</a></li>
+  <li><a href="#推荐实验矩阵" id="toc-推荐实验矩阵" class="nav-link" data-scroll-target="#推荐实验矩阵">5. 推荐实验矩阵</a></li>
+  <li><a href="#会员与留存模拟" id="toc-会员与留存模拟" class="nav-link" data-scroll-target="#会员与留存模拟">6. 会员与留存模拟</a></li>
+  <li><a href="#可信度等级" id="toc-可信度等级" class="nav-link" data-scroll-target="#可信度等级">7. 可信度等级</a></li>
+  <li><a href="#最终决策标准" id="toc-最终决策标准" class="nav-link" data-scroll-target="#最终决策标准">8. 最终决策标准</a></li>
+  <li><a href="#下一阶段真实实验" id="toc-下一阶段真实实验" class="nav-link" data-scroll-target="#下一阶段真实实验">9. 下一阶段真实实验</a></li>
+  <li><a href="#结论" id="toc-结论" class="nav-link" data-scroll-target="#结论">10. 结论</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">商君风控科学实验报告：时间外回测、多模型评价与商业政策模拟</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="摘要" class="level1">
+<h1>摘要</h1>
+<p>本报告将《商君风控基本概念》与 <code>top_tier_mthodology_report</code> 所要求的科学实验思想统一到一个可重复的风控研究框架中。核心原则是：<strong>不以单一模型指标代表商业价值，不以训练集表现代替真实预测能力，不以 MASE 取代生存分析指标，不虚构缺失的数据或实验结果</strong>。</p>
+<p>最终评价分为四层：</p>
+<ol type="1">
+<li><strong>预测层</strong>：MAE、RMSE、MASE（仅在确属时间序列预测任务时使用）。</li>
+<li><strong>生存层</strong>：Harrell/Uno C-index、time-dependent AUC、Brier、Integrated Brier Score（IBS）、校准。</li>
+<li><strong>风险识别层</strong>：PR-AUC、Recall@Top-K、Precision@Top-K、Lift、捕获曲线。</li>
+<li><strong>商业层</strong>：风险损失避免额、误伤成本、风控成本、会员留存损失、净收益、ROI。</li>
+</ol>
+</section>
+<section id="实验原则" class="level1">
+<h1>1. 实验原则</h1>
+<section id="时间外测试" class="level2">
+<h2 class="anchored" data-anchor-id="时间外测试">1.1 时间外测试</h2>
+<p>对于真实商业风控，推荐：</p>
+<p><code>训练期 → 验证期 → 时间外测试期</code></p>
+<p>严禁在同一时间窗口内随机切分后直接把结果当作未来表现。原因包括：</p>
+<ul>
+<li>玩家行为随时间漂移；</li>
+<li>dealer 风险随时间变化；</li>
+<li>规则上线后会改变数据生成机制；</li>
+<li>同一实体可能同时出现在训练与测试中；</li>
+<li>随机切分可能造成信息泄漏。</li>
+</ul>
+</section>
+<section id="mase-的适用边界" class="level2">
+<h2 class="anchored" data-anchor-id="mase-的适用边界">1.2 MASE 的适用边界</h2>
+<p>MASE 是时间序列预测误差尺度化指标。它非常适合比较需求、会员数、投注量、收入等时间序列预测，但<strong>不能单独作为 Cox、RSF、XGBoost survival 或二分类风控模型的核心精度标准</strong>。</p>
+<p>因此，本项目建议：</p>
+<ul>
+<li>会员数预测：MASE、sMAPE、RMSE；</li>
+<li>收入/盈亏预测：MASE、WAPE、RMSE；</li>
+<li>生存风险：C-index、IBS、Brier、time-dependent AUC；</li>
+<li>高风险识别：PR-AUC、Precision@K、Recall@K、Lift@K；</li>
+<li>商业政策：Net Benefit、ROI、Prevented Loss、Retention Impact。</li>
+</ul>
+</section>
+</section>
+<section id="现有模型体系的定位" class="level1">
+<h1>2. 现有模型体系的定位</h1>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>模型</th>
+<th>主要用途</th>
+<th>核心评价</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Cox</td>
+<td>风险排序、解释</td>
+<td>C-index、校准</td>
+</tr>
+<tr class="even">
+<td>RSF</td>
+<td>非线性风险</td>
+<td>C-index、IBS、AUC</td>
+</tr>
+<tr class="odd">
+<td>XGBoost Cox</td>
+<td>高预测能力风险评分</td>
+<td>C-index、时间外测试</td>
+</tr>
+<tr class="even">
+<td>Bayesian Hierarchical</td>
+<td>个体/群组异质性、不确定性</td>
+<td>后验、Rhat、ESS、校准</td>
+</tr>
+<tr class="odd">
+<td>Autoencoder</td>
+<td>无监督异常检测</td>
+<td>Precision@K、Recall@K、稳定性</td>
+</tr>
+<tr class="even">
+<td>Player-Pair Network</td>
+<td>协同与异常关系</td>
+<td>Lift、网络稳定性</td>
+</tr>
+<tr class="odd">
+<td>规则引擎</td>
+<td>业务执行</td>
+<td>捕获率、误伤率、净收益</td>
+</tr>
+<tr class="even">
+<td>Ensemble</td>
+<td>综合决策</td>
+<td>时间外综合表现</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="对已有实验结果的科学判断" class="level1">
+<h1>3. 对已有实验结果的科学判断</h1>
+<p>此前实验中 XGBoost Cox 在训练数据上得到 C-index 约 0.807。这个数字说明模型具有较强的<strong>样本内排序能力</strong>，但不能直接解释为真实上线后的 0.807。</p>
+<p>必须进一步验证：</p>
+<ul>
+<li>时间外 C-index；</li>
+<li>bootstrap 置信区间；</li>
+<li>时间窗口稳定性；</li>
+<li>不同会员群体的公平性；</li>
+<li>PSI / 数据漂移；</li>
+<li>calibration；</li>
+<li>Top 1%、5%、10% 的 Lift；</li>
+<li>风险政策实施后的业务反事实结果。</li>
+</ul>
+<p>此前 Bayesian 负二项模型出现 Rhat &gt; 1.05 和大量 divergent transitions，故不应把该模型的后验结果直接作为正式商业结论。应先解决收敛问题。</p>
+<p>此前 RSF 为节省内存使用 <code>forest = FALSE</code> 时，不能可靠执行后续森林预测。这种模型可用于探索，但不应作为最终线上预测模型。正式预测模型必须保存森林结构，或使用独立的资源充足环境重新训练。</p>
+</section>
+<section id="商业政策模拟" class="level1">
+<h1>4. 商业政策模拟</h1>
+<p>定义：</p>
+<p><code>Net Benefit = Prevented Loss - Intervention Cost - False Positive Cost - Retention Loss</code></p>
+<p>对以下政策进行比较：</p>
+<ul>
+<li>Policy A：不干预；</li>
+<li>Policy B：规则干预；</li>
+<li>Policy C：Cox/RSF/XGBoost；</li>
+<li>Policy D：Bayesian；</li>
+<li>Policy E：Ensemble。</li>
+</ul>
+<p>重点输出：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>指标</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Prevented Loss</td>
+<td>预计避免的风险损失</td>
+</tr>
+<tr class="even">
+<td>False Positive Cost</td>
+<td>正常会员被误伤的成本</td>
+</tr>
+<tr class="odd">
+<td>Retention Loss</td>
+<td>误伤导致的会员留存损失</td>
+</tr>
+<tr class="even">
+<td>Intervention Cost</td>
+<td>人工审核/限制/调查成本</td>
+</tr>
+<tr class="odd">
+<td>Net Benefit</td>
+<td>最终净收益</td>
+</tr>
+<tr class="even">
+<td>ROI</td>
+<td>风控投入的商业回报</td>
+</tr>
+<tr class="odd">
+<td>Recall@Top-K</td>
+<td>有限风控容量下捕获的风险比例</td>
+</tr>
+<tr class="even">
+<td>Precision@Top-K</td>
+<td>被干预会员中真正高风险的比例</td>
+</tr>
+<tr class="odd">
+<td>Lift@Top-K</td>
+<td>相对于随机抽查的风险提升倍数</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="推荐实验矩阵" class="level1">
+<h1>5. 推荐实验矩阵</h1>
+<p>建议至少运行：</p>
+<ul>
+<li>Top 1%</li>
+<li>Top 3%</li>
+<li>Top 5%</li>
+<li>Top 10%</li>
+<li>Top 20%</li>
+</ul>
+<p>并对每个策略进行 bootstrap 重采样，报告：</p>
+<ul>
+<li>点估计；</li>
+<li>95% CI；</li>
+<li>最坏情形；</li>
+<li>中位情形；</li>
+<li>最佳情形。</li>
+</ul>
+<p>最终选择不应只看最高收益，而应看：</p>
+<p><code>Risk-adjusted Net Benefit</code></p>
+<p>即在收益和不确定性之间取得平衡。</p>
+</section>
+<section id="会员与留存模拟" class="level1">
+<h1>6. 会员与留存模拟</h1>
+<p>会员数量和留存率必须来自真实历史数据，或来自经过验证的因果模型。不能仅凭风险模型的分类结果直接宣称“会员增加 X%”。</p>
+<p>推荐：</p>
+<ul>
+<li>会员留存：survival / churn model；</li>
+<li>会员数量：时间序列模型；</li>
+<li>干预效果：Difference-in-Differences、Causal Forest、Uplift Modeling；</li>
+<li>业务收益：Policy Evaluation / Off-policy Evaluation。</li>
+</ul>
+<p>如果没有真实干预实验，报告应明确区分：</p>
+<ol type="1">
+<li>观察性结果；</li>
+<li>模型预测；</li>
+<li>反事实模拟；</li>
+<li>随机对照实验结果。</li>
+</ol>
+<p>四者的证据等级不同。</p>
+</section>
+<section id="可信度等级" class="level1">
+<h1>7. 可信度等级</h1>
+<p>建议采用：</p>
+<p><strong>Level A</strong>：时间外测试 + 外部验证 + 真实 A/B 或准实验。</p>
+<p><strong>Level B</strong>：时间外测试 + bootstrap CI + 多模型一致性。</p>
+<p><strong>Level C</strong>：交叉验证 + 内部验证。</p>
+<p><strong>Level D</strong>：仅训练集指标。</p>
+<p>目前已获得的训练集 XGBoost Cox C-index ≈ 0.807，应暂定为 Level D，而不能直接作为商业上线证据。</p>
+</section>
+<section id="最终决策标准" class="level1">
+<h1>8. 最终决策标准</h1>
+<p>最终最优方案不是：</p>
+<blockquote class="blockquote">
+<p>精度最高的模型。</p>
+</blockquote>
+<p>而是：</p>
+<blockquote class="blockquote">
+<p>在时间外数据上稳定、校准良好、风险捕获能力高、误伤率可接受，并且在真实业务约束下具有最高 Risk-adjusted Net Benefit 的策略。</p>
+</blockquote>
+</section>
+<section id="下一阶段真实实验" class="level1">
+<h1>9. 下一阶段真实实验</h1>
+<p>建议按以下顺序执行：</p>
+<ol type="1">
+<li>固定数据版本；</li>
+<li>建立时间切分；</li>
+<li>重新训练所有候选模型；</li>
+<li>统一输出风险分数；</li>
+<li>计算时间外 C-index / IBS / Brier / AUC；</li>
+<li>计算 Top-K Precision / Recall / Lift；</li>
+<li>建立规则、模型、Ensemble 五种政策；</li>
+<li>计算业务净收益；</li>
+<li>建立会员留存与流失模型；</li>
+<li>使用 bootstrap 得到 95% CI；</li>
+<li>进行敏感性分析；</li>
+<li>选择最终政策；</li>
+<li>进入小规模灰度实验；</li>
+<li>最后才进行正式商业部署。</li>
+</ol>
+</section>
+<section id="结论" class="level1">
+<h1>10. 结论</h1>
+<p>本项目应当坚持“预测—风险—政策—业务”的闭环。</p>
+<p>最终科学结论应由以下证据共同支持：</p>
+<p><code>预测精度 + 风险识别 + 校准 + 时间外稳定性 + 业务净收益 + 会员留存 + 成本 + 不确定性</code></p>
+<p>而不是由某一个 MASE、C-index 或 AUC 单独决定。</p>
+<p>在目前数据和已知实验结果下，最稳妥的结论是：</p>
+<ul>
+<li>XGBoost Cox 已表现出较好的初步风险排序能力；</li>
+<li>Bayesian 模型需要先解决收敛问题；</li>
+<li>RSF 的正式预测版本必须保留森林结构；</li>
+<li>规则模型需要与机器学习模型进行时间外对照；</li>
+<li>最终商业政策应通过 Top-K 风险容量和净收益曲线选择；</li>
+<li>会员留存和商业收益不能由预测模型直接“推导为事实”，必须通过历史观察或因果/准实验验证。</li>
+</ul>
+<p>因此，本实验框架的最终目标不是寻找“最复杂的模型”，而是寻找<strong>经时间外验证、可解释、可复现、风险可控、商业净收益最大且具有统计可信度的风控政策</strong>。</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

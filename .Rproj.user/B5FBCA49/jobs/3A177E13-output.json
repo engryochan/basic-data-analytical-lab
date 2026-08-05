@@ -1,0 +1,7 @@
+[1,"==> quarto preview top_tier_methodology_report.qmd --to html --no-watch-inputs --no-browse\n\n"]
+[1,"\r\n\r\nprocessing file: top_tier_methodology_report.qmd\r\n\r  |                                                    \r  |                                              |   0%\r  |                                                    \r  |.                                             |   2%                        \r  |                                                    \r  |..                                            |   4% [setup]                "]
+[1,"试开URL’https://api.github.com/repos/stan-dev/cmdstan/releases/latest'\r\n"]
+[1,"Content type 'application/json; charset=utf-8' length 15238 bytes (14 KB)\r\n================================="]
+[1,"=================\r\ndownloaded 14 KB\r\n\r\n"]
+[1,"\r\n\r\nError:\r\n! CmdStan path has not been set yet. See ?set_cmdstan_path.\r\nBacktrace:\r\n    ▆\r\n 1. └─cmdstanr::cmdstan_version()\r\n 2.   └─cmdstanr:::stop_no_path()\r\n\r\r\nQuitting from top_tier_methodology_report.qmd:23-65 [setup]\r\n                                                                                                                  \r\n停止执行\r\n"]
+[1,"WARN: Error encountered when rendering files\n"]

@@ -1,0 +1,163 @@
+---
+title: "博彩公司评估体系概念"
+format: html
+---
+
+数据说明（必须先看）
+
+| 项目 | 内容   |
+|:----:|:------:|
+| 源文件`player_daily_aggregated_deduped.csv`（约 1.7GB 全局日聚合）|
+| 本报告计算 | 流式抽取约 78 万行日记录 → 113,801 名玩家 汇总（窗口约 2026-03-21～2026-04-18）| 
+| 可用维度（一字不改源字段）| dt, player_id, game_type, dealer_id, table_id, total_bets, total_bet_amount, total_win_amount, ggr, avg_bet, first_bet_time, last_bet_time, unique_rounds |
+| 样本汇总 | 投注额合计约 3.92e10；GGR 合计约 -4.86e8；整体 hold ≈ -1.24%（短窗+高额赢家可出现，全量需再跑） |
+
+GGR 口径（庄家视角）：
+
+`ggr ≈ total_bet_amount - total_win_amount`；正 GGR = 公司赢，负 GGR = 玩家赢、公司侵蚀。
+全量 1.7GB 应在 StarRocks ADS 上按同一公式批处理；下列规则可直接落地，不依赖虚构字段。
+
+# 一、顶级庄家怎么用这些维度（Focal / 持牌博彩思路）
+
+在只有注单日聚合、没有存款/IP/设备时，国际风控与 VIP 运营通常拆成两条轴：
+
+价值轴（Value） — 谁值得养：流水、活跃天数、单均注、接触荷官/桌台广度
+风险轴（Risk） — 谁在侵蚀或异常：持续负 hold、短线重仓、单日集中、超高单均、快速换荷官
+
+再映射到 分级 + 动作（赏罚分明），而不是只给一个“分数好看”的黑箱。
+玩家级衍生指标（全部由源字段算出）
+
+| 指标 | 计算 | 用途  |
+|:----:|:----:|:-----:|
+| 流水 turnoverΣ `total_bet_amount`价值、限额权重 |
+| 公司 GGR | Σ `ggr` | 贡献 / 侵蚀 |
+| hold | GGR / turnover | 相对理论优势是否偏离 |
+| 活跃天 active_days | 有记录的 `dt` | 数频率 / 忠诚 |
+| 单均 avg_bet | 流水 / Σ`total_bets` | 筹码层级 |
+| 局数 rounds | Σ`unique_rounds` | 参与深度 |
+| 荷官数 / 桌数 | `dealer_id` / `table_id` 去重 | 分散度、换桌行为 |
+| 单日最大流水 | max(日 `total_bet_amount`) | 冲击集中度 |
+| 最差单日 GGR | min(日 `ggr`) | 单日爆亏预警 |
+
+本批数据尚缺（需工程补点后再升级模型）： 存款/提款、IP/设备、注册时间、红利成本、同桌对打明细。有这些后可再叠 KYC、对打、养号（你方 ODS 字典里已有方向）。
+
+# 二、双分评分（0–100）
+
+1）价值分 Value（越高越值得经营）
+$$Value = 100 \times (0.50\,R_{turnover} + 0.25\,R_{days} + 0.15\,R_{avg\_bet} + 0.10\,Breadth)$$
+
+$  R_*  $：在全体玩家中的分位（0–1）
+$  Breadth = \min(1,\frac{n\_dealers/20 + n\_tables/5}{2})  $
+
+## 2）风险分 Risk（越高越要管）
+
+在有量的前提下累加（有上限 100）：
+
+| 信号 | 条件（务实阈值）| 加分逻辑  |
+|:----:|:---------------:|:---------:|
+| 持续负 hold | turnover≥1000 且 hold<−2% | 负 hold 越深、流水越大，风险越高（上限约 40） |
+| 单日过度集中 | 单日流水/总流水>70% 且总流水>5万 | +15；>90% 且总流水>20万再 +10 |
+| 超高单均 | avg_bet ≥ P95 / P99 | +6 / +12 |
+| 短线重创庄家 | 活跃≤3 天且 GGR<−5万；或 ≤5 天且 hold<−15% 且流水>10万 | +15 / +12 |
+| 高频换荷官 | dealers/days≥3 且流水>2万 | +8 |
+
+阈值可按产品理论 hold 微调；真人百家乐等应对照你们 game_type 的理论优势，而不是全球统一死数。
+
+# 三、样本窗口分级结果（113,801 人）
+
+| 等级 | 人数 | 占比 | 含义 |
+|:----:|:----:|:----:|:----:|
+| S-风控特级 | 202 | 0.18% | 高流水 + 高风险，优先人工 |
+| A-高风险关注 | 120 | 0.11% | 明显异常，要限注/监控 |
+| B-中风险观察 | 319 | 0.28% | 周观察、优惠降级 |
+| V1-核心VIP | 5,470 | 4.81% | 高价值且风险可控 |
+| V2-高价值 | 15,612 | 13.72% | 重点防流失 |
+| V3-潜力 | 34,765 | 30.55% | 标准培养 |
+| C-普通 | 15,627 | 13.73% | 控制成本 |
+| N-试水/沉默 | 41,686 | 36.63% | 低成本或自然沉淀 |
+
+利润标签（流水≥1万）：高侵蚀 5,833 人；高贡献 5,273 人；其余中性。
+
+S 级典型形态（与样本一致）： 1–3 天、极大单日流水、hold 深度为负（例如玩家 `147754045`：2 天流水约 7.82 亿、hold≈−21.5%、GGR≈−1.68 亿）→ 典型「短线重仓打穿」，必须先风控后谈 VIP。
+
+# 四、赏罚与措施（可执行）
+
+风控侧（罚 / 控）
+
+| 等级 | 措施（按周/实时） |
+|:----:|:-----------------:|
+| S | 立即下调单注与桌台限额；暂停高额红利/返水；抽检该玩家时间窗内 dealer_id×table_id 同桌；提款加强审核；报风控主管；必要时只读牌局/录像（若有） |
+| A | 限注一档；禁止高波动活动资格；同桌/换荷官速率监控；营销名单降权 |
+| B | 周报观察；异常日（min_day_ggr 极负）复核；优惠降级 |
+
+运营侧（赏 / 养）
+
+| 等级 | 措施 |
+| V1 | 专属经理；礼遇与优先出款（合规前提下）；防竞品挖角；不要因单周波动误杀（先看风险分） |
+| V2 | 定期关怀、适度返水；控制会话时长话术（负责任博彩） |
+| V3 | 小额活跃任务；培养稳定频次 |
+| C / N | 严控 CPA；避免对 N 级烧预算 |
+
+产品 / 荷官侧（样本含 235 个 dealer）
+
+按 `dealer_id` 汇总玩家 hold、大额负 GGR 局段 → 与玩家风险名单交叉（防内部放水/对打，需你方已有荷官主题表）。
+`game_type=101` 占绝对多数：先做 101 的 hold 基准，再拆 108/107 等。
+
+# 五、StarRocks 可落地 SQL 骨架（全量）
+
+SQL复制-- 玩家窗口汇总（字段名与 CSV 一致）
+
+```{sql, eval = FALSE}
+CREATE TABLE ads_player_window_score AS
+SELECT
+  player_id,
+  COUNT(DISTINCT dt)                    AS active_days,
+  SUM(total_bets)                       AS total_bets,
+  SUM(total_bet_amount)                 AS turnover,
+  SUM(ggr)                              AS ggr,
+  SUM(ggr) / NULLIF(SUM(total_bet_amount),0) AS hold_pct,
+  SUM(total_bet_amount) / NULLIF(SUM(total_bets),0) AS avg_bet,
+  SUM(unique_rounds)                    AS rounds,
+  COUNT(DISTINCT dealer_id)             AS n_dealers,
+  COUNT(DISTINCT table_id)              AS n_tables,
+  MAX(total_bet_amount)                 AS max_day_turnover,
+  MIN(ggr)                              AS min_day_ggr
+FROM ads_player_daily   -- 由 ODS 日聚合导入
+GROUP BY player_id;
+```
+
+价值分/风险分可用 SQL 窗口分位 + 应用层（Python/R）写回 `ads_player_tier`；Superset 做：
+
+- /A 名单表
+- V1 流水与 GGR
+- 按日全站 hold
+- 按 `game_type` / `dealer_id` 的异常贡献
+
+调度：DolphinScheduler DAG 每日 `ODS→日聚合→玩家评分→名单推送。`
+
+# 六、商业方案（务实优先级）
+
+| 阶段 | 动作 | 交付 |
+|:----:|:----:|:----:|
+| 本周 | 全量 1.7GB 在 StarRocks 重算评分；冻结 S/A 名单 | 带 `player_id`, `tier`, `risk`, `value`, `action` 的表 |
+| 2 周 | S 级限注+提款策略；V1 名单给运营 | 操作手册 1 页 + 看板 |
+| 1 月 | 补存款/提款、IP/设备进 ODS；叠对打/养号规则 | 第二代风险分 |
+| 持续 | 负责任博彩：超长会话、亏损加速预警 | 合规与长期 GGR |
+
+原则（持牌与顶级庄家共通）：
+
+1. 大额负 hold 先控码、再谈关系，避免“VIP 免死”。
+2. 正 GGR 高流水是资产，用服务与合规礼遇锁住，不是加码诱惑失控。
+3.阈值写进制度（持仓限额、优惠资格），模型只辅助，最终动作可审计。
+4. 样本窗整体 hold 为负 → 全量复核是否高额赢家集中、某 g`ame_type/`桌台异常，或统计窗过短。
+
+# 七、已生成文件（本机样本评分结果）
+
+- `/home/workdir/artifacts/player_summary_sample.csv` — 玩家汇总
+- `/home/workdir/artifacts/player_risk_value_scored.csv` — 价值分、风险分、等级、建议动作（11.4 万行，基于抽样窗口）
+
+生产请以 全量 CSV/ADS 重跑同一逻辑；抽样用于方法验证与首批 S 级排查清单。
+
+一句话：
+
+在真实字段约束下，用 流水+活跃做价值、用 hold/集中度/短线重仓/换荷官做风险，把客户分成 S/A/B 风控三级 + V1–V3/C/N 经营四级，配套限注、审同桌、名单运营与 VIP 礼遇——这就是 Focal 类顾问与一线博彩在「只有投注聚合」时仍可落地的顶级务实做法。若你下一步提供 StarRocks 表名，我可以把评分与名单写成可直接挂 DS 的完整 SQL。

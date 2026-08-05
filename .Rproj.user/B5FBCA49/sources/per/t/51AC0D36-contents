@@ -1,0 +1,136 @@
+---
+title: "赌场全局智能系统之字典"
+format: html
+---
+
+## 扫描数据库
+
+## Casino Global Intelligence System —— 补上你要的"下一条 SQL"
+
+上次结束在这句话："下一步最正确的动作，就是先做 ``ODS_ENCYCLOPEDIA_MASTER` 的完整 SQL 查询版……直接从 in`formation_schema ` + 全部 ODS 表自动生成百科目录"。补上，分两步，纯 SELECT，不建表。
+
+### Step 1｜结构层 + 启发式候选标记（元数据扫描，秒级，可直接跑）
+
+这一步只读 `information_schema`，不碰真实数据，安全、免费、随时可重跑。产出 Evidence Level 只到 L1/L2（字段名/注释层面），但已经把 dimension/measure/time/key/formula 候选自动标出来了：
+
+```{sql}
+/* =========================================================
+   ODS_ENCYCLOPEDIA_STRUCTURAL_LAYER — 元数据 + 启发式候选层
+   ========================================================= */
+SELECT
+    c.TABLE_SCHEMA,
+    c.TABLE_NAME,
+    t.TABLE_ROWS,
+    t.TABLE_COMMENT,
+    c.ORDINAL_POSITION,
+    c.COLUMN_NAME,
+    c.DATA_TYPE,
+    c.COLUMN_TYPE,
+    c.IS_NULLABLE,
+    c.COLUMN_KEY,
+    c.COLUMN_DEFAULT,
+    c.COLUMN_COMMENT,
+
+    /* ---- Evidence Level（本层上限 L2）---- */
+    CASE
+        WHEN c.COLUMN_COMMENT IS NOT NULL AND TRIM(c.COLUMN_COMMENT) <> '' THEN 'L2'
+        ELSE 'L1'
+    END AS evidence_level,
+
+    /* ---- Key 候选 ---- */
+    CASE
+        WHEN c.COLUMN_KEY IN ('PRI','UNI') THEN 'PK_UK_CONFIRMED'
+        WHEN LOWER(c.COLUMN_NAME) REGEXP '(^id$|_id$|^eid$|^uid$|_no$|_code$)' THEN 'FK_CANDIDATE'
+    END AS key_candidate,
+
+    /* ---- 时间候选 ---- */
+    CASE
+        WHEN c.DATA_TYPE IN ('datetime','date','timestamp') THEN 'TIME_CONFIRMED'
+        WHEN LOWER(c.COLUMN_NAME) REGEXP '(time|date|^dt$|_dt$)' THEN 'TIME_CANDIDATE'
+    END AS time_candidate,
+
+    /* ---- 度量候选 ---- */
+    CASE
+        WHEN c.DATA_TYPE IN ('decimal','double','float','int','bigint','smallint','tinyint')
+         AND LOWER(c.COLUMN_NAME) REGEXP '(amount|amt|bet|pay|win|loss|rebate|balance|stake|deposit|withdraw|fee|ggr|ngr|profit)'
+        THEN 'MEASURE_CANDIDATE'
+    END AS measure_candidate,
+
+    /* ---- 维度候选 ---- */
+    CASE
+        WHEN c.DATA_TYPE IN ('varchar','char','text','enum')
+          OR LOWER(c.COLUMN_NAME) REGEXP '(type|status|code|flag|category|room|level|lv[1-5]|game|currency|channel)'
+        THEN 'DIMENSION_CANDIDATE'
+    END AS dimension_candidate,
+
+    /* ---- 公式/衍生候选 ---- */
+    CASE
+        WHEN LOWER(c.COLUMN_NAME) REGEXP '(rate|ratio|pct|percent|roi|ggr|ngr|cv$|score)'
+        THEN 'FORMULA_CANDIDATE'
+    END AS formula_candidate,
+
+    'UNKNOWN' AS semantic_role,
+    0 AS confidence
+
+FROM information_schema.columns c
+JOIN information_schema.tables  t
+  ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME
+WHERE c.TABLE_SCHEMA = 'ods_mariadb_2b'
+ORDER BY c.TABLE_NAME, c.ORDINAL_POSITION;
+```
+
+### Step 2｜统计验证层生成器（SQL 生成 SQL，升到 L3）
+
+这一步要碰真实数据才能拿到 min/max/distinct/null rate，但绝不能对每个字段单独 SELECT ... FROM 大表——17.6M 行的 ods_a168_bet02 如果按字段逐一扫描，一张表就是 N 次全表扫描。正确做法是按表聚合：每张表只扫一遍，该表所有字段的统计量在同一次 pass 里一起算出来，再把结果拼成一段可执行 SQL 文本：
+
+```{sql}
+/* =========================================================
+   ODS_ENCYCLOPEDIA_STATISTICAL_GENERATOR
+   —— 每张表生成一条"单次扫描、全字段统计"的 SQL 文本
+   ========================================================= */
+SELECT
+    TABLE_SCHEMA,
+    TABLE_NAME,
+    CONCAT(
+        'SELECT ''', TABLE_SCHEMA, '''', ' AS table_schema, ',
+        '''', TABLE_NAME, '''', ' AS table_name, COUNT(*) AS row_count, ',
+        GROUP_CONCAT(
+            CONCAT(
+                'COUNT(`', COLUMN_NAME, '`) AS `', COLUMN_NAME, '_nonnull`, ',
+                'COUNT(*) - COUNT(`', COLUMN_NAME, '`) AS `', COLUMN_NAME, '_nullcnt`, ',
+                'COUNT(DISTINCT `', COLUMN_NAME, '`) AS `', COLUMN_NAME, '_distinct`',
+                CASE
+                    WHEN DATA_TYPE IN ('decimal','double','float','int','bigint','smallint','tinyint') THEN
+                        CONCAT(
+                            ', MIN(`', COLUMN_NAME, '`) AS `', COLUMN_NAME, '_min`',
+                            ', MAX(`', COLUMN_NAME, '`) AS `', COLUMN_NAME, '_max`',
+                            ', AVG(`', COLUMN_NAME, '`) AS `', COLUMN_NAME, '_avg`',
+                            ', SUM(CASE WHEN `', COLUMN_NAME, '` = 0 THEN 1 ELSE 0 END) AS `', COLUMN_NAME, '_zerocnt`'
+                        )
+                    WHEN DATA_TYPE IN ('datetime','date','timestamp') THEN
+                        CONCAT(
+                            ', MIN(`', COLUMN_NAME, '`) AS `', COLUMN_NAME, '_min`',
+                            ', MAX(`', COLUMN_NAME, '`) AS `', COLUMN_NAME, '_max`'
+                        )
+                    ELSE ''
+                END
+            )
+            ORDER BY ORDINAL_POSITION
+            SEPARATOR ', '
+        ),
+        ' FROM `', TABLE_SCHEMA, '`.`', TABLE_NAME, '`;'
+    ) AS generated_sql_per_table
+FROM information_schema.columns
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+GROUP BY TABLE_SCHEMA, TABLE_NAME;
+```
+
+两个实操坑，务必先处理：
+
+GROUP_CONCAT 默认长度上限通常是 1024 字节，字段多的表（比如 ods_a168_bet02）拼出来的 SQL 文本会被静默截断——生成结果看着正常，实际是半截 SQL，跑起来会报语法错。跑 Step 2 之前先执行 SET SESSION group_concat_max_len = 1000000;（StarRocks 若变量名不同，用等效 session 变量替换）。
+先小表后大表：member/dealer/agent/table/game 这类维度表体量小，先跑验证生成器逻辑没问题；ods_a168_bet02 这种 17M+ 行的事实表，第一轮建议先加 WHERE dt = (SELECT MAX(dt) FROM ...) 做单日试跑，确认耗时可接受再放开全量——这正是你 RSF 那次内存故障、cache: true OOM 的同一条教训。
+
+顺手能省一轮验证：bet05（player_id）、bet08（下注时间）、bet13（投注额）、bet14（返水率）、bet39（桌台）、bet40（房间）、bet01（局）、bet02（游戏类型）、eid（荷官）、validbet（有效投注）这十个字段在你之前 GLOBAL_PLAYER_DAY SQL 里已经被实际生产查询验证过语义和数值行为——可以直接把这十条在 Canonical Mapping 里预填为 L3/L4，不用再跑一遍 Step 2 重新论证。
+
+Step 1 现在就能跑；Step 2 生成结果出来后，把每张表那一条 generated_sql_per_table 复制出来单独执行，两层结果按 table_name + column_name 对齐，就是你要的 ODS_ENCYCLOPEDIA_MASTER 第一个可用版本。
+

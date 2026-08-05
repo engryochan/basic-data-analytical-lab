@@ -1,0 +1,3 @@
+[1,"==> quarto preview 客户风险与价值分级_商业方案报告.qmd --to html --no-watch-inputs --no-browse\n\n"]
+[1,"\nStarting python3 kernel..."]
+[1,"ERROR: \n\nThe jupyter-cache package is required for cached execution\nWARN: Error encountered when rendering files\n"]

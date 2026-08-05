@@ -1,0 +1,118 @@
+---
+title: "分析Business_Risk数据"
+format: html
+---
+
+## 数据
+
+由于禁止通过单机直接连接`StarRocks`数据库连接自动下载数据。故此通过`Superset`内的`SQL工具`内下载`StarRocks`数据库中的数据。先侦测数据量后分批手动下载数据，以确保分析的是全局而非局部观测值数据。
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+SELECT
+  (SELECT COUNT(*) FROM wm_live_risk.business_risk_same_table_pair_snapshot) AS nrow,
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='wm_live_risk' AND table_name='business_risk_same_table_pair_snapshot') AS ncol;
+
+00:00:00.460
+nrow	ncol
+364984	14
+
+SELECT * FROM wm_live_risk.business_risk_same_table_pair_snapshot LIMIT 100000 OFFSET 0;
+SELECT * FROM wm_live_risk.business_risk_same_table_pair_snapshot LIMIT 100000 OFFSET 100000;
+SELECT * FROM wm_live_risk.business_risk_same_table_pair_snapshot LIMIT 100000 OFFSET 200000;
+SELECT * FROM wm_live_risk.business_risk_same_table_pair_snapshot LIMIT 100000 OFFSET 300000;
+```
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+SELECT
+  (SELECT COUNT(*) FROM wm_live_risk.business_risk_late_bet_snapshot) AS nrow,
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='wm_live_risk' AND table_name='business_risk_late_bet_snapshot') AS ncol;
+
+00:00:00.431
+nrow	ncol
+12270	10
+
+SELECT * FROM wm_live_risk.business_risk_late_bet_snapshot LIMIT 100000 OFFSET 0;
+```
+
+```{sql eval = FALSE}
+-- eval = FALSE
+SELECT
+  (SELECT COUNT(*) FROM wm_live_risk.business_risk_player_dealer_snapshot) AS nrow,
+  (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='wm_live_risk' AND table_name='business_risk_player_dealer_snapshot') AS ncol;
+
+00:00:00.428
+nrow	ncol
+231805	19
+
+SELECT * FROM wm_live_risk.business_risk_player_dealer_snapshot LIMIT 100000 OFFSET 0;
+SELECT * FROM wm_live_risk.business_risk_player_dealer_snapshot LIMIT 100000 OFFSET 100000;
+SELECT * FROM wm_live_risk.business_risk_player_dealer_snapshot LIMIT 100000 OFFSET 200000;
+```
+
+```{python, eval = FALSE}
+# eval = FALSE
+import pymysql
+import pandas as pd
+import os
+from math import ceil
+
+# 数据库连接配置（根据您的数据源填写）
+DB_CONFIG = {
+    'host': '202.134.97.145',        # 使用您实际的数据源IP
+    'port': 3306,
+    'user': 'canal',                # 或 risk
+    'password': '您的密码',
+    'database': 'wm_live_risk',     # 或 a168
+    'charset': 'utf8mb4'
+}
+
+# 要导出的表（可根据通配符自动获取）
+TABLE_NAMES = [
+    'business_risk_same_table_pair_snapshot',
+    'business_risk_late_bet_snapshot',
+    'business_risk_player_dealer_snapshot'
+]
+
+BATCH_SIZE = 100000  # 每批行数
+OUTPUT_DIR = '/opt/dolphinscheduler/data/export'  # 输出目录
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+conn = pymysql.connect(**DB_CONFIG)
+cursor = conn.cursor()
+
+for table in TABLE_NAMES:
+    # 获取总行数
+    cursor.execute(f"SELECT COUNT(*) FROM {table}")
+    total_rows = cursor.fetchone()[0]
+    if total_rows == 0:
+        continue
+    num_batches = ceil(total_rows / BATCH_SIZE)
+    print(f"表 {table} 总行数 {total_rows}，分为 {num_batches} 批")
+
+    for i in range(num_batches):
+        offset = i * BATCH_SIZE
+        limit = BATCH_SIZE
+        # 使用 LIMIT 分页（建议配合 ORDER BY 主键，确保顺序稳定）
+        sql = f"SELECT * FROM {table} ORDER BY 1 LIMIT {limit} OFFSET {offset}"
+        df = pd.read_sql(sql, conn)
+
+        # 输出 CSV（可改为 Parquet 更高效）
+        part_file = os.path.join(OUTPUT_DIR, f"{table}_part{i+1}.csv")
+        df.to_csv(part_file, index=False, encoding='utf-8-sig')
+        print(f"  已导出 {part_file}，行数 {len(df)}")
+
+cursor.close()
+conn.close()
+print("所有表导出完成！")
+```
+
+```{python, }
+
+```
+
+
+
+

@@ -1,0 +1,74 @@
+/* ==============================================================================
+   春秋战国主题.css —— 商君风控体系专用复古视觉主题
+   ==============================================================================
+   【外行也能懂的说明】这个文件只负责"好不好看"，不影响任何数据计算结果——
+   就像给一份报告换个封面和排版风格，报告里的数字、结论一个字都不会变。
+   配色思路：竹简的米黄色打底、朱砂红做强调色（古代批注常用朱笔）、
+   玄铁黑做正文（对应甲骨/青铜器上阴刻的深色）、青铜金做点缀（礼器的光泽）。
+   ============================================================================== */
+
+:root {
+  --竹简底色: #f4ecd8;
+  --朱砂红: #a33d29;
+  --玄铁黑: #2b241c;
+  --青铜金: #b08d57;
+  --墨绿: #3c4a3e;
+  --浅印泥: #e8d4b8;
+}
+
+body {
+  background-color: var(--竹简底色);
+  background-image:
+    repeating-linear-gradient(90deg, rgba(176,141,87,0.06) 0px, rgba(176,141,87,0.06) 1px, transparent 1px, transparent 42px);
+  color: var(--玄铁黑);
+  font-family: "Noto Serif SC", "STSong", "SimSun", "PMingLiU", serif;
+  line-height: 1.85;
+}
+
+h1, h2, h3, h4 {
+  color: var(--朱砂红);
+  font-family: "STKaiti", "KaiTi", "Noto Serif SC", serif;
+  border-bottom: 2px solid var(--青铜金);
+  padding-bottom: 0.3rem;
+  letter-spacing: 0.05em;
+}
+
+h1::before { content: "◈ "; color: var(--青铜金); }
+h2::before { content: "卷 · "; color: var(--青铜金); font-size: 0.75em; }
+
+a { color: var(--朱砂红); text-decoration: none; border-bottom: 1px dashed var(--朱砂红); }
+a:hover { color: var(--墨绿); }
+
+code, pre {
+  background-color: var(--浅印泥) !important;
+  border: 1px solid var(--青铜金);
+  border-radius: 2px;
+  font-family: "Consolas", "Cascadia Code", monospace;
+}
+
+.sourceCode { background-color: #fbf6ea !important; border-left: 3px solid var(--朱砂红); }
+
+table { border: 1px solid var(--青铜金); background: #fbf6ea; }
+th { background-color: var(--朱砂红); color: var(--竹简底色); font-family: "STKaiti", "KaiTi", serif; }
+td { border-color: var(--青铜金) !important; }
+
+.callout, .callout-note { border-left: 4px solid var(--朱砂红); background: var(--浅印泥); }
+
+#TOC {
+  background: var(--浅印泥);
+  border: 1px solid var(--青铜金);
+  border-radius: 3px;
+}
+#TOC .active { color: var(--朱砂红); font-weight: bold; }
+
+/* 印章式小标签，可在正文里用 <span class="印章">审核通过</span> 这样调用 */
+.印章 {
+  display: inline-block;
+  border: 2px solid var(--朱砂红);
+  color: var(--朱砂红);
+  font-family: "STKaiti", "KaiTi", serif;
+  padding: 2px 8px;
+  border-radius: 2px;
+  transform: rotate(-3deg);
+  font-weight: bold;
+}

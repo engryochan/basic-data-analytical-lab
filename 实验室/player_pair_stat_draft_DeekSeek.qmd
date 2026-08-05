@@ -1,0 +1,223 @@
+---
+title: "玩家同桌关系风控深度求索草稿（player_pair_stat_draft_DeepSeek）"
+format: html
+---
+
+## 提问
+
+> 再次详细道明是将现有的数据参数搭配最优化至顶级电商与量化科技的规格与概念，首先从第一个数据“player_pair_stat  玩家同桌关系风控候选表”着手，基本参数如下：
+> 
+player_a         BIGINT   玩家A
+player_b         BIGINT   玩家B
+same_round_count BIGINT   同桌局数
+player_a_rounds  BIGINT   玩家A总局数
+player_b_rounds  BIGINT   玩家B总局数
+same_rate        DOUBLE   同桌率
+first_game_time  DATETIME 首次同桌时间
+last_game_time   DATETIME 最近同桌时间
+created_time     DATETIME 创建时间
+update_time      DATETIME 更新时间
+> 
+请根据Apache Superset 6.0.0版本以上现有提供的数据资源搭配，将数据分析风控统计模型最优化并绘图与详细阐释~
+
+## 解答
+
+### 🧩 数据模型优化：从原始数据到风控特征
+
+在 Superset 中创建图表前，首先需要对数据进行预处理与特征工程，将原始字段转化为风控分析所需的指标。
+
+#### 核心风控指标定义
+
+| 指标名称	            | 计算逻辑	                | 风控含义
+|:---------------------:|:-------------------------:|:---
+| 同桌率 (same_rate)	  | same_round_count / player_a_rounds 或 same_round_count / player_b_rounds | 衡量两个玩家关联强度的核心指标。同桌率越高，两人协同作弊的可能性越大。 |
+| 局数差异 (round_diff)	| ABS(player_a_rounds - player_b_rounds) |  若两人总对局数差异巨大但同桌率却很高，可能存在“小号喂养大号”的异常行为。 |
+| 同桌强度              | (pair_intensity)	same_round_count / (player_a_rounds + player_b_rounds) | 同桌局数占两人总对局数的比重，比重越高，关系越可疑。 |
+| 关系持续时间 (relationship_duration) | DATEDIFF(last_game_time, first_game_time) | 同桌关系持续的时间跨度，可用于判断是“短期突击”还是“长期潜伏”。 |
+| 同桌密度 (pair_density)	| same_round_count / DATEDIFF(last_game_time, first_game_time) | 单位时间内的同桌频率，密度越高，异常行为的集中度越高。 |
+
+#### 在 Superset 中实现特征工程
+
+在 Superset 的 SQL Lab 中，可以通过 SQL 查询创建包含上述指标的虚拟数据集 (Virtual Dataset)，供后续图表直接使用：
+
+```{sql}
+SELECT
+    player_a,
+    player_b,
+    same_round_count,
+    player_a_rounds,
+    player_b_rounds,
+    same_rate,
+    first_game_time,
+    last_game_time,
+    created_time,
+    update_time,
+    -- 计算衍生风控指标
+    ABS(player_a_rounds - player_b_rounds) AS round_diff,
+    same_round_count / (player_a_rounds + player_b_rounds) AS pair_intensity,
+    EXTRACT(EPOCH FROM (last_game_time - first_game_time)) / 86400 AS relationship_duration_days,
+    same_round_count / NULLIF(EXTRACT(EPOCH FROM (last_game_time - first_game_time)) / 86400, 0) AS pair_density
+FROM player_pair_stat;
+```
+
+### 🎯 顶级电商与量化科技场景下的图表选型与配置
+
+基于 Apache Superset 6.0.0 提供的 40+ 种可视化图表类型，以及新版 AG Grid 表格（支持高达 500,000 行数据的服务端分页、排序与搜索）和原生甘特图插件，以下是为 player_pair_stat 表量身定制的最优化图表选型方案。
+
+#### 1. 宏观概览层 (Executive Dashboard)
+
+**图表类型: Big Number / Big Number with Trendline**
+
+| 配置项	      | 推荐值	                                            | 说明                              |
+|:-------------:|:---------------------------------------------------:|:---------------------------------:|
+| 指标 (Metric)	| COUNT(*)	                                          | 当前系统中的玩家对总数            |
+| 指标 (Metric)	| AVG(same_rate)	                                    | 平均同桌率，用于监控整体风险水平  |
+| 指标 (Metric)	| MAX(same_round_count)	                              | 最高同桌局数，快速定位极端异常值  |
+| 指标 (Metric)	| COUNT(DISTINCT player_a) + COUNT(DISTINCT player_b)	| 参与同桌关系的独立玩家数          |
+
+> 风控价值：一眼掌握风控全局态势，快速感知风险水平的宏观变化。
+
+**图表类型: Time-series Line Chart (基于 update_time 或 last_game_time)**
+
+| 配置项	              | 推荐值                                                                 |
+|:---------------------:|:----------------------------------------------------------------------:|
+| 时间维度 (Time)	      | update_time                                                            |
+| 指标 (Metric)	        | COUNT(*)                                                               |
+| 分组 (Group by) 	    | 无（总趋势）或 CASE WHEN same_rate > 0.3 THEN '高风险' ELSE '正常' END |
+| 时间粒度 (Time Grain)	| day 或 hour                                                            |
+
+> 风控价值：监控每日新增/更新同桌关系的趋势，及时发现异常峰值，如某日突然涌现大量高同桌率玩家对，可能意味着团伙开始集中行动。
+
+#### 2. 风险定位层 (Risk Identification)
+
+**图表类型: Scatter Plot (散点图)**
+
+| 配置项	      | 推荐值	            | 说明      |
+|:-------------:|:-------------------:|:---------:|
+| X 轴	        | `same_round_count`	| 同桌局数  |
+| Y 轴	        | `same_rate`	        | 同桌率    |
+| 颜色 (Color)	| `CASE WHEN same_rate > 0.3 AND same_round_count > 50 THEN '红色' WHEN same_rate > 0.2 THEN '黄色' ELSE '蓝色' END`	| 通过颜色编码快速区分风险等级 |
+| 点大小 (Point Size)	| `same_round_count`	| 点越大，同桌局数越多 |
+| 气泡提示 (Tooltip)	| `player_a, player_b, same_round_count, same_rate, first_game_time, last_game_time` | 悬停时显示完整信息 |
+
+> 风控价值：散点图是识别“高-高”区域（高同桌率 + 高同桌局数）的最佳工具。右上角的点即为最高风险组合，可快速锁定目标进行深入调查。
+
+**图表类型: Heatmap (热力图)**
+
+| 配置项	                | 推荐值                                   |
+|:-----------------------:|:----------------------------------------:|
+| 行 (Rows)	              | `player_a` (仅取 Top 50 高风险玩家)      |
+| 列 (Columns)	          | `player_b` (仅取 Top 50 高风险玩家)      |
+| 值 (Values)	            | `same_round_count` 或 `same_rate`        |
+| 颜色方案 (Color Scheme)	| `Reds` 或 `YlOrRd`（红色越深，风险越高） |
+
+> 风控价值：热力图以矩阵形式直观呈现玩家关系网络中的“热点区域”，快速识别抱团团伙。若某行/列出现多个深红色块，说明该玩家与多人存在强关联，可能是团伙核心。
+
+#### 3. 深度洞察层 (Deep Dive)
+
+**图表类型: Table (表格) - 基于 AG Grid V2**
+
+| 配置项	          | 推荐值                                         |
+|:-----------------:|:----------------------------------------------:|
+| 列 (Columns)	    | `player_a`, `player_b`, `same_round_count`, `same_rate`, `round_diff`, `pair_intensity`, `relationship_duration_days`, `pair_density`, `first_game_time`, `last_game_time` |
+| 排序 (Sort by)	  | `same_rate` 降序 或 `same_round_count` 降序 |
+| 筛选器 (Filters)	| 可设置 `same_rate > 0.2` 或 `same_round_count > 50` 等条件 |
+| 分页 (Pagination)	| 启用服务端分页，每页 `100` 行 |
+
+> 风控价值：AG Grid 表格支持服务端分页、排序与搜索，即使数据量达到数十万行，也能流畅地进行深度钻取与人工复核。分析师可快速搜索特定玩家 ID，查看其所有同桌关系。
+
+**图表类型: Gantt Chart (甘特图) - Superset 6.0 原生支持**
+
+| 配置项	          | 推荐值                                       |
+|:-----------------:|:--------------------------------------------:|
+| 任务 (Tasks)	    | `player_a || ' - ' || player_b` (玩家对标识) |
+| 开始时间 (Start)	| `first_game_time`                            |
+| 结束时间 (End)	  | `last_game_time`                             |
+| 进度 (Progress)   |	不适用（或基于 `same_round_count` 归一化）   |
+| 颜色 (Color)	    | 按 `same_rate` 风险等级着色                  |
+
+> 风控价值：甘特图能够可视化展示每个玩家对关系的时间线，包括首次同桌、最近同桌及持续时长。特别适用于识别“短期高频”的异常模式——若某个玩家对在极短时间内（如 2 小时内）完成数十局同桌，甘特图将清晰呈现这一“脉冲式”异常。
+
+**图表类型: Box Plot (箱线图)**
+
+| 配置项	推荐值
+| 分组 (Group by)	CASE WHEN same_rate > 0.3 THEN '高风险' WHEN same_rate > 0.15 THEN '中风险' ELSE '低风险' END
+| 指标 (Metric)	same_round_count
+
+> 风控价值：箱线图用于展示不同风险等级下同桌局数的分布差异，帮助设定更精准的异常阈值。例如，高风险组的 same_round_count 中位数显著高于其他组，则可将该值作为预警阈值。
+
+#### 4. 网络关系层 (Network Analysis)
+
+**图表类型: Network Diagram / Sankey Diagram (网络图/桑基图)**
+
+| 配置项	              | 推荐值                            |
+|:---------------------:|:---------------------------------:|
+| 源节点 (Source)	      | `player_a`                        |
+| 目标节点 (Target)	    | `player_b`                        |
+| 连线权重 (Weight)	    | `same_round_count` 或 `same_rate` |
+| 节点大小 (Node Size)	| 该玩家参与的关系数量（度中心性）  |
+| 连线颜色 (Link Color)	| 按 same_rate 渐变，越红风险越高   |
+
+> 风控价值：网络图能够直观呈现玩家关系的拓扑结构，揭示团伙的组织形态——星型结构（一个核心连接多个外围）通常意味着“养号”或“代理”行为；网状结构（多对多密集连接）则高度疑似“团伙作弊”。Sankey 图则可用于展示风险流向。
+
+### 🚀 顶级电商与量化科技风控仪表板架构
+
+综合以上图表选型，建议按以下四层架构构建 Superset 风控仪表板：
+
+| 层级	          | 功能定位	          | 包含图表	                                | 交互方式           |
+|:---------------:|:-------------------:|:-----------------------------------------:|:------------------:|
+| L1: 宏观监控层	| 全局态势感知	      | Big Number (4个核心KPI) + 时间序列趋势图	| 自动刷新，无需交互 |
+| L2: 风险定位层	| 快速锁定异常	      | 散点图 + 热力图	| 点击散点图中的异常点，联动筛选相关数据       |
+| L3: 深度洞察层	| 详细分析与钻取	    | AG Grid 表格 + 甘特图 + 箱线图	| 表格搜索/排序/分页；甘特图悬停查看详情 |
+| L4: 网络关系层	| 团伙结构与核心识别	| Network Diagram / Sankey Diagram	| 拖拽/缩放，点击节点查看该玩家的所有关系 |
+
+全局筛选器配置：
+
+- 时间范围：筛选 update_time 或 last_game_time
+- 风险等级：same_rate 阈值滑块（如 0.1 ~ 0.5）
+- 同桌局数：same_round_count 阈值滑块
+- 玩家 ID 搜索：输入特定 player_a 或 player_b，查询单个玩家的所有关系
+
+### 📈 风控统计模型：规则引擎与评分卡
+
+在 Superset 中，可通过 SQL 查询 直接构建风控规则引擎与评分卡，无需编写 Python 代码。
+
+**规则引擎 SQL 示例：**
+
+```{sql}
+SELECT
+    player_a,
+    player_b,
+    same_round_count,
+    same_rate,
+    pair_density,
+    -- 多条件风险评分
+    (CASE WHEN same_rate > 0.3 THEN 30 ELSE 0 END) +
+    (CASE WHEN same_round_count > 50 THEN 25 ELSE 0 END) +
+    (CASE WHEN pair_density > 5 THEN 25 ELSE 0 END) +
+    (CASE WHEN relationship_duration_days < 1 AND same_round_count > 20 THEN 20 ELSE 0 END) AS risk_score
+FROM player_pair_stat
+WHERE same_rate > 0.15 AND same_round_count > 20
+ORDER BY risk_score DESC;
+```
+
+将上述查询保存为虚拟数据集，即可在 Superset 中基于 risk_score 创建柱状图、表格等可视化图表，实现自动化风险评分与排序。
+
+### 💎 总结与行动建议
+
+| 步骤	        | 操作	                              | 工具/方法                 |
+|:-------------:|:-----------------------------------:|:-------------------------:|
+| 1. 数据接入	  | 将 player_pair_stat 表接入 Superset	| Data → Connect Database   |
+| 2. 特征工程	  | 创建包含衍生风控指标的虚拟数据集	  | SQL Lab → Virtual Dataset |
+| 3. 图表构建	  | 按四层架构逐一创建图表	            | Explore → Chart Type      |
+| 4. 仪表板组装	| 组合图表，配置全局筛选器与联动	    | Dashboards → + Dashboard  |
+| 5. 告警配置	  | 为高风险阈值设置告警规则	          | Alerts & Reports          |
+| 6. 定期复盘	  | 根据实际风控效果迭代优化规则	      | 持续监控与调整            |
+
+Apache Superset 6.0.0 的 Ant Design v5 主题系统与全面暗黑模式支持，能够显著提升长时间数据分析的视觉体验与专注度。其 AG Grid V2 表格与原生甘特图等新特性，为风控场景下的深度钻取与时间线分析提供了前所未有的强大支持。
+
+通过上述方案，你可以在 Superset 6.0.0 中构建一套无需编写 Python 代码、完全基于 SQL 与可视化配置的顶级风控分析系统，实现从宏观监控到微观洞察的全链路风控闭环。
+
+*出处：[https://chat.deepseek.com/share/iqu719pj8k844th0z9](https://chat.deepseek.com/share/iqu719pj8k844th0z9)*
+
+

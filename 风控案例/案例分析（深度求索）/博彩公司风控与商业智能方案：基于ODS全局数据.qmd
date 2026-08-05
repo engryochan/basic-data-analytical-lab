@@ -1,0 +1,457 @@
+---
+title: "博彩公司风控与商业智能方案：基于ODS全局数据"
+author: "Ryo（雷欧）"
+date: "2026-07-28"
+format:
+  html:
+    toc: true
+    code-fold: true
+    embed-resources: true
+  pdf:
+    toc: true
+editor: source
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# 一、真实数据环境验证
+
+在开始分析前，请先执行以下命令，确认核心表的字段名。本方案后续的SQL和R代码均基于这些真实的表结构。
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 请在 StarRocks 中分别执行，记录字段名
+DESCRIBE ods_a168_bet;           -- 投注流水表（核心）
+DESCRIBE ods_a168_employee;      -- 荷官/员工表
+DESCRIBE ods_a168_member;        -- 会员信息表
+DESCRIBE ods_a168_payment_order; -- 存款/提款记录
+DESCRIBE ods_a168_game_type;     -- 游戏类型字典
+DESCRIBE ods_a168_agent;         -- 代理/合作伙伴
+```
+
+```{sql, eval = FALSE}
+DESCRIBE ods_a168_bet -- 投注流水表（核心）
+
+Field	Type	Null	Key	Default	Extra
+__source_pk	varchar(64)	NO	TRUE		
+dt	date	NO	TRUE		
+bet001	varchar(65533)	YES	FALSE		
+bet002	varchar(65533)	YES	FALSE		
+bet003	varchar(65533)	YES	FALSE		
+bet004	varchar(65533)	YES	FALSE		
+bet005	varchar(65533)	YES	FALSE		
+bet006	varchar(65533)	YES	FALSE		
+bet007	varchar(65533)	YES	FALSE		
+bet008	varchar(65533)	YES	FALSE		
+bet009	varchar(65533)	YES	FALSE		
+bet010	varchar(65533)	YES	FALSE		
+bet011	varchar(65533)	YES	FALSE		
+bet012	varchar(65533)	YES	FALSE		
+bet013	varchar(65533)	YES	FALSE		
+bet014	varchar(65533)	YES	FALSE		
+bet015	varchar(65533)	YES	FALSE		
+bet016	varchar(65533)	YES	FALSE		
+bet017	varchar(65533)	YES	FALSE		
+bet018	varchar(65533)	YES	FALSE		
+bet019	varchar(65533)	YES	FALSE		
+bet020	varchar(65533)	YES	FALSE		
+bet021	varchar(65533)	YES	FALSE		
+bet022	varchar(65533)	YES	FALSE		
+bet023	varchar(65533)	YES	FALSE		
+bet024	varchar(65533)	YES	FALSE		
+bet025	varchar(65533)	YES	FALSE		
+bet026	varchar(65533)	YES	FALSE		
+bet027	varchar(65533)	YES	FALSE		
+bet028	varchar(65533)	YES	FALSE		
+bet029	varchar(65533)	YES	FALSE		
+bet030	varchar(65533)	YES	FALSE		
+bet031	varchar(65533)	YES	FALSE		
+bet032	varchar(65533)	YES	FALSE		
+bet033	varchar(65533)	YES	FALSE		
+bet034	varchar(65533)	YES	FALSE		
+bet035	varchar(65533)	YES	FALSE		
+bet036	varchar(65533)	YES	FALSE		
+bet037	varchar(65533)	YES	FALSE		
+bet038	varchar(65533)	YES	FALSE		
+bet039	varchar(65533)	YES	FALSE		
+bet040	varchar(65533)	YES	FALSE		
+bet041	varchar(65533)	YES	FALSE		
+bet042	varchar(65533)	YES	FALSE		
+bet043	varchar(65533)	YES	FALSE		
+bet044	varchar(65533)	YES	FALSE		
+bet045	varchar(65533)	YES	FALSE		
+bet046	varchar(65533)	YES	FALSE		
+bet047	varchar(65533)	YES	FALSE		
+bet048	varchar(65533)	YES	FALSE		
+bet049	varchar(65533)	YES	FALSE		
+bet050	varchar(65533)	YES	FALSE		
+bet051	varchar(65533)	YES	FALSE		
+bet052	varchar(65533)	YES	FALSE		
+bet053	varchar(65533)	YES	FALSE		
+bet054	varchar(65533)	YES	FALSE		
+source_db	varchar(64)	YES	FALSE		
+source_table	varchar(128)	YES	FALSE		
+ods_table_name	varchar(256)	YES	FALSE		
+sync_time	datetime	YES	FALSE		
+
+DESCRIBE ods_a168_game_type; -- 游戏类型字典
+
+Field	Type	Null	Key	Default	Extra
+__source_pk	varchar(64)	NO	TRUE		
+dt	date	NO	TRUE		
+code	varchar(65533)	YES	FALSE		
+twname	varchar(65533)	YES	FALSE		
+cnname	varchar(65533)	YES	FALSE		
+enname	varchar(65533)	YES	FALSE		
+inname	varchar(65533)	YES	FALSE		
+janame	varchar(65533)	YES	FALSE		
+koname	varchar(65533)	YES	FALSE		
+thname	varchar(65533)	YES	FALSE		
+viname	varchar(65533)	YES	FALSE		
+hiname	varchar(65533)	YES	FALSE		
+msname	varchar(65533)	YES	FALSE		
+esname	varchar(65533)	YES	FALSE		
+status	varchar(65533)	YES	FALSE		
+ps003	varchar(65533)	YES	FALSE		
+ps004	varchar(65533)	YES	FALSE		
+ps005	varchar(65533)	YES	FALSE		
+ps006	varchar(65533)	YES	FALSE		
+ps007	varchar(65533)	YES	FALSE		
+ps008	varchar(65533)	YES	FALSE		
+ps009	varchar(65533)	YES	FALSE		
+ps010	varchar(65533)	YES	FALSE		
+ps011	varchar(65533)	YES	FALSE		
+source_db	varchar(64)	YES	FALSE		
+source_table	varchar(128)	YES	FALSE		
+ods_table_name	varchar(256)	YES	FALSE		
+sync_time	datetime	YES	FALSE		
+
+DESCRIBE ods_a168_agent; -- 代理合作伙伴
+
+Field	Type	Null	Key	Default	Extra
+__source_pk	varchar(64)	NO	TRUE		
+dt	date	NO	TRUE		
+age001	varchar(65533)	YES	FALSE		
+age002	varchar(65533)	YES	FALSE		
+age003	varchar(65533)	YES	FALSE		
+age004	varchar(65533)	YES	FALSE		
+age005	varchar(65533)	YES	FALSE		
+age006	varchar(65533)	YES	FALSE		
+age007	varchar(65533)	YES	FALSE		
+age008	varchar(65533)	YES	FALSE		
+age009	varchar(65533)	YES	FALSE		
+age010	varchar(65533)	YES	FALSE		
+age011	varchar(65533)	YES	FALSE		
+age012	varchar(65533)	YES	FALSE		
+age013	varchar(1048576)	YES	FALSE		
+age014	varchar(65533)	YES	FALSE		
+age015	varchar(65533)	YES	FALSE		
+age016	varchar(65533)	YES	FALSE		
+age017	varchar(65533)	YES	FALSE		
+age018	varchar(65533)	YES	FALSE		
+age019	varchar(65533)	YES	FALSE		
+age020	varchar(65533)	YES	FALSE		
+age021	varchar(65533)	YES	FALSE		
+age022	varchar(65533)	YES	FALSE		
+age023	varchar(65533)	YES	FALSE		
+age024	varchar(65533)	YES	FALSE		
+credit	varchar(65533)	YES	FALSE		
+cash	varchar(65533)	YES	FALSE		
+type	varchar(65533)	YES	FALSE		
+currency	varchar(65533)	YES	FALSE		
+tip	varchar(65533)	YES	FALSE		
+red	varchar(65533)	YES	FALSE		
+prefix_add	varchar(65533)	YES	FALSE		
+prefix_acc	varchar(65533)	YES	FALSE		
+receipt_acc	varchar(65533)	YES	FALSE		
+notification	varchar(65533)	YES	FALSE		
+sacc	varchar(65533)	YES	FALSE		
+opengame	varchar(65533)	YES	FALSE		
+site	varchar(65533)	YES	FALSE		
+membermax	varchar(65533)	YES	FALSE		
+profitmax	varchar(65533)	YES	FALSE		
+promotecode	varchar(65533)	YES	FALSE		
+kickperiod	varchar(65533)	YES	FALSE		
+identity	varchar(65533)	YES	FALSE		
+chkKey	varchar(65533)	YES	FALSE		
+chkLock	varchar(65533)	YES	FALSE		
+last_chpsw	varchar(65533)	YES	FALSE		
+source_db	varchar(64)	YES	FALSE		
+source_table	varchar(128)	YES	FALSE		
+ods_table_name	varchar(256)	YES	FALSE		
+sync_time	datetime	YES	FALSE		
+
+DESCRIBE ods_a168_payment_order; -- 存款提款记录
+
+Field	Type	Null	Key	Default	Extra
+__source_pk	varchar(64)	NO	TRUE		
+dt	date	NO	TRUE		
+id	varchar(65533)	YES	FALSE		
+ps_id	varchar(65533)	YES	FALSE		
+orderId	varchar(65533)	YES	FALSE		
+mid	varchar(65533)	YES	FALSE		
+orderTime	varchar(65533)	YES	FALSE		
+paymentOrderId	varchar(65533)	YES	FALSE		
+currency	varchar(65533)	YES	FALSE		
+amount	varchar(65533)	YES	FALSE		
+real_amount	varchar(65533)	YES	FALSE		
+fee	varchar(65533)	YES	FALSE		
+fee_tax	varchar(65533)	YES	FALSE		
+status	varchar(65533)	YES	FALSE		
+wallet_id	varchar(65533)	YES	FALSE		
+iom_id	varchar(65533)	YES	FALSE		
+cbtime	varchar(65533)	YES	FALSE		
+ip	varchar(65533)	YES	FALSE		
+remark	varchar(65533)	YES	FALSE		
+source_db	varchar(64)	YES	FALSE		
+source_table	varchar(128)	YES	FALSE		
+ods_table_name	varchar(256)	YES	FALSE		
+sync_time	datetime	YES	FALSE		
+
+DESCRIBE ods_a168_member; -- 会员信息表
+
+Field	Type	Null	Key	Default	Extra
+__source_pk	varchar(64)	NO	TRUE		
+dt	date	NO	TRUE		
+mem001	varchar(65533)	YES	FALSE		
+mem002	varchar(65533)	YES	FALSE		
+mem003	varchar(65533)	YES	FALSE		
+mem004	varchar(65533)	YES	FALSE		
+mem005	varchar(65533)	YES	FALSE		
+mem006	varchar(65533)	YES	FALSE		
+mem007	varchar(65533)	YES	FALSE		
+mem008	varchar(65533)	YES	FALSE		
+mem009	varchar(65533)	YES	FALSE		
+mem010	varchar(65533)	YES	FALSE		
+mem011	varchar(65533)	YES	FALSE		
+mem012	varchar(65533)	YES	FALSE		
+mem013	varchar(65533)	YES	FALSE		
+mem014	varchar(65533)	YES	FALSE		
+mem015	varchar(65533)	YES	FALSE		
+mem016	varchar(65533)	YES	FALSE		
+mem017	varchar(65533)	YES	FALSE		
+mem018	varchar(65533)	YES	FALSE		
+mem019	varchar(65533)	YES	FALSE		
+mem020	varchar(65533)	YES	FALSE		
+mem021	varchar(65533)	YES	FALSE		
+mem022	varchar(65533)	YES	FALSE		
+mem022a	varchar(65533)	YES	FALSE		
+mem023	varchar(65533)	YES	FALSE		
+mem024	varchar(65533)	YES	FALSE		
+mem026	varchar(65533)	YES	FALSE		
+mem028	varchar(65533)	YES	FALSE		
+type	varchar(65533)	YES	FALSE		
+currency	varchar(65533)	YES	FALSE		
+cash	varchar(65533)	YES	FALSE		
+money	varchar(65533)	YES	FALSE		
+lockmoney	varchar(65533)	YES	FALSE		
+head	varchar(65533)	YES	FALSE		
+chips	varchar(65533)	YES	FALSE		
+follow1	varchar(65533)	YES	FALSE		
+follow2	varchar(65533)	YES	FALSE		
+tip	varchar(65533)	YES	FALSE		
+red	varchar(65533)	YES	FALSE		
+wallet	varchar(65533)	YES	FALSE		
+opengame	varchar(65533)	YES	FALSE		
+site	varchar(65533)	YES	FALSE		
+kickperiod	varchar(65533)	YES	FALSE		
+identity	varchar(65533)	YES	FALSE		
+singlebetprompt	varchar(65533)	YES	FALSE		
+conwinprompt	varchar(65533)	YES	FALSE		
+winlossprompt	varchar(65533)	YES	FALSE		
+onlineprompt	varchar(65533)	YES	FALSE		
+source_db	varchar(64)	YES	FALSE		
+source_table	varchar(128)	YES	FALSE		
+ods_table_name	varchar(256)	YES	FALSE		
+sync_time	datetime	YES	FALSE		
+
+DESCRIBE ods_a168_employee; -- 荷官员工表
+
+Field	Type	Null	Key	Default	Extra
+__source_pk	varchar(64)	NO	TRUE		
+dt	date	NO	TRUE		
+id	varchar(65533)	YES	FALSE		
+account	varchar(65533)	YES	FALSE		
+password	varchar(65533)	YES	FALSE		
+name	varchar(65533)	YES	FALSE		
+type	varchar(65533)	YES	FALSE		
+roles	varchar(65533)	YES	FALSE		
+phone	varchar(65533)	YES	FALSE		
+email	varchar(65533)	YES	FALSE		
+qq	varchar(65533)	YES	FALSE		
+enable	varchar(65533)	YES	FALSE		
+status	varchar(65533)	YES	FALSE		
+servicemember	varchar(65533)	YES	FALSE		
+lasttime	varchar(65533)	YES	FALSE		
+lastip	varchar(65533)	YES	FALSE		
+addtime	varchar(65533)	YES	FALSE		
+addip	varchar(65533)	YES	FALSE		
+image	varchar(65533)	YES	FALSE		
+image2	varchar(65533)	YES	FALSE		
+source_db	varchar(64)	YES	FALSE		
+source_table	varchar(128)	YES	FALSE		
+ods_table_name	varchar(256)	YES	FALSE		
+sync_time	datetime	YES	FALSE		
+
+SELECT * FROM ods_a168_bet LIMIT 10;
+
+00:00:01.036
+查询无结果
+
+SELECT COUNT(*) FROM ods_a168_bet;
+
+00:00:01.064
+count(*)
+0
+
+SELECT MIN(dt), MAX(dt) FROM ods_a168_bet;
+
+00:00:00.408
+min(dt)	max(dt)
+	
+-- 假设数据开始于 2026 年某天，可尝试最近的日期
+SELECT * FROM ods_a168_bet WHERE dt = '2026-07-27' LIMIT 10;
+
+00:00:01.047
+查询无结果
+
+SELECT * FROM ods_a168_bet WHERE dt >= '2026-07-01' AND dt <= '2026-07-27' LIMIT 10;
+
+00:00:06.196
+查询无结果
+
+```
+
+以下所有SQL和R代码中使用的字段名均基于通用博彩系统设计，请务必用上一步获得的实际字段名进行替换。关键映射如下：
+
+| 业务含义	    | 本方案使用的推测字段名 | 需替换为真实字段名（由DESCRIBE获得） |
+|:-------------:|:----------------------:|:------------------------------------:|
+| 玩家ID	      | player_id	             | ?                                    |
+| 荷官ID	      | dealer_id	             | ?                                    |
+| 下注金额	    | bet_amount	           | ?                                    |
+| 有效投注额    | valid_bet_amount	     | ?                                    |
+| 赢款金额	    | win_amount	           | ?                                    |
+| 返水金额	    | rebate_amount	         | ?                                    |
+| 游戏类型	    | game_type	             | ?                                    |
+| 游戏开始时间  | start_time	           | ?                                    |
+| 会员VIP等级	  | vip_level	             | ?                                    |
+| 荷官等级	    | dealer_level	         | ?                                    |
+| 存款/提款类型	| txn_type	             | ?                                    |
+
+# 二、宏观全局业绩分析（StarRocks 聚合）
+
+由于系统一次最多只能下载10万行数据，而全局数据有上亿行，所有宏观指标的计算必须在 StarRocks 内完成。我们只将聚合后的结果（数百至数千行）拉回本地进行分析。
+
+## 2.1 全局KPI
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 基于真实表 ods_a168_bet 的全局汇总（示例字段名，请替换）
+SELECT 
+    COUNT(DISTINCT player_id) AS total_players,
+    COUNT(DISTINCT dealer_id) AS total_dealers,
+    SUM(bet_amount) AS total_bet,
+    SUM(valid_bet_amount) AS total_valid_bet,
+    SUM(win_amount - bet_amount) AS total_pnl,
+    SUM(rebate_amount) AS total_rebates,
+    ROUND(SUM(win_amount - bet_amount) / NULLIF(SUM(valid_bet_amount), 0), 4) AS pnl_rate
+FROM ods_a168_bet
+WHERE start_time >= '2026-03-01' AND start_time < '2026-07-24';
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+
+
+
+

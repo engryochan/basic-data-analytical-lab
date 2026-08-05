@@ -1,0 +1,135 @@
+---
+title: "博彩公司ODS层数据分析与风控方案优化（草稿）"
+format: html
+---
+
+## 
+
+```{sql, eval = FALSE}
+WITH player_day AS (
+
+    SELECT
+        dt,
+        bet05 AS player_id,
+
+        COUNT(*) AS bet_count,
+
+        COUNT(DISTINCT bet01) AS unique_rounds,
+
+        COUNT(DISTINCT bet02) AS unique_games,
+
+        COUNT(DISTINCT eid) AS unique_dealers,
+
+        COUNT(DISTINCT bet39) AS unique_tables,
+
+        SUM(
+            CAST(bet13 AS DECIMAL(30,8))
+        ) AS total_bet_amount,
+
+        SUM(
+            CAST(validbet AS DECIMAL(30,8))
+        ) AS total_effective_bet,
+
+        SUM(
+            CAST(bet41 AS DECIMAL(30,8))
+        ) AS total_rebate_amount,
+
+        AVG(
+            CAST(bet13 AS DECIMAL(30,8))
+        ) AS avg_bet_amount,
+
+        STDDEV(
+            CAST(bet13 AS DECIMAL(30,8))
+        ) AS std_bet_amount,
+
+        MIN(bet08) AS first_bet_time,
+
+        MAX(bet08) AS last_bet_time
+
+    FROM ods_mariadb_2b.ods_a168_bet02
+
+    WHERE dt BETWEEN '2026-03-21' AND '2026-08-02'
+
+    GROUP BY
+        dt,
+        bet05
+),
+
+global_player_day AS (
+
+    SELECT
+
+        *,
+
+        MIN(dt) OVER (
+            PARTITION BY player_id
+        ) AS first_active_date,
+
+        MAX(dt) OVER (
+            PARTITION BY player_id
+        ) AS last_active_date,
+
+        COUNT(*) OVER (
+            PARTITION BY player_id
+        ) AS active_days
+
+    FROM player_day
+)
+
+SELECT
+
+    dt,
+
+    player_id,
+
+    first_active_date,
+
+    last_active_date,
+
+    active_days,
+
+    bet_count,
+
+    unique_rounds,
+
+    unique_games,
+
+    unique_dealers,
+
+    unique_tables,
+
+    total_bet_amount,
+
+    total_effective_bet,
+
+    total_rebate_amount,
+
+    avg_bet_amount,
+
+    std_bet_amount,
+
+    first_bet_time,
+
+    last_bet_time,
+
+    CASE
+        WHEN dt = first_active_date
+            THEN 'NEW'
+
+        WHEN dt = last_active_date
+            THEN 'LAST_ACTIVE'
+
+        ELSE 'ACTIVE'
+
+    END AS lifecycle_state
+
+FROM global_player_day
+
+ORDER BY
+    player_id,
+    dt;
+```
+
+
+
+

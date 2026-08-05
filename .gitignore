@@ -1,0 +1,32 @@
+# === Python 绝对不上 - 核心 ===
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.eggs/
+*.whl
+.mypy_cache/
+.pytest_cache/
+jupyter_runtime/
+.ipynb_checkpoints
+
+# npm 也会套在 .venv 里
+**/node_modules/
+
+# === 下面这些数据，强制要上载，所以前面不能有 *.csv / *.rds ===
+!*.csv
+!*.rds
+!*.RData
+!*.rda
+!*.RDS
+!*.xlsx
+!*.xls
+!*.zip
+!*.rds
+!*.RData

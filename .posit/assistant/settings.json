@@ -1,0 +1,10 @@
+{
+  "permission": {
+    "bash": {
+      "wsl.exe *": "allow",
+      "echo *": "allow",
+      "chcp.com *": "allow",
+      "dism.exe *": "allow"
+    }
+  }
+}

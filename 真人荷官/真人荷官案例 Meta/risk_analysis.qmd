@@ -1,0 +1,125 @@
+---
+title: "玩家同桌与荷官获利风控 - 顶级电商+量化实验室级分析"
+subtitle: "player_pair_stat / dealer_profit_stat 四表联动 Superset 6.0+ 最优化"
+author: "风控量化实验室"
+date: today
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    code-fold: true
+    theme: cosmo
+    df-print: paged
+lang: zh
+---
+
+## 一、学术框架
+
+采用三层顶级范式：
+
+1. **电商刷单检测**：Support = same_round_count, Confidence = same_rate, Lift = same_rate / expected_rate
+2. **量化因子**：same_rate = Correlation, profit_per_bet = PnL, roi_zscore = Alpha
+3. **图论**：player_a-b 构成共现图，检测闭环团伙
+
+```{r setup, message=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(scales)
+library(igraph)
+
+pair_stat <- fread("C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/数据库/player_pair_stat.csv")
+pair_hourly <- fread("C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/数据库/player_pair_stat_hourly.csv")
+dealer_stat <- fread("C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/数据库/dealer_profit_stat.csv")
+dealer_hourly <- fread("C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/数据库/dealer_profit_stat_hourly.csv")
+
+pair_stat[, `:=`(
+  time_span_days = as.numeric(difftime(ymd_hms(last_game_time), ymd_hms(first_game_time), units="days")),
+  min_rounds = pmin(player_a_rounds, player_b_rounds),
+  dominance = same_round_count / pmax(player_a_rounds, player_b_rounds)
+)]
+pair_stat[, risk_tier := fcase(
+  same_rate >= 0.30, "L4-实锤",
+  same_rate >= 0.15, "L3-高危",
+  same_rate >= 0.05, "L2-可疑",
+  default = "L1-正常"
+)]
+```
+
+## 二、数据底盘质检
+
+```{r}
+rbindlist(list(
+  data.table(table="dealer_profit_stat", rows=nrow(dealer_stat), dealer_id_unique=uniqueN(dealer_stat$dealer_id), risk_unknown=sum(dealer_stat$risk_level=="UNKNOWN")),
+  data.table(table="dealer_hourly", rows=nrow(dealer_hourly), dealer_id_unique=uniqueN(dealer_hourly$dealer_id), risk_unknown=0),
+  data.table(table="player_pair_stat", rows=nrow(pair_stat), dealer_id_unique=uniqueN(pair_stat$player_a), risk_unknown=0),
+  data.table(table="pair_hourly", rows=nrow(pair_hourly), dealer_id_unique=uniqueN(pair_hourly$player_a), risk_unknown=0)
+))
+```
+
+**核心发现**：dealer_id全为-1，dealer_avg_roi与std全空，roi_zscore无法计算，上游归因失效。player_a在候选表100%为273467，说明当前切片是单点玩家深挖。
+
+## 三、player_pair_stat 核心
+
+### 3.1 分布
+```{r}
+ggplot(pair_stat, aes(same_rate)) + geom_histogram(bins=30, fill="#2c7fb8") +
+  geom_vline(xintercept=0.15, color="red", linetype="dashed") +
+  labs(title="same_rate分布 - 电商Support") + theme_minimal()
+
+ggplot(pair_stat, aes(risk_tier, same_rate, fill=risk_tier)) + geom_boxplot() + theme_minimal()
+```
+
+解读：正常应为幂律衰减，样本中273467-3163098 same_rate=0.445为极端尾部，L4实锤。
+
+### 3.2 散点象限
+```{r}
+ggplot(pair_stat, aes(same_round_count, same_rate, size=time_span_days, color=risk_tier)) +
+  geom_point(alpha=0.7) + theme_minimal() +
+  labs(title="粘性 vs 亲密度 - 量化因子象限", x="same_round_count", y="same_rate")
+```
+
+右上角大气泡 = 高危团伙。
+
+### 3.3 网络
+```{r}
+g <- graph_from_data_frame(pair_stat[same_rate>0.15, .(player_a, player_b, weight=same_rate)], directed=FALSE)
+plot(g, vertex.size=8, edge.width=E(g)$weight*5, main="高危共现网络")
+```
+
+## 四、dealer_profit_stat
+
+```{r}
+ggplot(dealer_stat, aes(win_rate, player_roi, size=bet_count, color=profit)) +
+  geom_point() + geom_hline(yintercept=0.3, linetype="dashed", color="red") +
+  labs(title="win_rate vs ROI - 量化PnL") + theme_minimal()
+
+dealer_stat[order(-player_roi)][1:5, .(player_id, bet_count, win_rate, player_roi, profit)]
+```
+
+解读：player_roi>0.5且win_rate>0.6为放水嫌疑，但当前risk_score全0需修复。
+
+## 五、小时表穿透
+
+```{r}
+dealer_hourly[, .(mean_profit=mean(profit), sd_profit=sd(profit)), by=.(stat_date)]
+pair_hourly[, .(hours=.N, total_co=sum(same_round_count)), by=.(player_a, player_b)][order(-total_co)][1:10]
+```
+
+## 六、最优化风控评分
+
+RiskScore = 0.5*Z(same_rate) + 0.3*log(1+same_round_count)/max + 0.2*exp(-recency/7)
+
+```{r}
+pair_stat[, z_rate := (same_rate - mean(same_rate))/sd(same_rate)]
+pair_stat[, recency := as.numeric(Sys.Date() - as.Date(last_game_time))]
+pair_stat[, risk_score_v2 := 0.5*z_rate + 0.3*log1p(same_round_count)/max(log1p(same_round_count)) + 0.2*exp(-recency/7)]
+pair_stat[order(-risk_score_v2)][1:10, .(player_a, player_b, same_rate, same_round_count, risk_score_v2, risk_tier)]
+```
+
+## 七、结论
+
+1. 立即封：273467-3163098，44.5%同桌率
+2. 数据修复：dealer_id=-1需回补
+3. Superset落地：risk_score_v2写入，Big Number看高危，Graph看闭环

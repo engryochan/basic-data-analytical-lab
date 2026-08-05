@@ -1,0 +1,360 @@
+---
+title: "Untitled"
+format: html
+---
+
+# 会员风控分级与处置体系
+## ——顶级电商 / 量化科技 / 实验室级科学方法的三重交叉设计
+
+> 适用底座：`ods_mariadb_2b.ods_a168_*`（StarRocks，MariaDB 同步）
+> 建模栈：StarRocks SQL → R（`survival` / `brms` / `randomForestSRC` / `data.table`）+ Python（`scikit-learn` / `PyOD`）
+> 交付形态：Quarto 报告 + Shiny 风控看板 + 每日调度打分表
+
+---
+
+## 零、三个行业的方法论差异与融合
+
+| 维度 | 顶级电商（Amazon / Shopee） | 量化科技（对冲基金 / 做市商） | 教授级实验室 |
+|---|---|---|---|
+| 核心目标 | 分层运营、GMV 与复购最大化 | 敞口控制、尾部风险、对手方识别 | 因果识别、可复现、可证伪 |
+| 关键手段 | RFM / CLV / 倾向分 | VaR、集中度、异常检测、博弈论 | 随机对照、准实验、贝叶斯层级模型 |
+| 判断口径 | 概率排序（谁值钱） | 极值与相关性（谁能打穿我） | 结构参数（为什么） |
+| 落到博彩风控 | 会员价值分层与激励配置 | 单会员/单桌/单荷官敞口与套利识别 | 归因是"运气"还是"作弊/优势玩法" |
+
+**融合原则**：电商的分层决定"给多少"，量化的敞口决定"限多少"，实验室的因果决定"敢不敢定性"。三者缺一，风控要么误伤大客，要么放跑套利团伙。
+
+---
+
+## 一、数据准备：从 ODS 到风控宽表
+
+### 1.1 必须先解决的四个口径陷阱
+
+参照 `ods_a168_bet01` 的结构特征：
+
+1. **全字段 varchar** — 任何聚合前必须显式 `CAST`，否则字符串排序会让金额分位数完全失真。
+2. **`dt` ≠ `bet07`** — `dt` 是 StarRocks 分区键（扫描用），`bet07` 帐务日期才是财务与风控归属口径。两者都要进 `WHERE`。
+3. **注单版本** — `updatetime` 存在说明源行会被结算/取消回写，须按 `bet01` 取最新版本。
+4. **取消单与小费** — `bet30='N'` 过滤取消单，`category=2`（小费）不计入有效投注。
+
+### 1.2 会员日粒度宽表（风控基础层）
+
+```{sql, eval = FALSE}
+--- eval = FALSE
+CREATE VIEW dwd_member_daily AS
+WITH b AS (
+  SELECT *
+  FROM ods_mariadb_2b.ods_a168_bet01
+  WHERE dt BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 400 DAY) AND CURRENT_DATE()
+    AND bet30 = 'N'
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY bet01 ORDER BY CAST(updatetime AS DATETIME) DESC) = 1
+)
+SELECT
+  CAST(bet05 AS INT)                                   AS member_id,
+  bet07                                                AS acct_date,
+  CAST(bet02 AS INT)                                   AS game_type,
+  CAST(bet15 AS INT)                                   AS lv1_id,
+  CAST(bet19 AS INT)                                   AS lv5_id,
+  CAST(eid  AS INT)                                    AS dealer_id,
+  CAST(bet31 AS INT)                                   AS table_id,
+  COUNT(DISTINCT bet01)                                AS n_bets,
+  SUM(CAST(bet13 AS DECIMAL(16,4))*CAST(bet11 AS DECIMAL(16,4)))  AS turnover_base,
+  AVG(CAST(bet13 AS DECIMAL(16,4))*CAST(bet11 AS DECIMAL(16,4)))  AS avg_stake,
+  STDDEV_SAMP(CAST(bet13 AS DECIMAL(16,4))*CAST(bet11 AS DECIMAL(16,4))) AS sd_stake,
+  MAX(CAST(bet13 AS DECIMAL(16,4))*CAST(bet11 AS DECIMAL(16,4)))  AS max_stake,
+  AVG(CAST(bet14 AS DECIMAL(16,4)))                    AS avg_rebate_pct,
+  COUNT(DISTINCT ip)                                   AS n_ip,
+  COUNT(DISTINCT bet31)                                AS n_tables,
+  MIN(CAST(bet08 AS DATETIME))                         AS first_bet_ts,
+  MAX(CAST(bet08 AS DATETIME))                         AS last_bet_ts
+FROM b
+GROUP BY 1,2,3,4,5,6,7;
+```
+
+派彩/输赢需 `JOIN` 结算表（`ods_a168_bet02` 或独立 settle 表）后才能算 GGR/NGR。**没有 NGR 就不要谈会员分级**——只有 turnover 的分级会把刷返水的套利客误判为 VIP。
+
+### 1.3 关键派生指标
+
+| 指标 | 定义 | 风控含义 |
+|---|---|---|
+| `ngr = ggr − 返水 − 优惠` | 公司真实净收入 | 分级的**唯一钱口径** |
+| `hold_rate = ggr / turnover` | 实收率 | 显著低于理论 house edge → 套利嫌疑 |
+| `rebate_ratio = 返水 / ngr` | 返水占比 | >1 即公司倒贴 |
+| `stake_cv = sd_stake / avg_stake` | 注额变异系数 | 极高 → 追注 / 打法切换 |
+| `bet_latency` | 开局时间 → 下注时间间隔 | 极短且稳定 → 脚本/API 打法 |
+| `late_bet_rate` | 临近封盘下注占比 | 高 → 延迟套利（video latency arbitrage） |
+| `ip_entropy` | IP / 设备分布熵 | 低熵多账号 → 团伙 |
+| `hhi_game` | 玩法集中度 HHI | 单一低边际玩法 → 优势玩法专攻 |
+
+---
+
+## 二、判断层：如何"看出"一个会员是什么
+
+### 2.1 四象限主轴（价值 × 风险）
+
+不要用单一评分。用**二维正交**，这是电商与量化的分歧点，也是融合点。
+
+```
+                 高风险
+                    │
+   ④ 高价值高风险    │    ③ 低价值高风险
+   （鲸鱼但可疑）     │    （套利/欺诈客）
+   → 人工审查 + 限额  │    → 冻结 / 清退
+────────────────────┼────────────────────  价值轴 →
+   ① 高价值低风险     │    ② 低价值低风险
+   （核心 VIP）       │    （长尾/沉睡）
+   → 加码激励        │    → 自动化唤醒
+                    │
+                 低风险
+```
+
+**价值轴** = 预测未来 12 个月贴现 NGR（不是历史累计 NGR）。
+**风险轴** = 套利概率 × 潜在敞口（不是单纯的"赢了多少"）。
+
+> 最常见的行业错误：把"赢钱的客人"当成风险客。真正该抓的是 **hold_rate 系统性偏离理论值** 且 **可重复** 的人，而不是运气好的人。这正是实验室方法的价值所在。
+
+### 2.2 价值轴：CLV 的三层建模
+
+**第一层 — 描述性 RFM+M'（快速可用）**
+
+```{r, eval = FALSE}
+# eval = FALSE
+library(data.table)
+rfm <- dt[, .(
+  R = as.numeric(Sys.Date() - max(acct_date)),
+  F = uniqueN(acct_date),
+  M = sum(ngr),
+  M2 = sum(turnover_base)
+), by = member_id]
+
+# 五分位打分，注意 NGR 有负值，需分段处理
+rfm[, R_s := 6 - cut(R, quantile(R, 0:5/5), labels = 1:5, include.lowest = TRUE)]
+rfm[, F_s := cut(F, quantile(F, 0:5/5), labels = 1:5, include.lowest = TRUE)]
+rfm[, M_s := cut(M, quantile(M, 0:5/5), labels = 1:5, include.lowest = TRUE)]
+```
+
+**第二层 — 生存分析驱动的 CLV（您已在用）**
+
+```{r, eval = FALSE}
+# eval = FALSE
+library(survival)
+# 时变协变量格式：counting process (start, stop, event)
+fit <- coxph(
+  Surv(start, stop, churn) ~ log1p(turnover_base) + stake_cv + rebate_ratio +
+    n_tables + strata(vip_tier) + cluster(member_id),
+  data = tv_data
+)
+
+# CLV = Σ_t S(t) × 月均NGR × 折现
+surv <- survfit(fit, newdata = member_profile)
+clv  <- sapply(seq_len(nrow(member_profile)), function(i) {
+  s <- summary(surv[i], times = 1:12)$surv
+  sum(s * member_profile$monthly_ngr[i] / (1 + 0.01)^(1:12))
+})
+```
+
+对非比例风险（VIP 与散户的流失机制不同）用 `strata()`，或改用 **Random Survival Forest**（`randomForestSRC::rfsrc`）捕捉交互。
+
+**第三层 — 贝叶斯层级模型（实验室级，可给不确定性）**
+
+```{r, eval = FALSE}
+# eval = FALSE
+library(brms)
+m <- brm(
+  bf(ngr ~ 1 + log1p(turnover) + (1 | member_id) + (1 | lv1_id) + (1 | country),
+     sigma ~ 1 + (1 | vip_tier)),
+  family = student(),                 # 厚尾，博彩 NGR 必用
+  prior = c(prior(normal(0, 2), class = "b"),
+            prior(exponential(1), class = "sd")),
+  data = d, chains = 4, cores = 4, backend = "cmdstanr"
+)
+```
+
+层级结构直接对应您的**「客户–产品–国家地区」利润评分模型**：会员嵌套于代理线（LV1–LV5）嵌套于地区。层级收缩能防止"打了 3 单赢 5 万"的小样本会员被误判为高价值/高风险。
+
+> 提醒：LOO 在大样本上会炸内存。按 `dealer_id` 或风险等级分层抽样 1000–2000 行做模型比较即可，最终模型不跑 LOO。
+
+### 2.3 风险轴：多信号融合
+
+**信号 A — 统计异常（无监督，覆盖未知手法）**
+
+```{python, eval = FALSE}
+# eval = FALSE
+from pyod.models.ecod import ECOD
+from pyod.models.iforest import IForest
+import numpy as np
+
+X = feats[['hold_rate','stake_cv','bet_latency_med','late_bet_rate',
+           'ip_entropy','hhi_game','rebate_ratio','max_stake_ratio']].values
+
+ecod = ECOD().fit(X)          # 无参数、可解释每维贡献
+iso  = IForest(n_estimators=500, contamination=0.01, random_state=42).fit(X)
+score = 0.5*ecod.decision_scores_ + 0.5*iso.decision_scores_
+```
+
+ECOD 的优势是**逐维给出尾部概率贡献**，可以直接告诉审查员"这个人是因为下注延迟异常被标记的"，符合可解释风控要求。
+
+**信号 B — 规则引擎（已知手法，硬边界）**
+
+| 规则 | 判据 | 指向 |
+|---|---|---|
+| 对冲对打 | 同一 `table_id` 同场次，两账号下注方向相反且金额近似 | 洗返水团伙 |
+| 延迟套利 | `bet_latency` 分布左移且 `late_bet_rate` > 阈值 | 视频流延迟利用 |
+| 免佣百家乐扫边 | `commission=1` 且专打特定 bet09 内容 | 优势玩法 |
+| 多账号同 IP | `ip` 共享度 + `betwalletid` 关联 | 一人多号套优惠 |
+| 起始点数异常 | `bet12/bet12a` 与钱包流水不符 | 系统漏洞/内部勾结 |
+| 荷官关联 | 某 `eid` 下特定会员 hold_rate 系统性为负 | 内外勾结 |
+
+**信号 C — 图网络（团伙识别）**
+
+以会员为节点，共享 IP / 钱包 / 提款账户 / 代理线 / 同桌对打为边，跑连通分量与社区检测（`igraph::cluster_louvain`）。**团伙风险必须在社区层面聚合**——单个账号看起来都正常，合起来是完美对冲。
+
+```{r, eval = FALSE}
+# eval = FALSE
+library(igraph)
+g <- graph_from_data_frame(edges, directed = FALSE)
+comm <- cluster_louvain(g)
+# 社区级敞口 = 组内成员 NGR 之和；对冲团伙的组内 NGR 方差极小而个体方差极大
+```
+
+**信号 D — 因果检验（区分运气 vs 优势）**
+
+这是实验室方法真正的杀手锏。对疑似套利会员：
+
+- **原假设 H₀**：该会员 hold_rate 与理论 house edge 无差异（纯运气）。
+- 用**序贯概率比检验（SPRT）** 而非固定样本检验——因为风控需要"越早判定越好"，且要控制误伤率。
+
+```{r, eval = FALSE}
+# eval = FALSE
+# SPRT: 在 α=0.001（误伤率）、β=0.05（漏判率）下持续监控
+llr <- cumsum(log(dbinom(x, 1, p1) / dbinom(x, 1, p0)))
+A <- log((1-beta)/alpha); B <- log(beta/(1-alpha))
+# llr > A → 判定优势玩家；llr < B → 判定正常；之间 → 继续观察
+```
+
+同时用 **bootstrap 抽样** 给出"若该会员是普通玩家，出现如此战绩的概率"，写进人工审查工单。这一步能让处置决定经得起客诉与监管质询。
+
+### 2.4 敞口维度（量化视角，最常被忽略）
+
+分级不只看"这个人怎么样"，还要看"他能对我造成多大伤害"：
+
+- **单会员 VaR₉₉**：基于历史注额分布与玩法赔率，模拟单日最大潜在赔付。
+- **集中度 HHI**：单会员 NGR 占单桌 / 单代理线 / 单地区的比重。HHI > 0.25 即结构性依赖。
+- **相关性敞口**：多个会员在同场次的下注是否高度相关（同向 → 系统性风险；反向 → 对冲嫌疑）。
+- **代理线传导**：LV1–LV5 占成结构意味着大会员出事会沿代理线放大损失，须按 `bet20~bet24` 占成回算实际净敞口。
+
+---
+
+## 三、归类层：分级体系设计
+
+### 3.1 主分级（8 类）
+
+| 代码 | 名称 | 判据（示意） | 占比目标 |
+|---|---|---|---|
+| **A1** | 战略 VIP | CLV top 1%，风险分 < P50，行为稳定 ≥ 6 月 | ~1% |
+| **A2** | 核心 VIP | CLV top 5%，风险分 < P70 | ~4% |
+| **B1** | 成长潜力 | CLV 中高位 + 上升斜率显著为正 | ~10% |
+| **B2** | 稳定长尾 | 低 CLV 低风险，贡献规模效应 | ~50% |
+| **C1** | 沉睡 | R > 90 天，历史 NGR > 0 | ~20% |
+| **C2** | 流失预警 | 生存模型 30 日流失概率 > 0.6 且 CLV 中高 | ~5% |
+| **D1** | 疑似套利 | 风险分 > P95 或触发 ≥ 2 条硬规则，未定性 | ~2% |
+| **D2** | 确认违规 | 硬规则 + SPRT 判定 + 人工复核通过 | < 0.5% |
+
+**关键设计**：D1 与 A1/A2 **可以并存**——一个鲸鱼客同时是高风险客是完全正常的。系统必须允许 `(tier, risk_flag)` 两个独立标签，而不是塞进一个字段。这是绝大多数博彩风控系统的架构性缺陷。
+
+### 3.2 分级的技术实现
+
+- **软分级**：模型输出连续分（CLV 分位 + 风险分位），存 `member_score_daily`。
+- **硬分级**：分位阈值 + 规则触发映射到 tier，**加入迟滞（hysteresis）** —— 升级需连续 7 天满足，降级需连续 14 天满足，防止会员在等级间抖动导致运营混乱。
+- **稳定性监控**：每周计算 tier 转移矩阵，对角线占比应 > 85%；PSI（Population Stability Index）> 0.25 即模型需重训。
+
+### 3.3 分群补充（正交于分级）
+
+在 tier 之上再跑一层**行为聚类**（K-prototypes 或 GMM），得到打法画像：稳健小注型、追注型、单玩法专精型、多桌游走型、夜间活跃型。tier 决定资源投入，画像决定沟通方式。
+
+---
+
+## 四、处置层：措施矩阵
+
+### 4.1 分级 × 措施
+
+| 分级 | 额度策略 | 优惠策略 | 服务策略 | 监控频率 |
+|---|---|---|---|---|
+| A1 | 上浮 200%，专属限额 | 定制返水，非标礼遇 | 专属客户经理，直连 | 实时（敞口告警） |
+| A2 | 上浮 100% | 阶梯返水 | 分组 VIP 服务 | 日 |
+| B1 | 标准 + 成长阶梯 | 达标即升，触发式激励 | 自动化 + 定向触达 | 日 |
+| B2 | 标准 | 通用活动 | 全自动化 | 周 |
+| C1 | 标准 | 唤醒券（限时、限额、ROI 可测） | 自动化触达 | 周 |
+| C2 | 标准 | 挽留包（按流失原因定制） | 人工外呼（高 CLV 者） | 日 |
+| D1 | **下调 50%，冻结优惠** | 停发返水/活动 | 静默，不通知 | 实时 |
+| D2 | 冻结投注 | 全停 | 依合规流程处理 | 归档 |
+
+### 4.2 处置的四条铁律
+
+1. **分级触发建议，不触发自动执行。** D1/D2 的实际动作必须经人工复核并留痕。自动冻结高价值客户造成的商誉损失，通常远超套利损失本身。
+2. **先降额，后冻结。** 降低限额是可逆的、低对抗成本的干预，能观察对方反应（真套利客会立即转移，普通客只会抱怨）。这本身就是一次**准实验**。
+3. **处置理由必须可归因到具体信号。** 工单模板：触发规则 + 模型分及分位 + 统计检验 p 值 + 关联账号图 + 相似历史案例。
+4. **所有干预都要留对照组。** 挽留、唤醒、降额，随机保留 5–10% 不干预，用 uplift model 衡量真实增量效果。没有对照组的运营动作，一年后你无法证明它有没有用。
+
+### 4.3 优惠的经济性约束
+
+对每个会员计算 **返水/优惠 ROI**：
+
+$$\text{Bonus ROI} = \frac{\Delta \text{NGR}_{\text{增量}}}{\text{Bonus Cost}}$$
+
+其中 ΔNGR 增量必须来自 **uplift 模型**（双模型法或 causal forest），不是简单前后对比。ROI < 1 的优惠立即停发。顶级电商在这一点上做得远比多数博彩公司精细。
+
+---
+
+## 五、闭环：监控、验证与治理
+
+### 5.1 三层监控
+
+| 层级 | 监控项 | 告警阈值 |
+|---|---|---|
+| 数据层 | 分区完整性、`bet30/bet07` 空值率、金额异常值率 | 偏离基线 3σ |
+| 模型层 | AUC / C-index、PSI、tier 转移矩阵对角占比、校准曲线 | AUC 下降 > 0.05 |
+| 业务层 | 各 tier 实收率、返水占比、误伤率（申诉成功率）、漏判率 | 误伤率 > 2% |
+
+### 5.2 误伤率与漏判率的显式权衡
+
+风控本质是**分类阈值选择问题**。定义：
+
+- 误伤成本 = 该会员 CLV × 流失概率提升
+- 漏判成本 = 套利者预期持续损失 × 剩余生命期
+
+最优阈值满足边际成本相等。**把这个计算写进模型文档**，而不是拍脑袋定 P95。
+
+### 5.3 可复现性（实验室标准）
+
+- 所有特征工程写成版本化 SQL 视图 + `targets` / `renv` 锁定 R 环境。
+- 模型训练用固定 seed，产出 model card：训练窗口、特征列表、性能、已知失效场景。
+- 每次线上决策记录当时的模型版本与输入快照，支持事后重演（regulatory replay）。
+- 大对象（`.rds`、`.csv` > 100MB）用 Git LFS 或直接排除出仓库，只保留生成脚本。
+
+---
+
+## 六、落地路线（12 周）
+
+| 阶段 | 周次 | 交付 |
+|---|---|---|
+| 一、数据底座 | 1–3 | 打通结算表，建 `dwd_member_daily` 与 NGR 口径，数据质量报告 |
+| 二、价值轴 | 4–6 | RFM 上线 + Cox/RSF 流失模型 + CLV v1 |
+| 三、风险轴 | 5–8 | 规则引擎 + ECOD/IForest + 图网络团伙识别 |
+| 四、分级系统 | 8–10 | 8 类 tier + 迟滞逻辑 + 转移矩阵监控 |
+| 五、处置与实验 | 10–12 | 措施矩阵落地 + uplift 对照组 + Shiny 风控看板 |
+
+优先级建议：**先做风险轴的规则引擎**（一周内就能抓到确定的对打团伙，ROI 最快），再做价值轴，最后做贝叶斯层级模型这类"漂亮但慢"的部分。
+
+---
+
+## 七、常见失败模式
+
+1. **用 turnover 而非 NGR 分级** → 把刷返水的套利客捧成 VIP。
+2. **风险与价值合并成一个分** → 高价值高风险客被系统吞掉或被无脑放行。
+3. **只有规则没有统计检验** → 误伤率失控，客诉无法应对。
+4. **只有模型没有规则** → 已知手法反复漏判，模型冷启动期裸奔。
+5. **不做团伙聚合** → 对冲团伙的每个账号都"正常"。
+6. **没有对照组** → 三个月后无法回答"这套体系值多少钱"。
+7. **分级无迟滞** → 会员天天升降级，运营与客户双方失去信任。
+8. **忽略代理线传导** → 按会员算敞口，实际损失沿 LV1–LV5 占成结构放大。

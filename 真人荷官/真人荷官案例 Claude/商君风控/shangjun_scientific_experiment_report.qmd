@@ -1,0 +1,217 @@
+---
+title: "商君风控科学实验报告：时间外回测、多模型评价与商业政策模拟"
+format:
+  html:
+    toc: true
+    code-fold: true
+execute:
+  echo: true
+  warning: false
+---
+
+# 摘要
+
+本报告将《商君风控基本概念》与 `top_tier_mthodology_report` 所要求的科学实验思想统一到一个可重复的风控研究框架中。核心原则是：**不以单一模型指标代表商业价值，不以训练集表现代替真实预测能力，不以 MASE 取代生存分析指标，不虚构缺失的数据或实验结果**。
+
+最终评价分为四层：
+
+1. **预测层**：MAE、RMSE、MASE（仅在确属时间序列预测任务时使用）。
+2. **生存层**：Harrell/Uno C-index、time-dependent AUC、Brier、Integrated Brier Score（IBS）、校准。
+3. **风险识别层**：PR-AUC、Recall@Top-K、Precision@Top-K、Lift、捕获曲线。
+4. **商业层**：风险损失避免额、误伤成本、风控成本、会员留存损失、净收益、ROI。
+
+# 1. 实验原则
+
+## 1.1 时间外测试
+
+对于真实商业风控，推荐：
+
+`训练期 → 验证期 → 时间外测试期`
+
+严禁在同一时间窗口内随机切分后直接把结果当作未来表现。原因包括：
+
+- 玩家行为随时间漂移；
+- dealer 风险随时间变化；
+- 规则上线后会改变数据生成机制；
+- 同一实体可能同时出现在训练与测试中；
+- 随机切分可能造成信息泄漏。
+
+## 1.2 MASE 的适用边界
+
+MASE 是时间序列预测误差尺度化指标。它非常适合比较需求、会员数、投注量、收入等时间序列预测，但**不能单独作为 Cox、RSF、XGBoost survival 或二分类风控模型的核心精度标准**。
+
+因此，本项目建议：
+
+- 会员数预测：MASE、sMAPE、RMSE；
+- 收入/盈亏预测：MASE、WAPE、RMSE；
+- 生存风险：C-index、IBS、Brier、time-dependent AUC；
+- 高风险识别：PR-AUC、Precision@K、Recall@K、Lift@K；
+- 商业政策：Net Benefit、ROI、Prevented Loss、Retention Impact。
+
+# 2. 现有模型体系的定位
+
+| 模型 | 主要用途 | 核心评价 |
+|---|---|---|
+| Cox | 风险排序、解释 | C-index、校准 |
+| RSF | 非线性风险 | C-index、IBS、AUC |
+| XGBoost Cox | 高预测能力风险评分 | C-index、时间外测试 |
+| Bayesian Hierarchical | 个体/群组异质性、不确定性 | 后验、Rhat、ESS、校准 |
+| Autoencoder | 无监督异常检测 | Precision@K、Recall@K、稳定性 |
+| Player-Pair Network | 协同与异常关系 | Lift、网络稳定性 |
+| 规则引擎 | 业务执行 | 捕获率、误伤率、净收益 |
+| Ensemble | 综合决策 | 时间外综合表现 |
+
+# 3. 对已有实验结果的科学判断
+
+此前实验中 XGBoost Cox 在训练数据上得到 C-index 约 0.807。这个数字说明模型具有较强的**样本内排序能力**，但不能直接解释为真实上线后的 0.807。
+
+必须进一步验证：
+
+- 时间外 C-index；
+- bootstrap 置信区间；
+- 时间窗口稳定性；
+- 不同会员群体的公平性；
+- PSI / 数据漂移；
+- calibration；
+- Top 1%、5%、10% 的 Lift；
+- 风险政策实施后的业务反事实结果。
+
+此前 Bayesian 负二项模型出现 Rhat > 1.05 和大量 divergent transitions，故不应把该模型的后验结果直接作为正式商业结论。应先解决收敛问题。
+
+此前 RSF 为节省内存使用 `forest = FALSE` 时，不能可靠执行后续森林预测。这种模型可用于探索，但不应作为最终线上预测模型。正式预测模型必须保存森林结构，或使用独立的资源充足环境重新训练。
+
+# 4. 商业政策模拟
+
+定义：
+
+`Net Benefit = Prevented Loss - Intervention Cost - False Positive Cost - Retention Loss`
+
+对以下政策进行比较：
+
+- Policy A：不干预；
+- Policy B：规则干预；
+- Policy C：Cox/RSF/XGBoost；
+- Policy D：Bayesian；
+- Policy E：Ensemble。
+
+重点输出：
+
+| 指标 | 含义 |
+|---|---|
+| Prevented Loss | 预计避免的风险损失 |
+| False Positive Cost | 正常会员被误伤的成本 |
+| Retention Loss | 误伤导致的会员留存损失 |
+| Intervention Cost | 人工审核/限制/调查成本 |
+| Net Benefit | 最终净收益 |
+| ROI | 风控投入的商业回报 |
+| Recall@Top-K | 有限风控容量下捕获的风险比例 |
+| Precision@Top-K | 被干预会员中真正高风险的比例 |
+| Lift@Top-K | 相对于随机抽查的风险提升倍数 |
+
+# 5. 推荐实验矩阵
+
+建议至少运行：
+
+- Top 1%
+- Top 3%
+- Top 5%
+- Top 10%
+- Top 20%
+
+并对每个策略进行 bootstrap 重采样，报告：
+
+- 点估计；
+- 95% CI；
+- 最坏情形；
+- 中位情形；
+- 最佳情形。
+
+最终选择不应只看最高收益，而应看：
+
+`Risk-adjusted Net Benefit`
+
+即在收益和不确定性之间取得平衡。
+
+# 6. 会员与留存模拟
+
+会员数量和留存率必须来自真实历史数据，或来自经过验证的因果模型。不能仅凭风险模型的分类结果直接宣称“会员增加 X%”。
+
+推荐：
+
+- 会员留存：survival / churn model；
+- 会员数量：时间序列模型；
+- 干预效果：Difference-in-Differences、Causal Forest、Uplift Modeling；
+- 业务收益：Policy Evaluation / Off-policy Evaluation。
+
+如果没有真实干预实验，报告应明确区分：
+
+1. 观察性结果；
+2. 模型预测；
+3. 反事实模拟；
+4. 随机对照实验结果。
+
+四者的证据等级不同。
+
+# 7. 可信度等级
+
+建议采用：
+
+**Level A**：时间外测试 + 外部验证 + 真实 A/B 或准实验。
+
+**Level B**：时间外测试 + bootstrap CI + 多模型一致性。
+
+**Level C**：交叉验证 + 内部验证。
+
+**Level D**：仅训练集指标。
+
+目前已获得的训练集 XGBoost Cox C-index ≈ 0.807，应暂定为 Level D，而不能直接作为商业上线证据。
+
+# 8. 最终决策标准
+
+最终最优方案不是：
+
+> 精度最高的模型。
+
+而是：
+
+> 在时间外数据上稳定、校准良好、风险捕获能力高、误伤率可接受，并且在真实业务约束下具有最高 Risk-adjusted Net Benefit 的策略。
+
+# 9. 下一阶段真实实验
+
+建议按以下顺序执行：
+
+1. 固定数据版本；
+2. 建立时间切分；
+3. 重新训练所有候选模型；
+4. 统一输出风险分数；
+5. 计算时间外 C-index / IBS / Brier / AUC；
+6. 计算 Top-K Precision / Recall / Lift；
+7. 建立规则、模型、Ensemble 五种政策；
+8. 计算业务净收益；
+9. 建立会员留存与流失模型；
+10. 使用 bootstrap 得到 95% CI；
+11. 进行敏感性分析；
+12. 选择最终政策；
+13. 进入小规模灰度实验；
+14. 最后才进行正式商业部署。
+
+# 10. 结论
+
+本项目应当坚持“预测—风险—政策—业务”的闭环。
+
+最终科学结论应由以下证据共同支持：
+
+`预测精度 + 风险识别 + 校准 + 时间外稳定性 + 业务净收益 + 会员留存 + 成本 + 不确定性`
+
+而不是由某一个 MASE、C-index 或 AUC 单独决定。
+
+在目前数据和已知实验结果下，最稳妥的结论是：
+
+- XGBoost Cox 已表现出较好的初步风险排序能力；
+- Bayesian 模型需要先解决收敛问题；
+- RSF 的正式预测版本必须保留森林结构；
+- 规则模型需要与机器学习模型进行时间外对照；
+- 最终商业政策应通过 Top-K 风险容量和净收益曲线选择；
+- 会员留存和商业收益不能由预测模型直接“推导为事实”，必须通过历史观察或因果/准实验验证。
+
+因此，本实验框架的最终目标不是寻找“最复杂的模型”，而是寻找**经时间外验证、可解释、可复现、风险可控、商业净收益最大且具有统计可信度的风控政策**。

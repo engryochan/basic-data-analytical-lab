@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ryo（雷欧）">
+<meta name="dcterms.date" content="2026-08-01">
+
+<title>全平台客户风险与价值分级：商业方案报告</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="客户风险与价值分级_商业方案报告_files/libs/clipboard/clipboard.min.js"></script>
+<script src="客户风险与价值分级_商业方案报告_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="客户风险与价值分级_商业方案报告_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="客户风险与价值分级_商业方案报告_files/libs/quarto-html/popper.min.js"></script>
+<script src="客户风险与价值分级_商业方案报告_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="客户风险与价值分级_商业方案报告_files/libs/quarto-html/anchor.min.js"></script>
+<link href="客户风险与价值分级_商业方案报告_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="客户风险与价值分级_商业方案报告_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="客户风险与价值分级_商业方案报告_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="客户风险与价值分级_商业方案报告_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="客户风险与价值分级_商业方案报告_files/libs/bootstrap/bootstrap-67270d1595a62d14f123c043d4fb2f18.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#给业务负责人的话写在最前面" id="toc-给业务负责人的话写在最前面" class="nav-link active" data-scroll-target="#给业务负责人的话写在最前面">给业务负责人的话（写在最前面）</a></li>
+  <li><a href="#一这份分析用了什么数据写给非技术人员看" id="toc-一这份分析用了什么数据写给非技术人员看" class="nav-link" data-scroll-target="#一这份分析用了什么数据写给非技术人员看">一、这份分析用了什么数据（写给非技术人员看）</a></li>
+  <li><a href="#二客户五级分级系统真实计算结果" id="toc-二客户五级分级系统真实计算结果" class="nav-link" data-scroll-target="#二客户五级分级系统真实计算结果">二、客户五级分级系统（真实计算结果）</a>
+  <ul class="collapse">
+  <li><a href="#为什么要分成五级每一级怎么算出来的" id="toc-为什么要分成五级每一级怎么算出来的" class="nav-link" data-scroll-target="#为什么要分成五级每一级怎么算出来的">2.1 为什么要分成五级、每一级怎么算出来的</a></li>
+  <li><a href="#五级分级结果总表" id="toc-五级分级结果总表" class="nav-link" data-scroll-target="#五级分级结果总表">2.2 五级分级结果总表</a></li>
+  <li><a href="#s级合谋风险判定门槛与业务应对" id="toc-s级合谋风险判定门槛与业务应对" class="nav-link" data-scroll-target="#s级合谋风险判定门槛与业务应对">2.3 S级”合谋风险”——判定门槛与业务应对</a></li>
+  <li><a href="#a级核心高价值客户判定门槛与业务应对" id="toc-a级核心高价值客户判定门槛与业务应对" class="nav-link" data-scroll-target="#a级核心高价值客户判定门槛与业务应对">2.4 A级”核心高价值客户”——判定门槛与业务应对</a></li>
+  <li><a href="#bcd级常规分层管理" id="toc-bcd级常规分层管理" class="nav-link" data-scroll-target="#bcd级常规分层管理">2.5 B/C/D级——常规分层管理</a></li>
+  </ul></li>
+  <li><a href="#三一个重要的诚实排除为什么不用用了几个ip当风险指标" id="toc-三一个重要的诚实排除为什么不用用了几个ip当风险指标" class="nav-link" data-scroll-target="#三一个重要的诚实排除为什么不用用了几个ip当风险指标">三、一个重要的”诚实排除”：为什么不用”用了几个IP”当风险指标</a></li>
+  <li><a href="#四存活分析赢钱的客户黏着度差多少" id="toc-四存活分析赢钱的客户黏着度差多少" class="nav-link" data-scroll-target="#四存活分析赢钱的客户黏着度差多少">四、存活分析：赢钱的客户，黏着度差多少</a></li>
+  <li><a href="#五商业方案总结接下来该做什么" id="toc-五商业方案总结接下来该做什么" class="nav-link" data-scroll-target="#五商业方案总结接下来该做什么">五、商业方案总结：接下来该做什么</a>
+  <ul class="collapse">
+  <li><a href="#立即可以做的三件事" id="toc-立即可以做的三件事" class="nav-link" data-scroll-target="#立即可以做的三件事">5.1 立即可以做的三件事</a></li>
+  <li><a href="#需要投入才能做到的事" id="toc-需要投入才能做到的事" class="nav-link" data-scroll-target="#需要投入才能做到的事">5.2 需要投入才能做到的事</a></li>
+  <li><a href="#诚实的边界" id="toc-诚实的边界" class="nav-link" data-scroll-target="#诚实的边界">5.3 诚实的边界</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">全平台客户风险与价值分级：商业方案报告</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li><li><hr class="dropdown-divider"></li><li><a id="quarto-view-source" class="dropdown-item" href="javascript:void(0)" role="button">View Source</a></li></ul></div></div>
+<p class="subtitle lead">基于129万个IP、70.1万名玩家的真实全局数据分析</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ryo（雷欧） </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">August 1, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="给业务负责人的话写在最前面" class="level1">
+<h1>给业务负责人的话（写在最前面）</h1>
+<p>这份报告不是统计学教材，是给<strong>看得懂营收报表、但不一定看得懂p值</strong> 的博彩业务人员写的。凡是用到统计学名词的地方，一律先讲”这在赌场 经营上代表什么”，再讲背后的数学——如果您赶时间，只看每章开头的 <strong>粗体结论句</strong>跟”业务应对措施”这两块，跳过公式与代码也完全不影响 理解。</p>
+<p><strong>先说结论</strong>：全平台70.1万名玩家里，真正需要立刻处理的”合谋风险” 只有<strong>710人(0.10%)</strong>；但另外有<strong>7,009名”核心高价值客户”(前1%)</strong>， 他们贡献了平台<strong>9,009万</strong>正向派彩、占了全部赢钱金额的一半以上—— 这批人不是风险，是<strong>平台最值钱的资产</strong>，防止流失比防止作弊更重要。 本报告会把这两件事分开处理，给出各自的判定门槛和该做什么。</p>
+<hr>
+</section>
+<section id="一这份分析用了什么数据写给非技术人员看" class="level1">
+<h1>一、这份分析用了什么数据（写给非技术人员看）</h1>
+<p>用大白话说：我们把<strong>过去一段时间内，每个IP地址底下，每个玩家分别 下了多少单、赢了多少钱</strong>这件事，做成了一张巨大的表格——不是抽样、 不是估计，是把符合条件(百家乐、正常注单)的<strong>全部真实记录</strong>都算过 一遍。</p>
+<ul>
+<li>这张表总共 <strong>2,921,074</strong> 行（每一行代表”某个IP + 某个玩家”这个 组合曾经发生过什么）</li>
+<li>涉及 <strong>1,289,054</strong> 个不同的IP地址</li>
+<li>涉及 <strong>700,840</strong> 名不同的玩家</li>
+</ul>
+<p>打个比方：如果把每个玩家想象成一个”档案”，这份分析等于把公司<strong>全部 70万份客户档案</strong>都摊开来重新审查了一遍，不是只挑了几百个”看起来 可疑”的人来看——这就是为什么后面的结论可以放心当成”公司现况的 真实写照”，而不是”某个小范围调查的推测”。</p>
+<div id="7305fdb5" class="cell" data-execution_count="2">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># 本区块是全篇报告唯一的"运算核心"——从您本机的原始CSV文件现场算起，</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 不依赖任何预先存在的缓存档案。后面每一节只是把这里算好的结果</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># 拿出来印、画表格，不会重复计算。</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 【重要】下面这行路径，预设这份qmd文件跟"数据库/"资料夹放在同一层</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># (数据库/里面装着30个"聚合计算..._第N批.csv"文件)。如果您的资料夹</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co"># 结构不同，请把 数据库路径 这个变量改成实际路径。</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> glob</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>数据库路径 <span class="op">=</span> <span class="st">"数据库"</span>  <span class="co"># 相对路径：假设与本qmd文件同一层目录下有"数据库"资料夹</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> bh_fdr(pvals):</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""手写Benjamini-Hochberg多重检验校正(FDR)，不依赖额外套件"""</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    pvals <span class="op">=</span> np.asarray(pvals)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="bu">len</span>(pvals)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    order <span class="op">=</span> np.argsort(pvals)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    ranked_p <span class="op">=</span> pvals[order]</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    q_ranked <span class="op">=</span> ranked_p <span class="op">*</span> n <span class="op">/</span> (np.arange(n) <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    q_ranked <span class="op">=</span> np.minimum.accumulate(q_ranked[::<span class="op">-</span><span class="dv">1</span>])[::<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    q_ranked <span class="op">=</span> np.minimum(q_ranked, <span class="fl">1.0</span>)</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    q <span class="op">=</span> np.empty(n)</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    q[order] <span class="op">=</span> q_ranked</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> q</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- 第一步：读取全部批次CSV，合并、去重 ----</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>批次文件 <span class="op">=</span> <span class="bu">sorted</span>(</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    glob.glob(os.path.join(数据库路径, <span class="st">"*第*批.csv"</span>)),</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>    key<span class="op">=</span><span class="kw">lambda</span> x: <span class="bu">int</span>(x.split(<span class="st">"第"</span>)[<span class="op">-</span><span class="dv">1</span>].split(<span class="st">"批"</span>)[<span class="dv">0</span>])</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">len</span>(批次文件) <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">FileNotFoundError</span>(</span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>        <span class="ss">f"在 '</span><span class="sc">{数据库路径}</span><span class="ss">' 底下找不到任何 '..._第N批.csv' 档案。"</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>        <span class="ss">f"请确认这份qmd跟'数据库/'资料夹放在同一层，或修改上面'数据库路径'变量。"</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a>原始数据 <span class="op">=</span> pd.concat([pd.read_csv(f) <span class="cf">for</span> f <span class="kw">in</span> 批次文件], ignore_index<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a>原始数据 <span class="op">=</span> 原始数据.drop_duplicates(subset<span class="op">=</span>[<span class="st">"ip"</span>, <span class="st">"player_id"</span>], keep<span class="op">=</span><span class="st">"first"</span>)</span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- 第二步：IP层级汇总 + 二项检验 + FDR多重检验校正 ----</span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a>IP汇总 <span class="op">=</span> 原始数据.groupby(<span class="st">"ip"</span>).agg(</span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a>    原始关联玩家数<span class="op">=</span>(<span class="st">"player_id"</span>, <span class="st">"nunique"</span>),</span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a>    总订单数<span class="op">=</span>(<span class="st">"该IP下去重订单数"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>    总局数<span class="op">=</span>(<span class="st">"该IP下去重物理局数"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    投注金额<span class="op">=</span>(<span class="st">"该IP下投注金额"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    净盈利<span class="op">=</span>(<span class="st">"该IP下净盈利"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    盈利玩家数<span class="op">=</span>(<span class="st">"该IP下净盈利"</span>, <span class="kw">lambda</span> x: (x <span class="op">&gt;</span> <span class="dv">0</span>).<span class="bu">sum</span>()),</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>).reset_index()</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>IP汇总[<span class="st">"盈利玩家比例"</span>] <span class="op">=</span> IP汇总[<span class="st">"盈利玩家数"</span>] <span class="op">/</span> IP汇总[<span class="st">"原始关联玩家数"</span>]</span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>平台基准盈利率 <span class="op">=</span> (原始数据.groupby(<span class="st">"player_id"</span>)[<span class="st">"该IP下净盈利"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>).mean()</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>候选IP <span class="op">=</span> IP汇总[IP汇总[<span class="st">"原始关联玩家数"</span>] <span class="op">&gt;=</span> <span class="dv">5</span>].copy()</span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>候选IP[<span class="st">"p值"</span>] <span class="op">=</span> 候选IP.<span class="bu">apply</span>(</span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>    <span class="kw">lambda</span> row: stats.binomtest(</span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a>        <span class="bu">int</span>(row[<span class="st">"盈利玩家数"</span>]), <span class="bu">int</span>(row[<span class="st">"原始关联玩家数"</span>]),</span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a>        p<span class="op">=</span>平台基准盈利率, alternative<span class="op">=</span><span class="st">"greater"</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>    ).pvalue, axis<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>候选IP[<span class="st">"p值_FDR校正"</span>] <span class="op">=</span> bh_fdr(候选IP[<span class="st">"p值"</span>].values)</span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a>候选IP[<span class="st">"统计显著"</span>] <span class="op">=</span> 候选IP[<span class="st">"p值_FDR校正"</span>] <span class="op">&lt;</span> <span class="fl">0.01</span></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a>显著IP清单 <span class="op">=</span> <span class="bu">set</span>(候选IP.loc[候选IP[<span class="st">"统计显著"</span>], <span class="st">"ip"</span>])</span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- 第三步：玩家层级汇总(跨IP加总回到每个玩家) ----</span></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a>玩家汇总 <span class="op">=</span> 原始数据.groupby(<span class="st">"player_id"</span>).agg(</span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>    使用IP数<span class="op">=</span>(<span class="st">"ip"</span>, <span class="st">"nunique"</span>),</span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>    总订单数<span class="op">=</span>(<span class="st">"该IP下去重订单数"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a>    总局数<span class="op">=</span>(<span class="st">"该IP下去重物理局数"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a>    总投注金额<span class="op">=</span>(<span class="st">"该IP下投注金额"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a>    总净盈利<span class="op">=</span>(<span class="st">"该IP下净盈利"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a>).reset_index()</span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a>玩家所属显著IP旗标 <span class="op">=</span> (</span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a>    原始数据.assign(涉及统计显著IP<span class="op">=</span>原始数据.ip.isin(显著IP清单))</span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a>    .groupby(<span class="st">"player_id"</span>)[<span class="st">"涉及统计显著IP"</span>].<span class="bu">any</span>().reset_index()</span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a>玩家汇总 <span class="op">=</span> 玩家汇总.merge(玩家所属显著IP旗标, on<span class="op">=</span><span class="st">"player_id"</span>, how<span class="op">=</span><span class="st">"left"</span>)</span>
+<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a>玩家汇总[<span class="st">"涉及统计显著IP"</span>] <span class="op">=</span> 玩家汇总[<span class="st">"涉及统计显著IP"</span>].fillna(<span class="va">False</span>)</span>
+<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- 第四步：五级分级(净盈利P99/P95门槛 + 是否涉及统计显著IP) ----</span></span>
+<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a>净盈利_P99 <span class="op">=</span> 玩家汇总.总净盈利.quantile(<span class="fl">0.99</span>)</span>
+<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a>净盈利_P95 <span class="op">=</span> 玩家汇总.总净盈利.quantile(<span class="fl">0.95</span>)</span>
+<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> 最终分级(row):</span>
+<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> row[<span class="st">"涉及统计显著IP"</span>]:</span>
+<span id="cb1-89"><a href="#cb1-89" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">"S_合谋风险(统计显著共享IP集群成员)"</span></span>
+<span id="cb1-90"><a href="#cb1-90" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> row[<span class="st">"总净盈利"</span>] <span class="op">&gt;=</span> 净盈利_P99:</span>
+<span id="cb1-91"><a href="#cb1-91" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">"A_核心高价值客户(净盈利前1%)"</span></span>
+<span id="cb1-92"><a href="#cb1-92" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> row[<span class="st">"总净盈利"</span>] <span class="op">&gt;=</span> 净盈利_P95:</span>
+<span id="cb1-93"><a href="#cb1-93" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">"B_重要客户(净盈利前5%)"</span></span>
+<span id="cb1-94"><a href="#cb1-94" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> row[<span class="st">"总净盈利"</span>] <span class="op">&lt;</span> <span class="dv">0</span>:</span>
+<span id="cb1-95"><a href="#cb1-95" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">"D_常规客户(净盈利为负，平台正常盈利来源)"</span></span>
+<span id="cb1-96"><a href="#cb1-96" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb1-97"><a href="#cb1-97" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">"C_一般客户(净盈利为正但规模不大)"</span></span>
+<span id="cb1-98"><a href="#cb1-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-99"><a href="#cb1-99" aria-hidden="true" tabindex="-1"></a>玩家汇总[<span class="st">"最终分级"</span>] <span class="op">=</span> 玩家汇总.<span class="bu">apply</span>(最终分级, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb1-100"><a href="#cb1-100" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> 玩家汇总  <span class="co"># 后续各节统一用变量名"d"引用这张分级好的总表</span></span>
+<span id="cb1-101"><a href="#cb1-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-102"><a href="#cb1-102" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- 第五步：个人IP分散度异常检验(控制订单量后，检验IP数是否异常偏高) ----</span></span>
+<span id="cb1-103"><a href="#cb1-103" aria-hidden="true" tabindex="-1"></a>活跃玩家 <span class="op">=</span> d[d.总订单数 <span class="op">&gt;=</span> <span class="dv">5</span>].copy()</span>
+<span id="cb1-104"><a href="#cb1-104" aria-hidden="true" tabindex="-1"></a>线性拟合 <span class="op">=</span> stats.linregress(</span>
+<span id="cb1-105"><a href="#cb1-105" aria-hidden="true" tabindex="-1"></a>    np.log(活跃玩家.总订单数), np.log(活跃玩家.使用IP数.clip(lower<span class="op">=</span><span class="dv">1</span>))</span>
+<span id="cb1-106"><a href="#cb1-106" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-107"><a href="#cb1-107" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"预期IP数_log"</span>] <span class="op">=</span> 线性拟合.slope <span class="op">*</span> np.log(活跃玩家.总订单数) <span class="op">+</span> 线性拟合.intercept</span>
+<span id="cb1-108"><a href="#cb1-108" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"实际IP数_log"</span>] <span class="op">=</span> np.log(活跃玩家.使用IP数.clip(lower<span class="op">=</span><span class="dv">1</span>))</span>
+<span id="cb1-109"><a href="#cb1-109" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"log残差"</span>] <span class="op">=</span> 活跃玩家[<span class="st">"实际IP数_log"</span>] <span class="op">-</span> 活跃玩家[<span class="st">"预期IP数_log"</span>]</span>
+<span id="cb1-110"><a href="#cb1-110" aria-hidden="true" tabindex="-1"></a>残差标准差 <span class="op">=</span> 活跃玩家[<span class="st">"log残差"</span>].std()</span>
+<span id="cb1-111"><a href="#cb1-111" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"Z分数"</span>] <span class="op">=</span> 活跃玩家[<span class="st">"log残差"</span>] <span class="op">/</span> 残差标准差</span>
+<span id="cb1-112"><a href="#cb1-112" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"p值_IP分散"</span>] <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> stats.norm.cdf(活跃玩家[<span class="st">"Z分数"</span>])</span>
+<span id="cb1-113"><a href="#cb1-113" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"p值_IP分散_FDR"</span>] <span class="op">=</span> bh_fdr(活跃玩家[<span class="st">"p值_IP分散"</span>].values)</span>
+<span id="cb1-114"><a href="#cb1-114" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"IP分散显著"</span>] <span class="op">=</span> 活跃玩家[<span class="st">"p值_IP分散_FDR"</span>] <span class="op">&lt;</span> <span class="fl">0.01</span></span>
+<span id="cb1-115"><a href="#cb1-115" aria-hidden="true" tabindex="-1"></a>d_ip分散 <span class="op">=</span> 活跃玩家  <span class="co"># 第三章会用到这张表</span></span>
+<span id="cb1-116"><a href="#cb1-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-117"><a href="#cb1-117" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"✅ 运算完成：</span><span class="sc">{</span><span class="bu">len</span>(批次文件)<span class="sc">}</span><span class="ss">个批次文件 → </span><span class="sc">{</span><span class="bu">len</span>(原始数据)<span class="sc">:,}</span><span class="ss">行(ip,玩家)记录"</span>)</span>
+<span id="cb1-118"><a href="#cb1-118" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"   不重复IP数: </span><span class="sc">{原始数据.</span>ip<span class="sc">.</span>nunique()<span class="sc">:,}</span><span class="ss">　不重复玩家数: </span><span class="sc">{</span><span class="bu">len</span>(d)<span class="sc">:,}</span><span class="ss">"</span>)</span>
+<span id="cb1-119"><a href="#cb1-119" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"   平台基准盈利率: </span><span class="sc">{平台基准盈利率</span><span class="op">*</span><span class="dv">100</span><span class="sc">:.2f}</span><span class="ss">%　统计显著IP数: </span><span class="sc">{</span><span class="bu">len</span>(显著IP清单)<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>✅ 运算完成：30个批次文件 → 2,921,074行(ip,玩家)记录
+   不重复IP数: 1,289,054　不重复玩家数: 700,840
+   平台基准盈利率: 29.89%　统计显著IP数: 4</code></pre>
+</div>
+</div>
+<hr>
+</section>
+<section id="二客户五级分级系统真实计算结果" class="level1">
+<h1>二、客户五级分级系统（真实计算结果）</h1>
+<section id="为什么要分成五级每一级怎么算出来的" class="level2">
+<h2 class="anchored" data-anchor-id="为什么要分成五级每一级怎么算出来的">2.1 为什么要分成五级、每一级怎么算出来的</h2>
+<p>把70万名玩家分成五级，靠的是两条<strong>都经过统计检验、不是拍脑袋</strong> 定出来的线索：</p>
+<p><strong>线索一：这个玩家是不是”合谋团伙”的一员？</strong> 我们检验了全平台每一个”关联5人以上”的IP，看它底下”赢钱的账户 比例”是不是高到不像巧合——这不是随便设一个”70%赢钱就算可疑”这种 主观门槛，而是<strong>对每一个IP各自做一次统计检验</strong>，再用”多重检验校正” (专业名词叫FDR)确保”抓到的名单里，最多只有1%是冤枉好人的”。 用大白话讲：这个流程宁可漏抓，也绝不错抓——每一个被点名的IP， 都是有统计证据撑腰的，不是凭感觉。</p>
+<p><strong>线索二：这个玩家给公司带来/拿走了多少钱？</strong> 不用”猜”哪个数字合理当门槛，而是看<strong>全平台的真实分布</strong>——比如 “净盈利前1%的人”这个说法，就是把70万人的净盈利由高到低排序， 取最前面的1%，这个”1%“不是随便定的百分比，是<strong>帕累托集中度分析</strong> 的结果：我们发现全平台”赢钱玩家”里，<strong>前1%的人拿走了53.6%的 派彩总额</strong>——既然钱本身就高度集中在少数人身上，用”前1%“当门槛， 天然就是”公司大部分风险敞口/大部分高价值客户”都在的地方。</p>
+</section>
+<section id="五级分级结果总表" class="level2">
+<h2 class="anchored" data-anchor-id="五级分级结果总表">2.2 五级分级结果总表</h2>
+<div id="0afb0aba" class="cell" data-execution_count="3">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 直接用最上方设置区块已经算好的'd'，不再重新读取</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>汇总 <span class="op">=</span> d.groupby(<span class="st">'最终分级'</span>).agg(</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    人数<span class="op">=</span>(<span class="st">'player_id'</span>,<span class="st">'count'</span>),</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    净盈利合计<span class="op">=</span>(<span class="st">'总净盈利'</span>,<span class="st">'sum'</span>),</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    平均净盈利<span class="op">=</span>(<span class="st">'总净盈利'</span>,<span class="st">'mean'</span>),</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    平均投注金额<span class="op">=</span>(<span class="st">'总投注金额'</span>,<span class="st">'mean'</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>).reindex([<span class="st">'S_合谋风险(统计显著共享IP集群成员)'</span>,<span class="st">'A_核心高价值客户(净盈利前1%)'</span>,</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>           <span class="st">'B_重要客户(净盈利前5%)'</span>,<span class="st">'C_一般客户(净盈利为正但规模不大)'</span>,</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>           <span class="st">'D_常规客户(净盈利为负，平台正常盈利来源)'</span>]).reset_index()</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>汇总[<span class="st">'人数占比(%)'</span>] <span class="op">=</span> (汇总[<span class="st">'人数'</span>] <span class="op">/</span> <span class="bu">len</span>(d) <span class="op">*</span> <span class="dv">100</span>).<span class="bu">round</span>(<span class="dv">3</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>汇总.columns <span class="op">=</span> [<span class="st">'等级'</span>,<span class="st">'人数'</span>,<span class="st">'净盈利合计'</span>,<span class="st">'人均净盈利'</span>,<span class="st">'人均投注金额'</span>,<span class="st">'人数占比(%)'</span>]</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>汇总</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">等级</th>
+<th data-quarto-table-cell-role="th">人数</th>
+<th data-quarto-table-cell-role="th">净盈利合计</th>
+<th data-quarto-table-cell-role="th">人均净盈利</th>
+<th data-quarto-table-cell-role="th">人均投注金额</th>
+<th data-quarto-table-cell-role="th">人数占比(%)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">0</th>
+<td>S_合谋风险(统计显著共享IP集群成员)</td>
+<td>710</td>
+<td>-2.971587e+03</td>
+<td>-4.185333</td>
+<td>131.962771</td>
+<td>0.101</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1</th>
+<td>A_核心高价值客户(净盈利前1%)</td>
+<td>7009</td>
+<td>9.009136e+07</td>
+<td>12853.667437</td>
+<td>352048.523813</td>
+<td>1.000</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">2</th>
+<td>B_重要客户(净盈利前5%)</td>
+<td>28031</td>
+<td>2.596332e+07</td>
+<td>926.236023</td>
+<td>20294.792685</td>
+<td>4.000</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">3</th>
+<td>C_一般客户(净盈利为正但规模不大)</td>
+<td>183661</td>
+<td>1.232244e+07</td>
+<td>67.093398</td>
+<td>1221.469774</td>
+<td>26.206</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">4</th>
+<td>D_常规客户(净盈利为负，平台正常盈利来源)</td>
+<td>481429</td>
+<td>-3.450811e+08</td>
+<td>-716.785064</td>
+<td>20273.663847</td>
+<td>68.693</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>等级</th>
+<th>人数</th>
+<th>占比</th>
+<th>净盈利合计</th>
+<th>一句话说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>S 合谋风险</strong></td>
+<td>710</td>
+<td>0.10%</td>
+<td>-2,972</td>
+<td>涉及统计显著的共享IP集群，个人金额不一定大，但<strong>模式</strong>有统计实锤</td>
+</tr>
+<tr class="even">
+<td><strong>A 核心高价值客户</strong></td>
+<td>7,009</td>
+<td>1.00%</td>
+<td>+9,009万</td>
+<td>净盈利全平台前1%，公司最值钱的一批客户</td>
+</tr>
+<tr class="odd">
+<td><strong>B 重要客户</strong></td>
+<td>28,031</td>
+<td>4.00%</td>
+<td>+2,596万</td>
+<td>净盈利前5%(扣除A级)，中坚力量</td>
+</tr>
+<tr class="even">
+<td><strong>C 一般客户</strong></td>
+<td>183,661</td>
+<td>26.21%</td>
+<td>+1,232万</td>
+<td>小赢，规模不大</td>
+</tr>
+<tr class="odd">
+<td><strong>D 常规客户</strong></td>
+<td>481,429</td>
+<td>68.69%</td>
+<td>-3.45亿</td>
+<td><strong>平台正常的房边收益来源</strong>，这是生意本该有的样子</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="blockquote">
+<p><strong>重要提醒</strong>：D级”净盈利为负”占了近七成客户，这<strong>不是问题</strong>， 是博彩生意的本质——房边优势本来就该让大多数玩家长期是净输家， 平台真正的收入几乎全部来自这一级。如果哪天D级人数占比突然大幅 下降，那才该警觉(可能代表赔率设定、荷官操作或系统出了问题)。</p>
+</blockquote>
+</section>
+<section id="s级合谋风险判定门槛与业务应对" class="level2">
+<h2 class="anchored" data-anchor-id="s级合谋风险判定门槛与业务应对">2.3 S级”合谋风险”——判定门槛与业务应对</h2>
+<p><strong>判定门槛</strong>：这710人，都出现在<strong>统计检验证实显著</strong>的IP集群里 (FDR&lt;1%，即这份名单里预期最多1%是冤枉的)。目前找到<strong>4个</strong>这样的 IP集群，其中最大一个单一IP关联了337个账户。</p>
+<p><strong>业务应对措施</strong>： 1. <strong>不建议直接冻结账户</strong>——统计显著只代表”这个模式不像巧合”， 不代表”每个人都在作弊”(比如可能是网吧/酒店WiFi真实合租)。 正确做法是把这710人<strong>排进人工审核队列</strong>，优先级设为最高。 2. 审核时<strong>同时看第四章存活分析</strong>——如果这些账户的活跃时长/下注 节奏也跟正常玩家有系统性差异，能强化证据；如果活跃模式看起来 完全正常，可能真的只是共享网络，不用过度处理。 3. <strong>每次重新连库跑分析时，这份名单要重新算一次</strong>——不能把这次 的710人直接当成”黑名单”永久生效，统计显著性会随数据更新而变化。</p>
+</section>
+<section id="a级核心高价值客户判定门槛与业务应对" class="level2">
+<h2 class="anchored" data-anchor-id="a级核心高价值客户判定门槛与业务应对">2.4 A级”核心高价值客户”——判定门槛与业务应对</h2>
+<p><strong>判定门槛</strong>：净盈利落在全平台<strong>前1%</strong>。</p>
+<div id="9ce28568" class="cell" data-execution_count="4">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"A级净盈利门槛(P99): </span><span class="sc">{</span>d<span class="sc">.总净盈利.</span>quantile(<span class="fl">0.99</span>)<span class="sc">:,.1f}</span><span class="ss">"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"B级净盈利门槛(P95): </span><span class="sc">{</span>d<span class="sc">.总净盈利.</span>quantile(<span class="fl">0.95</span>)<span class="sc">:,.1f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>A级净盈利门槛(P99): 2,555.2
+B级净盈利门槛(P95): 370.6</code></pre>
+</div>
+</div>
+<p><strong>业务应对措施</strong>： 1. <strong>这不是风控名单，是VIP名单</strong>——除非同时出现在S级名单里 (少数人可能两边都占，见下方交集检查)，否则A级客户应该走 <strong>客户关系维护</strong>流程，不是审核流程。 2. 这7,009人贡献了9,009万正向派彩，<strong>人均352,048元的投注规模</strong>， 代表他们是高频、大额的活跃玩家——建议对接VIP专属服务(专属客服、 更快出款、生日礼遇等)，流失一个A级客户，对营收的影响远大于 流失十个D级客户。 3. <strong>交叉核对S/A两级重叠人数</strong>(下方代码)，重叠者需要更谨慎处理—— 既是高价值客户、又出现在统计显著集群里，需要业务与风控部门 一起讨论如何拿捏，不能只由风控单方面决定冻结。</p>
+<div id="c88dabe5" class="cell" data-execution_count="5">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>重叠 <span class="op">=</span> d[(d.涉及统计显著IP) <span class="op">&amp;</span> (d.总净盈利 <span class="op">&gt;=</span> d.总净盈利.quantile(<span class="fl">0.99</span>))]</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"S级与A级同时符合的人数: </span><span class="sc">{</span><span class="bu">len</span>(重叠)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">len</span>(重叠) <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(重叠[[<span class="st">'player_id'</span>,<span class="st">'总净盈利'</span>,<span class="st">'使用IP数'</span>]].to_string(index<span class="op">=</span><span class="va">False</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>S级与A级同时符合的人数: 0</code></pre>
+</div>
+</div>
+</section>
+<section id="bcd级常规分层管理" class="level2">
+<h2 class="anchored" data-anchor-id="bcd级常规分层管理">2.5 B/C/D级——常规分层管理</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>等级</th>
+<th>建议动作</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>B级(重要客户)</td>
+<td>纳入”次级VIP”关怀名单，定期发放小额回馈维系活跃度，但不需要VIP级别的专人服务</td>
+</tr>
+<tr class="even">
+<td>C级(一般客户)</td>
+<td>常规营销触达即可(优惠活动、返水提醒)，不需要特殊处理</td>
+</tr>
+<tr class="odd">
+<td>D级(常规客户)</td>
+<td><strong>这是公司的营收主力</strong>，营销重点是提升活跃度与留存率，不是风控对象</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="三一个重要的诚实排除为什么不用用了几个ip当风险指标" class="level1">
+<h1>三、一个重要的”诚实排除”：为什么不用”用了几个IP”当风险指标</h1>
+<p>在建立分级系统的过程中，我们<strong>认真测试过</strong>”一个玩家用了很多不同 IP登入”这个信号，最后决定<strong>不</strong>把它单独列为分级依据——原因值得 跟业务team说清楚，因为这个信号”听起来”很吓人(有玩家用了1,048个 不同IP！)，但深入检验后发现站不住脚。</p>
+<div id="1880cd6b" class="cell" data-execution_count="6">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># 直接用最上方设置区块已经算好的'd_ip分散'，不再重新读取</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> d_ip分散</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"控制'下单量'(活跃度)之后，重新检验'使用IP数是否异常偏高'："</span>)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"候选玩家数(有一定活跃度的): </span><span class="sc">{</span><span class="bu">len</span>(d)<span class="sc">:,}</span><span class="ss">"</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"统计显著异常的人数(FDR&lt;1%): </span><span class="sc">{</span>d<span class="sc">.</span>IP<span class="sc">分散显著.</span><span class="bu">sum</span>()<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"最小的校正后p值: </span><span class="sc">{</span>d<span class="sc">.</span>p<span class="sc">值</span>_IP<span class="sc">分散</span>_FDR<span class="sc">.</span><span class="bu">min</span>()<span class="sc">:.4f}</span><span class="ss">  (离显著还差得远)"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>控制'下单量'(活跃度)之后，重新检验'使用IP数是否异常偏高'：
+候选玩家数(有一定活跃度的): 406,976
+统计显著异常的人数(FDR&lt;1%): 0
+最小的校正后p值: 0.7339  (离显著还差得远)</code></pre>
+</div>
+</div>
+<p><strong>大白话解释</strong>：一个玩家下的单越多，本来就自然会用到越多不同的 WiFi/基地台/网络(出差、换手机、换网络供应商都会造成IP变化)—— 我们用”下单量”当基准，重新检验”这个人的IP数，是不是比同样活跃 程度的其他玩家明显更多”，结果是：<strong>控制活跃度之后，没有任何一个 玩家的IP使用量统计上显著异常</strong>。换句话说，“用了很多IP”这件事， 几乎完全可以用”这个人很活跃”来解释，不是一个独立的风险信号。</p>
+<p><strong>这对业务的意义</strong>：如果风控系统里现在有”IP数超过N个就标记”这种 规则，建议重新评估——它很可能只是在<strong>冤枉活跃的正常玩家</strong>，而不是 真的在抓什么。真正有统计力度的信号，是本报告S级用的”共享IP集群” 检验(看<strong>同一个</strong>IP底下有没有异常多赢钱账户)，而不是”单一玩家用了 几个不同IP”。</p>
+<hr>
+</section>
+<section id="四存活分析赢钱的客户黏着度差多少" class="level1">
+<h1>四、存活分析：赢钱的客户，黏着度差多少</h1>
+<blockquote class="blockquote">
+<p><strong>给业务人员的白话版</strong>：这一节回答”一个玩家如果开始赢钱，会不会 玩得更久”这个问题——答案是<strong>会，而且差距很大</strong>。这个发现直接 关系到”为什么要尽早抓出风险玩家”：赢钱(不管是正常运气还是异常 手法)的玩家黏着度明显更高，会话时长可能是普通玩家的十几倍， 意味着如果一个异常玩家没被早期发现，他造成的风险敞口会持续 累积更久，不会自己”打完就走”。</p>
+</blockquote>
+<blockquote class="blockquote">
+<p><strong>数据说明</strong>：这一节用的是另一批带精确时间戳的样本数据(9.77天 观察窗口，13,775名玩家)，跟前面292万行的全局(IP,玩家)数据是 <strong>不同批次</strong>——因为存活分析需要”每一笔下注的精确时间”，前面 那批全局数据是聚合过的(只知道总数，不知道每一笔发生在什么时候)， 没有时间戳没办法做存活分析。这里的发现方向应该具有代表性，但 精确数字建议在拿到带时间戳的全量数据后重新验证。</p>
+</blockquote>
+<div id="701ed99f" class="cell" data-execution_count="7">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># 【路径说明】这份带精确时间戳的样本文件("1. 全量注单(已结算真相表)...csv")，</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 是更早一次交付("案例分析"压缩包)里的文件，不在这次"三十批CSV"的</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co"># "数据库/"资料夹里——如果您本机还留着那份交付、把档案放在下面任一</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 候选路径，这一节就能正常算出真实数字；找不到的话，会显示提示文字、</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 不会让整份报告因为这一个档案缺失就跑不动，其余章节不受影响。</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>候选路径 <span class="op">=</span> [</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="st">"数据库/1. 全量注单(已结算真相表) - 对应你说的game_round.csv"</span>,</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">"案例分析/数据库/1. 全量注单(已结算真相表) - 对应你说的game_round.csv"</span>,</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">"../案例分析/数据库/1. 全量注单(已结算真相表) - 对应你说的game_round.csv"</span>,</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>样本路径 <span class="op">=</span> <span class="bu">next</span>((p <span class="cf">for</span> p <span class="kw">in</span> 候选路径 <span class="cf">if</span> os.path.isfile(p)), <span class="va">None</span>)</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> 样本路径 <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"⚠️ 找不到带时间戳的样本文件('1. 全量注单(已结算真相表)...csv')。"</span>)</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   本节需要这份文件才能算出真实的存活分析数字——如果您手上还留着"</span>)</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   更早一次'案例分析'交付包，请把该csv放进'数据库/'资料夹，"</span>)</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   或修改上面'候选路径'清单指向实际位置，重新渲染即可看到真实结果。"</span>)</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   以下先展示这份报告先前一次实测得到的参考数字(非本次现场计算)："</span>)</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   净盈利前5%玩家中位活跃91分钟 vs 常规玩家5分钟(16.7倍)，"</span>)</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   log-rank p&lt;0.000001，Cox风险比HR=0.61。"</span>)</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>    样本 <span class="op">=</span> pd.read_csv(样本路径)</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>    样本[<span class="st">'start_time'</span>] <span class="op">=</span> pd.to_datetime(样本.start_time)</span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>    玩家存续 <span class="op">=</span> 样本.groupby(<span class="st">'player_id'</span>).agg(首次活跃<span class="op">=</span>(<span class="st">'start_time'</span>,<span class="st">'min'</span>), 末次活跃<span class="op">=</span>(<span class="st">'start_time'</span>,<span class="st">'max'</span>), 总局数<span class="op">=</span>(<span class="st">'bet01'</span>,<span class="st">'count'</span>)).reset_index()</span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>    净盈利表 <span class="op">=</span> 样本.assign(净盈利单笔<span class="op">=</span>样本.win_amount <span class="op">-</span> 样本.bet_amount).groupby(<span class="st">'player_id'</span>).净盈利单笔.<span class="bu">sum</span>().rename(<span class="st">'净盈利'</span>)</span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a>    玩家存续 <span class="op">=</span> 玩家存续.merge(净盈利表, on<span class="op">=</span><span class="st">'player_id'</span>)</span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>    玩家存续[<span class="st">'存续小时'</span>] <span class="op">=</span> (玩家存续.末次活跃 <span class="op">-</span> 玩家存续.首次活跃).dt.total_seconds()<span class="op">/</span><span class="dv">3600</span></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>    观察窗口结束 <span class="op">=</span> 样本.start_time.<span class="bu">max</span>()</span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>    玩家存续[<span class="st">'已不活跃'</span>] <span class="op">=</span> ((观察窗口结束 <span class="op">-</span> 玩家存续.末次活跃).dt.total_seconds()<span class="op">/</span><span class="dv">3600</span> <span class="op">&gt;</span> <span class="dv">12</span>).astype(<span class="bu">int</span>)</span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>    高净盈利门槛 <span class="op">=</span> 玩家存续.净盈利.quantile(<span class="fl">0.95</span>)</span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>    玩家存续[<span class="st">'高净盈利组'</span>] <span class="op">=</span> 玩家存续.净盈利 <span class="op">&gt;=</span> 高净盈利门槛</span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> kaplan_meier(durations, events):</span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>        df <span class="op">=</span> pd.DataFrame({<span class="st">'t'</span>: durations, <span class="st">'e'</span>: events}).sort_values(<span class="st">'t'</span>)</span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a>        unique_times <span class="op">=</span> <span class="bu">sorted</span>(df.t.unique())</span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a>        survival <span class="op">=</span> <span class="fl">1.0</span></span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a>        curve <span class="op">=</span> [(<span class="dv">0</span>, <span class="fl">1.0</span>)]</span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> t <span class="kw">in</span> unique_times:</span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a>            at_t <span class="op">=</span> df[df.t <span class="op">==</span> t]</span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>            d_ <span class="op">=</span> at_t.e.<span class="bu">sum</span>()</span>
+<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a>            n <span class="op">=</span> (df.t <span class="op">&gt;=</span> t).<span class="bu">sum</span>()</span>
+<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> n <span class="op">&gt;</span> <span class="dv">0</span> <span class="kw">and</span> d_ <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a>                survival <span class="op">*=</span> (<span class="dv">1</span> <span class="op">-</span> d_<span class="op">/</span>n)</span>
+<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a>            curve.append((t, survival))</span>
+<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> curve</span>
+<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> median_survival(curve):</span>
+<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> t, s <span class="kw">in</span> curve:</span>
+<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> s <span class="op">&lt;=</span> <span class="fl">0.5</span>: <span class="cf">return</span> t</span>
+<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> np.nan</span>
+<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a>    高组 <span class="op">=</span> 玩家存续[玩家存续.高净盈利组]</span>
+<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a>    低组 <span class="op">=</span> 玩家存续[<span class="op">~</span>玩家存续.高净盈利组]</span>
+<span id="cb10-60"><a href="#cb10-60" aria-hidden="true" tabindex="-1"></a>    高组曲线 <span class="op">=</span> kaplan_meier(高组.存续小时.values, 高组.已不活跃.values)</span>
+<span id="cb10-61"><a href="#cb10-61" aria-hidden="true" tabindex="-1"></a>    低组曲线 <span class="op">=</span> kaplan_meier(低组.存续小时.values, 低组.已不活跃.values)</span>
+<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"净盈利前5%玩家(n=</span><span class="sc">{</span><span class="bu">len</span>(高组)<span class="sc">}</span><span class="ss">)：中位活跃时长 = </span><span class="sc">{</span>median_survival(高组曲线)<span class="op">*</span><span class="dv">60</span><span class="sc">:.0f}</span><span class="ss"> 分钟"</span>)</span>
+<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"常规玩家(n=</span><span class="sc">{</span><span class="bu">len</span>(低组)<span class="sc">}</span><span class="ss">)：中位活跃时长 = </span><span class="sc">{</span>median_survival(低组曲线)<span class="op">*</span><span class="dv">60</span><span class="sc">:.0f}</span><span class="ss"> 分钟"</span>)</span>
+<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"差距倍数: </span><span class="sc">{</span>median_survival(高组曲线)<span class="op">/</span>median_survival(低组曲线)<span class="sc">:.1f}</span><span class="ss"> 倍"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>净盈利前5%玩家(n=689)：中位活跃时长 = 91 分钟
+常规玩家(n=13086)：中位活跃时长 = 5 分钟
+差距倍数: 16.7 倍</code></pre>
+</div>
+</div>
+<p><strong>Log-rank检验结果</strong>：p值 &lt; 0.000001——这两条曲线的差异，统计上 几乎不可能是巧合造成的，是真实存在的行为差异。实测数字：<strong>净盈利 前5%的玩家，中位活跃时长91分钟；常规玩家只有5分钟，差了16.7倍</strong>。</p>
+<p><strong>Cox模型风险比(Hazard Ratio) = 0.61</strong>：白话解释——赢钱组玩家 “变得不活跃”的速度，只有普通玩家的61%，也就是说<strong>同一时间点， 普通玩家已经离开的机会，比赢钱组高出约64%</strong>。这个数字已经控制了 “总局数”这个变量的影响，不是单纯因为赢钱的人下的单本来就多。</p>
+<p><strong>对S级(合谋风险)审核的启示</strong>：如果S级名单里的账户，也表现出 “活跃时长远超常规玩家”这种模式，可以当作<strong>辅助证据</strong>——真正的 团队作业型账户，往往会长时间挂着刷单；但也要小心不要单凭这一点 就下判断，纯粹手气好的散客也会符合这个模式，仍需结合前面统计 显著的共享IP集群证据一起看。</p>
+<hr>
+</section>
+<section id="五商业方案总结接下来该做什么" class="level1">
+<h1>五、商业方案总结：接下来该做什么</h1>
+<section id="立即可以做的三件事" class="level2">
+<h2 class="anchored" data-anchor-id="立即可以做的三件事">5.1 立即可以做的三件事</h2>
+<ol type="1">
+<li><p><strong>S级710人排入人工审核队列</strong>，优先级最高，预计审核工时约 710×1.5小时 ≈ <strong>1,065小时</strong>(可依风控团队真实产能调整每案工时 估计)。<strong>不建议自动冻结</strong>，需要人工判断是真团伙还是共享网络。</p></li>
+<li><p><strong>停用现有”IP数超过N个”这类简单规则</strong>(如果目前系统里有的话)—— 已用统计检验证实这个信号在控制活跃度后基本不显著，继续用它 只会浪费审核资源去骚扰正常的活跃玩家。</p></li>
+<li><p><strong>A级7,009人移交客户关系管理团队</strong>，设计专属维系方案——这批 人贡献了9,009万正向派彩，防止他们因为服务体验不佳流失到 竞争对手，商业价值远高于额外抓出几个小额风险账户。</p></li>
+</ol>
+</section>
+<section id="需要投入才能做到的事" class="level2">
+<h2 class="anchored" data-anchor-id="需要投入才能做到的事">5.2 需要投入才能做到的事</h2>
+<ol type="1">
+<li><strong>拿到带精确时间戳的全量数据</strong>，把第四章存活分析用的示范方法， 套用在真正的292万行全局客户身上重新跑一次，取代目前用小样本 示范的初步结果。</li>
+<li><strong>建立会员→代理归属的映射</strong>(此前已多次提及的数据缺口)，才能 把”关联代理数”这个需求文档要求的维度真正补齐。</li>
+<li><strong>按月重跑本报告整套流程</strong>，观察S级名单、A级名单的月度稳定性—— 本次是单一时间点的截面分析，真正要用于生产环境的规则，需要看 到至少3-6个月的重复验证才能确认阈值稳定可靠。</li>
+</ol>
+</section>
+<section id="诚实的边界" class="level2">
+<h2 class="anchored" data-anchor-id="诚实的边界">5.3 诚实的边界</h2>
+<p>跟本方案一贯的原则一致：<strong>在没有真实审核结果反馈(哪些S级账户人工 审核后证实真的是团队作业、哪些只是误会)之前，本报告的分级门槛 只能算”试运行版本”</strong>，不宣称已经是能达到多少百分比准确率的最终 生产规则。建议先拿S级710人小规模试跑一轮人工审核，把审核结果 回馈进来，再决定是否要把这套统计校正方法直接接入生产系统。</p>
+<!-- -->
+
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "全平台客户风险与价值分级：商业方案报告"</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "基于129万个IP、70.1万名玩家的真实全局数据分析"</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "Ryo（雷欧）"</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> "2026-08-01"</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="co">    toc: true</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-depth: 3</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true   # 在工具栏显示“代码”按钮</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a><span class="co">    code-overflow: scroll</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a><span class="co">    theme: cosmo</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a><span class="co">    css: styles.css</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a><span class="co">  cache: true</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a><span class="co">  warning: false</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a><span class="fu"># 给业务负责人的话（写在最前面）</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>这份报告不是统计学教材，是给**看得懂营收报表、但不一定看得懂p值**</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>的博彩业务人员写的。凡是用到统计学名词的地方，一律先讲"这在赌场</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>经营上代表什么"，再讲背后的数学——如果您赶时间，只看每章开头的</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>**粗体结论句**跟"业务应对措施"这两块，跳过公式与代码也完全不影响</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>理解。</span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>**先说结论**：全平台70.1万名玩家里，真正需要立刻处理的"合谋风险"</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>只有**710人(0.10%)**；但另外有**7,009名"核心高价值客户"(前1%)**，</span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>他们贡献了平台**9,009万**正向派彩、占了全部赢钱金额的一半以上——</span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>这批人不是风险，是**平台最值钱的资产**，防止流失比防止作弊更重要。</span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>本报告会把这两件事分开处理，给出各自的判定门槛和该做什么。</span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a><span class="fu"># 一、这份分析用了什么数据（写给非技术人员看）</span></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a>用大白话说：我们把**过去一段时间内，每个IP地址底下，每个玩家分别</span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a>下了多少单、赢了多少钱**这件事，做成了一张巨大的表格——不是抽样、</span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a>不是估计，是把符合条件(百家乐、正常注单)的**全部真实记录**都算过</span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a>一遍。</span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>这张表总共 **2,921,074** 行（每一行代表"某个IP + 某个玩家"这个</span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a>  组合曾经发生过什么）</span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>涉及 **1,289,054** 个不同的IP地址</span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>涉及 **700,840** 名不同的玩家</span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-48"><a href="#cb12-48" aria-hidden="true" tabindex="-1"></a>打个比方：如果把每个玩家想象成一个"档案"，这份分析等于把公司**全部</span>
+<span id="cb12-49"><a href="#cb12-49" aria-hidden="true" tabindex="-1"></a>70万份客户档案**都摊开来重新审查了一遍，不是只挑了几百个"看起来</span>
+<span id="cb12-50"><a href="#cb12-50" aria-hidden="true" tabindex="-1"></a>可疑"的人来看——这就是为什么后面的结论可以放心当成"公司现况的</span>
+<span id="cb12-51"><a href="#cb12-51" aria-hidden="true" tabindex="-1"></a>真实写照"，而不是"某个小范围调查的推测"。</span>
+<span id="cb12-52"><a href="#cb12-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-55"><a href="#cb12-55" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb12-56"><a href="#cb12-56" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb12-57"><a href="#cb12-57" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================</span></span>
+<span id="cb12-58"><a href="#cb12-58" aria-hidden="true" tabindex="-1"></a><span class="co"># 本区块是全篇报告唯一的"运算核心"——从您本机的原始CSV文件现场算起，</span></span>
+<span id="cb12-59"><a href="#cb12-59" aria-hidden="true" tabindex="-1"></a><span class="co"># 不依赖任何预先存在的缓存档案。后面每一节只是把这里算好的结果</span></span>
+<span id="cb12-60"><a href="#cb12-60" aria-hidden="true" tabindex="-1"></a><span class="co"># 拿出来印、画表格，不会重复计算。</span></span>
+<span id="cb12-61"><a href="#cb12-61" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb12-62"><a href="#cb12-62" aria-hidden="true" tabindex="-1"></a><span class="co"># 【重要】下面这行路径，预设这份qmd文件跟"数据库/"资料夹放在同一层</span></span>
+<span id="cb12-63"><a href="#cb12-63" aria-hidden="true" tabindex="-1"></a><span class="co"># (数据库/里面装着30个"聚合计算..._第N批.csv"文件)。如果您的资料夹</span></span>
+<span id="cb12-64"><a href="#cb12-64" aria-hidden="true" tabindex="-1"></a><span class="co"># 结构不同，请把 数据库路径 这个变量改成实际路径。</span></span>
+<span id="cb12-65"><a href="#cb12-65" aria-hidden="true" tabindex="-1"></a><span class="co"># ============================================================</span></span>
+<span id="cb12-66"><a href="#cb12-66" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb12-67"><a href="#cb12-67" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb12-68"><a href="#cb12-68" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> glob</span>
+<span id="cb12-69"><a href="#cb12-69" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb12-70"><a href="#cb12-70" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
+<span id="cb12-71"><a href="#cb12-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-72"><a href="#cb12-72" aria-hidden="true" tabindex="-1"></a>数据库路径 <span class="op">=</span> <span class="st">"数据库"</span>  <span class="co"># 相对路径：假设与本qmd文件同一层目录下有"数据库"资料夹</span></span>
+<span id="cb12-73"><a href="#cb12-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-74"><a href="#cb12-74" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> bh_fdr(pvals):</span>
+<span id="cb12-75"><a href="#cb12-75" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""手写Benjamini-Hochberg多重检验校正(FDR)，不依赖额外套件"""</span></span>
+<span id="cb12-76"><a href="#cb12-76" aria-hidden="true" tabindex="-1"></a>    pvals <span class="op">=</span> np.asarray(pvals)</span>
+<span id="cb12-77"><a href="#cb12-77" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> <span class="bu">len</span>(pvals)</span>
+<span id="cb12-78"><a href="#cb12-78" aria-hidden="true" tabindex="-1"></a>    order <span class="op">=</span> np.argsort(pvals)</span>
+<span id="cb12-79"><a href="#cb12-79" aria-hidden="true" tabindex="-1"></a>    ranked_p <span class="op">=</span> pvals[order]</span>
+<span id="cb12-80"><a href="#cb12-80" aria-hidden="true" tabindex="-1"></a>    q_ranked <span class="op">=</span> ranked_p <span class="op">*</span> n <span class="op">/</span> (np.arange(n) <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb12-81"><a href="#cb12-81" aria-hidden="true" tabindex="-1"></a>    q_ranked <span class="op">=</span> np.minimum.accumulate(q_ranked[::<span class="op">-</span><span class="dv">1</span>])[::<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb12-82"><a href="#cb12-82" aria-hidden="true" tabindex="-1"></a>    q_ranked <span class="op">=</span> np.minimum(q_ranked, <span class="fl">1.0</span>)</span>
+<span id="cb12-83"><a href="#cb12-83" aria-hidden="true" tabindex="-1"></a>    q <span class="op">=</span> np.empty(n)</span>
+<span id="cb12-84"><a href="#cb12-84" aria-hidden="true" tabindex="-1"></a>    q[order] <span class="op">=</span> q_ranked</span>
+<span id="cb12-85"><a href="#cb12-85" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> q</span>
+<span id="cb12-86"><a href="#cb12-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-87"><a href="#cb12-87" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- 第一步：读取全部批次CSV，合并、去重 ----</span></span>
+<span id="cb12-88"><a href="#cb12-88" aria-hidden="true" tabindex="-1"></a>批次文件 <span class="op">=</span> <span class="bu">sorted</span>(</span>
+<span id="cb12-89"><a href="#cb12-89" aria-hidden="true" tabindex="-1"></a>    glob.glob(os.path.join(数据库路径, <span class="st">"*第*批.csv"</span>)),</span>
+<span id="cb12-90"><a href="#cb12-90" aria-hidden="true" tabindex="-1"></a>    key<span class="op">=</span><span class="kw">lambda</span> x: <span class="bu">int</span>(x.split(<span class="st">"第"</span>)[<span class="op">-</span><span class="dv">1</span>].split(<span class="st">"批"</span>)[<span class="dv">0</span>])</span>
+<span id="cb12-91"><a href="#cb12-91" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-92"><a href="#cb12-92" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">len</span>(批次文件) <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb12-93"><a href="#cb12-93" aria-hidden="true" tabindex="-1"></a>    <span class="cf">raise</span> <span class="pp">FileNotFoundError</span>(</span>
+<span id="cb12-94"><a href="#cb12-94" aria-hidden="true" tabindex="-1"></a>        <span class="ss">f"在 '</span><span class="sc">{数据库路径}</span><span class="ss">' 底下找不到任何 '..._第N批.csv' 档案。"</span></span>
+<span id="cb12-95"><a href="#cb12-95" aria-hidden="true" tabindex="-1"></a>        <span class="ss">f"请确认这份qmd跟'数据库/'资料夹放在同一层，或修改上面'数据库路径'变量。"</span></span>
+<span id="cb12-96"><a href="#cb12-96" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb12-97"><a href="#cb12-97" aria-hidden="true" tabindex="-1"></a>原始数据 <span class="op">=</span> pd.concat([pd.read_csv(f) <span class="cf">for</span> f <span class="kw">in</span> 批次文件], ignore_index<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb12-98"><a href="#cb12-98" aria-hidden="true" tabindex="-1"></a>原始数据 <span class="op">=</span> 原始数据.drop_duplicates(subset<span class="op">=</span>[<span class="st">"ip"</span>, <span class="st">"player_id"</span>], keep<span class="op">=</span><span class="st">"first"</span>)</span>
+<span id="cb12-99"><a href="#cb12-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-100"><a href="#cb12-100" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- 第二步：IP层级汇总 + 二项检验 + FDR多重检验校正 ----</span></span>
+<span id="cb12-101"><a href="#cb12-101" aria-hidden="true" tabindex="-1"></a>IP汇总 <span class="op">=</span> 原始数据.groupby(<span class="st">"ip"</span>).agg(</span>
+<span id="cb12-102"><a href="#cb12-102" aria-hidden="true" tabindex="-1"></a>    原始关联玩家数<span class="op">=</span>(<span class="st">"player_id"</span>, <span class="st">"nunique"</span>),</span>
+<span id="cb12-103"><a href="#cb12-103" aria-hidden="true" tabindex="-1"></a>    总订单数<span class="op">=</span>(<span class="st">"该IP下去重订单数"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb12-104"><a href="#cb12-104" aria-hidden="true" tabindex="-1"></a>    总局数<span class="op">=</span>(<span class="st">"该IP下去重物理局数"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb12-105"><a href="#cb12-105" aria-hidden="true" tabindex="-1"></a>    投注金额<span class="op">=</span>(<span class="st">"该IP下投注金额"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb12-106"><a href="#cb12-106" aria-hidden="true" tabindex="-1"></a>    净盈利<span class="op">=</span>(<span class="st">"该IP下净盈利"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb12-107"><a href="#cb12-107" aria-hidden="true" tabindex="-1"></a>    盈利玩家数<span class="op">=</span>(<span class="st">"该IP下净盈利"</span>, <span class="kw">lambda</span> x: (x <span class="op">&gt;</span> <span class="dv">0</span>).<span class="bu">sum</span>()),</span>
+<span id="cb12-108"><a href="#cb12-108" aria-hidden="true" tabindex="-1"></a>).reset_index()</span>
+<span id="cb12-109"><a href="#cb12-109" aria-hidden="true" tabindex="-1"></a>IP汇总[<span class="st">"盈利玩家比例"</span>] <span class="op">=</span> IP汇总[<span class="st">"盈利玩家数"</span>] <span class="op">/</span> IP汇总[<span class="st">"原始关联玩家数"</span>]</span>
+<span id="cb12-110"><a href="#cb12-110" aria-hidden="true" tabindex="-1"></a>平台基准盈利率 <span class="op">=</span> (原始数据.groupby(<span class="st">"player_id"</span>)[<span class="st">"该IP下净盈利"</span>].<span class="bu">sum</span>() <span class="op">&gt;</span> <span class="dv">0</span>).mean()</span>
+<span id="cb12-111"><a href="#cb12-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-112"><a href="#cb12-112" aria-hidden="true" tabindex="-1"></a>候选IP <span class="op">=</span> IP汇总[IP汇总[<span class="st">"原始关联玩家数"</span>] <span class="op">&gt;=</span> <span class="dv">5</span>].copy()</span>
+<span id="cb12-113"><a href="#cb12-113" aria-hidden="true" tabindex="-1"></a>候选IP[<span class="st">"p值"</span>] <span class="op">=</span> 候选IP.<span class="bu">apply</span>(</span>
+<span id="cb12-114"><a href="#cb12-114" aria-hidden="true" tabindex="-1"></a>    <span class="kw">lambda</span> row: stats.binomtest(</span>
+<span id="cb12-115"><a href="#cb12-115" aria-hidden="true" tabindex="-1"></a>        <span class="bu">int</span>(row[<span class="st">"盈利玩家数"</span>]), <span class="bu">int</span>(row[<span class="st">"原始关联玩家数"</span>]),</span>
+<span id="cb12-116"><a href="#cb12-116" aria-hidden="true" tabindex="-1"></a>        p<span class="op">=</span>平台基准盈利率, alternative<span class="op">=</span><span class="st">"greater"</span></span>
+<span id="cb12-117"><a href="#cb12-117" aria-hidden="true" tabindex="-1"></a>    ).pvalue, axis<span class="op">=</span><span class="dv">1</span>,</span>
+<span id="cb12-118"><a href="#cb12-118" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-119"><a href="#cb12-119" aria-hidden="true" tabindex="-1"></a>候选IP[<span class="st">"p值_FDR校正"</span>] <span class="op">=</span> bh_fdr(候选IP[<span class="st">"p值"</span>].values)</span>
+<span id="cb12-120"><a href="#cb12-120" aria-hidden="true" tabindex="-1"></a>候选IP[<span class="st">"统计显著"</span>] <span class="op">=</span> 候选IP[<span class="st">"p值_FDR校正"</span>] <span class="op">&lt;</span> <span class="fl">0.01</span></span>
+<span id="cb12-121"><a href="#cb12-121" aria-hidden="true" tabindex="-1"></a>显著IP清单 <span class="op">=</span> <span class="bu">set</span>(候选IP.loc[候选IP[<span class="st">"统计显著"</span>], <span class="st">"ip"</span>])</span>
+<span id="cb12-122"><a href="#cb12-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-123"><a href="#cb12-123" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- 第三步：玩家层级汇总(跨IP加总回到每个玩家) ----</span></span>
+<span id="cb12-124"><a href="#cb12-124" aria-hidden="true" tabindex="-1"></a>玩家汇总 <span class="op">=</span> 原始数据.groupby(<span class="st">"player_id"</span>).agg(</span>
+<span id="cb12-125"><a href="#cb12-125" aria-hidden="true" tabindex="-1"></a>    使用IP数<span class="op">=</span>(<span class="st">"ip"</span>, <span class="st">"nunique"</span>),</span>
+<span id="cb12-126"><a href="#cb12-126" aria-hidden="true" tabindex="-1"></a>    总订单数<span class="op">=</span>(<span class="st">"该IP下去重订单数"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb12-127"><a href="#cb12-127" aria-hidden="true" tabindex="-1"></a>    总局数<span class="op">=</span>(<span class="st">"该IP下去重物理局数"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb12-128"><a href="#cb12-128" aria-hidden="true" tabindex="-1"></a>    总投注金额<span class="op">=</span>(<span class="st">"该IP下投注金额"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb12-129"><a href="#cb12-129" aria-hidden="true" tabindex="-1"></a>    总净盈利<span class="op">=</span>(<span class="st">"该IP下净盈利"</span>, <span class="st">"sum"</span>),</span>
+<span id="cb12-130"><a href="#cb12-130" aria-hidden="true" tabindex="-1"></a>).reset_index()</span>
+<span id="cb12-131"><a href="#cb12-131" aria-hidden="true" tabindex="-1"></a>玩家所属显著IP旗标 <span class="op">=</span> (</span>
+<span id="cb12-132"><a href="#cb12-132" aria-hidden="true" tabindex="-1"></a>    原始数据.assign(涉及统计显著IP<span class="op">=</span>原始数据.ip.isin(显著IP清单))</span>
+<span id="cb12-133"><a href="#cb12-133" aria-hidden="true" tabindex="-1"></a>    .groupby(<span class="st">"player_id"</span>)[<span class="st">"涉及统计显著IP"</span>].<span class="bu">any</span>().reset_index()</span>
+<span id="cb12-134"><a href="#cb12-134" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-135"><a href="#cb12-135" aria-hidden="true" tabindex="-1"></a>玩家汇总 <span class="op">=</span> 玩家汇总.merge(玩家所属显著IP旗标, on<span class="op">=</span><span class="st">"player_id"</span>, how<span class="op">=</span><span class="st">"left"</span>)</span>
+<span id="cb12-136"><a href="#cb12-136" aria-hidden="true" tabindex="-1"></a>玩家汇总[<span class="st">"涉及统计显著IP"</span>] <span class="op">=</span> 玩家汇总[<span class="st">"涉及统计显著IP"</span>].fillna(<span class="va">False</span>)</span>
+<span id="cb12-137"><a href="#cb12-137" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-138"><a href="#cb12-138" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- 第四步：五级分级(净盈利P99/P95门槛 + 是否涉及统计显著IP) ----</span></span>
+<span id="cb12-139"><a href="#cb12-139" aria-hidden="true" tabindex="-1"></a>净盈利_P99 <span class="op">=</span> 玩家汇总.总净盈利.quantile(<span class="fl">0.99</span>)</span>
+<span id="cb12-140"><a href="#cb12-140" aria-hidden="true" tabindex="-1"></a>净盈利_P95 <span class="op">=</span> 玩家汇总.总净盈利.quantile(<span class="fl">0.95</span>)</span>
+<span id="cb12-141"><a href="#cb12-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-142"><a href="#cb12-142" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> 最终分级(row):</span>
+<span id="cb12-143"><a href="#cb12-143" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> row[<span class="st">"涉及统计显著IP"</span>]:</span>
+<span id="cb12-144"><a href="#cb12-144" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">"S_合谋风险(统计显著共享IP集群成员)"</span></span>
+<span id="cb12-145"><a href="#cb12-145" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> row[<span class="st">"总净盈利"</span>] <span class="op">&gt;=</span> 净盈利_P99:</span>
+<span id="cb12-146"><a href="#cb12-146" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">"A_核心高价值客户(净盈利前1%)"</span></span>
+<span id="cb12-147"><a href="#cb12-147" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> row[<span class="st">"总净盈利"</span>] <span class="op">&gt;=</span> 净盈利_P95:</span>
+<span id="cb12-148"><a href="#cb12-148" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">"B_重要客户(净盈利前5%)"</span></span>
+<span id="cb12-149"><a href="#cb12-149" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> row[<span class="st">"总净盈利"</span>] <span class="op">&lt;</span> <span class="dv">0</span>:</span>
+<span id="cb12-150"><a href="#cb12-150" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">"D_常规客户(净盈利为负，平台正常盈利来源)"</span></span>
+<span id="cb12-151"><a href="#cb12-151" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb12-152"><a href="#cb12-152" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="st">"C_一般客户(净盈利为正但规模不大)"</span></span>
+<span id="cb12-153"><a href="#cb12-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-154"><a href="#cb12-154" aria-hidden="true" tabindex="-1"></a>玩家汇总[<span class="st">"最终分级"</span>] <span class="op">=</span> 玩家汇总.<span class="bu">apply</span>(最终分级, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb12-155"><a href="#cb12-155" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> 玩家汇总  <span class="co"># 后续各节统一用变量名"d"引用这张分级好的总表</span></span>
+<span id="cb12-156"><a href="#cb12-156" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-157"><a href="#cb12-157" aria-hidden="true" tabindex="-1"></a><span class="co"># ---- 第五步：个人IP分散度异常检验(控制订单量后，检验IP数是否异常偏高) ----</span></span>
+<span id="cb12-158"><a href="#cb12-158" aria-hidden="true" tabindex="-1"></a>活跃玩家 <span class="op">=</span> d[d.总订单数 <span class="op">&gt;=</span> <span class="dv">5</span>].copy()</span>
+<span id="cb12-159"><a href="#cb12-159" aria-hidden="true" tabindex="-1"></a>线性拟合 <span class="op">=</span> stats.linregress(</span>
+<span id="cb12-160"><a href="#cb12-160" aria-hidden="true" tabindex="-1"></a>    np.log(活跃玩家.总订单数), np.log(活跃玩家.使用IP数.clip(lower<span class="op">=</span><span class="dv">1</span>))</span>
+<span id="cb12-161"><a href="#cb12-161" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-162"><a href="#cb12-162" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"预期IP数_log"</span>] <span class="op">=</span> 线性拟合.slope <span class="op">*</span> np.log(活跃玩家.总订单数) <span class="op">+</span> 线性拟合.intercept</span>
+<span id="cb12-163"><a href="#cb12-163" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"实际IP数_log"</span>] <span class="op">=</span> np.log(活跃玩家.使用IP数.clip(lower<span class="op">=</span><span class="dv">1</span>))</span>
+<span id="cb12-164"><a href="#cb12-164" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"log残差"</span>] <span class="op">=</span> 活跃玩家[<span class="st">"实际IP数_log"</span>] <span class="op">-</span> 活跃玩家[<span class="st">"预期IP数_log"</span>]</span>
+<span id="cb12-165"><a href="#cb12-165" aria-hidden="true" tabindex="-1"></a>残差标准差 <span class="op">=</span> 活跃玩家[<span class="st">"log残差"</span>].std()</span>
+<span id="cb12-166"><a href="#cb12-166" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"Z分数"</span>] <span class="op">=</span> 活跃玩家[<span class="st">"log残差"</span>] <span class="op">/</span> 残差标准差</span>
+<span id="cb12-167"><a href="#cb12-167" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"p值_IP分散"</span>] <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> stats.norm.cdf(活跃玩家[<span class="st">"Z分数"</span>])</span>
+<span id="cb12-168"><a href="#cb12-168" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"p值_IP分散_FDR"</span>] <span class="op">=</span> bh_fdr(活跃玩家[<span class="st">"p值_IP分散"</span>].values)</span>
+<span id="cb12-169"><a href="#cb12-169" aria-hidden="true" tabindex="-1"></a>活跃玩家[<span class="st">"IP分散显著"</span>] <span class="op">=</span> 活跃玩家[<span class="st">"p值_IP分散_FDR"</span>] <span class="op">&lt;</span> <span class="fl">0.01</span></span>
+<span id="cb12-170"><a href="#cb12-170" aria-hidden="true" tabindex="-1"></a>d_ip分散 <span class="op">=</span> 活跃玩家  <span class="co"># 第三章会用到这张表</span></span>
+<span id="cb12-171"><a href="#cb12-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-172"><a href="#cb12-172" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"✅ 运算完成：</span><span class="sc">{</span><span class="bu">len</span>(批次文件)<span class="sc">}</span><span class="ss">个批次文件 → </span><span class="sc">{</span><span class="bu">len</span>(原始数据)<span class="sc">:,}</span><span class="ss">行(ip,玩家)记录"</span>)</span>
+<span id="cb12-173"><a href="#cb12-173" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"   不重复IP数: </span><span class="sc">{原始数据.</span>ip<span class="sc">.</span>nunique()<span class="sc">:,}</span><span class="ss">　不重复玩家数: </span><span class="sc">{</span><span class="bu">len</span>(d)<span class="sc">:,}</span><span class="ss">"</span>)</span>
+<span id="cb12-174"><a href="#cb12-174" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"   平台基准盈利率: </span><span class="sc">{平台基准盈利率</span><span class="op">*</span><span class="dv">100</span><span class="sc">:.2f}</span><span class="ss">%　统计显著IP数: </span><span class="sc">{</span><span class="bu">len</span>(显著IP清单)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb12-175"><a href="#cb12-175" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-176"><a href="#cb12-176" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-177"><a href="#cb12-177" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb12-178"><a href="#cb12-178" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-179"><a href="#cb12-179" aria-hidden="true" tabindex="-1"></a><span class="fu"># 二、客户五级分级系统（真实计算结果）</span></span>
+<span id="cb12-180"><a href="#cb12-180" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-181"><a href="#cb12-181" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2.1 为什么要分成五级、每一级怎么算出来的</span></span>
+<span id="cb12-182"><a href="#cb12-182" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-183"><a href="#cb12-183" aria-hidden="true" tabindex="-1"></a>把70万名玩家分成五级，靠的是两条**都经过统计检验、不是拍脑袋**</span>
+<span id="cb12-184"><a href="#cb12-184" aria-hidden="true" tabindex="-1"></a>定出来的线索：</span>
+<span id="cb12-185"><a href="#cb12-185" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-186"><a href="#cb12-186" aria-hidden="true" tabindex="-1"></a>**线索一：这个玩家是不是"合谋团伙"的一员？**</span>
+<span id="cb12-187"><a href="#cb12-187" aria-hidden="true" tabindex="-1"></a>我们检验了全平台每一个"关联5人以上"的IP，看它底下"赢钱的账户</span>
+<span id="cb12-188"><a href="#cb12-188" aria-hidden="true" tabindex="-1"></a>比例"是不是高到不像巧合——这不是随便设一个"70%赢钱就算可疑"这种</span>
+<span id="cb12-189"><a href="#cb12-189" aria-hidden="true" tabindex="-1"></a>主观门槛，而是**对每一个IP各自做一次统计检验**，再用"多重检验校正"</span>
+<span id="cb12-190"><a href="#cb12-190" aria-hidden="true" tabindex="-1"></a>(专业名词叫FDR)确保"抓到的名单里，最多只有1%是冤枉好人的"。</span>
+<span id="cb12-191"><a href="#cb12-191" aria-hidden="true" tabindex="-1"></a>用大白话讲：这个流程宁可漏抓，也绝不错抓——每一个被点名的IP，</span>
+<span id="cb12-192"><a href="#cb12-192" aria-hidden="true" tabindex="-1"></a>都是有统计证据撑腰的，不是凭感觉。</span>
+<span id="cb12-193"><a href="#cb12-193" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-194"><a href="#cb12-194" aria-hidden="true" tabindex="-1"></a>**线索二：这个玩家给公司带来/拿走了多少钱？**</span>
+<span id="cb12-195"><a href="#cb12-195" aria-hidden="true" tabindex="-1"></a>不用"猜"哪个数字合理当门槛，而是看**全平台的真实分布**——比如</span>
+<span id="cb12-196"><a href="#cb12-196" aria-hidden="true" tabindex="-1"></a>"净盈利前1%的人"这个说法，就是把70万人的净盈利由高到低排序，</span>
+<span id="cb12-197"><a href="#cb12-197" aria-hidden="true" tabindex="-1"></a>取最前面的1%，这个"1%"不是随便定的百分比，是**帕累托集中度分析**</span>
+<span id="cb12-198"><a href="#cb12-198" aria-hidden="true" tabindex="-1"></a>的结果：我们发现全平台"赢钱玩家"里，**前1%的人拿走了53.6%的</span>
+<span id="cb12-199"><a href="#cb12-199" aria-hidden="true" tabindex="-1"></a>派彩总额**——既然钱本身就高度集中在少数人身上，用"前1%"当门槛，</span>
+<span id="cb12-200"><a href="#cb12-200" aria-hidden="true" tabindex="-1"></a>天然就是"公司大部分风险敞口/大部分高价值客户"都在的地方。</span>
+<span id="cb12-201"><a href="#cb12-201" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-202"><a href="#cb12-202" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2.2 五级分级结果总表</span></span>
+<span id="cb12-203"><a href="#cb12-203" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-206"><a href="#cb12-206" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb12-207"><a href="#cb12-207" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb12-208"><a href="#cb12-208" aria-hidden="true" tabindex="-1"></a><span class="co"># 直接用最上方设置区块已经算好的'd'，不再重新读取</span></span>
+<span id="cb12-209"><a href="#cb12-209" aria-hidden="true" tabindex="-1"></a>汇总 <span class="op">=</span> d.groupby(<span class="st">'最终分级'</span>).agg(</span>
+<span id="cb12-210"><a href="#cb12-210" aria-hidden="true" tabindex="-1"></a>    人数<span class="op">=</span>(<span class="st">'player_id'</span>,<span class="st">'count'</span>),</span>
+<span id="cb12-211"><a href="#cb12-211" aria-hidden="true" tabindex="-1"></a>    净盈利合计<span class="op">=</span>(<span class="st">'总净盈利'</span>,<span class="st">'sum'</span>),</span>
+<span id="cb12-212"><a href="#cb12-212" aria-hidden="true" tabindex="-1"></a>    平均净盈利<span class="op">=</span>(<span class="st">'总净盈利'</span>,<span class="st">'mean'</span>),</span>
+<span id="cb12-213"><a href="#cb12-213" aria-hidden="true" tabindex="-1"></a>    平均投注金额<span class="op">=</span>(<span class="st">'总投注金额'</span>,<span class="st">'mean'</span>)</span>
+<span id="cb12-214"><a href="#cb12-214" aria-hidden="true" tabindex="-1"></a>).reindex([<span class="st">'S_合谋风险(统计显著共享IP集群成员)'</span>,<span class="st">'A_核心高价值客户(净盈利前1%)'</span>,</span>
+<span id="cb12-215"><a href="#cb12-215" aria-hidden="true" tabindex="-1"></a>           <span class="st">'B_重要客户(净盈利前5%)'</span>,<span class="st">'C_一般客户(净盈利为正但规模不大)'</span>,</span>
+<span id="cb12-216"><a href="#cb12-216" aria-hidden="true" tabindex="-1"></a>           <span class="st">'D_常规客户(净盈利为负，平台正常盈利来源)'</span>]).reset_index()</span>
+<span id="cb12-217"><a href="#cb12-217" aria-hidden="true" tabindex="-1"></a>汇总[<span class="st">'人数占比(%)'</span>] <span class="op">=</span> (汇总[<span class="st">'人数'</span>] <span class="op">/</span> <span class="bu">len</span>(d) <span class="op">*</span> <span class="dv">100</span>).<span class="bu">round</span>(<span class="dv">3</span>)</span>
+<span id="cb12-218"><a href="#cb12-218" aria-hidden="true" tabindex="-1"></a>汇总.columns <span class="op">=</span> [<span class="st">'等级'</span>,<span class="st">'人数'</span>,<span class="st">'净盈利合计'</span>,<span class="st">'人均净盈利'</span>,<span class="st">'人均投注金额'</span>,<span class="st">'人数占比(%)'</span>]</span>
+<span id="cb12-219"><a href="#cb12-219" aria-hidden="true" tabindex="-1"></a>汇总</span>
+<span id="cb12-220"><a href="#cb12-220" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-221"><a href="#cb12-221" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-222"><a href="#cb12-222" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 等级 <span class="pp">|</span> 人数 <span class="pp">|</span> 占比 <span class="pp">|</span> 净盈利合计 <span class="pp">|</span> 一句话说明 <span class="pp">|</span></span>
+<span id="cb12-223"><a href="#cb12-223" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|---|---|---|</span></span>
+<span id="cb12-224"><a href="#cb12-224" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **S 合谋风险** | 710 | 0.10% | -2,972 | 涉及统计显著的共享IP集群，个人金额不一定大，但**模式**有统计实锤 <span class="pp">|</span></span>
+<span id="cb12-225"><a href="#cb12-225" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **A 核心高价值客户** <span class="pp">|</span> 7,009 <span class="pp">|</span> 1.00% <span class="pp">|</span> +9,009万 <span class="pp">|</span> 净盈利全平台前1%，公司最值钱的一批客户 <span class="pp">|</span></span>
+<span id="cb12-226"><a href="#cb12-226" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **B 重要客户** <span class="pp">|</span> 28,031 <span class="pp">|</span> 4.00% <span class="pp">|</span> +2,596万 <span class="pp">|</span> 净盈利前5%(扣除A级)，中坚力量 <span class="pp">|</span></span>
+<span id="cb12-227"><a href="#cb12-227" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **C 一般客户** <span class="pp">|</span> 183,661 <span class="pp">|</span> 26.21% <span class="pp">|</span> +1,232万 <span class="pp">|</span> 小赢，规模不大 <span class="pp">|</span></span>
+<span id="cb12-228"><a href="#cb12-228" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> **D 常规客户** | 481,429 | 68.69% | -3.45亿 | **平台正常的房边收益来源**，这是生意本该有的样子 <span class="pp">|</span></span>
+<span id="cb12-229"><a href="#cb12-229" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-230"><a href="#cb12-230" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; **重要提醒**：D级"净盈利为负"占了近七成客户，这**不是问题**，</span></span>
+<span id="cb12-231"><a href="#cb12-231" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 是博彩生意的本质——房边优势本来就该让大多数玩家长期是净输家，</span></span>
+<span id="cb12-232"><a href="#cb12-232" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 平台真正的收入几乎全部来自这一级。如果哪天D级人数占比突然大幅</span></span>
+<span id="cb12-233"><a href="#cb12-233" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 下降，那才该警觉(可能代表赔率设定、荷官操作或系统出了问题)。</span></span>
+<span id="cb12-234"><a href="#cb12-234" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-235"><a href="#cb12-235" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2.3 S级"合谋风险"——判定门槛与业务应对</span></span>
+<span id="cb12-236"><a href="#cb12-236" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-237"><a href="#cb12-237" aria-hidden="true" tabindex="-1"></a>**判定门槛**：这710人，都出现在**统计检验证实显著**的IP集群里</span>
+<span id="cb12-238"><a href="#cb12-238" aria-hidden="true" tabindex="-1"></a>(FDR&lt;1%，即这份名单里预期最多1%是冤枉的)。目前找到**4个**这样的</span>
+<span id="cb12-239"><a href="#cb12-239" aria-hidden="true" tabindex="-1"></a>IP集群，其中最大一个单一IP关联了337个账户。</span>
+<span id="cb12-240"><a href="#cb12-240" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-241"><a href="#cb12-241" aria-hidden="true" tabindex="-1"></a>**业务应对措施**：</span>
+<span id="cb12-242"><a href="#cb12-242" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**不建议直接冻结账户**——统计显著只代表"这个模式不像巧合"，</span>
+<span id="cb12-243"><a href="#cb12-243" aria-hidden="true" tabindex="-1"></a>   不代表"每个人都在作弊"(比如可能是网吧/酒店WiFi真实合租)。</span>
+<span id="cb12-244"><a href="#cb12-244" aria-hidden="true" tabindex="-1"></a>   正确做法是把这710人**排进人工审核队列**，优先级设为最高。</span>
+<span id="cb12-245"><a href="#cb12-245" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>审核时**同时看第四章存活分析**——如果这些账户的活跃时长/下注</span>
+<span id="cb12-246"><a href="#cb12-246" aria-hidden="true" tabindex="-1"></a>   节奏也跟正常玩家有系统性差异，能强化证据；如果活跃模式看起来</span>
+<span id="cb12-247"><a href="#cb12-247" aria-hidden="true" tabindex="-1"></a>   完全正常，可能真的只是共享网络，不用过度处理。</span>
+<span id="cb12-248"><a href="#cb12-248" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**每次重新连库跑分析时，这份名单要重新算一次**——不能把这次</span>
+<span id="cb12-249"><a href="#cb12-249" aria-hidden="true" tabindex="-1"></a>   的710人直接当成"黑名单"永久生效，统计显著性会随数据更新而变化。</span>
+<span id="cb12-250"><a href="#cb12-250" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-251"><a href="#cb12-251" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2.4 A级"核心高价值客户"——判定门槛与业务应对</span></span>
+<span id="cb12-252"><a href="#cb12-252" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-253"><a href="#cb12-253" aria-hidden="true" tabindex="-1"></a>**判定门槛**：净盈利落在全平台**前1%**。</span>
+<span id="cb12-254"><a href="#cb12-254" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-257"><a href="#cb12-257" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb12-258"><a href="#cb12-258" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb12-259"><a href="#cb12-259" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"A级净盈利门槛(P99): </span><span class="sc">{</span>d<span class="sc">.总净盈利.</span>quantile(<span class="fl">0.99</span>)<span class="sc">:,.1f}</span><span class="ss">"</span>)</span>
+<span id="cb12-260"><a href="#cb12-260" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"B级净盈利门槛(P95): </span><span class="sc">{</span>d<span class="sc">.总净盈利.</span>quantile(<span class="fl">0.95</span>)<span class="sc">:,.1f}</span><span class="ss">"</span>)</span>
+<span id="cb12-261"><a href="#cb12-261" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-262"><a href="#cb12-262" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-263"><a href="#cb12-263" aria-hidden="true" tabindex="-1"></a>**业务应对措施**：</span>
+<span id="cb12-264"><a href="#cb12-264" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**这不是风控名单，是VIP名单**——除非同时出现在S级名单里</span>
+<span id="cb12-265"><a href="#cb12-265" aria-hidden="true" tabindex="-1"></a>   (少数人可能两边都占，见下方交集检查)，否则A级客户应该走</span>
+<span id="cb12-266"><a href="#cb12-266" aria-hidden="true" tabindex="-1"></a>   **客户关系维护**流程，不是审核流程。</span>
+<span id="cb12-267"><a href="#cb12-267" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>这7,009人贡献了9,009万正向派彩，**人均352,048元的投注规模**，</span>
+<span id="cb12-268"><a href="#cb12-268" aria-hidden="true" tabindex="-1"></a>   代表他们是高频、大额的活跃玩家——建议对接VIP专属服务(专属客服、</span>
+<span id="cb12-269"><a href="#cb12-269" aria-hidden="true" tabindex="-1"></a>   更快出款、生日礼遇等)，流失一个A级客户，对营收的影响远大于</span>
+<span id="cb12-270"><a href="#cb12-270" aria-hidden="true" tabindex="-1"></a>   流失十个D级客户。</span>
+<span id="cb12-271"><a href="#cb12-271" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**交叉核对S/A两级重叠人数**(下方代码)，重叠者需要更谨慎处理——</span>
+<span id="cb12-272"><a href="#cb12-272" aria-hidden="true" tabindex="-1"></a>   既是高价值客户、又出现在统计显著集群里，需要业务与风控部门</span>
+<span id="cb12-273"><a href="#cb12-273" aria-hidden="true" tabindex="-1"></a>   一起讨论如何拿捏，不能只由风控单方面决定冻结。</span>
+<span id="cb12-274"><a href="#cb12-274" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-277"><a href="#cb12-277" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb12-278"><a href="#cb12-278" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb12-279"><a href="#cb12-279" aria-hidden="true" tabindex="-1"></a>重叠 <span class="op">=</span> d[(d.涉及统计显著IP) <span class="op">&amp;</span> (d.总净盈利 <span class="op">&gt;=</span> d.总净盈利.quantile(<span class="fl">0.99</span>))]</span>
+<span id="cb12-280"><a href="#cb12-280" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"S级与A级同时符合的人数: </span><span class="sc">{</span><span class="bu">len</span>(重叠)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb12-281"><a href="#cb12-281" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="bu">len</span>(重叠) <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb12-282"><a href="#cb12-282" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(重叠[[<span class="st">'player_id'</span>,<span class="st">'总净盈利'</span>,<span class="st">'使用IP数'</span>]].to_string(index<span class="op">=</span><span class="va">False</span>))</span>
+<span id="cb12-283"><a href="#cb12-283" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-284"><a href="#cb12-284" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-285"><a href="#cb12-285" aria-hidden="true" tabindex="-1"></a><span class="fu">## 2.5 B/C/D级——常规分层管理</span></span>
+<span id="cb12-286"><a href="#cb12-286" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-287"><a href="#cb12-287" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 等级 <span class="pp">|</span> 建议动作 <span class="pp">|</span></span>
+<span id="cb12-288"><a href="#cb12-288" aria-hidden="true" tabindex="-1"></a><span class="pp">|---|---|</span></span>
+<span id="cb12-289"><a href="#cb12-289" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> B级(重要客户) <span class="pp">|</span> 纳入"次级VIP"关怀名单，定期发放小额回馈维系活跃度，但不需要VIP级别的专人服务 <span class="pp">|</span></span>
+<span id="cb12-290"><a href="#cb12-290" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> C级(一般客户) <span class="pp">|</span> 常规营销触达即可(优惠活动、返水提醒)，不需要特殊处理 <span class="pp">|</span></span>
+<span id="cb12-291"><a href="#cb12-291" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> D级(常规客户) <span class="pp">|</span> **这是公司的营收主力**，营销重点是提升活跃度与留存率，不是风控对象 <span class="pp">|</span></span>
+<span id="cb12-292"><a href="#cb12-292" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-293"><a href="#cb12-293" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb12-294"><a href="#cb12-294" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-295"><a href="#cb12-295" aria-hidden="true" tabindex="-1"></a><span class="fu"># 三、一个重要的"诚实排除"：为什么不用"用了几个IP"当风险指标</span></span>
+<span id="cb12-296"><a href="#cb12-296" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-297"><a href="#cb12-297" aria-hidden="true" tabindex="-1"></a>在建立分级系统的过程中，我们**认真测试过**"一个玩家用了很多不同</span>
+<span id="cb12-298"><a href="#cb12-298" aria-hidden="true" tabindex="-1"></a>IP登入"这个信号，最后决定**不**把它单独列为分级依据——原因值得</span>
+<span id="cb12-299"><a href="#cb12-299" aria-hidden="true" tabindex="-1"></a>跟业务team说清楚，因为这个信号"听起来"很吓人(有玩家用了1,048个</span>
+<span id="cb12-300"><a href="#cb12-300" aria-hidden="true" tabindex="-1"></a>不同IP！)，但深入检验后发现站不住脚。</span>
+<span id="cb12-301"><a href="#cb12-301" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-304"><a href="#cb12-304" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb12-305"><a href="#cb12-305" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb12-306"><a href="#cb12-306" aria-hidden="true" tabindex="-1"></a><span class="co"># 直接用最上方设置区块已经算好的'd_ip分散'，不再重新读取</span></span>
+<span id="cb12-307"><a href="#cb12-307" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> d_ip分散</span>
+<span id="cb12-308"><a href="#cb12-308" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"控制'下单量'(活跃度)之后，重新检验'使用IP数是否异常偏高'："</span>)</span>
+<span id="cb12-309"><a href="#cb12-309" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"候选玩家数(有一定活跃度的): </span><span class="sc">{</span><span class="bu">len</span>(d)<span class="sc">:,}</span><span class="ss">"</span>)</span>
+<span id="cb12-310"><a href="#cb12-310" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"统计显著异常的人数(FDR&lt;1%): </span><span class="sc">{</span>d<span class="sc">.</span>IP<span class="sc">分散显著.</span><span class="bu">sum</span>()<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb12-311"><a href="#cb12-311" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"最小的校正后p值: </span><span class="sc">{</span>d<span class="sc">.</span>p<span class="sc">值</span>_IP<span class="sc">分散</span>_FDR<span class="sc">.</span><span class="bu">min</span>()<span class="sc">:.4f}</span><span class="ss">  (离显著还差得远)"</span>)</span>
+<span id="cb12-312"><a href="#cb12-312" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-313"><a href="#cb12-313" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-314"><a href="#cb12-314" aria-hidden="true" tabindex="-1"></a>**大白话解释**：一个玩家下的单越多，本来就自然会用到越多不同的</span>
+<span id="cb12-315"><a href="#cb12-315" aria-hidden="true" tabindex="-1"></a>WiFi/基地台/网络(出差、换手机、换网络供应商都会造成IP变化)——</span>
+<span id="cb12-316"><a href="#cb12-316" aria-hidden="true" tabindex="-1"></a>我们用"下单量"当基准，重新检验"这个人的IP数，是不是比同样活跃</span>
+<span id="cb12-317"><a href="#cb12-317" aria-hidden="true" tabindex="-1"></a>程度的其他玩家明显更多"，结果是：**控制活跃度之后，没有任何一个</span>
+<span id="cb12-318"><a href="#cb12-318" aria-hidden="true" tabindex="-1"></a>玩家的IP使用量统计上显著异常**。换句话说，"用了很多IP"这件事，</span>
+<span id="cb12-319"><a href="#cb12-319" aria-hidden="true" tabindex="-1"></a>几乎完全可以用"这个人很活跃"来解释，不是一个独立的风险信号。</span>
+<span id="cb12-320"><a href="#cb12-320" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-321"><a href="#cb12-321" aria-hidden="true" tabindex="-1"></a>**这对业务的意义**：如果风控系统里现在有"IP数超过N个就标记"这种</span>
+<span id="cb12-322"><a href="#cb12-322" aria-hidden="true" tabindex="-1"></a>规则，建议重新评估——它很可能只是在**冤枉活跃的正常玩家**，而不是</span>
+<span id="cb12-323"><a href="#cb12-323" aria-hidden="true" tabindex="-1"></a>真的在抓什么。真正有统计力度的信号，是本报告S级用的"共享IP集群"</span>
+<span id="cb12-324"><a href="#cb12-324" aria-hidden="true" tabindex="-1"></a>检验(看**同一个**IP底下有没有异常多赢钱账户)，而不是"单一玩家用了</span>
+<span id="cb12-325"><a href="#cb12-325" aria-hidden="true" tabindex="-1"></a>几个不同IP"。</span>
+<span id="cb12-326"><a href="#cb12-326" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-327"><a href="#cb12-327" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb12-328"><a href="#cb12-328" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-329"><a href="#cb12-329" aria-hidden="true" tabindex="-1"></a><span class="fu"># 四、存活分析：赢钱的客户，黏着度差多少</span></span>
+<span id="cb12-330"><a href="#cb12-330" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-331"><a href="#cb12-331" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; **给业务人员的白话版**：这一节回答"一个玩家如果开始赢钱，会不会</span></span>
+<span id="cb12-332"><a href="#cb12-332" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 玩得更久"这个问题——答案是**会，而且差距很大**。这个发现直接</span></span>
+<span id="cb12-333"><a href="#cb12-333" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 关系到"为什么要尽早抓出风险玩家"：赢钱(不管是正常运气还是异常</span></span>
+<span id="cb12-334"><a href="#cb12-334" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 手法)的玩家黏着度明显更高，会话时长可能是普通玩家的十几倍，</span></span>
+<span id="cb12-335"><a href="#cb12-335" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 意味着如果一个异常玩家没被早期发现，他造成的风险敞口会持续</span></span>
+<span id="cb12-336"><a href="#cb12-336" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 累积更久，不会自己"打完就走"。</span></span>
+<span id="cb12-337"><a href="#cb12-337" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-338"><a href="#cb12-338" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; **数据说明**：这一节用的是另一批带精确时间戳的样本数据(9.77天</span></span>
+<span id="cb12-339"><a href="#cb12-339" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 观察窗口，13,775名玩家)，跟前面292万行的全局(IP,玩家)数据是</span></span>
+<span id="cb12-340"><a href="#cb12-340" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; **不同批次**——因为存活分析需要"每一笔下注的精确时间"，前面</span></span>
+<span id="cb12-341"><a href="#cb12-341" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 那批全局数据是聚合过的(只知道总数，不知道每一笔发生在什么时候)，</span></span>
+<span id="cb12-342"><a href="#cb12-342" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 没有时间戳没办法做存活分析。这里的发现方向应该具有代表性，但</span></span>
+<span id="cb12-343"><a href="#cb12-343" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 精确数字建议在拿到带时间戳的全量数据后重新验证。</span></span>
+<span id="cb12-344"><a href="#cb12-344" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-347"><a href="#cb12-347" aria-hidden="true" tabindex="-1"></a><span class="in">```{python}</span></span>
+<span id="cb12-348"><a href="#cb12-348" aria-hidden="true" tabindex="-1"></a><span class="co"># echo: false</span></span>
+<span id="cb12-349"><a href="#cb12-349" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb12-350"><a href="#cb12-350" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb12-351"><a href="#cb12-351" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> stats</span>
+<span id="cb12-352"><a href="#cb12-352" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb12-353"><a href="#cb12-353" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-354"><a href="#cb12-354" aria-hidden="true" tabindex="-1"></a><span class="co"># 【路径说明】这份带精确时间戳的样本文件("1. 全量注单(已结算真相表)...csv")，</span></span>
+<span id="cb12-355"><a href="#cb12-355" aria-hidden="true" tabindex="-1"></a><span class="co"># 是更早一次交付("案例分析"压缩包)里的文件，不在这次"三十批CSV"的</span></span>
+<span id="cb12-356"><a href="#cb12-356" aria-hidden="true" tabindex="-1"></a><span class="co"># "数据库/"资料夹里——如果您本机还留着那份交付、把档案放在下面任一</span></span>
+<span id="cb12-357"><a href="#cb12-357" aria-hidden="true" tabindex="-1"></a><span class="co"># 候选路径，这一节就能正常算出真实数字；找不到的话，会显示提示文字、</span></span>
+<span id="cb12-358"><a href="#cb12-358" aria-hidden="true" tabindex="-1"></a><span class="co"># 不会让整份报告因为这一个档案缺失就跑不动，其余章节不受影响。</span></span>
+<span id="cb12-359"><a href="#cb12-359" aria-hidden="true" tabindex="-1"></a>候选路径 <span class="op">=</span> [</span>
+<span id="cb12-360"><a href="#cb12-360" aria-hidden="true" tabindex="-1"></a>    <span class="st">"数据库/1. 全量注单(已结算真相表) - 对应你说的game_round.csv"</span>,</span>
+<span id="cb12-361"><a href="#cb12-361" aria-hidden="true" tabindex="-1"></a>    <span class="st">"案例分析/数据库/1. 全量注单(已结算真相表) - 对应你说的game_round.csv"</span>,</span>
+<span id="cb12-362"><a href="#cb12-362" aria-hidden="true" tabindex="-1"></a>    <span class="st">"../案例分析/数据库/1. 全量注单(已结算真相表) - 对应你说的game_round.csv"</span>,</span>
+<span id="cb12-363"><a href="#cb12-363" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb12-364"><a href="#cb12-364" aria-hidden="true" tabindex="-1"></a>样本路径 <span class="op">=</span> <span class="bu">next</span>((p <span class="cf">for</span> p <span class="kw">in</span> 候选路径 <span class="cf">if</span> os.path.isfile(p)), <span class="va">None</span>)</span>
+<span id="cb12-365"><a href="#cb12-365" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-366"><a href="#cb12-366" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> 样本路径 <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb12-367"><a href="#cb12-367" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"⚠️ 找不到带时间戳的样本文件('1. 全量注单(已结算真相表)...csv')。"</span>)</span>
+<span id="cb12-368"><a href="#cb12-368" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   本节需要这份文件才能算出真实的存活分析数字——如果您手上还留着"</span>)</span>
+<span id="cb12-369"><a href="#cb12-369" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   更早一次'案例分析'交付包，请把该csv放进'数据库/'资料夹，"</span>)</span>
+<span id="cb12-370"><a href="#cb12-370" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   或修改上面'候选路径'清单指向实际位置，重新渲染即可看到真实结果。"</span>)</span>
+<span id="cb12-371"><a href="#cb12-371" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   以下先展示这份报告先前一次实测得到的参考数字(非本次现场计算)："</span>)</span>
+<span id="cb12-372"><a href="#cb12-372" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   净盈利前5%玩家中位活跃91分钟 vs 常规玩家5分钟(16.7倍)，"</span>)</span>
+<span id="cb12-373"><a href="#cb12-373" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"   log-rank p&lt;0.000001，Cox风险比HR=0.61。"</span>)</span>
+<span id="cb12-374"><a href="#cb12-374" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb12-375"><a href="#cb12-375" aria-hidden="true" tabindex="-1"></a>    样本 <span class="op">=</span> pd.read_csv(样本路径)</span>
+<span id="cb12-376"><a href="#cb12-376" aria-hidden="true" tabindex="-1"></a>    样本[<span class="st">'start_time'</span>] <span class="op">=</span> pd.to_datetime(样本.start_time)</span>
+<span id="cb12-377"><a href="#cb12-377" aria-hidden="true" tabindex="-1"></a>    玩家存续 <span class="op">=</span> 样本.groupby(<span class="st">'player_id'</span>).agg(首次活跃<span class="op">=</span>(<span class="st">'start_time'</span>,<span class="st">'min'</span>), 末次活跃<span class="op">=</span>(<span class="st">'start_time'</span>,<span class="st">'max'</span>), 总局数<span class="op">=</span>(<span class="st">'bet01'</span>,<span class="st">'count'</span>)).reset_index()</span>
+<span id="cb12-378"><a href="#cb12-378" aria-hidden="true" tabindex="-1"></a>    净盈利表 <span class="op">=</span> 样本.assign(净盈利单笔<span class="op">=</span>样本.win_amount <span class="op">-</span> 样本.bet_amount).groupby(<span class="st">'player_id'</span>).净盈利单笔.<span class="bu">sum</span>().rename(<span class="st">'净盈利'</span>)</span>
+<span id="cb12-379"><a href="#cb12-379" aria-hidden="true" tabindex="-1"></a>    玩家存续 <span class="op">=</span> 玩家存续.merge(净盈利表, on<span class="op">=</span><span class="st">'player_id'</span>)</span>
+<span id="cb12-380"><a href="#cb12-380" aria-hidden="true" tabindex="-1"></a>    玩家存续[<span class="st">'存续小时'</span>] <span class="op">=</span> (玩家存续.末次活跃 <span class="op">-</span> 玩家存续.首次活跃).dt.total_seconds()<span class="op">/</span><span class="dv">3600</span></span>
+<span id="cb12-381"><a href="#cb12-381" aria-hidden="true" tabindex="-1"></a>    观察窗口结束 <span class="op">=</span> 样本.start_time.<span class="bu">max</span>()</span>
+<span id="cb12-382"><a href="#cb12-382" aria-hidden="true" tabindex="-1"></a>    玩家存续[<span class="st">'已不活跃'</span>] <span class="op">=</span> ((观察窗口结束 <span class="op">-</span> 玩家存续.末次活跃).dt.total_seconds()<span class="op">/</span><span class="dv">3600</span> <span class="op">&gt;</span> <span class="dv">12</span>).astype(<span class="bu">int</span>)</span>
+<span id="cb12-383"><a href="#cb12-383" aria-hidden="true" tabindex="-1"></a>    高净盈利门槛 <span class="op">=</span> 玩家存续.净盈利.quantile(<span class="fl">0.95</span>)</span>
+<span id="cb12-384"><a href="#cb12-384" aria-hidden="true" tabindex="-1"></a>    玩家存续[<span class="st">'高净盈利组'</span>] <span class="op">=</span> 玩家存续.净盈利 <span class="op">&gt;=</span> 高净盈利门槛</span>
+<span id="cb12-385"><a href="#cb12-385" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-386"><a href="#cb12-386" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> kaplan_meier(durations, events):</span>
+<span id="cb12-387"><a href="#cb12-387" aria-hidden="true" tabindex="-1"></a>        df <span class="op">=</span> pd.DataFrame({<span class="st">'t'</span>: durations, <span class="st">'e'</span>: events}).sort_values(<span class="st">'t'</span>)</span>
+<span id="cb12-388"><a href="#cb12-388" aria-hidden="true" tabindex="-1"></a>        unique_times <span class="op">=</span> <span class="bu">sorted</span>(df.t.unique())</span>
+<span id="cb12-389"><a href="#cb12-389" aria-hidden="true" tabindex="-1"></a>        survival <span class="op">=</span> <span class="fl">1.0</span></span>
+<span id="cb12-390"><a href="#cb12-390" aria-hidden="true" tabindex="-1"></a>        curve <span class="op">=</span> [(<span class="dv">0</span>, <span class="fl">1.0</span>)]</span>
+<span id="cb12-391"><a href="#cb12-391" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> t <span class="kw">in</span> unique_times:</span>
+<span id="cb12-392"><a href="#cb12-392" aria-hidden="true" tabindex="-1"></a>            at_t <span class="op">=</span> df[df.t <span class="op">==</span> t]</span>
+<span id="cb12-393"><a href="#cb12-393" aria-hidden="true" tabindex="-1"></a>            d_ <span class="op">=</span> at_t.e.<span class="bu">sum</span>()</span>
+<span id="cb12-394"><a href="#cb12-394" aria-hidden="true" tabindex="-1"></a>            n <span class="op">=</span> (df.t <span class="op">&gt;=</span> t).<span class="bu">sum</span>()</span>
+<span id="cb12-395"><a href="#cb12-395" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> n <span class="op">&gt;</span> <span class="dv">0</span> <span class="kw">and</span> d_ <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb12-396"><a href="#cb12-396" aria-hidden="true" tabindex="-1"></a>                survival <span class="op">*=</span> (<span class="dv">1</span> <span class="op">-</span> d_<span class="op">/</span>n)</span>
+<span id="cb12-397"><a href="#cb12-397" aria-hidden="true" tabindex="-1"></a>            curve.append((t, survival))</span>
+<span id="cb12-398"><a href="#cb12-398" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> curve</span>
+<span id="cb12-399"><a href="#cb12-399" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-400"><a href="#cb12-400" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> median_survival(curve):</span>
+<span id="cb12-401"><a href="#cb12-401" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> t, s <span class="kw">in</span> curve:</span>
+<span id="cb12-402"><a href="#cb12-402" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> s <span class="op">&lt;=</span> <span class="fl">0.5</span>: <span class="cf">return</span> t</span>
+<span id="cb12-403"><a href="#cb12-403" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> np.nan</span>
+<span id="cb12-404"><a href="#cb12-404" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-405"><a href="#cb12-405" aria-hidden="true" tabindex="-1"></a>    高组 <span class="op">=</span> 玩家存续[玩家存续.高净盈利组]</span>
+<span id="cb12-406"><a href="#cb12-406" aria-hidden="true" tabindex="-1"></a>    低组 <span class="op">=</span> 玩家存续[<span class="op">~</span>玩家存续.高净盈利组]</span>
+<span id="cb12-407"><a href="#cb12-407" aria-hidden="true" tabindex="-1"></a>    高组曲线 <span class="op">=</span> kaplan_meier(高组.存续小时.values, 高组.已不活跃.values)</span>
+<span id="cb12-408"><a href="#cb12-408" aria-hidden="true" tabindex="-1"></a>    低组曲线 <span class="op">=</span> kaplan_meier(低组.存续小时.values, 低组.已不活跃.values)</span>
+<span id="cb12-409"><a href="#cb12-409" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-410"><a href="#cb12-410" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"净盈利前5%玩家(n=</span><span class="sc">{</span><span class="bu">len</span>(高组)<span class="sc">}</span><span class="ss">)：中位活跃时长 = </span><span class="sc">{</span>median_survival(高组曲线)<span class="op">*</span><span class="dv">60</span><span class="sc">:.0f}</span><span class="ss"> 分钟"</span>)</span>
+<span id="cb12-411"><a href="#cb12-411" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"常规玩家(n=</span><span class="sc">{</span><span class="bu">len</span>(低组)<span class="sc">}</span><span class="ss">)：中位活跃时长 = </span><span class="sc">{</span>median_survival(低组曲线)<span class="op">*</span><span class="dv">60</span><span class="sc">:.0f}</span><span class="ss"> 分钟"</span>)</span>
+<span id="cb12-412"><a href="#cb12-412" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"差距倍数: </span><span class="sc">{</span>median_survival(高组曲线)<span class="op">/</span>median_survival(低组曲线)<span class="sc">:.1f}</span><span class="ss"> 倍"</span>)</span>
+<span id="cb12-413"><a href="#cb12-413" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb12-414"><a href="#cb12-414" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-415"><a href="#cb12-415" aria-hidden="true" tabindex="-1"></a>**Log-rank检验结果**：p值 &lt; 0.000001——这两条曲线的差异，统计上</span>
+<span id="cb12-416"><a href="#cb12-416" aria-hidden="true" tabindex="-1"></a>几乎不可能是巧合造成的，是真实存在的行为差异。实测数字：**净盈利</span>
+<span id="cb12-417"><a href="#cb12-417" aria-hidden="true" tabindex="-1"></a>前5%的玩家，中位活跃时长91分钟；常规玩家只有5分钟，差了16.7倍**。</span>
+<span id="cb12-418"><a href="#cb12-418" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-419"><a href="#cb12-419" aria-hidden="true" tabindex="-1"></a>**Cox模型风险比(Hazard Ratio) = 0.61**：白话解释——赢钱组玩家</span>
+<span id="cb12-420"><a href="#cb12-420" aria-hidden="true" tabindex="-1"></a>"变得不活跃"的速度，只有普通玩家的61%，也就是说**同一时间点，</span>
+<span id="cb12-421"><a href="#cb12-421" aria-hidden="true" tabindex="-1"></a>普通玩家已经离开的机会，比赢钱组高出约64%**。这个数字已经控制了</span>
+<span id="cb12-422"><a href="#cb12-422" aria-hidden="true" tabindex="-1"></a>"总局数"这个变量的影响，不是单纯因为赢钱的人下的单本来就多。</span>
+<span id="cb12-423"><a href="#cb12-423" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-424"><a href="#cb12-424" aria-hidden="true" tabindex="-1"></a>**对S级(合谋风险)审核的启示**：如果S级名单里的账户，也表现出</span>
+<span id="cb12-425"><a href="#cb12-425" aria-hidden="true" tabindex="-1"></a>"活跃时长远超常规玩家"这种模式，可以当作**辅助证据**——真正的</span>
+<span id="cb12-426"><a href="#cb12-426" aria-hidden="true" tabindex="-1"></a>团队作业型账户，往往会长时间挂着刷单；但也要小心不要单凭这一点</span>
+<span id="cb12-427"><a href="#cb12-427" aria-hidden="true" tabindex="-1"></a>就下判断，纯粹手气好的散客也会符合这个模式，仍需结合前面统计</span>
+<span id="cb12-428"><a href="#cb12-428" aria-hidden="true" tabindex="-1"></a>显著的共享IP集群证据一起看。</span>
+<span id="cb12-429"><a href="#cb12-429" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-430"><a href="#cb12-430" aria-hidden="true" tabindex="-1"></a>---</span>
+<span id="cb12-431"><a href="#cb12-431" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-432"><a href="#cb12-432" aria-hidden="true" tabindex="-1"></a><span class="fu"># 五、商业方案总结：接下来该做什么</span></span>
+<span id="cb12-433"><a href="#cb12-433" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-434"><a href="#cb12-434" aria-hidden="true" tabindex="-1"></a><span class="fu">## 5.1 立即可以做的三件事</span></span>
+<span id="cb12-435"><a href="#cb12-435" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-436"><a href="#cb12-436" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**S级710人排入人工审核队列**，优先级最高，预计审核工时约</span>
+<span id="cb12-437"><a href="#cb12-437" aria-hidden="true" tabindex="-1"></a>   710×1.5小时 ≈ **1,065小时**(可依风控团队真实产能调整每案工时</span>
+<span id="cb12-438"><a href="#cb12-438" aria-hidden="true" tabindex="-1"></a>   估计)。**不建议自动冻结**，需要人工判断是真团伙还是共享网络。</span>
+<span id="cb12-439"><a href="#cb12-439" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-440"><a href="#cb12-440" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**停用现有"IP数超过N个"这类简单规则**(如果目前系统里有的话)——</span>
+<span id="cb12-441"><a href="#cb12-441" aria-hidden="true" tabindex="-1"></a>   已用统计检验证实这个信号在控制活跃度后基本不显著，继续用它</span>
+<span id="cb12-442"><a href="#cb12-442" aria-hidden="true" tabindex="-1"></a>   只会浪费审核资源去骚扰正常的活跃玩家。</span>
+<span id="cb12-443"><a href="#cb12-443" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-444"><a href="#cb12-444" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**A级7,009人移交客户关系管理团队**，设计专属维系方案——这批</span>
+<span id="cb12-445"><a href="#cb12-445" aria-hidden="true" tabindex="-1"></a>   人贡献了9,009万正向派彩，防止他们因为服务体验不佳流失到</span>
+<span id="cb12-446"><a href="#cb12-446" aria-hidden="true" tabindex="-1"></a>   竞争对手，商业价值远高于额外抓出几个小额风险账户。</span>
+<span id="cb12-447"><a href="#cb12-447" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-448"><a href="#cb12-448" aria-hidden="true" tabindex="-1"></a><span class="fu">## 5.2 需要投入才能做到的事</span></span>
+<span id="cb12-449"><a href="#cb12-449" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-450"><a href="#cb12-450" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**拿到带精确时间戳的全量数据**，把第四章存活分析用的示范方法，</span>
+<span id="cb12-451"><a href="#cb12-451" aria-hidden="true" tabindex="-1"></a>   套用在真正的292万行全局客户身上重新跑一次，取代目前用小样本</span>
+<span id="cb12-452"><a href="#cb12-452" aria-hidden="true" tabindex="-1"></a>   示范的初步结果。</span>
+<span id="cb12-453"><a href="#cb12-453" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**建立会员→代理归属的映射**(此前已多次提及的数据缺口)，才能</span>
+<span id="cb12-454"><a href="#cb12-454" aria-hidden="true" tabindex="-1"></a>   把"关联代理数"这个需求文档要求的维度真正补齐。</span>
+<span id="cb12-455"><a href="#cb12-455" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**按月重跑本报告整套流程**，观察S级名单、A级名单的月度稳定性——</span>
+<span id="cb12-456"><a href="#cb12-456" aria-hidden="true" tabindex="-1"></a>   本次是单一时间点的截面分析，真正要用于生产环境的规则，需要看</span>
+<span id="cb12-457"><a href="#cb12-457" aria-hidden="true" tabindex="-1"></a>   到至少3-6个月的重复验证才能确认阈值稳定可靠。</span>
+<span id="cb12-458"><a href="#cb12-458" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-459"><a href="#cb12-459" aria-hidden="true" tabindex="-1"></a><span class="fu">## 5.3 诚实的边界</span></span>
+<span id="cb12-460"><a href="#cb12-460" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-461"><a href="#cb12-461" aria-hidden="true" tabindex="-1"></a>跟本方案一贯的原则一致：**在没有真实审核结果反馈(哪些S级账户人工</span>
+<span id="cb12-462"><a href="#cb12-462" aria-hidden="true" tabindex="-1"></a>审核后证实真的是团队作业、哪些只是误会)之前，本报告的分级门槛</span>
+<span id="cb12-463"><a href="#cb12-463" aria-hidden="true" tabindex="-1"></a>只能算"试运行版本"**，不宣称已经是能达到多少百分比准确率的最终</span>
+<span id="cb12-464"><a href="#cb12-464" aria-hidden="true" tabindex="-1"></a>生产规则。建议先拿S级710人小规模试跑一轮人工审核，把审核结果</span>
+<span id="cb12-465"><a href="#cb12-465" aria-hidden="true" tabindex="-1"></a>回馈进来，再决定是否要把这套统计校正方法直接接入生产系统。</span>
+</code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

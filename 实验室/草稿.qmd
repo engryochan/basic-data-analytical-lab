@@ -1,0 +1,67 @@
+---
+title: "草稿"
+format: html
+---
+
+```{r}
+if(!require('BBmisc')) {
+  install.packages('BBmisc')
+}
+library('pacman')
+lib('microbenchmark', 'profvis', 'openxlsx', 'fable', 'fabletools', 'forecast', 'survival', 'keras3', 'tensorflow', 'reticulate')
+
+```
+
+
+```{r}
+gc()
+system.time(
+  csv <- data.table::fread('./数据库/英博体育_电子_数据.csv')
+)
+
+system.time(
+  xl <- openxlsx2::read_xlsx('./数据库/【英博体育_电子】7-6-7-13_结算_全阶段_3576.xlsx')
+)
+```
+
+
+```{python}
+
+
+```
+
+
+```{r}
+荷官 <- grep('真人', list.files('./数据库/'), value = T)
+文件路径 <- paste0(getwd(), '/数据库/', 荷官)
+
+# 读取所有真人荷官报表数据
+lapply(文件路径, funtion(参数) openxlsx2::read_xlsx(参数, sheet = 1))
+```
+
+```{r}
+站点 <- read.table(
+    file = paste0(getwd(), '/站点名称.txt'), 
+    sep = "", 
+    header = FALSE, 
+    strip.white = TRUE, 
+    stringsAsFactors = FALSE
+)
+
+新站点 <- 站点[站点$V1 %in% 站点名,] %>% 
+    mutate(新名称 = paste(V1, V2))
+
+旧名 <- list.files(站点路径)
+新名 <- 新站点[新站点$V1 == as.numeric(substr(list.files(站点路径), 1, 4)),]$新名称
+旧名路径 <- paste0(站点路径, '\\', 旧名)
+新名路径 <- paste0(站点路径, '\\', 新名, (substring(list.files(站点路径)[1], 5)))
+file.rename(旧名路径, 新名路径)
+```
+
+```{sql}
+
+```
+
+
+
+

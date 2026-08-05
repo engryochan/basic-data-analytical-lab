@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>玩家同桌关系风控深度求索草稿（player_pair_stat_draft_DeepSeek）</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="player_pair_stat_draft_DeekSeek_files/libs/clipboard/clipboard.min.js"></script>
+<script src="player_pair_stat_draft_DeekSeek_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="player_pair_stat_draft_DeekSeek_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="player_pair_stat_draft_DeekSeek_files/libs/quarto-html/popper.min.js"></script>
+<script src="player_pair_stat_draft_DeekSeek_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="player_pair_stat_draft_DeekSeek_files/libs/quarto-html/anchor.min.js"></script>
+<link href="player_pair_stat_draft_DeekSeek_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="player_pair_stat_draft_DeekSeek_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="player_pair_stat_draft_DeekSeek_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="player_pair_stat_draft_DeekSeek_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="player_pair_stat_draft_DeekSeek_files/libs/bootstrap/bootstrap-efbb37e9afcc02144ebbc7afd12a776f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">玩家同桌关系风控深度求索草稿（player_pair_stat_draft_DeepSeek）</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="提问" class="level2">
+<h2 class="anchored" data-anchor-id="提问">提问</h2>
+<blockquote class="blockquote">
+<p>再次详细道明是将现有的数据参数搭配最优化至顶级电商与量化科技的规格与概念，首先从第一个数据“player_pair_stat 玩家同桌关系风控候选表”着手，基本参数如下：</p>
+<p>player_a BIGINT 玩家A player_b BIGINT 玩家B same_round_count BIGINT 同桌局数 player_a_rounds BIGINT 玩家A总局数 player_b_rounds BIGINT 玩家B总局数 same_rate DOUBLE 同桌率 first_game_time DATETIME 首次同桌时间 last_game_time DATETIME 最近同桌时间 created_time DATETIME 创建时间 update_time DATETIME 更新时间</p>
+<p>请根据Apache Superset 6.0.0版本以上现有提供的数据资源搭配，将数据分析风控统计模型最优化并绘图与详细阐释~</p>
+</blockquote>
+</section>
+<section id="解答" class="level2">
+<h2 class="anchored" data-anchor-id="解答">解答</h2>
+<section id="数据模型优化从原始数据到风控特征" class="level3">
+<h3 class="anchored" data-anchor-id="数据模型优化从原始数据到风控特征">🧩 数据模型优化：从原始数据到风控特征</h3>
+<p>在 Superset 中创建图表前，首先需要对数据进行预处理与特征工程，将原始字段转化为风控分析所需的指标。</p>
+<section id="核心风控指标定义" class="level4">
+<h4 class="anchored" data-anchor-id="核心风控指标定义">核心风控指标定义</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 42%">
+<col style="width: 50%">
+<col style="width: 7%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">指标名称</th>
+<th style="text-align: center;">计算逻辑</th>
+<th style="text-align: left;">风控含义</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">同桌率 (same_rate)</td>
+<td style="text-align: center;">same_round_count / player_a_rounds 或 same_round_count / player_b_rounds</td>
+<td style="text-align: left;">衡量两个玩家关联强度的核心指标。同桌率越高，两人协同作弊的可能性越大。</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">局数差异 (round_diff)</td>
+<td style="text-align: center;">ABS(player_a_rounds - player_b_rounds)</td>
+<td style="text-align: left;">若两人总对局数差异巨大但同桌率却很高，可能存在“小号喂养大号”的异常行为。</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">同桌强度</td>
+<td style="text-align: center;">(pair_intensity) same_round_count / (player_a_rounds + player_b_rounds)</td>
+<td style="text-align: left;">同桌局数占两人总对局数的比重，比重越高，关系越可疑。</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">关系持续时间 (relationship_duration)</td>
+<td style="text-align: center;">DATEDIFF(last_game_time, first_game_time)</td>
+<td style="text-align: left;">同桌关系持续的时间跨度，可用于判断是“短期突击”还是“长期潜伏”。</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">同桌密度 (pair_density)</td>
+<td style="text-align: center;">same_round_count / DATEDIFF(last_game_time, first_game_time)</td>
+<td style="text-align: left;">单位时间内的同桌频率，密度越高，异常行为的集中度越高。</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="在-superset-中实现特征工程" class="level4">
+<h4 class="anchored" data-anchor-id="在-superset-中实现特征工程">在 Superset 中实现特征工程</h4>
+<p>在 Superset 的 SQL Lab 中，可以通过 SQL 查询创建包含上述指标的虚拟数据集 (Virtual Dataset)，供后续图表直接使用：</p>
+<pre class="{sql}"><code>SELECT
+    player_a,
+    player_b,
+    same_round_count,
+    player_a_rounds,
+    player_b_rounds,
+    same_rate,
+    first_game_time,
+    last_game_time,
+    created_time,
+    update_time,
+    -- 计算衍生风控指标
+    ABS(player_a_rounds - player_b_rounds) AS round_diff,
+    same_round_count / (player_a_rounds + player_b_rounds) AS pair_intensity,
+    EXTRACT(EPOCH FROM (last_game_time - first_game_time)) / 86400 AS relationship_duration_days,
+    same_round_count / NULLIF(EXTRACT(EPOCH FROM (last_game_time - first_game_time)) / 86400, 0) AS pair_density
+FROM player_pair_stat;</code></pre>
+</section>
+</section>
+<section id="顶级电商与量化科技场景下的图表选型与配置" class="level3">
+<h3 class="anchored" data-anchor-id="顶级电商与量化科技场景下的图表选型与配置">🎯 顶级电商与量化科技场景下的图表选型与配置</h3>
+<p>基于 Apache Superset 6.0.0 提供的 40+ 种可视化图表类型，以及新版 AG Grid 表格（支持高达 500,000 行数据的服务端分页、排序与搜索）和原生甘特图插件，以下是为 player_pair_stat 表量身定制的最优化图表选型方案。</p>
+<section id="宏观概览层-executive-dashboard" class="level4">
+<h4 class="anchored" data-anchor-id="宏观概览层-executive-dashboard">1. 宏观概览层 (Executive Dashboard)</h4>
+<p><strong>图表类型: Big Number / Big Number with Trendline</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 51%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">配置项</th>
+<th style="text-align: center;">推荐值</th>
+<th style="text-align: center;">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">指标 (Metric)</td>
+<td style="text-align: center;">COUNT(*)</td>
+<td style="text-align: center;">当前系统中的玩家对总数</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">指标 (Metric)</td>
+<td style="text-align: center;">AVG(same_rate)</td>
+<td style="text-align: center;">平均同桌率，用于监控整体风险水平</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">指标 (Metric)</td>
+<td style="text-align: center;">MAX(same_round_count)</td>
+<td style="text-align: center;">最高同桌局数，快速定位极端异常值</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">指标 (Metric)</td>
+<td style="text-align: center;">COUNT(DISTINCT player_a) + COUNT(DISTINCT player_b)</td>
+<td style="text-align: center;">参与同桌关系的独立玩家数</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="blockquote">
+<p>风控价值：一眼掌握风控全局态势，快速感知风险水平的宏观变化。</p>
+</blockquote>
+<p><strong>图表类型: Time-series Line Chart (基于 update_time 或 last_game_time)</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 24%">
+<col style="width: 75%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">配置项</th>
+<th style="text-align: center;">推荐值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">时间维度 (Time)</td>
+<td style="text-align: center;">update_time</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">指标 (Metric)</td>
+<td style="text-align: center;">COUNT(*)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">分组 (Group by)</td>
+<td style="text-align: center;">无（总趋势）或 CASE WHEN same_rate &gt; 0.3 THEN ‘高风险’ ELSE ‘正常’ END</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">时间粒度 (Time Grain)</td>
+<td style="text-align: center;">day 或 hour</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="blockquote">
+<p>风控价值：监控每日新增/更新同桌关系的趋势，及时发现异常峰值，如某日突然涌现大量高同桌率玩家对，可能意味着团伙开始集中行动。</p>
+</blockquote>
+</section>
+<section id="风险定位层-risk-identification" class="level4">
+<h4 class="anchored" data-anchor-id="风险定位层-risk-identification">2. 风险定位层 (Risk Identification)</h4>
+<p><strong>图表类型: Scatter Plot (散点图)</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 31%">
+<col style="width: 44%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">配置项</th>
+<th style="text-align: center;">推荐值</th>
+<th style="text-align: center;">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">X 轴</td>
+<td style="text-align: center;"><code>same_round_count</code></td>
+<td style="text-align: center;">同桌局数</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">Y 轴</td>
+<td style="text-align: center;"><code>same_rate</code></td>
+<td style="text-align: center;">同桌率</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">颜色 (Color)</td>
+<td style="text-align: center;"><code>CASE WHEN same_rate &gt; 0.3 AND same_round_count &gt; 50 THEN '红色' WHEN same_rate &gt; 0.2 THEN '黄色' ELSE '蓝色' END</code></td>
+<td style="text-align: center;">通过颜色编码快速区分风险等级</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">点大小 (Point Size)</td>
+<td style="text-align: center;"><code>same_round_count</code></td>
+<td style="text-align: center;">点越大，同桌局数越多</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">气泡提示 (Tooltip)</td>
+<td style="text-align: center;"><code>player_a, player_b, same_round_count, same_rate, first_game_time, last_game_time</code></td>
+<td style="text-align: center;">悬停时显示完整信息</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="blockquote">
+<p>风控价值：散点图是识别“高-高”区域（高同桌率 + 高同桌局数）的最佳工具。右上角的点即为最高风险组合，可快速锁定目标进行深入调查。</p>
+</blockquote>
+<p><strong>图表类型: Heatmap (热力图)</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 37%">
+<col style="width: 62%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">配置项</th>
+<th style="text-align: center;">推荐值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">行 (Rows)</td>
+<td style="text-align: center;"><code>player_a</code> (仅取 Top 50 高风险玩家)</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">列 (Columns)</td>
+<td style="text-align: center;"><code>player_b</code> (仅取 Top 50 高风险玩家)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">值 (Values)</td>
+<td style="text-align: center;"><code>same_round_count</code> 或 <code>same_rate</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">颜色方案 (Color Scheme)</td>
+<td style="text-align: center;"><code>Reds</code> 或 <code>YlOrRd</code>（红色越深，风险越高）</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="blockquote">
+<p>风控价值：热力图以矩阵形式直观呈现玩家关系网络中的“热点区域”，快速识别抱团团伙。若某行/列出现多个深红色块，说明该玩家与多人存在强关联，可能是团伙核心。</p>
+</blockquote>
+</section>
+<section id="深度洞察层-deep-dive" class="level4">
+<h4 class="anchored" data-anchor-id="深度洞察层-deep-dive">3. 深度洞察层 (Deep Dive)</h4>
+<p><strong>图表类型: Table (表格) - 基于 AG Grid V2</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 28%">
+<col style="width: 71%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">配置项</th>
+<th style="text-align: center;">推荐值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">列 (Columns)</td>
+<td style="text-align: center;"><code>player_a</code>, <code>player_b</code>, <code>same_round_count</code>, <code>same_rate</code>, <code>round_diff</code>, <code>pair_intensity</code>, <code>relationship_duration_days</code>, <code>pair_density</code>, <code>first_game_time</code>, <code>last_game_time</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">排序 (Sort by)</td>
+<td style="text-align: center;"><code>same_rate</code> 降序 或 <code>same_round_count</code> 降序</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">筛选器 (Filters)</td>
+<td style="text-align: center;">可设置 <code>same_rate &gt; 0.2</code> 或 <code>same_round_count &gt; 50</code> 等条件</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">分页 (Pagination)</td>
+<td style="text-align: center;">启用服务端分页，每页 <code>100</code> 行</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="blockquote">
+<p>风控价值：AG Grid 表格支持服务端分页、排序与搜索，即使数据量达到数十万行，也能流畅地进行深度钻取与人工复核。分析师可快速搜索特定玩家 ID，查看其所有同桌关系。</p>
+</blockquote>
+<p><strong>图表类型: Gantt Chart (甘特图) - Superset 6.0 原生支持</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: center;">配置项</th>
+<th style="text-align: center;">推荐值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">任务 (Tasks)</td>
+<td style="text-align: center;"><code>player_a || ' - ' || player_b</code> (玩家对标识)</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">开始时间 (Start)</td>
+<td style="text-align: center;"><code>first_game_time</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">结束时间 (End)</td>
+<td style="text-align: center;"><code>last_game_time</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">进度 (Progress)</td>
+<td style="text-align: center;">不适用（或基于 <code>same_round_count</code> 归一化）</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">颜色 (Color)</td>
+<td style="text-align: center;">按 <code>same_rate</code> 风险等级着色</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="blockquote">
+<p>风控价值：甘特图能够可视化展示每个玩家对关系的时间线，包括首次同桌、最近同桌及持续时长。特别适用于识别“短期高频”的异常模式——若某个玩家对在极短时间内（如 2 小时内）完成数十局同桌，甘特图将清晰呈现这一“脉冲式”异常。</p>
+</blockquote>
+<p><strong>图表类型: Box Plot (箱线图)</strong></p>
+<div class="line-block">配置项 推荐值<br>
+分组 (Group by) CASE WHEN same_rate &gt; 0.3 THEN ‘高风险’ WHEN same_rate &gt; 0.15 THEN ‘中风险’ ELSE ‘低风险’ END<br>
+指标 (Metric) same_round_count</div>
+<blockquote class="blockquote">
+<p>风控价值：箱线图用于展示不同风险等级下同桌局数的分布差异，帮助设定更精准的异常阈值。例如，高风险组的 same_round_count 中位数显著高于其他组，则可将该值作为预警阈值。</p>
+</blockquote>
+</section>
+<section id="网络关系层-network-analysis" class="level4">
+<h4 class="anchored" data-anchor-id="网络关系层-network-analysis">4. 网络关系层 (Network Analysis)</h4>
+<p><strong>图表类型: Network Diagram / Sankey Diagram (网络图/桑基图)</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: center;">配置项</th>
+<th style="text-align: center;">推荐值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">源节点 (Source)</td>
+<td style="text-align: center;"><code>player_a</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">目标节点 (Target)</td>
+<td style="text-align: center;"><code>player_b</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">连线权重 (Weight)</td>
+<td style="text-align: center;"><code>same_round_count</code> 或 <code>same_rate</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">节点大小 (Node Size)</td>
+<td style="text-align: center;">该玩家参与的关系数量（度中心性）</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">连线颜色 (Link Color)</td>
+<td style="text-align: center;">按 same_rate 渐变，越红风险越高</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="blockquote">
+<p>风控价值：网络图能够直观呈现玩家关系的拓扑结构，揭示团伙的组织形态——星型结构（一个核心连接多个外围）通常意味着“养号”或“代理”行为；网状结构（多对多密集连接）则高度疑似“团伙作弊”。Sankey 图则可用于展示风险流向。</p>
+</blockquote>
+</section>
+</section>
+<section id="顶级电商与量化科技风控仪表板架构" class="level3">
+<h3 class="anchored" data-anchor-id="顶级电商与量化科技风控仪表板架构">🚀 顶级电商与量化科技风控仪表板架构</h3>
+<p>综合以上图表选型，建议按以下四层架构构建 Superset 风控仪表板：</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 20%">
+<col style="width: 42%">
+<col style="width: 19%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">层级</th>
+<th style="text-align: center;">功能定位</th>
+<th style="text-align: center;">包含图表</th>
+<th style="text-align: center;">交互方式</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">L1: 宏观监控层</td>
+<td style="text-align: center;">全局态势感知</td>
+<td style="text-align: center;">Big Number (4个核心KPI) + 时间序列趋势图</td>
+<td style="text-align: center;">自动刷新，无需交互</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">L2: 风险定位层</td>
+<td style="text-align: center;">快速锁定异常</td>
+<td style="text-align: center;">散点图 + 热力图</td>
+<td style="text-align: center;">点击散点图中的异常点，联动筛选相关数据</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">L3: 深度洞察层</td>
+<td style="text-align: center;">详细分析与钻取</td>
+<td style="text-align: center;">AG Grid 表格 + 甘特图 + 箱线图</td>
+<td style="text-align: center;">表格搜索/排序/分页；甘特图悬停查看详情</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">L4: 网络关系层</td>
+<td style="text-align: center;">团伙结构与核心识别</td>
+<td style="text-align: center;">Network Diagram / Sankey Diagram</td>
+<td style="text-align: center;">拖拽/缩放，点击节点查看该玩家的所有关系</td>
+</tr>
+</tbody>
+</table>
+<p>全局筛选器配置：</p>
+<ul>
+<li>时间范围：筛选 update_time 或 last_game_time</li>
+<li>风险等级：same_rate 阈值滑块（如 0.1 ~ 0.5）</li>
+<li>同桌局数：same_round_count 阈值滑块</li>
+<li>玩家 ID 搜索：输入特定 player_a 或 player_b，查询单个玩家的所有关系</li>
+</ul>
+</section>
+<section id="风控统计模型规则引擎与评分卡" class="level3">
+<h3 class="anchored" data-anchor-id="风控统计模型规则引擎与评分卡">📈 风控统计模型：规则引擎与评分卡</h3>
+<p>在 Superset 中，可通过 SQL 查询 直接构建风控规则引擎与评分卡，无需编写 Python 代码。</p>
+<p><strong>规则引擎 SQL 示例：</strong></p>
+<pre class="{sql}"><code>SELECT
+    player_a,
+    player_b,
+    same_round_count,
+    same_rate,
+    pair_density,
+    -- 多条件风险评分
+    (CASE WHEN same_rate &gt; 0.3 THEN 30 ELSE 0 END) +
+    (CASE WHEN same_round_count &gt; 50 THEN 25 ELSE 0 END) +
+    (CASE WHEN pair_density &gt; 5 THEN 25 ELSE 0 END) +
+    (CASE WHEN relationship_duration_days &lt; 1 AND same_round_count &gt; 20 THEN 20 ELSE 0 END) AS risk_score
+FROM player_pair_stat
+WHERE same_rate &gt; 0.15 AND same_round_count &gt; 20
+ORDER BY risk_score DESC;</code></pre>
+<p>将上述查询保存为虚拟数据集，即可在 Superset 中基于 risk_score 创建柱状图、表格等可视化图表，实现自动化风险评分与排序。</p>
+</section>
+<section id="总结与行动建议" class="level3">
+<h3 class="anchored" data-anchor-id="总结与行动建议">💎 总结与行动建议</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 18%">
+<col style="width: 46%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">步骤</th>
+<th style="text-align: center;">操作</th>
+<th style="text-align: center;">工具/方法</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">1. 数据接入</td>
+<td style="text-align: center;">将 player_pair_stat 表接入 Superset</td>
+<td style="text-align: center;">Data → Connect Database</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">2. 特征工程</td>
+<td style="text-align: center;">创建包含衍生风控指标的虚拟数据集</td>
+<td style="text-align: center;">SQL Lab → Virtual Dataset</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">3. 图表构建</td>
+<td style="text-align: center;">按四层架构逐一创建图表</td>
+<td style="text-align: center;">Explore → Chart Type</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">4. 仪表板组装</td>
+<td style="text-align: center;">组合图表，配置全局筛选器与联动</td>
+<td style="text-align: center;">Dashboards → + Dashboard</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">5. 告警配置</td>
+<td style="text-align: center;">为高风险阈值设置告警规则</td>
+<td style="text-align: center;">Alerts &amp; Reports</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">6. 定期复盘</td>
+<td style="text-align: center;">根据实际风控效果迭代优化规则</td>
+<td style="text-align: center;">持续监控与调整</td>
+</tr>
+</tbody>
+</table>
+<p>Apache Superset 6.0.0 的 Ant Design v5 主题系统与全面暗黑模式支持，能够显著提升长时间数据分析的视觉体验与专注度。其 AG Grid V2 表格与原生甘特图等新特性，为风控场景下的深度钻取与时间线分析提供了前所未有的强大支持。</p>
+<p>通过上述方案，你可以在 Superset 6.0.0 中构建一套无需编写 Python 代码、完全基于 SQL 与可视化配置的顶级风控分析系统，实现从宏观监控到微观洞察的全链路风控闭环。</p>
+<p><em>出处：<a href="https://chat.deepseek.com/share/iqu719pj8k844th0z9">https://chat.deepseek.com/share/iqu719pj8k844th0z9</a></em></p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

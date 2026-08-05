@@ -1,0 +1,3 @@
+[1,"==> quarto preview 博彩公司ODS层数据分析与风控方案.qmd --to html --no-watch-inputs --no-browse\n\n"]
+[1,"\nERROR: Error executing 'C:\\PROGRA~1\\R\\R-46~1.1\\bin\\Rscript.exe': 管道正在被关闭。 (os error 232)\n"]
+[1,"Error: memory exhausted\r\nExecution halted\r\nProblem with running R found at C:\\PROGRA~1\\R\\R-46~1.1\\bin\\Rscript.exe to check environment configurations.\nPlease check your installation of R.\n\nWARN: Error encountered when rendering files\nError occurred during cleanup: TypeError: Child process has already terminated\n"]

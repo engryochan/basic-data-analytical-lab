@@ -1,0 +1,16 @@
+SELECT
+    TABLE_SCHEMA,
+    TABLE_NAME,
+    COLUMN_NAME,
+    DATA_TYPE,
+    COLUMN_COMMENT
+FROM information_schema.columns
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND (
+       LOWER(COLUMN_NAME) LIKE '%member%'
+    OR LOWER(COLUMN_NAME) LIKE '%user%'
+    OR LOWER(COLUMN_NAME) LIKE '%player%'
+    OR LOWER(COLUMN_NAME) LIKE '%uid%'
+    OR LOWER(COLUMN_NAME) LIKE '%account%'
+  )
+ORDER BY TABLE_NAME, ORDINAL_POSITION;

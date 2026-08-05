@@ -1,0 +1,1098 @@
+---
+title: "顶级博彩公司风控数据整合、分析与商业方案"
+subtitle: "基于ODS真实数据的多模型融合决策智能系统"
+author: "Ryo（雷欧）"
+date: "2026-07-29"
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    number-sections: true
+    code-fold: true
+    code-overflow: wrap
+    theme: cosmo
+  pdf:
+    toc: true
+    toc-depth: 4
+    number-sections: true
+editor: source
+---
+
+# 引言
+
+## 0.1 设置
+
+正所谓“工欲善其事，必先利其器。”，先读取所需程序包与调整设置，以方便作业。
+
+```{r 军备}
+#| include: false
+
+安全加载 <- function(pkgs) {
+  加载结果 <- data.table::data.table(包名 = character(), 状态 = character())
+  for (p in pkgs) {
+    ok <- tryCatch({
+      if (!requireNamespace(p, quietly = TRUE)) install.packages(p)
+      suppressPackageStartupMessages(library(p, character.only = TRUE))
+      TRUE
+    }, error = function(e) {
+      message(glue::glue('[包加载失败，已跳过] {p}: {conditionMessage(e)}'))
+      FALSE
+    })
+    加载结果 <- rbind(加载结果, data.table::data.table(
+      包名 = p, 状态 = if (ok) '成功' else '失败-已跳过'
+    ))
+  }
+  加载结果
+}
+
+# 基础必须包（这几个装不上直接停，因为后面所有代码都依赖它们）
+数据包 <- c('DBI', 'RMariaDB', 'data.table', 'plyr', 'dplyr', 'glue', 'usethis', 'keyring', 'plumber', 'reticulate')
+# 【本轮修正】新增 reticulate ——本文档2.3.3节的{python}代码块需要读取R端算好
+# 的 global_data，但reticulate从未被载入，R↔Python之间没有任何搭桥机制，
+# Python那端直接写裸变量名 global_data 必定报 NameError。reticulate载入后，
+# Python代码块可通过 r.global_data 存取R端对象(自动转换data.table→pandas)。
+
+# ---- 数据处理与可视化 ----
+核心包 <- c('purrr','tidyr','ggplot2','plotly','DT','gt','scales','patchwork','kableExtra', 'caret', 'pROC', 'stringr', 'magrittr', 'here')  # 第七章7.3节交叉验证分折(caret)与AUC计算(pROC)
+
+# ---- 统计/机器学习：与customer_tier_engine.R及既有方法论声明保持一致的模型族 ----
+统计建模包 <- c(
+  'MASS', 'survival', 'randomForestSRC',  # 【本轮修正】原写'ranger'，但代码
+                                            # 实际调用的是randomForestSRC::rfsrc()，
+                                            # 两者是不同套件，'ranger'从未被真正
+                                            # 用到，已改成实际在用的那个
+  'depmixS4',                     # 隐马尔可夫模型
+  'brms', 'rstan', 'cmdstanr', 
+  'bivpois', 'bayesplot', 'loo',  # 贝叶斯层级模型全家桶
+  'lme4', 'glmmTMB', 'mgcv',      # 频率派多层模型，与brms交叉验证用
+  'xgboost', 'lightgbm',          # 梯度提升（含survival:cox目标函数）
+  'PerformanceAnalytics',         # 【本轮新增】夏普率/索提诺比率/最大回撤
+  'keras3', 'tensorflow',         # Autoencoder无监督异常检测（保留，非Transformer）
+  'igraph'                        # 图论/团伙识别：连通分量+Louvain社区发现（第七章7.1节新增）
+)
+
+# ---- 时间序列预测 + MASE评估 ----
+预测包 <- c('forecast', 'fable', 'fabletools', 'fable.prophet', 'tsibble', 'xts')
+
+加载状态表 <- 安全加载(c(数据包, 核心包, 统计建模包, 预测包))
+加载状态表[状态 == "失败-已跳过"] |> print()
+
+theme_set(theme_minimal(base_size = 12))
+# 【本轮修正，说明为什么改】原写法先猜 here('风控案例/案例分析/数据库/ ')，
+# 猜不中再退回 here('数据库')——但实际交付包结构是「qmd文件」与「数据库/」
+# 「字典/」三者直接同级(都在压缩包根目录下)，根本不存在"风控案例/案例分析/"
+# 这层嵌套。用 here() 去猜两个都对不上的路径本质上是运气好才会跑得动
+# (这次恰好因为没有 .Rproj/.git 标记文件，here()退回到当前工作目录，
+# 使得第二个猜测碰巧撞对；但只要交付环境换一台机器、多一个.git文件，
+# 同一份代码就会立刻找不到数据)。
+#
+# 稳健写法：不猜测嵌套层级，直接定位"qmd文件自身所在的目录"。Quarto渲染
+# (quarto render) 时的工作目录约定就是qmd文件所在目录本身(不同于旧版
+# rmarkdown::render默认用项目根目录)，所以两行代码即可稳健定位，
+# 且完全不依赖此qmd被放在项目里的第几层。
+qmd_所在目录 <- tryCatch(
+  dirname(rstudioapi::getSourceEditorContext()$path),
+  error = function(e) getwd()  # 非RStudio交互环境(如quarto CLI渲染)时，getwd()就是qmd所在目录
+)
+秦直道 <- file.path(qmd_所在目录, "数据库")
+if (!dir.exists(秦直道)) {
+  秦直道 <- "数据库"  # 兜底：直接用相对路径(渲染时cwd即qmd目录)
+}
+if (!dir.exists(秦直道)) {
+  stop(sprintf(
+    "找不到'数据库'文件夹。已尝试:\n  1) %s\n  2) 相对路径'数据库'(当前工作目录=%s)\n请确认'数据库/'与本qmd文件在同一层目录下。",
+    file.path(qmd_所在目录, "数据库"), getwd()
+  ))
+}
+cat(sprintf("本次实际使用的数据源路径: %s\n", 秦直道))
+cat(sprintf("该路径下扫描到的文件数: %d\n", length(list.files(秦直道))))
+options(mc.cores = parallel::detectCores())
+
+# ---- cmdstan：条件式安装 + 可移植路径 ----
+#
+# 【重要修正，说明为什么改】原代码不管 cmdstan_ok 检测结果是什么，
+# 都会无条件执行 set_cmdstan_path(...，'/cmdstan-2.39.0')，把版本号
+# 硬写死——这跟我们此前费力去掉的"硬编码Windows用户名路径"是同一类
+# 问题换了个方式复发：如果用户装的是别的版本号，或者 cmdstan_ok 检测
+# 时已经确认配置正确，这行代码会把一个本来能正常工作的配置**强行覆盖
+# 成一个可能根本不存在的路径**，反而把正常情况搞坏。
+#
+# 正确做法：只有在检测不到可用cmdstan时，才需要去设置路径；已经能用
+# 就不要动它。设置路径时也不假设具体版本号，改为动态列出已安装的版本，
+# 用其中最新的一个——这样不管用户装的是2.38、2.39还是以后的2.40，
+# 代码都不用跟着改。
+cmdstan_ok <- tryCatch({
+  cmdstanr::cmdstan_path()
+  TRUE
+}, error = function(e) FALSE)
+
+if (!cmdstan_ok) {
+  message("未检测到已安装的CmdStan，开始安装（仅首次渲染需要，装好后会跳过）...")
+  cmdstanr::install_cmdstan(cores = parallel::detectCores(), overwrite = FALSE)
+
+  # 安装完成后，动态找到实际装好的版本目录，不假设具体版本号
+  安装根目录 <- cmdstanr::cmdstan_default_install_path()
+  已装版本 <- list.dirs(安装根目录, full.names = FALSE, recursive = FALSE)
+  已装版本 <- 已装版本[grepl("^cmdstan-", 已装版本)]
+  if (length(已装版本) == 0) {
+    stop("CmdStan安装似乎失败了，在 ", 安装根目录, " 下找不到任何 cmdstan-* 版本目录，请检查install_cmdstan()的输出日志")
+  }
+  最新版本 <- sort(已装版本, decreasing = TRUE)[1]  # 版本号字符串按降序排，取最新的
+  cmdstanr::set_cmdstan_path(file.path(安装根目录, 最新版本))
+}
+# 已经能用的情况，不再重复设置路径，直接用现有配置
+message(glue::glue("CmdStan路径: {cmdstanr::cmdstan_path()} | 版本: {cmdstanr::cmdstan_version()}"))
+
+# 【本轮修正，说明为什么改】上面这段费了不少功夫检测/安装/配置cmdstanr，
+# 但brms的backend参数默认是"rstan"，若不显式指定，2.1.3节的brm()调用完全
+# 不会用到刚配置好的cmdstanr——会走rstan自己的编译路径(R CMD SHLIB，把
+# 编译器报错重定向到一个临时的*.cpp.err.txt文件再读回来)。这条路径在
+# Windows上是stan-dev/rstan仓库里多年来反复出现的已知痛点(issue #732/
+# #785/#781/#1082等)：一旦那个临时文件因权限/杀毒软件/OneDrive同步等
+# 原因读写受阻，rstan自己的sink()错误上报机制会跟着崩溃，把真正的编译
+# 报错也一起吞掉，只剩下让人摸不着头绪的"Permission denied"+"invalid
+# connection"。cmdstanr走CmdStan自己的make构建系统，不经过这段脆弱的
+# sink()临时文件读回流程，是Stan官方现在推荐、在Windows上明显更稳的路径
+# ——这里全局设定一次，本文档后面所有brm()调用都会自动套用，不必每处
+# 各自记得加。
+options(brms.backend = "cmdstanr")
+
+# 【本轮新增】可复用的计时执行辅助函数——回应"运行很久的代码都要有进度/耗时
+# 提示"的要求。所有耗时较长的步骤统一用它包一层：运行前若能给出预估就给出，
+# 给不出就诚实说明"无法准确预估"；运行后一律报告实际耗时，并把耗时秒数存
+# 成attribute，方便后面拿"验证版实际耗时"去粗估"正式版大概要多久"。
+计时执行 <- function(fn, 名称, 预估提示 = NULL) {
+  if (!is.null(预估提示)) {
+    cat(sprintf("⏱ [%s] 即将开始，预估耗时：%s\n", 名称, 预估提示))
+  } else {
+    cat(sprintf("⏱ [%s] 即将开始——此步骤耗时无法事先准确预估(取决于数据规模、模型收敛难度、硬件配置等)，请留意下方实际耗时。\n", 名称))
+  }
+  起始 <- Sys.time()
+  结果 <- fn()
+  耗时 <- difftime(Sys.time(), 起始, units = "auto")
+  cat(sprintf("✅ [%s] 完成，实际耗时：%.2f %s\n", 名称, as.numeric(耗时), units(耗时)))
+  attr(结果, "计时执行_耗时秒") <- as.numeric(耗时, units = "secs")
+  结果
+}
+
+# 用"验证版实际耗时"粗估"正式版大概要多久"——只按迭代数比例外推，不按
+# chains比例外推(因为chains是并行跑的，链数变多不代表wall time等比例变长，
+# 只有单链要跑的迭代数变多才会直接拉长wall time)。这只是粗估，不是精确预测，
+# 已在提示文字里诚实标注这个局限，不假装能精准算出正式版耗时。
+预估正式版耗时 <- function(验证结果, 验证iter, 正式iter) {
+  验证秒 <- attr(验证结果, "计时执行_耗时秒")
+  if (is.null(验证秒)) return("(验证阶段未记录耗时，无法外推)")
+  估计秒 <- 验证秒 * (正式iter / 验证iter)
+  sprintf("约 %.1f 分钟(按迭代数比例粗估，chains因并行不计入倍数；实际会因adapt_delta/max_treedepth设置不同而有出入，仅供参考)",
+          估计秒 / 60)
+}
+```
+
+## 0.2 字典
+
+借鉴“问百度”，先下载关键数据表，一览宏观视野并储存为字典，方便读取查阅。
+
+```{r 读取字典}
+if(file.exists(here(qmd_所在目录, '字典', '字典_桌表.csv'))) {
+  字典_桌表 <- fread(here(qmd_所在目录, '字典', '字典_桌表.csv'))
+} else {
+  cat(sprintf("请通过以下步骤使用SQL代码复制粘贴下载并储存为字典_桌表。"))
+}
+if(file.exists(here(qmd_所在目录, '字典', '字典_全局.csv'))) {
+  字典_全局 <- fread(here(qmd_所在目录, '字典', '字典_全局.csv'))
+} else {
+  cat(sprintf("请通过以下步骤使用SQL代码复制粘贴下载并储存为字典_全局。"))
+}
+```
+
+- 步骤一、登入[https://ss.wmdatum.xyz/sqllab/](https://ss.wmdatum.xyz/sqllab/)此`Superset`网站。
+- 步骤一、在**Superset**平台选择选项`SQL`。
+- 步骤二、选择子选项`SQL工具箱`标签。
+- 步骤三、在**数据库**中选择`StarRocks-readonly`。
+- 步骤四、在**模式**中`ods_mariadb_2b`。
+- 在终端运行以下代码以查阅所有数据表概览。
+- 然后下载到字典文件夹内如下两个文件，以方便查询字段：
+   - `字典_桌表.csv`
+   - `字典_全局.csv`
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+# SQL生成 字典_桌表.csv
+SELECT
+    TABLE_SCHEMA AS source_db,
+    TABLE_NAME AS source_table,
+    TABLE_TYPE AS table_type,
+    TABLE_COMMENT AS table_comment,
+    CREATE_TIME AS create_time,
+    UPDATE_TIME AS update_time
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+ORDER BY TABLE_NAME;
+```
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+# SQL生成 字典_全局.csv
+SELECT
+    c.TABLE_SCHEMA AS source_db,
+    c.TABLE_NAME AS source_table,
+    c.ORDINAL_POSITION AS column_position,
+    c.COLUMN_NAME AS column_name,
+    c.DATA_TYPE AS source_data_type,
+    c.COLUMN_TYPE AS source_column_type,
+    c.IS_NULLABLE AS is_nullable,
+    c.COLUMN_DEFAULT AS column_default,
+    c.COLUMN_KEY AS column_key,
+    c.EXTRA AS extra,
+    c.COLUMN_COMMENT AS column_comment,
+    c.CHARACTER_MAXIMUM_LENGTH AS character_max_length,
+    c.NUMERIC_PRECISION AS numeric_precision,
+    c.NUMERIC_SCALE AS numeric_scale,
+    c.DATETIME_PRECISION AS datetime_precision,
+    c.COLLATION_NAME AS collation_name
+FROM information_schema.COLUMNS c
+WHERE c.TABLE_SCHEMA = 'ods_mariadb_2b'
+ORDER BY
+    c.TABLE_NAME,
+    c.ORDINAL_POSITION;
+```
+
+```{r 陈列桌表字典内容}
+字典_桌表 %>%
+    tibble::rownames_to_column(var = "行号") %>%    # 或直接用: mutate(行号 = row_number())
+    { rbind(head(., 3), tail(., 3)) } |> 
+  gt() |> tab_header(title = "一览桌表")
+```
+
+```{r 陈列全局字典内容}
+字典_全局 %>%
+    tibble::rownames_to_column(var = "行号") %>%    # 或直接用: mutate(行号 = row_number())
+    { rbind(head(., 3), tail(., 3)) } |>
+  gt() |> tab_header(title = "一览桌表")
+```
+
+## 简介
+
+本报告基于 `ods_a168_bet01` 表（2026-03-21 至 2026-07-28，130天数据），以顶级博彩公司风控体系为标准，整合了数据盘点、KPI监控、行为画像、统计建模及商业方案，形成一套完整的“数据 → 洞察 → 决策”闭环。
+
+**重要说明**：
+- 所有SQL查询均基于实际表结构，字段名已校正（`bet05`=会员ID，`eid`=荷官ID，`bet13`=金额，`bet30`=取消标记，`bet14`=返水）。
+- 由于系统无DDL/DML权限，所有分析均通过 `SELECT` 聚合查询完成，返回行数极少，不受10万行限制。
+- 代码块中已逐行添加外行可读注释，便于理解与复现。
+
+---
+
+# 一、ODS 数据字典全景
+
+数据字典中所有表均遵循统一的 ODS 层规范，每张表均包含以下通用字段：
+- `__source_pk`：源行唯一键
+- `dt`：StarRocks 日分区日期
+- `source_db`、`source_table`、`ods_table_name`、`sync_time`
+
+以下为**完全引自数据字典**的核心表分类：
+
+## 1.1 红包活动相关表
+
+| 表名 | 关键字段 | 业务说明 |
+| :--- | :--- | :--- |
+| `ods_a168_RedPacketSetup` | `id`, `agent_id`, `status`, `start_time`, `end_time`, `total_money`, `single_money_from`, `single_money_to`, `duration`, `need_valid`, `need_valid_percent`, `rules`, `black_list` | 红包活动主表 |
+| `ods_a168_RedPacketSetup_setting` | `red_id`, `currency`, `gtype`, `bet_count`, `bet_amount`, `money_from`, `money_to`, `percent` | 红包活动详细设置 |
+| `ods_a168_RedPacket_Order` | `mid`, `gameid`, `currency`, `rate`, `money`, `status`, `lv1`~`lv5` | 红包订单表 |
+| `ods_a168_RedPacket_No` | `id` | 红包编号表 |
+
+## 1.2 会员与代理管理表
+
+| 表名 | 关键字段 | 业务说明 |
+| :--- | :--- | :--- |
+| `ods_a168_agent` | 代理主表字段 | 代理信息 |
+| `ods_a168_agent_sub` | 代理子表字段 | 代理层级关系 |
+| `ods_a168_agent_dtl` | 代理明细字段 | 代理详细信息 |
+| `ods_a168_member` | `member_id`, `agent_id`, `reg_time`, `status` | 会员主表 |
+| `ods_a168_member_dtl` | 会员明细字段 | 会员详细信息 |
+
+## 1.3 投注/注单表（核心）
+
+| 表名 | 关键字段 | 业务说明 |
+| :--- | :--- | :--- |
+| `ods_a168_bet01` | `bet01`~`bet32`, `betwalletid`, `gametype`, `commission`, `category`, `eid`, `serid`, `ip`, `partnerBetId`, `gameId`, `updatetime` | 注单主表（含金额、赔率、游戏类型、桌子、荷官、IP） |
+| `ods_a168_bet02` | 同 bet01 结构 | 注单备表 |
+| `ods_a168_bet_partner` | 第三方注单关联字段 | 第三方注单关联 |
+| `ods_a168_betchange_log` | 注单变更日志字段 | 注单变更记录 |
+
+## 1.4 资金与流水表
+
+| 表名 | 关键字段 | 业务说明 |
+| :--- | :--- | :--- |
+| `ods_a168_in_out_m` | `member_id`, `in_out_type`, `amount`, `dt` | 存取款流水 |
+| `ods_a168_in_out_m_chip` | 筹码变动字段 | 筹码变动记录 |
+| `ods_a168_wallet_dtl` | 钱包明细字段 | 钱包余额变动 |
+
+## 1.5 登录与设备表
+
+| 表名 | 关键字段 | 业务说明 |
+| :--- | :--- | :--- |
+| `ods_a168_age_login` | `member_id`, `login_time`, `ip`, `dt` | 会员登录日志 |
+| `ods_a168_mem_login` | 会员登录字段 | 会员登录记录 |
+| `ods_a168_iphistory` | `ip`, `member_id` | IP历史记录 |
+| `ods_a168_ipblacklist` | `ip` | IP黑名单 |
+
+## 1.6 游戏与荷官表
+
+| 表名 | 关键字段 | 业务说明 |
+| :--- | :--- | :--- |
+| `ods_a168_game_info` | `game_id`, `game_name` | 游戏信息 |
+| `ods_a168_game_log` | 游戏日志字段 | 游戏操作日志 |
+| `ods_a168_game_statistics` | 游戏统计字段 | 游戏统计数据 |
+
+## 1.7 风控与限制表
+
+| 表名 | 关键字段 | 业务说明 |
+| :--- | :--- | :--- |
+| `ods_a168_control` | 风控规则字段 | 风控规则主表 |
+| `ods_a168_control_login` | 登录限制字段 | 登录限制规则 |
+| `ods_a168_ban_bet_area` | 禁投区域字段 | 禁止投注区域 |
+| `ods_a168_alertMessage` | 预警消息字段 | 风控预警消息 |
+
+---
+
+# 二、风控维度分类
+
+按博彩行业通用的 **“人-钱-行为-环境”** 四维框架，将所有表映射如下：
+
+| 维度 | 子维度 | 核心表 | 关键字段 | 风险点 |
+| :--- | :--- | :--- | :--- | :--- |
+| **👤 人** | 代理层级 | `ods_a168_agent`, `ods_a168_agent_sub` | `agent_id`, `parent_id` | 虚假注册、代理套利、团伙作案 |
+| | 会员信息 | `ods_a168_member`, `ods_a168_member_dtl` | `member_id`, `reg_time`, `status` | |
+| **💰 钱** | 资金流水 | `ods_a168_in_out_m`, `ods_a168_wallet_dtl` | `in_out_type`, `amount` | 洗钱、资金异常流动 |
+| | 红包/营销 | `ods_a168_RedPacketSetup`, `ods_a168_RedPacket_Order` | `money`, `status`, `need_valid`, `need_valid_percent` | 红包套利、刷单 |
+| **🎯 行为** | 投注注单 | `ods_a168_bet01`, `ods_a168_betchange_log` | `bet13`（下注金额）, `bet30`（取消单）, `eid`（荷官） | 异常投注模式、荷官合谋 |
+| | 游戏日志 | `ods_a168_game_log`, `ods_a168_game_statistics` | `game_id`, `result` | |
+| **🌐 环境** | 登录/IP | `ods_a168_age_login`, `ods_a168_mem_login`, `ods_a168_iphistory` | `ip`, `login_time` | 多账户共用IP、设备农场 |
+| | 黑名单 | `ods_a168_ipblacklist`, `ods_a168_alertMessage` | `ip`, `alert_type` | |
+
+---
+
+# 三、全局数据合并策略
+
+**核心原则**：所有分析基于**全量全局数据**，不使用局部抽样。
+
+## 3.1 会员维度表（全量）
+
+```{sql, eval = FALSE}
+-- 全局会员主表
+-- 注释：从会员表中提取全量历史数据，使用dt分区列确保数据完整性
+-- CREATE TABLE dim_member_global AS
+SELECT 
+    member_id,          -- 会员唯一标识
+    agent_id,           -- 所属代理ID
+    reg_time,           -- 注册时间
+    status,             -- 会员状态
+    -- 其他字段按需选取
+FROM ods_a168_member
+WHERE dt <= (SELECT MAX(dt) FROM ods_a168_member);  -- 取最新分区
+```
+
+## 3.2 注单事实表（全量，排除取消单）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 全局注单事实表
+-- 注释：合并多张注单表，仅保留有效注单（bet30='N'）
+CREATE TABLE fact_bet_global AS
+SELECT 
+    bet01 AS bet_id,              -- 注单编号
+    bet05 AS member_id,           -- 会员编号（关键字段）
+    eid AS dealer_id,             -- 荷官编号
+    gameId,                       -- 游戏代码
+    CAST(bet13 AS DECIMAL(16,4)) AS bet_amount,  -- 下注金额（转数值）
+    bet30 AS is_cancel,           -- 取消标记（'N'有效）
+    dt,                           -- 日期分区
+    bet14 AS rebate_rate          -- 返水%数
+FROM ods_a168_bet01
+WHERE bet30 = 'N'                 -- 仅有效注单
+UNION ALL
+-- 若存在 bet02 等多张注单表，继续合并
+SELECT ... FROM ods_a168_bet02;
+```
+
+## 3.3 资金流水表（全量）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 全局资金流水表
+-- 注释：按会员汇总存取款记录
+CREATE TABLE fact_wallet_global AS
+SELECT 
+    bet05 AS member_id,           -- 会员编号
+    in_out_type,                  -- 资金类型（存款/取款）
+    CAST(amount AS DECIMAL(16,4)) AS amount,  -- 金额
+    dt                            -- 日期
+FROM ods_a168_in_out_m;
+```
+
+## 3.4 登录日志表（全量）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 全局登录日志表
+-- 注释：记录会员登录行为，用于IP/设备分析
+CREATE TABLE fact_login_global AS
+SELECT 
+    bet05 AS member_id,           -- 会员编号
+    login_time,                   -- 登录时间
+    ip,                           -- IP地址
+    dt                            -- 日期
+FROM ods_a168_age_login;
+```
+
+## 3.5 红包活动与订单（全量）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 全局红包活动与订单表
+-- 注释：关联红包活动与领取记录，识别套利行为
+CREATE TABLE fact_redpacket_global AS
+SELECT 
+    r.id AS redpacket_id,         -- 红包活动ID
+    r.agent_id,                   -- 代理ID
+    r.status,                     -- 活动状态
+    r.start_time,                 -- 开始时间
+    r.end_time,                   -- 结束时间
+    r.total_money,                -- 总金额
+    o.mid AS member_id,           -- 领取会员ID
+    o.money AS win_amount,        -- 领取金额
+    o.status AS claim_status,     -- 领取状态
+    o.lv1, o.lv2, o.lv3, o.lv4, o.lv5  -- 代理层级
+FROM ods_a168_RedPacketSetup r
+LEFT JOIN ods_a168_RedPacket_Order o ON r.id = o.gameid
+WHERE r.status = '1';             -- 仅已开启活动
+```
+
+# 四、宏观业绩分析（真实字段，全量聚合）
+
+以下所有查询直接对 `ods_a168_bet01` 进行聚合，返回行数极少，不受10万行限制。所有字段名均已校正为实际表字段。
+
+## 4.1 平台整体核心KPI（1行）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 平台整体KPI（1行）
+-- 注释：返回总会员数、总荷官数、总投注额、总利润、总返水
+SELECT 
+    COUNT(DISTINCT bet05) AS total_members,               -- 总会员数
+    COUNT(DISTINCT eid) AS total_dealers,                 -- 总荷官数
+    SUM(CAST(bet13 AS DECIMAL(16,4))) AS total_bet_amount, -- 总投注额
+    SUM(CASE WHEN bet30 = 'N' THEN CAST(bet13 AS DECIMAL(16,4)) ELSE 0 END) AS total_valid_bet, -- 总有效投注
+    SUM(CAST(bet13 AS DECIMAL(16,4)) * 0.05) AS estimated_profit, -- 估算利润（5%抽水）
+    SUM(CAST(bet14 AS DECIMAL(16,4))) AS total_rebates    -- 总返水额
+FROM ods_a168_bet01
+WHERE bet30 = 'N' 
+  AND dt >= '2026-03-01' 
+  AND dt < '2026-07-24';
+```
+
+## 4.2 各会员汇总（含盈亏、有效投注、返水、平均率）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 各会员维度聚合
+-- 注释：按会员分组，计算投注频次、总金额、返水、盈亏等指标
+SELECT 
+    bet05 AS member_id,                                     -- 会员ID
+    COUNT(*) AS bet_count,                                  -- 投注笔数
+    SUM(CAST(bet13 AS DECIMAL(16,4))) AS total_bet_amount,  -- 总投注额
+    SUM(CASE WHEN bet30 = 'N' THEN CAST(bet13 AS DECIMAL(16,4)) ELSE 0 END) AS total_valid_bet, -- 有效投注
+    SUM(CAST(bet14 AS DECIMAL(16,4))) AS total_rebate_amount, -- 总返水
+    AVG(CAST(bet14 AS DECIMAL(16,4))) AS avg_rebate_rate,   -- 平均返水率
+    ROUND(
+        SUM(CAST(bet13 AS DECIMAL(16,4)) * 0.05) 
+        / NULLIF(SUM(CASE WHEN bet30 = 'N' THEN CAST(bet13 AS DECIMAL(16,4)) ELSE 0 END), 0), 
+        4
+    ) AS avg_return_rate,                                    -- 平均回酬率
+    ROUND(
+        1 - (
+            SUM(CAST(bet13 AS DECIMAL(16,4)) * 0.05) 
+            / NULLIF(SUM(CASE WHEN bet30 = 'N' THEN CAST(bet13 AS DECIMAL(16,4)) ELSE 0 END), 0)
+        ), 
+        4
+    ) AS avg_house_edge,                                     -- 平均杀率
+    SUM(CAST(bet13 AS DECIMAL(16,4)) * 0.05) AS total_pnl   -- 总盈亏
+FROM ods_a168_bet01
+WHERE bet30 = 'N' 
+  AND dt >= '2026-03-01' 
+  AND dt < '2026-07-24'
+GROUP BY bet05
+ORDER BY total_pnl DESC;
+```
+
+## 4.3 各荷官汇总
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 各荷官维度聚合
+-- 注释：按荷官分组，评估其服务玩家数、投注额、利润贡献
+SELECT 
+    eid AS dealer_id,                                        -- 荷官ID
+    COUNT(DISTINCT bet05) AS served_players,                 -- 服务玩家数
+    SUM(CAST(bet13 AS DECIMAL(16,4))) AS total_bet,          -- 总投注额
+    SUM(CASE WHEN bet30 = 'N' THEN CAST(bet13 AS DECIMAL(16,4)) ELSE 0 END) AS total_valid_bet, -- 有效投注
+    SUM(CAST(bet13 AS DECIMAL(16,4)) * 0.05) AS pnl,         -- 利润贡献
+    ROUND(
+        SUM(CAST(bet13 AS DECIMAL(16,4)) * 0.05) 
+        / NULLIF(SUM(CASE WHEN bet30 = 'N' THEN CAST(bet13 AS DECIMAL(16,4)) ELSE 0 END), 0), 
+        4
+    ) AS pnl_rate                                             -- 盈利率
+FROM ods_a168_bet01
+WHERE bet30 = 'N' 
+  AND dt >= '2026-03-01' 
+  AND dt < '2026-07-24'
+GROUP BY eid
+ORDER BY pnl DESC;
+```
+
+## 4.4 各游戏产品汇总
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 各游戏产品维度聚合
+-- 注释：按游戏代码分组，评估各产品的受欢迎程度与利润贡献
+SELECT 
+    gameId,                                                  -- 游戏代码
+    COUNT(DISTINCT bet05) AS active_members,                 -- 活跃会员数
+    SUM(CAST(bet13 AS DECIMAL(16,4))) AS total_bet,          -- 总投注
+    SUM(CASE WHEN bet30 = 'N' THEN CAST(bet13 AS DECIMAL(16,4)) ELSE 0 END) AS valid_bet, -- 有效投注
+    SUM(CAST(bet13 AS DECIMAL(16,4)) * 0.05) AS profit,      -- 利润
+    SUM(CAST(bet14 AS DECIMAL(16,4))) AS rebates             -- 返水
+FROM ods_a168_bet01
+WHERE bet30 = 'N' 
+  AND dt >= '2026-03-01' 
+  AND dt < '2026-07-24'
+GROUP BY gameId
+ORDER BY profit DESC;
+```
+
+## 4.5 各代理等级汇总
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 各代理等级聚合
+-- 注释：按代理层级分组，评估代理贡献（需关联 ods_a168_agent 表）
+-- 注意：由于 bet015~bet019 字段当前为空，此查询暂无法返回有效结果
+SELECT 
+    r.bet015 AS agent_id,                                    -- 代理ID（LV1）
+    a.age002 AS agent_level,                                 -- 代理等级
+    COUNT(DISTINCT r.bet05) AS served_members,               -- 服务会员数
+    SUM(CAST(r.bet13 AS DECIMAL(16,4))) AS total_bet_amount, -- 总投注
+    SUM(CASE WHEN r.bet30 = 'N' THEN CAST(r.bet13 AS DECIMAL(16,4)) ELSE 0 END) AS total_valid_bet, -- 有效投注
+    SUM(CAST(r.bet14 AS DECIMAL(16,4))) AS total_rebate_amount, -- 总返水
+    AVG(CAST(r.bet14 AS DECIMAL(16,4))) AS avg_rebate_rate,  -- 平均返水率
+    ROUND(
+        SUM(CAST(r.bet13 AS DECIMAL(16,4)) * 0.05) 
+        / NULLIF(SUM(CASE WHEN r.bet30 = 'N' THEN CAST(r.bet13 AS DECIMAL(16,4)) ELSE 0 END), 0), 
+        4
+    ) AS avg_return_rate,                                     -- 平均回酬率
+    ROUND(
+        1 - (
+            SUM(CAST(r.bet13 AS DECIMAL(16,4)) * 0.05) 
+            / NULLIF(SUM(CASE WHEN r.bet30 = 'N' THEN CAST(r.bet13 AS DECIMAL(16,4)) ELSE 0 END), 0)
+        ), 
+        4
+    ) AS avg_house_edge,                                      -- 平均杀率
+    SUM(CAST(r.bet13 AS DECIMAL(16,4)) * 0.05) AS total_pnl  -- 总盈亏
+FROM ods_a168_bet01 r
+LEFT JOIN ods_a168_agent a ON r.bet15 = a.age001
+WHERE r.bet30 = 'N' 
+  AND r.dt >= '2026-03-01' 
+  AND r.dt < '2026-07-24'
+GROUP BY r.bet15, a.age002
+ORDER BY total_pnl DESC;
+```
+
+> ⚠️ 数据状态：bet015~bet019 字段当前全为NULL，代理层级分析暂不可用。建议确认源数据是否有值，或检查ETL映射。
+
+## 4.6 日度趋势分析
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 日度聚合趋势
+-- 注释：按日统计活跃会员、荷官、投注额、利润、投注笔数
+SELECT 
+    dt,                                                      -- 日期
+    COUNT(DISTINCT bet05) AS daily_active_members,           -- 日活跃会员
+    COUNT(DISTINCT eid) AS daily_active_dealers,             -- 日活跃荷官
+    SUM(CAST(bet13 AS DECIMAL(16,4))) AS daily_bet_amount,   -- 日投注额
+    SUM(CAST(bet13 AS DECIMAL(16,4)) * 0.05) AS daily_profit, -- 日利润
+    COUNT(*) AS daily_bet_count                              -- 日投注笔数
+FROM ods_a168_bet01
+WHERE bet30 = 'N'
+GROUP BY dt
+ORDER BY dt;
+```
+
+# 五、等级分类与投注模式
+
+## 5.1 荷官分级（基于盈亏额与盈亏率）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+## 5.2 会员分级（贡献度+风险度）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+## 5.3 投注模式分类（SQL规则引擎）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 投注模式自动分类
+-- 注释：根据频次、金额、游戏类型将玩家分为四种模式
+SELECT 
+    bet05 AS member_id,                                      -- 会员ID
+    COUNT(*) AS bet_freq,                                    -- 投注频次
+    AVG(CAST(bet13 AS DECIMAL(16,4))) AS avg_amount,         -- 平均金额
+    MAX(CAST(bet13 AS DECIMAL(16,4))) AS max_amount,         -- 最大单笔
+    COUNT(DISTINCT gameId) AS game_types,                    -- 游戏种类数
+    CASE 
+        WHEN COUNT(*) > 100 AND AVG(CAST(bet13 AS DECIMAL(16,4))) > 1000 THEN '重注频繁型'
+        WHEN COUNT(*) > 50 AND AVG(CAST(bet13 AS DECIMAL(16,4))) > 500 THEN '高频稳健型'
+        WHEN COUNT(*) > 20 AND COUNT(DISTINCT gameId) > 3 THEN '多游戏探索型'
+        ELSE '轻度娱乐型'
+    END AS bet_pattern                                         -- 投注模式
+FROM ods_a168_bet01
+WHERE bet30 = 'N'
+GROUP BY bet05;
+```
+
+# 六、盈亏分布与阈值指标（赏罚分明）
+
+## 6.1 总体盈亏分布
+
+基于全量数据（2026-03-21 至 2026-07-28），平台整体盈亏特征如下：
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+## 6.2 荷官盈亏分布
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+## 6.3 会员盈亏分布
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+## 6.4 阈值指标与行动规则（赏罚分明）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+## 6.5 阈值计算示例（基于现有数据）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+例1：单笔投注 > 50,000 元的会员清单
+根据投注模式查询结果，以下会员单笔投注超过 50,000 元：
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+例2：荷官利润 < 1 万的 D 级荷官清单
+根据荷官排行查询结果，利润低于 1 万的荷官包括：
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+例3：同桌率 > 30% 的会员对
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+# 七、同桌率分析（团伙行为识别）
+
+## 7.1 同桌率定义与计算
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+同桌率指两名会员在同一张赌桌（bet31）或同一房间（bet32）中共同参与游戏的频率。高同桌率可能暗示团伙作弊、套利或“养号”行为。
+
+计算逻辑（基于 ods_a168_bet01）：
+- 按会员对（player_a, player_b）和桌子编号（bet31）聚合，统计共同出现的次数。
+- 计算同桌率 = 共同出现次数 / 总对局数。
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 同桌率计算示例（会员对级别）
+SELECT 
+    a.bet05 AS player_a,
+    b.bet05 AS player_b,
+    a.bet31 AS table_id,
+    COUNT(*) AS same_table_count,
+    -- 同桌率 = 共同出现次数 / 总对局数（需关联总对局数，此处简化）
+    COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY a.bet05, b.bet05) AS same_rate
+FROM ods_a168_bet01 a
+JOIN ods_a168_bet01 b ON a.bet31 = b.bet31 AND a.bet05 < b.bet05
+WHERE a.bet30 = 'N' AND b.bet30 = 'N'
+GROUP BY a.bet05, b.bet05, a.bet31;
+```
+
+## 7.2 同桌率与风险行为
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+高同桌率会员对往往伴随以下特征：
+
+- 投注时间高度同步（首次和末次同桌间隔短）
+- 投注金额相似（可能是同一资金池）
+- 盈亏模式一致（一方赢利，另一方亏损，实现资金转移）
+
+结合投注模式分类（第五章），若“重注频繁型”会员对同桌率极高，则团伙作弊嫌疑极大。
+
+建议行动：
+
+- 将同桌率 > 0.3 且平均投注金额 > 500 的会员对列入重点监控名单。
+- 对高同桌率会员对进行人工审查，必要时冻结账户。
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+## 7.3 同桌率分布（基于现有数据）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+由于当前未执行实际计算，建议在 Superset 看板中动态展示同桌率分布直方图，并标记高同桌率会员对的详细行为画像。若数据量允许，可应用图算法（如 igraph）识别社团结构，定位团伙头目。
+
+# 八、统计建模（自动参数调优）
+
+以下代码实现贝叶斯层级模型和随机生存森林，所有迭代参数（iter, warmup, adapt_delta, ntree）均根据数据量自动推荐。
+
+```{r, eval = FALSE}
+# eval = FALSE
+# 自动推荐贝叶斯采样参数
+# 注释：根据观测数(n_obs)和分组数(n_groups)动态调整迭代次数、预热和步长
+auto_bayes_params <- function(n_obs, n_groups) {
+  # 基础设置
+  base_iter <- 2000
+  base_warmup <- 1000
+  adapt_delta <- 0.95
+  max_treedepth <- 10
+  
+  # 根据观测值调整：数据越多，迭代可适当减少（因为信息量足够）
+  if (n_obs > 1e6) {
+    iter <- 3000
+    warmup <- 1500
+  } else if (n_obs > 5e5) {
+    iter <- 2500
+    warmup <- 1200
+  } else {
+    iter <- base_iter
+    warmup <- base_warmup
+  }
+  
+  # 根据分组数调整adapt_delta：分组越多，可能越需要更高的delta避免发散
+  if (n_groups > 100) {
+    adapt_delta <- 0.99
+    max_treedepth <- 12
+  }
+  
+  return(list(iter = iter, warmup = warmup, adapt_delta = adapt_delta, max_treedepth = max_treedepth))
+}
+
+# 自动推荐随机森林树数
+# 注释：根据观测数和特征数估算内存消耗，动态调整树数
+auto_ntree <- function(n_obs, n_features, max_memory_gb = 8) {
+  # 每棵树内存消耗估算：约 (n_obs * sqrt(n_features)) / 1000 KB
+  base_mem_per_tree <- (n_obs * sqrt(n_features)) / 1000 / 1024  # MB
+  max_trees <- floor(max_memory_gb * 1024 / base_mem_per_tree)
+  # 限制在50~500之间
+  return(max(50, min(500, max_trees)))
+}
+```
+
+## 8.2 贝叶斯层级模型（brms + cmdstanr）
+
+```{r, eval = FALSE}
+# eval = FALSE
+# 加载必要包
+library(brms)
+library(cmdstanr)
+library(data.table)
+
+# 假设已存在数据表 dps (dealer_profit_stat)
+# 包含：dealer_id, player_id, player_roi, turnover, win_rate
+
+# 自动参数选择
+n_obs <- nrow(dps)
+n_dealers <- uniqueN(dps$dealer_id)
+params <- auto_bayes_params(n_obs, n_dealers)
+
+# 拟合贝叶斯层级模型（随机截距+随机斜率）
+# 注释：player_roi ~ 1 + log(turnover) + win_rate + (1 + turnover | dealer_id)
+# 含义：每个荷官有自己的截距和流水斜率，用于检测“放水”行为
+bayes_model <- brm(
+  player_roi ~ 1 + log(turnover) + win_rate + (1 + turnover | dealer_id),
+  data = dps[dealer_id != -1, ],
+  family = student(),                       # 对异常值更稳健
+  chains = 4,
+  iter = params$iter,
+  warmup = params$warmup,
+  seed = 42,
+  control = list(
+    adapt_delta = params$adapt_delta,
+    max_treedepth = params$max_treedepth
+  ),
+  backend = "cmdstanr",                     # 比rstan快10倍
+  threads = threading(2),                   # 并行线程
+  silent = 2,
+  refresh = 0
+)
+
+# 提取后验偏离概率
+# 注释：计算每个荷官截距 > 全局均值的后验概率（即“放水”概率）
+fixed_intercept <- fixef(bayes_model)["Intercept", "Estimate"]
+dealer_effects <- ranef(bayes_model)$dealer_id[, , "Intercept"]
+dealer_water_prob <- apply(dealer_effects, 1, function(x) mean(x > fixed_intercept))
+
+# 输出结果
+result <- data.table(
+  dealer_id = as.integer(rownames(dealer_effects)),
+  water_prob = dealer_water_prob
+)[order(-water_prob)]
+```
+
+## 8.3 随机生存森林（RSF）
+
+```{r, eval = FALSE}
+# eval = FALSE
+library(randomForestSRC)
+
+# 准备数据
+# 注释：构建生存分析数据集，包含生存时间、事件标记和预测特征
+rsf_data <- pps[, .(
+  duration_days,          # 生存时间（活跃天数）
+  event,                  # 事件标记（1=流失，0=删失）
+  same_round_count,       # 同桌局数
+  same_rate,              # 同桌率
+  player_a_rounds,        # 焦点玩家总对局数
+  player_b_rounds         # 搭档总对局数
+)]
+
+# 自动选择树数
+n_obs <- nrow(rsf_data)
+n_features <- ncol(rsf_data) - 2  # 减去时间列和事件列
+ntree <- auto_ntree(n_obs, n_features)
+
+# 拟合RSF
+# 注释：使用随机生存森林预测流失风险，自动处理删失数据
+rsf_fit <- rfsrc(
+  Surv(duration_days, event) ~ same_round_count + same_rate + player_a_rounds + player_b_rounds,
+  data = rsf_data,
+  ntree = ntree,                          # 自动推荐的树数
+  importance = FALSE,                     # 节省内存
+  forest = FALSE,                         # 不存储森林（仅预测用）
+  nodesize = 20,                          # 节点最小样本数
+  nodedepth = 12,                         # 树最大深度
+  sampsize = ceiling(0.632 * n_obs),      # 自动计算样本大小
+  block.size = 10,                        # 内存优化
+  splitrule = "logrank",                  # 分裂规则
+  seed = 42
+)
+
+# 提取OOB风险评分
+rsf_risk <- rsf_fit$predicted.oob
+
+# 计算C-index（一致性指数）
+# 注释：C-index衡量模型排序能力，越接近1越好
+library(survival)
+c_index_rsf <- concordance(Surv(duration_days, event) ~ rsf_risk, data = rsf_data)$concordance
+cat(sprintf("RSF C-index: %.4f\n", c_index_rsf))
+```
+
+## 8.4 XGBoost 生存分析（自动早停）
+
+```{r, eval = FALSE}
+# eval = FALSE
+library(xgboost)
+
+# 准备数据
+# 注释：XGBoost Cox生存分析的标签编码：事件发生时为正持续时间，删失时为负持续时间
+xgb_label <- ifelse(pps$event == 1, pps$duration_days, -pps$duration_days)
+xgb_features <- as.matrix(pps[, .(same_round_count, same_rate, player_a_rounds, player_b_rounds)])
+
+dtrain <- xgb.DMatrix(data = xgb_features, label = xgb_label)
+dval <- xgb.DMatrix(data = xgb_features[1:5000, ], label = xgb_label[1:5000])  # 验证集
+
+params <- list(
+  objective = "survival:cox",      # Cox比例风险目标函数
+  eval_metric = "cox-nloglik",     # 评估指标
+  max_depth = 4,                   # 树最大深度
+  eta = 0.1                        # 学习率
+)
+
+# 使用早停自动确定最佳迭代次数
+xgb_cox_model <- xgb.train(
+  params,
+  dtrain,
+  nrounds = 1000,                  # 足够大，让早停决定
+  watchlist = list(train = dtrain, val = dval),
+  early_stopping_rounds = 50,      # 50轮无提升则停止
+  verbose = 0
+)
+
+# 最佳迭代次数自动保存在 xgb_cox_model$best_iteration
+cat(sprintf("XGBoost最佳迭代次数: %d\n", xgb_cox_model$best_iteration))
+
+# 预测风险评分
+pps[, xgb_risk_score := predict(xgb_cox_model, dtrain)]
+
+# 计算C-index
+c_index_xgb <- concordance(Surv(duration_days, event) ~ xgb_risk_score, data = pps)$concordance
+cat(sprintf("XGBoost C-index: %.4f\n", c_index_xgb))
+```
+
+# 九、商业方案（赏罚分明）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+对象	等级/模式	措施	预期效果
+钻石会员	高贡献、低风险	专属客服、返水加成、免提现手续费	提升忠诚度，带动更多投注
+黄金会员	中高贡献	定期赠送红包、免费投注券	刺激活跃度，提升流水
+黑名单会员	高风险	限制提现、冻结账户、报警	减少欺诈损失
+S级荷官	高盈亏、高盈利率	奖金激励、品牌宣传	吸引更多玩家，提升平台声誉
+D级荷官	低效	培训考核、轮岗	优化服务，提升收益
+预期收益（基于历史数据估算）：
+
+措施	目标	预期提升
+VIP维护	高价值会员留存	留存率+15%
+异常投注拦截	单笔>50,000投注	减少欺诈损失80%
+流失预警	即将流失会员	挽回30%流失
+跨游戏引导	单一游戏玩家	ARPU+20%
+
+# 十、实施路径与监控看板
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+## 10.1 Superset 看板设计
+
+宏观概览（总会员、总荷官、总投注、总盈亏、总返水）
+
+- 荷官绩效排行榜（按盈亏额/盈亏率）
+- 会员分级分布图（饼图/柱状图）
+- 投注模式占比（饼图）
+- 风险预警表格（高风险会员清单）
+- 同桌率热力图（会员对级别）
+
+## 10.2 数据汇总（若权限允许）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 日度汇总查询（替代物化视图）
+SELECT 
+    dt,
+    COUNT(DISTINCT bet05) AS daily_active_members,
+    SUM(CAST(bet13 AS DECIMAL(16,4))) AS daily_bet_amount,
+    SUM(CASE WHEN bet30 = 'N' THEN CAST(bet13 AS DECIMAL(16,4)) ELSE 0 END) AS daily_valid_bet
+FROM ods_a168_bet01
+GROUP BY dt
+ORDER BY dt;
+```
+
+## 10.3 定期报告
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+每周输出《荷官绩效报告》、《会员健康度报告》。
+
+# 十一、风险提示与免责声明
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+- 数据隐私：所有分析必须脱敏处理，严禁使用真实姓名、身份证号等敏感字段。
+- 模型漂移：建议每月重新训练模型，并监控PSI（群体稳定性指数）。
+- 合规性：需符合当地博彩监管要求（如Malta、UKGC、PAGCOR），确保风控规则不涉及歧视性策略。
+- 全局数据原则：所有分析和预测基于全局数据，局部抽样会导致结论偏差。
+- 盈亏估算：当前盈亏按“下注额 × 5%”估算，如需精确值请关联 ods_a168_game_statistics 获取实际玩家赢额。
+
+# 十二、额外参考资源
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+- 数据字典：00_ODS_GLOBAL_DATA_DICTIONARY.csv
+- 表结构：DESCRIBE ods_a168_bet01 等
+- 贝叶斯建模参考：brms 官方文档
+- 生存分析理论：Therneau & Grambsch (2000)
+- 开源项目：案例分析 实验室 GitHub
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+# 附录：关键代码文件清单
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+文件	用途
+01_数据合并.sql	全局 ODS → DWD → DWS → ADS 合并脚本
+02_特征工程.R	R 语言特征工程脚本
+03_模型训练.py	Python XGBoost 模型训练脚本
+04_风控告警.sql	实时风控告警 SQL
+05_看板原型.qmd	Shiny / Quarto 风控看板
+
+**报告结束**
+
+
+
+

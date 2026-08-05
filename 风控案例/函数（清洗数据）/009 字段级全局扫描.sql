@@ -1,0 +1,12 @@
+SELECT
+    TABLE_SCHEMA,
+    TABLE_NAME,
+    COLUMN_NAME,
+    DATA_TYPE,
+    COLUMN_COMMENT
+FROM information_schema.columns
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+ORDER BY
+    TABLE_NAME,
+    ORDINAL_POSITION;
+    

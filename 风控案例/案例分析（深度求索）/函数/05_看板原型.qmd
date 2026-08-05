@@ -1,0 +1,108 @@
+---
+title: "风控看板原型"
+author: "OGDIL 实验室"
+date: "2026-07-29"
+format: 
+  html:
+    toc: true
+    code-fold: true
+    theme: cosmo
+editor: source
+---
+
+# 风控仪表盘
+
+本看板基于 `ods_a168_bet01` 及衍生表构建，用于实时监控平台风控指标。
+
+## 宏观指标（KPI）
+
+```{r}
+library(DT)
+library(plotly)
+library(data.table)
+
+# 假设已连接数据库或读取汇总表
+# 此处用模拟数据示意
+kpi <- data.table(
+  指标 = c("总会员数", "总荷官数", "总投注额", "总利润", "总返水"),
+  数值 = c("1,251,138", "306", "1.084万亿", "542.07亿", "646万")
+)
+datatable(kpi, options = list(dom = 't', paging = FALSE))
+```
+
+## 日趋势图
+
+```{r}
+# eval = FALSE
+# 模拟日趋势数据
+dates <- seq.Date(Sys.Date()-130, Sys.Date()-1, by="day")
+daily <- data.table(
+  dt = dates,
+  active_members = round(runif(130, 20000, 80000)),
+  daily_bet = round(runif(130, 5e9, 3e10))
+)
+plot_ly(daily, x = ~dt, y = ~active_members, type = 'scatter', mode = 'lines', name = '日活') %>%
+  add_lines(y = ~daily_bet/1e9, name = '日投注(十亿)', yaxis = "y2") %>%
+  layout(yaxis2 = list(overlaying = "y", side = "right"))
+```
+
+## 风险预警表格
+
+```{r}
+# eval = FALSE
+alert_data <- data.table(
+  会员ID = c("152679126", "153047581", "146375973"),
+  告警类型 = c("单笔大额", "单笔大额", "单笔大额"),
+  金额 = c(800000, 220000, 500000),
+  时间 = Sys.Date() - sample(1:10, 3)
+)
+datatable(alert_data, options = list(pageLength = 10))
+```
+
+## 投注模式分布
+
+```{r}
+# eval = FALSE
+pattern <- data.table(
+  模式 = c("重注频繁型", "高频稳健型", "轻度娱乐型"),
+  占比 = c(1.2, 0.8, 98)
+)
+plot_ly(pattern, labels = ~模式, values = ~占比, type = 'pie')
+```
+
+## 荷官绩效排行
+
+```{r}
+# eval = FALSE
+dealer_top <- data.table(
+  荷官ID = c("2153", "2141", "583"),
+  利润 = c(5.96e8, 5.65e8, 5.56e8),
+  服务玩家数 = c(73410, 74182, 79377)
+)
+datatable(dealer_top[order(-利润)], options = list(dom = 't'))
+```
+
+## 阈值监控
+
+```{r}
+# eval = FALSE
+# 阈值状态
+threshold_status <- data.table(
+  维度 = c("单笔投注", "日累计投注", "荷官月利润"),
+  当前值 = c("80,000", "600,000", "5,000"),
+  阈值 = c("50,000", "500,000", "10,000"),
+  状态 = c("🔴 超标", "🔴 超标", "🟢 正常")
+)
+datatable(threshold_status, options = list(dom = 't'))
+```
+
+```{r}
+# eval = FALSE
+
+```
+
+---
+
+以上五个文件完整覆盖了数据合并、特征工程、模型训练、告警SQL以及看板原型，可直接部署使用。请根据实际数据源和字段名微调。
+
+

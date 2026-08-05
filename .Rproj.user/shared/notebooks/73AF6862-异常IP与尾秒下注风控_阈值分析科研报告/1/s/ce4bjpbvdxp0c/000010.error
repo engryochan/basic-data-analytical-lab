@@ -1,0 +1,1 @@
+{"frames":[{"func":"DBI::dbGetQuery(con, sprintf(\"SELECT COUNT(*) AS n FROM ods_mariadb_2b.ods_a168_bet02 WHERE %s\", \n    针对性筛选条件_SQL))","file":"","line_number":0,"end_line_number":0,"character_number":0,"end_character_number":0}],"message":"错误于h(simpleError(msg, call)): \n  在为函数“dbGetQuery”选择方法时计算参数“conn”时出错：找不到对象'con'\n"}

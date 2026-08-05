@@ -1,0 +1,49 @@
+---
+title: "真实数据详细报告栏 - 顶级实验室规格"
+format:
+  html:
+    toc: true
+    theme: cosmo
+lang: zh
+---
+
+```{r setup, message=FALSE}
+library(data.table)
+library(ggplot2)
+library(plotly)
+pair <- fread("C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/数据库/player_pair_stat.csv")
+pair_hourly <- fread("C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/数据库/player_pair_stat_hourly.csv")
+dealer <- fread("C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/数据库/dealer_profit_stat.csv")
+dealer_hourly <- fread("C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/数据库/dealer_profit_stat_hourly.csv")
+
+pair[, time_span := as.numeric(difftime(as.POSIXct(last_game_time), as.POSIXct(first_game_time), units="days"))]
+pair[, tier := cut(same_rate, breaks=c(-0.01,0.05,0.15,0.30,1), labels=c("L1正常","L2可疑","L3高危","L4实锤"))]
+```
+
+## 一、真实数据总览
+
+- 总对子: `r nrow(pair)`，全为 273467-X，说明已是单点深挖
+- 同桌率: 均值 `r round(mean(pair$same_rate)*100,1)`%，最大 `r round(max(pair$same_rate)*100,1)`% (3163098)
+- 存活: 均值 `r round(mean(pair$time_span),1)` 天，最长 `r round(max(pair$time_span),1)` 天
+- Dealer: ROI均值 `r round(mean(dealer$player_roi)*100,1)`%，35%玩家>30%
+
+## 二、L4实锤明细
+
+```{r}
+pair[order(-same_rate)][1:10, .(player_a, player_b, same_round_count, same_rate, time_span, tier)]
+```
+
+## 三、互动图
+
+```{r}
+plot_ly(pair, x=~same_rate, color=~tier, type="histogram")
+plot_ly(pair, x=~same_round_count, y=~same_rate, size=~time_span, color=~tier, text=~paste(player_a, player_b))
+plot_ly(dealer, x=~win_rate, y=~player_roi, size=~bet_count, color=~profit)
+```
+
+## 四、结论
+
+1. 273467-3163098 44.5% 实锤
+2. dealer_id=-1 需修复
+3. 35%高ROI说明放水
+```

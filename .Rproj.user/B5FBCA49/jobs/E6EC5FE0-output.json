@@ -1,0 +1,5 @@
+[1,"==> quarto preview 客户风险与价值分级_商业方案报告.qmd --to html --no-watch-inputs --no-browse\n\n"]
+[1,"\nStarting python3 kernel..."]
+[1,"(Notebook read from cache)\n\n"]
+[1,"pandoc \n  to: html\n  output-file: 客户风险与价值分级_商业方案报告.html\n  standalone: true\n  section-divs: true\n  html-math-method: mathjax\n  wrap: none\n  default-image-extension: png\n  toc: true\n  toc-depth: 3\n  css:\n    - styles.css\n  variables: {}\n  \nmetadata\n  document-css: false\n  link-citations: true\n  date-format: long\n  lang: en\n  engines:\n    - path: C:\\PROGRA~1\\RStudio\\RESOUR~1\\app\\bin\\quarto\\share\\extension-subtrees\\julia-engine\\_extensions\\julia-engine\\julia-engine.js\n  title: 全平台客户风险与价值分级：商业方案报告\n  subtitle: 基于129万个IP、70.1万名玩家的真实全局数据分析\n  author: Ryo（雷欧）\n  date: '2026-08-01'\n  theme: cosmo\n  \n"]
+[1,"Output created: 客户风险与价值分级_商业方案报告.html\n\nWatching files for changes\nBrowse at http://localhost:3247/\nListening on http://127.0.0.1:3247/\n"]

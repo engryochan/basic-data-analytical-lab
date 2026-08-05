@@ -1,0 +1,75 @@
+/* Ryo（雷欧） —— Quarto HTML 报告样式
+   延续既有 Shiny 档案页配色：深蓝 #146275 / 青绿 #33A8C4 / 金色 #FFD64D */
+
+:root {
+  --sb-navy: #0B2136;
+  --sb-teal-dark: #146275;
+  --sb-teal: #33A8C4;
+  --sb-gold: #FFD64D;
+  --sb-card: #F4FAFC;
+}
+
+body {
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif;
+  line-height: 1.7;
+  color: #1a2a33;
+}
+
+h1, h2, h3, h4 {
+  color: var(--sb-teal-dark);
+  border-bottom: 2px solid var(--sb-teal);
+  padding-bottom: 0.25em;
+}
+
+h1.title {
+  color: var(--sb-navy);
+  border-bottom: 4px solid var(--sb-gold);
+}
+
+.toc-title, #TOC {
+  color: var(--sb-teal-dark);
+}
+
+a { color: var(--sb-teal-dark); }
+a:hover { color: var(--sb-gold); }
+
+code {
+  background-color: #eef7f9;
+  color: #0b4a5a;
+  border-radius: 4px;
+}
+
+pre.sourceCode {
+  border-left: 4px solid var(--sb-teal);
+  background-color: #f7fbfc;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+table th {
+  background-color: var(--sb-teal-dark);
+  color: white;
+}
+
+table td, table th {
+  border: 1px solid #d5e6ea;
+  padding: 8px 12px;
+}
+
+table tr:nth-child(even) {
+  background-color: var(--sb-card);
+}
+
+blockquote {
+  border-left: 4px solid var(--sb-gold);
+  background-color: #fffaf0;
+  padding: 0.6em 1em;
+  margin-left: 0;
+}
+
+.callout-warning {
+  border-left-color: #e67e22 !important;
+}

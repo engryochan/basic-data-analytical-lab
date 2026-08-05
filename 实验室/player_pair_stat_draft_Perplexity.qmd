@@ -1,0 +1,219 @@
+---
+title: "玩家同桌关系风控Perplexity草稿（player_pair_stat_draft_Perplexity）"
+format: html
+---
+
+## 一、同桌率分布：识别异常高同桌率玩家对
+
+### 1）SQL：按同桌率分箱统计玩家对数量
+
+假设你用的是 MySQL 或兼容方言，可以先在 SQL Lab 写一个“分箱查询”，然后在 Superset 里基于这个查询建图：
+
+```{sql}
+SELECT
+  CASE
+    WHEN same_rate < 0.1 THEN '[0.0, 0.1)'
+    WHEN same_rate < 0.3 THEN '[0.1, 0.3)'
+    WHEN same_rate < 0.5 THEN '[0.3, 0.5)'
+    WHEN same_rate < 0.8 THEN '[0.5, 0.8)'
+    ELSE '[0.8, 1.0]'
+  END AS same_rate_bucket,
+  COUNT(*) AS pair_count
+FROM player_pair_stat
+GROUP BY same_rate_bucket
+ORDER BY same_rate_bucket;
+```
+
+在 Superset 中：
+
+- 数据源：使用这段 SQL 作为 Saved Query，点 “Explore”。
+- 图表类型：Bar Chart。
+- 维度（Group by）：same_rate_bucket。
+- 指标（Metric）：SUM(pair_count) 或直接 COUNT(*)。
+
+意义：
+
+- 你可以一眼看出高同桌率区间（例如 [0.8, 1.0]）的玩家对有多少，是否异常偏多。
+- 在电商类场景，这对应“高复购用户群”；在你的博弈风控中，这是“高共现关系群”。
+
+## 二、同桌局数 vs 同桌率：二维结构视角（散点）
+
+Superset 的散点图背后也是SQL查询，你可以用一条简单查询作为基础，把每对玩家的核心指标选出来。
+
+### 1）SQL：选出分析所需的二维数据
+
+```{sql}
+SELECT
+  player_a,
+  player_b,
+  same_round_count,
+  same_rate,
+  (player_a_rounds + player_b_rounds) AS total_rounds
+FROM player_pair_stat;
+```
+
+在 Superset 中：
+
+数据集：可以直接把 player_pair_stat 注册为 Dataset，也可以用这条 SQL 建一个新的虚拟 Dataset。
+
+- 图表类型：Scatter Plot。
+- X 轴：same_round_count。
+- Y 轴：same_rate。
+- Size（点大小）：total_rounds。
+- Tooltip / Filters：player_a, player_b。
+
+意义：
+
+- 散点图里右上角的点（同桌局数多、同桌率高）就是最关键的候选团伙关系。
+- 这完全由 SQL 提供原始数据，Superset 负责可视化。
+
+## 三、时间维度分析：关系生命线与风险爆发时点
+
+### 1）SQL：高同桌率玩家对在时间上的分布（按最近同桌时间）
+
+先用 SQL 把高同桌率过滤出来，并按 last_game_time 聚合：
+
+```{sql}
+SELECT
+  DATE(last_game_time) AS last_game_date,
+  COUNT(*) AS high_same_rate_pair_count,
+  SUM(same_round_count) AS high_same_rate_rounds
+FROM player_pair_stat
+WHERE same_rate >= 0.5  -- 阈值可以调
+GROUP BY DATE(last_game_time)
+ORDER BY last_game_date;
+```
+
+在 Superset 中：
+
+- 图表类型：Time-Series Line Chart 或 Area Chart。
+- 时间列：last_game_date。
+
+指标：
+
+- 线 1：SUM(high_same_rate_pair_count)。
+- 线 2：SUM(high_same_rate_rounds)（可以用混合时间序列，将两条线叠加对比）。
+
+意义：
+
+- 能看到高风险关系在时间上的“爆发”与“平复”，这对运营活动、安全事件、攻击窗口等分析非常关键。
+- 和电商里的“异常订单量 / 高风险客群随时间变化”是同一类分析。
+
+### 2）SQL：关系存续时长（first vs last）
+
+如果你的数据库支持 TIMESTAMPDIFF，可以直接在 SQL 里算出关系时长：
+
+```{sql}
+SELECT
+  player_a,
+  player_b,
+  same_round_count,
+  same_rate,
+  first_game_time,
+  last_game_time,
+  TIMESTAMPDIFF(HOUR, first_game_time, last_game_time) AS relation_duration_hours
+FROM player_pair_stat;
+```
+
+在 Superset 中：
+
+- 图表类型：Box Plot 或 Histogram（如果有）。
+- Metric：relation_duration_hours。
+- 过滤：可以只看 same_rate >= 0.5 或 same_round_count >= 50 的玩家对。
+
+意义：
+
+- 长期稳定且高同桌率的关系，是比“短期爆发”的更可疑的长期团伙形态。
+
+## 四、Pivot Table 视角：玩家 A 的同桌结构雷达
+
+Pivot Table 本质还是 SQL 的聚合结果，只是 Superset帮你把它整理成表格矩阵。
+
+### 1）SQL：按玩家 A 和同桌率区间统计玩家对数量
+
+先在 SQL 中做分箱和分组：
+
+```{sql}
+WITH rate_bucketed AS (
+  SELECT
+    player_a,
+    player_b,
+    CASE
+      WHEN same_rate < 0.1 THEN '[0.0, 0.1)'
+      WHEN same_rate < 0.3 THEN '[0.1, 0.3)'
+      WHEN same_rate < 0.5 THEN '[0.3, 0.5)'
+      WHEN same_rate < 0.8 THEN '[0.5, 0.8)'
+      ELSE '[0.8, 1.0]'
+    END AS same_rate_bucket,
+    same_round_count
+  FROM player_pair_stat
+)
+SELECT
+  player_a,
+  same_rate_bucket,
+  COUNT(player_b) AS pair_count,
+  SUM(same_round_count) AS total_same_rounds
+FROM rate_bucketed
+GROUP BY player_a, same_rate_bucket
+ORDER BY player_a, same_rate_bucket;
+```
+
+在 Superset 中：
+
+图表类型：Pivot Table。
+
+- Rows：player_a。
+- Columns：same_rate_bucket。
+- Metrics
+  - SUM(pair_count)。
+  - SUM(total_same_rounds)。
+
+意义：
+
+- 能看到每个玩家 A 在不同同桌率区间的“关系结构”：
+  - 某个玩家A如果在高同桌率区间有大量玩家B，就像电商中的“超级节点用户”，但在博弈风控中是“潜在团伙核心”。
+
+## 五、Top-N 风控候选列表：SQL + Superset Table 图
+
+你可以直接用 SQL设计一个“风险评分”，再让 Superset 用 Table 图展示 Top-N。
+
+### 1）SQL：给每个玩家对打一个简单风险分数
+
+例如：
+
+- 同桌率高：加权。
+- 同桌局数多：加权。
+- 关系存续时间长：加权。
+
+简单示例（可以根据业务调整权重）：
+
+```{sql}
+SELECT
+  player_a,
+  player_b,
+  same_round_count,
+  same_rate,
+  TIMESTAMPDIFF(HOUR, first_game_time, last_game_time) AS relation_duration_hours,
+  -- 简易风险评分：可以根据需要调权重
+  (same_rate * 100)
+    + (LOG10(GREATEST(same_round_count, 1)) * 10)
+    + (LOG10(GREATEST(TIMESTAMPDIFF(HOUR, first_game_time, last_game_time), 1)) * 5)
+    AS risk_score
+FROM player_pair_stat
+WHERE same_round_count >= 10  -- 去掉噪音
+ORDER BY risk_score DESC
+LIMIT 200;
+```
+
+在 Superset 中：
+
+- 图表类型：Table。
+- 显示列：player_a, player_b, same_round_count, same_rate, relation_duration_hours, risk_score。
+- 支持排序、过滤、导出 CSV。
+
+意义：
+
+- 这是为风控审核团队提供的“Top 风险玩家对列表”，完全基于 SQL 计算，没有用任何派森代码。
+- 在电商/量化科技领域，这对应于“高价值 / 高风险客户组合榜单”。
+
+*出处：[https://www.perplexity.ai/search/b6aeebf9-988c-414a-bfeb-40806fb07f05#103](https://www.perplexity.ai/search/b6aeebf9-988c-414a-bfeb-40806fb07f05#103)*

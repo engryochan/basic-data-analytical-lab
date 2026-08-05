@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>BDAL草拟</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="BDAL草拟_files/libs/clipboard/clipboard.min.js"></script>
+<script src="BDAL草拟_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="BDAL草拟_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="BDAL草拟_files/libs/quarto-html/popper.min.js"></script>
+<script src="BDAL草拟_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="BDAL草拟_files/libs/quarto-html/anchor.min.js"></script>
+<link href="BDAL草拟_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="BDAL草拟_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="BDAL草拟_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="BDAL草拟_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="BDAL草拟_files/libs/bootstrap/bootstrap-efbb37e9afcc02144ebbc7afd12a776f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">BDAL草拟</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="概括" class="level1">
+<h1>概括</h1>
+<p>构建<code>BDAL</code>鄀计数编程程序包。</p>
+</section>
+<section id="求索" class="level1">
+<h1>求索</h1>
+<section id="meta" class="level2">
+<h2 class="anchored" data-anchor-id="meta">Meta</h2>
+<section id="meta提问一" class="level3">
+<h3 class="anchored" data-anchor-id="meta提问一">Meta提问一</h3>
+<blockquote class="blockquote">
+<p>请将刚才的闪霓应用与html两个文件中的萦怀指标的颜色鲜明化，否则与背景颜色相近的话，看不到指标内容。然后添加多一栏专门分析真实数据信息，并提供对于每位会员、真人荷官、玩家与产品的详细分析包括该真人荷官、玩家、产品、时间点、盈亏率与最优平均值的差距与详细解说，让外行人一看就懂、任何不足之处、风控、推荐、优化、解决方案与措施等~</p>
+</blockquote>
+</section>
+<section id="meta解答一" class="level3">
+<h3 class="anchored" data-anchor-id="meta解答一">Meta解答一</h3>
+</section>
+</section>
+<section id="chatgpt" class="level2">
+<h2 class="anchored" data-anchor-id="chatgpt">chatGPT</h2>
+<section id="提问一" class="level3">
+<h3 class="anchored" data-anchor-id="提问一">提问一</h3>
+<blockquote class="blockquote">
+<p>还有最大回撤值、MASE，还有最大回撤值与MASE和夏普率与索提诺率四个指标搭配最优化的新风险评估指标，有啥顶尖计数尤物被我遗漏掉的还得补充呢，然后才继续</p>
+</blockquote>
+</section>
+<section id="解答一" class="level3">
+<h3 class="anchored" data-anchor-id="解答一">解答一</h3>
+<p>你的方向已经非常接近一个<strong>科研级风险评估体系</strong>了。不过，如果目标是建立一个能够覆盖量化金融、风控、时序预测和异常检测的统一平台，我建议把指标按用途分类，而不是简单堆叠。这样更容易形成可解释、可扩展的评估框架。</p>
+<section id="一你已经明确要纳入的核心指标" class="level4">
+<h4 class="anchored" data-anchor-id="一你已经明确要纳入的核心指标">一、你已经明确要纳入的核心指标</h4>
+<p>这些建议作为第一层核心指标保留：</p>
+<ul>
+<li><strong>MASE（Mean Absolute Scaled Error）</strong>：适合比较不同规模、不同序列的预测模型，是时序预测中非常重要的误差指标。</li>
+<li><strong>Maximum Drawdown（最大回撤）</strong>：衡量风险暴露和资金曲线最差表现。</li>
+<li><strong>Sharpe Ratio（夏普率）</strong>：单位总风险收益。</li>
+<li><strong>Sortino Ratio（索提诺率）</strong>：单位下行风险收益。</li>
+</ul>
+<p>这四项可以组成第一层综合评价。</p>
+<hr>
+</section>
+<section id="二建议补充的风险与收益指标" class="level4">
+<h4 class="anchored" data-anchor-id="二建议补充的风险与收益指标">二、建议补充的风险与收益指标</h4>
+<p>仅靠 Sharpe 和 Sortino 往往不足，因为它们各有局限。</p>
+<section id="收益调整类" class="level5">
+<h5 class="anchored" data-anchor-id="收益调整类">收益调整类</h5>
+<p>建议增加：</p>
+<ul>
+<li>Calmar Ratio</li>
+<li>Omega Ratio</li>
+<li>Information Ratio</li>
+<li>Treynor Ratio</li>
+<li>Jensen’s Alpha</li>
+<li>Profit Factor</li>
+<li>Kelly Criterion</li>
+</ul>
+<p>这些可以补充不同角度的收益质量。</p>
+<hr>
+</section>
+<section id="风险类" class="level5">
+<h5 class="anchored" data-anchor-id="风险类">风险类</h5>
+<p>建议增加：</p>
+<ul>
+<li>Maximum Drawdown（已纳入）</li>
+<li>Average Drawdown</li>
+<li>Drawdown Duration（回撤持续时间）</li>
+<li>Recovery Time（恢复时间）</li>
+<li>Ulcer Index</li>
+<li>Value at Risk（VaR）</li>
+<li>Conditional Value at Risk（CVaR / Expected Shortfall）</li>
+</ul>
+<hr>
+</section>
+<section id="预测误差类" class="level5">
+<h5 class="anchored" data-anchor-id="预测误差类">预测误差类</h5>
+<p>除了 MASE，还建议：</p>
+<ul>
+<li>MAE</li>
+<li>RMSE</li>
+<li>SMAPE</li>
+<li>RMSSE（Root Mean Squared Scaled Error）</li>
+<li>CRPS（概率预测）</li>
+<li>Pinball Loss（分位数预测）</li>
+</ul>
+<p>这样既能评价点预测，也能评价概率预测。</p>
+<hr>
+</section>
+</section>
+<section id="三模型稳定性指标" class="level4">
+<h4 class="anchored" data-anchor-id="三模型稳定性指标">三、模型稳定性指标</h4>
+<p>如果模型要进入生产环境，建议增加：</p>
+<ul>
+<li>Bootstrap 置信区间</li>
+<li>Cross Validation Mean</li>
+<li>Cross Validation SD</li>
+<li>Rolling Window Stability</li>
+<li>Drift Detection（概念漂移）</li>
+</ul>
+<hr>
+</section>
+<section id="四分类模型指标" class="level4">
+<h4 class="anchored" data-anchor-id="四分类模型指标">四、分类模型指标</h4>
+<p>对于风控分类问题（如玩家是否存在串通风险），建议统一输出：</p>
+<ul>
+<li>ROC-AUC</li>
+<li>PR-AUC</li>
+<li>F1 Score</li>
+<li>Matthews Correlation Coefficient（MCC）</li>
+<li>Cohen’s Kappa</li>
+<li>Brier Score</li>
+<li>Log Loss</li>
+<li>Calibration Error</li>
+</ul>
+<hr>
+</section>
+<section id="五时序预测指标" class="level4">
+<h4 class="anchored" data-anchor-id="五时序预测指标">五、时序预测指标</h4>
+<p>针对小时快照数据，建议增加：</p>
+<ul>
+<li>Directional Accuracy（方向预测准确率）</li>
+<li>Forecast Bias</li>
+<li>Prediction Interval Coverage Probability（PICP）</li>
+<li>Mean Interval Score（MIS）</li>
+</ul>
+<hr>
+</section>
+<section id="六图网络指标" class="level4">
+<h4 class="anchored" data-anchor-id="六图网络指标">六、图网络指标</h4>
+<p>对于玩家关系网络：</p>
+<ul>
+<li>Degree</li>
+<li>Betweenness</li>
+<li>Closeness</li>
+<li>Eigenvector Centrality</li>
+<li>PageRank</li>
+<li>Louvain Community</li>
+<li>Leiden Community</li>
+<li>Clustering Coefficient</li>
+<li>Network Density</li>
+<li>Modularity</li>
+</ul>
+<hr>
+</section>
+<section id="七regime状态识别指标" class="level4">
+<h4 class="anchored" data-anchor-id="七regime状态识别指标">七、Regime（状态识别）指标</h4>
+<p>建议加入：</p>
+<ul>
+<li>Hidden Markov Model</li>
+<li>Hidden Semi-Markov Model</li>
+<li>Markov Switching</li>
+<li>Bayesian Change Point</li>
+<li>Kernel Change Point</li>
+<li>Dynamic Time Warping</li>
+<li>Bayesian Online Change Point Detection</li>
+</ul>
+<hr>
+</section>
+<section id="八可解释性指标" class="level4">
+<h4 class="anchored" data-anchor-id="八可解释性指标">八、可解释性指标</h4>
+<p>如果使用树模型、Transformer 等，建议统一支持：</p>
+<ul>
+<li>SHAP</li>
+<li>LIME</li>
+<li>Permutation Importance</li>
+<li>Partial Dependence Plot</li>
+<li>Accumulated Local Effects（ALE）</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="关于四个指标搭配最优化的新风险评估指标" class="level3">
+<h3 class="anchored" data-anchor-id="关于四个指标搭配最优化的新风险评估指标">关于“四个指标搭配最优化的新风险评估指标”</h3>
+<p>你提出了一个很有意思的想法：将 <strong>MASE、最大回撤、Sharpe、Sortino</strong> 融合为一个新的综合指标。</p>
+<p>我建议不要直接线性相加，而是设计一个可配置的<strong>综合评分（Composite Risk Score）</strong>。例如：</p>
+<ol type="1">
+<li><strong>标准化</strong>：先将各指标转换到统一尺度（例如 0–1 或 Z-score）。</li>
+<li><strong>方向统一</strong>：对于“越小越好”的指标（如 MASE、最大回撤），进行反向处理；对于“越大越好”的指标（如 Sharpe、Sortino），保持正向。</li>
+<li><strong>权重组合</strong>：采用可配置权重，或通过历史数据学习权重。</li>
+<li><strong>稳健性约束</strong>：避免某一项极端值完全主导综合得分。</li>
+</ol>
+<p>可以表示为：</p>
+<p>[ = w_1 f() + w_2 f() + w_3 g() + w_4 g()]</p>
+<p>其中 (f) 和 (g) 分别表示对不同方向指标的标准化变换。</p>
+<p>进一步，还可以用<strong>多目标优化（Multi-objective Optimization）</strong>来确定权重，例如基于 Pareto 最优，而不是人为指定固定权重。</p>
+<hr>
+<section id="一个更完整的-bdal-评估框架建议" class="level4">
+<h4 class="anchored" data-anchor-id="一个更完整的-bdal-评估框架建议">一个更完整的 BDAL 评估框架建议</h4>
+<p>与其只做一个四指标综合分，我更建议 BDAL 最终输出五个维度的评分：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>维度</th>
+<th>示例指标</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>预测能力</td>
+<td>MASE、RMSSE、RMSE、SMAPE</td>
+</tr>
+<tr class="even">
+<td>收益能力</td>
+<td>Sharpe、Sortino、Calmar、Omega</td>
+</tr>
+<tr class="odd">
+<td>风险控制</td>
+<td>最大回撤、CVaR、Ulcer Index、Recovery Time</td>
+</tr>
+<tr class="even">
+<td>稳定性</td>
+<td>Bootstrap、Rolling CV、Drift Detection</td>
+</tr>
+<tr class="odd">
+<td>可解释性</td>
+<td>SHAP、LIME、Calibration、Feature Importance</td>
+</tr>
+</tbody>
+</table>
+<p>然后根据不同业务（玩家串通识别、荷官异常获利、时序预测等）设置不同的权重，形成最终的综合评分。这种多维评估框架比单一指标更稳健，也更符合科研和生产环境的实际需求。</p>
+<p><em>出处：<a href="https://chatgpt.com/s/t_6a5da75f79888191b7176f0bff56f231">https://chatgpt.com/s/t_6a5da75f79888191b7176f0bff56f231</a></em></p>
+</section>
+</section>
+<section id="chatgpt提问二" class="level3">
+<h3 class="anchored" data-anchor-id="chatgpt提问二">chatGPT提问二</h3>
+<blockquote class="blockquote">
+<p>对的，得将pareto、相关系数、与kutosis搭配最优化提高精准度，然后还得搭配类似在下旧著Rmodel中使用的对角通膨双变量泊松模型或负二项分布、bivpois、tranSurv、TransModel、bamlss、TransformerLSR、SSL-SurvFormer 程序包等，尤其是bivpois在主客场来回双方竞猜的博弈中最为先要，需要将所有顶级计数尤物互相搭配灵活应用以达到最优化效果预测精准度。最后通过MASE来评估精准度，再继续~</p>
+</blockquote>
+</section>
+<section id="chatgpt解答二" class="level3">
+<h3 class="anchored" data-anchor-id="chatgpt解答二">chatGPT解答二</h3>
+<p>我非常赞同这个方向，而且这已经不是传统意义上的数据分析，而是<strong>建立一个统一的量化预测与风控科研框架</strong>。不过，我建议对整体设计做两点重要调整，以保证科学性和可维护性。</p>
+<hr>
+<section id="一不要以单一模型为中心而应建立-model-zoo-meta-learner" class="level4">
+<h4 class="anchored" data-anchor-id="一不要以单一模型为中心而应建立-model-zoo-meta-learner">一、不要以单一模型为中心，而应建立 Model Zoo + Meta Learner</h4>
+<p>你提到的模型涵盖了多个不同范式：</p>
+<ul>
+<li><strong>统计分布模型</strong>：Poisson、负二项、双变量泊松（bivpois）、零膨胀、Hurdle 等。</li>
+<li><strong>生存分析</strong>：tranSurv、TransformerLSR、SSL-SurvFormer 等。</li>
+<li><strong>贝叶斯模型</strong>：bamlss、Stan、brms。</li>
+<li><strong>Transformer 系列</strong>：TabTransformer、TimesFM、Chronos、Informer 等。</li>
+<li><strong>图模型</strong>：Node2Vec、图神经网络（未来可扩展）。</li>
+<li><strong>状态识别</strong>：HMM、Markov Switching 等。</li>
+</ul>
+<p>这些模型各有适用场景，不能强行统一到同一个预测器，而应该建立一个<strong>模型动物园（Model Zoo）</strong>，通过统一接口管理，并让 Meta Learner 自动选择或集成。</p>
+<hr>
+</section>
+<section id="二建立-auto-model-selection-流程" class="level4">
+<h4 class="anchored" data-anchor-id="二建立-auto-model-selection-流程">二、建立 Auto Model Selection 流程</h4>
+<p>针对每一个数据集（如 <code>player_pair_stat</code>、<code>dealer_profit_stat</code>），建议采用如下流水线：</p>
+<pre class="text"><code>数据导入
+    │
+数据校验
+    │
+特征工程
+    │
+相关性分析
+    │
+Pareto 特征筛选
+    │
+多模型训练（Model Zoo）
+    │
+模型集成（Ensemble）
+    │
+综合评估
+    │
+自动推荐最佳方案</code></pre>
+<hr>
+</section>
+</section>
+<section id="三特征筛选不仅是相关系数" class="level3">
+<h3 class="anchored" data-anchor-id="三特征筛选不仅是相关系数">三、特征筛选：不仅是相关系数</h3>
+<p>建议不要只用 Pearson，而是建立多层特征筛选体系。</p>
+<section id="第一层线性相关" class="level4">
+<h4 class="anchored" data-anchor-id="第一层线性相关">第一层：线性相关</h4>
+<ul>
+<li>Pearson</li>
+<li>Spearman</li>
+<li>Kendall</li>
+</ul>
+</section>
+<section id="第二层非线性关联" class="level4">
+<h4 class="anchored" data-anchor-id="第二层非线性关联">第二层：非线性关联</h4>
+<ul>
+<li>Distance Correlation</li>
+<li>Mutual Information</li>
+<li>MIC（Maximal Information Coefficient）</li>
+<li>HSIC（Hilbert-Schmidt Independence Criterion）</li>
+</ul>
+</section>
+<section id="第三层共线性" class="level4">
+<h4 class="anchored" data-anchor-id="第三层共线性">第三层：共线性</h4>
+<ul>
+<li>VIF</li>
+<li>Condition Number</li>
+</ul>
+</section>
+<section id="第四层高阶统计量" class="level4">
+<h4 class="anchored" data-anchor-id="第四层高阶统计量">第四层：高阶统计量</h4>
+<p>这里可以加入你提到的 <strong>Kurtosis（峰度）</strong>，同时建议增加：</p>
+<ul>
+<li>Skewness（偏度）</li>
+<li>Entropy（熵）</li>
+<li>Gini</li>
+<li>Hurst Exponent（长记忆）</li>
+<li>Fractal Dimension（分形维数）</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="四pareto-不应只是图而应作为优化方法" class="level3">
+<h3 class="anchored" data-anchor-id="四pareto-不应只是图而应作为优化方法">四、Pareto 不应只是图，而应作为优化方法</h3>
+<p>Pareto 的价值在于<strong>多目标优化</strong>。</p>
+<p>例如同时优化：</p>
+<ul>
+<li>最小 MASE</li>
+<li>最小 Maximum Drawdown</li>
+<li>最大 Sharpe</li>
+<li>最大 Sortino</li>
+<li>最大 AUC</li>
+<li>最小推理时间</li>
+<li>最低内存占用</li>
+</ul>
+<p>得到 Pareto Front，而不是一个单一最优点。</p>
+<p>之后可以根据业务目标（例如风控偏稳健或预测偏精准）从 Pareto 前沿中选择方案。</p>
+<hr>
+</section>
+<section id="五分布模型建议构建-distribution-engine" class="level3">
+<h3 class="anchored" data-anchor-id="五分布模型建议构建-distribution-engine">五、分布模型：建议构建 Distribution Engine</h3>
+<p>这一部分与你提到的 <code>bivpois</code>、负二项等高度契合。建议统一纳入：</p>
+<section id="计数分布" class="level4">
+<h4 class="anchored" data-anchor-id="计数分布">计数分布</h4>
+<ul>
+<li>Poisson</li>
+<li>Zero-Inflated Poisson</li>
+<li>Negative Binomial</li>
+<li>Zero-Inflated Negative Binomial</li>
+<li>Conway–Maxwell–Poisson</li>
+<li>Hurdle Model</li>
+</ul>
+</section>
+<section id="双变量计数" class="level4">
+<h4 class="anchored" data-anchor-id="双变量计数">双变量计数</h4>
+<ul>
+<li><strong>bivpois</strong></li>
+<li>Diagonal Inflated Bivariate Poisson（对角膨胀双变量泊松）</li>
+<li>Diagonal Inflated Negative Binomial</li>
+<li>Copula Bivariate Poisson</li>
+<li>Skellam Distribution（差值分布，足球、博弈中常用）</li>
+</ul>
+<p>其中，<strong>Diagonal Inflated Bivariate Poisson</strong> 非常适合你提到的“主客场来回双方竞猜”，因为它能够显式建模双方得分同时增加的相关性。</p>
+<hr>
+</section>
+</section>
+<section id="六生存分析建议构建-survival-engine" class="level3">
+<h3 class="anchored" data-anchor-id="六生存分析建议构建-survival-engine">六、生存分析：建议构建 Survival Engine</h3>
+<p>统一支持：</p>
+<ul>
+<li>Cox PH</li>
+<li>AFT</li>
+<li>Random Survival Forest</li>
+<li>XGBoost Survival</li>
+<li>DeepSurv</li>
+<li>DeepHit</li>
+<li>tranSurv</li>
+<li>TransformerLSR</li>
+<li>SSL-SurvFormer</li>
+<li>Dynamic-DeepHit</li>
+</ul>
+<p>这样既能处理传统生存分析，也能支持深度学习模型。</p>
+<hr>
+</section>
+<section id="七贝叶斯模型建议构建-bayesian-engine" class="level3">
+<h3 class="anchored" data-anchor-id="七贝叶斯模型建议构建-bayesian-engine">七、贝叶斯模型：建议构建 Bayesian Engine</h3>
+<p>统一接口支持：</p>
+<ul>
+<li>bamlss</li>
+<li>brms</li>
+<li>rstan</li>
+<li>cmdstanr</li>
+<li>greta</li>
+<li>nimble</li>
+</ul>
+<p>贝叶斯模型可以输出参数的不确定性，对于风控场景很有价值。</p>
+<hr>
+</section>
+<section id="八transformer-家族建议构建-transformer-zoo" class="level3">
+<h3 class="anchored" data-anchor-id="八transformer-家族建议构建-transformer-zoo">八、Transformer 家族：建议构建 Transformer Zoo</h3>
+<p>建议纳入：</p>
+<ul>
+<li>TabTransformer</li>
+<li>FTTransformer</li>
+<li>SAINT</li>
+<li>TabNet</li>
+<li>TransformerLSR</li>
+<li>TimesFM</li>
+<li>Chronos</li>
+<li>Informer</li>
+<li>Autoformer</li>
+<li>FEDformer</li>
+<li>PatchTST</li>
+<li>TimeMixer</li>
+<li>iTransformer</li>
+</ul>
+<p>并保持统一训练与预测接口。</p>
+<hr>
+</section>
+<section id="九mase作为核心评估指标" class="level3">
+<h3 class="anchored" data-anchor-id="九mase作为核心评估指标">九、MASE：作为核心评估指标</h3>
+<p>我赞成将 <strong>MASE</strong> 作为默认的预测误差指标之一，因为它便于不同数据集之间的横向比较。但建议不要单独依赖 MASE，而是结合：</p>
+<ul>
+<li>MASE</li>
+<li>RMSSE</li>
+<li>RMSE</li>
+<li>SMAPE</li>
+<li>CRPS（概率预测）</li>
+<li>Pinball Loss（分位数预测）</li>
+</ul>
+<p>这样可以覆盖点预测、概率预测和区间预测。</p>
+<hr>
+</section>
+<section id="十一个更稳健的综合评价框架" class="level3">
+<h3 class="anchored" data-anchor-id="十一个更稳健的综合评价框架">十、一个更稳健的综合评价框架</h3>
+<p>相比直接构造一个固定公式，我更建议建立<strong>分层评分体系</strong>：</p>
+<ol type="1">
+<li><strong>预测能力层</strong>：MASE、RMSSE、RMSE 等。</li>
+<li><strong>收益风险层</strong>：Sharpe、Sortino、Calmar、Omega、最大回撤等。</li>
+<li><strong>稳定性层</strong>：交叉验证、Bootstrap、漂移检测。</li>
+<li><strong>复杂度层</strong>：训练时间、推理时间、内存占用。</li>
+<li><strong>可解释性层</strong>：SHAP、LIME、特征重要性。</li>
+</ol>
+<p>每层先形成子评分，再通过可配置权重或多目标优化进行综合。</p>
+<hr>
+</section>
+<section id="我建议-bdal-增加一个核心模块optimization-engine" class="level3">
+<h3 class="anchored" data-anchor-id="我建议-bdal-增加一个核心模块optimization-engine">我建议 BDAL 增加一个核心模块：Optimization Engine</h3>
+<p>这是我认为目前还缺少、但能把整个框架串联起来的关键。</p>
+<p>它负责：</p>
+<ul>
+<li><strong>多目标优化</strong>：基于 Pareto Front，兼顾预测误差、风险收益、复杂度等多个目标。</li>
+<li><strong>自动特征筛选</strong>：结合相关系数、MIC、互信息、峰度、偏度、VIF 等统计量筛选特征。</li>
+<li><strong>模型集成</strong>：自动比较统计模型、机器学习、Transformer、生存分析等，并支持 Stacking、Blending、Voting。</li>
+<li><strong>超参数优化</strong>：支持 Bayesian Optimization、Optuna、Hyperband、遗传算法、粒子群优化等。</li>
+<li><strong>自动生成推荐方案</strong>：输出最佳模型、最佳参数、最佳特征组合，以及对应的评估报告。</li>
+</ul>
+<p>这样，BDAL 的整体架构就会形成：</p>
+<blockquote class="blockquote">
+<p><strong>数据 → 特征工程 → Model Zoo → Optimization Engine → Pareto 多目标优化 → 综合评估 → Quarto/Shiny/Superset 展示</strong></p>
+</blockquote>
+<p>这比简单增加更多模型或指标更具可扩展性，也更符合现代量化研究平台和科研实验室的设计思路。</p>
+<p><em>出处：<a href="https://chatgpt.com/s/t_6a5dab599e348191ada2f3e34a360813">https://chatgpt.com/s/t_6a5dab599e348191ada2f3e34a360813</a></em></p>
+</section>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
