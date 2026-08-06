@@ -30,6 +30,44 @@ format:
           -webkit-background-clip:text;background-clip:text;color:transparent;}
         .callout{background:rgba(8,25,45,.75)!important;
           border-left-color:var(--ac)!important;}
+        /* ★ 行内代码：默认白底白字，此处强制极光高对比（全文含表格/标题/callout）*/
+        code,code span,kbd,tt,.table code,td code,th code,h1 code,h2 code,h3 code,
+        h4 code,.callout code,caption code,li code,p code,a code{
+          background:rgba(0,229,160,.16)!important;color:#7dffd4!important;
+          border:1px solid rgba(34,211,238,.35)!important;border-radius:4px;
+          padding:1px 5px!important;-webkit-text-fill-color:#7dffd4!important;}
+        h1 code,h2 code{-webkit-text-fill-color:#7dffd4!important;}
+        pre,pre code,div.sourceCode,div.sourceCode pre{
+          background:#071a2b!important;color:#dff7ee!important;
+          border:1px solid rgba(34,211,238,.25)!important;}
+        pre code{-webkit-text-fill-color:#dff7ee!important;border:none!important;}
+        /* 表格内一切文本兜底：禁止继承白字 */
+        table td,table th,.table td,.table th{color:#e7fbf3!important;}
+        table th,.table th{color:#062018!important;}
+        caption{color:#9fe8d5!important;caption-side:top;font-weight:600;}
+        strong,b{color:#ffe9a8!important;}
+        table strong,table b{color:#ffd64d!important;}
+        a{color:#22d3ee!important;}
+        /* callout 正文与标题：防继承主题白字 */
+        .callout,.callout-body,.callout-body-container,.callout p,.callout li,
+        .callout td,.callout th{color:#e7fbf3!important;
+          -webkit-text-fill-color:#e7fbf3!important;}
+        .callout{background:rgba(8,25,45,.88)!important;}
+        .callout-title,.callout-header,.callout .callout-title-container{
+          background:rgba(0,229,160,.20)!important;color:#7dffd4!important;
+          -webkit-text-fill-color:#7dffd4!important;}
+        /* 代码高亮语法色（默认浅色主题在深底上不可读） */
+        .sourceCode .co,.sourceCode .cm{color:#8fb3c9!important;}
+        .sourceCode .st,.sourceCode .ss{color:#ffd991!important;}
+        .sourceCode .kw,.sourceCode .cf{color:#7dffd4!important;}
+        .sourceCode .dv,.sourceCode .fl,.sourceCode .bn{color:#f0abfc!important;}
+        .sourceCode .fu{color:#22d3ee!important;}
+        .sourceCode .op,.sourceCode .sc{color:#dff7ee!important;}
+        /* DT 互动表：搜索框/分页在深底上的可读性 */
+        .dataTables_filter input,.dataTables_length select{
+          background:#06283d!important;color:#e7fbf3!important;
+          border:1px solid rgba(34,211,238,.4)!important;}
+        .paginate_button{color:#7dffd4!important;}
         </style>
     toc: true
     toc-depth: 4
@@ -78,7 +116,8 @@ aurora_kb <- function(df, caption=NULL, ...)
     full_width=TRUE, font_size=13) |>
   kableExtra::row_spec(0, background="#0b3d3a", color="#7dffd4", bold=TRUE) |>
   kableExtra::row_spec(seq_len(nrow(df)),
-    background="#08243c", color="#e7fbf3", extra_css="border-color:#1e5a6b;")
+    background="#08243c", color="#e7fbf3",
+    extra_css="border-color:#1e5a6b;-webkit-text-fill-color:#e7fbf3;")
 theme_set(theme_minimal(base_size=12) + theme(
   plot.background=element_rect(fill=PAL$bg,colour=NA),
   panel.background=element_rect(fill=PAL$bg,colour=NA),
@@ -182,6 +221,55 @@ aurora_dt(正名, caption="正名表：先正名，后算账", len=18)
 | **杀数 / 放数** | 庄家吃注 / 代理授信 | 结算审计的对象 |
 | **尾注（尾秒）** | 临近封盘才下注 | 全线检验不成立，保持现状 |
 | **运营商共享出口（CGNAT）** | 数千客人共用一个门牌号上网 | C-08 榜首 967 段全是它，已入白名单候选 |
+
+---
+
+## E1 全局分布总表（全文一切结论的唯一数据底座） {#sec-e1-dist}
+
+> 行话说白了：**这是我们把整间赌场 139 天的账，从头到尾数了一遍的结果**。
+> 不是抽样、不是估算、不是「拿十万条看看」——是全量点清。
+> 后文每一个数字、每一条阈值、每一项建议，都必须能追回这张表。
+
+```{r}
+#| label: e1-global-dist
+#| echo: false
+E1 <- tibble::tribble(
+  ~项目, ~全局实测值, ~白话解释, ~直接决定了什么,
+  "分析窗口","2026-03-21 ~ 2026-08-07（139 个营业日）","近半年的完整账期","所有比率的分母口径",
+  "百家乐注单量","≈1.9 亿笔（bet02）","平均每天约 137 万注","样本量足够，不存在「数据不够」的借口",
+  "下注会员数","721,190 人","半年内真正下过注的客人","**所有命中率的分母**",
+  "注单重复率","0.74%","同一注单被同步了两次的比例","不去重，流水虚高 0.74%",
+  "哨兵局（bet03='0'）","0 笔","没有「无效局号」的脏数据","局键三段式成立，可放心分局统计",
+  "桌台数","30 张百家乐桌","在营桌台","尾注阈值必须按桌分层的对象数",
+  "局时长（开局→开奖）","桌内 SD≈5 秒，桌间 SD=18.2 秒","同一张桌节奏稳定，不同桌差很多","**「第几秒」的全局说法作废**",
+  "下注进度上限","30 桌全部落 0.49~0.86，无一到 1","封盘时间库里没有，只能用开奖时间当分母","进度是「相对排名」，不是绝对秒数",
+  "客人 IP 数（bet02.ip）","1,320,000 个","客人实际下注的门牌号","IP 分析的唯一可用来源",
+  "登入日志 IP（game_log.ip）","1,668 个，与上者仅 2 个重合","这是机房网关，不是客人家门牌","**地理维度作废**，别拿它做风控",
+  "测试线代理","214 个（跨全部五级）","公司自己的测试账号线","不剔除，所有指标被内部数据污染",
+  "会员退水配置","94.4% 为 0；其余集中在 0.3%/0.8%/0.9%","绝大多数客人不吃退水","吃高退水的那一小撮才是洗码嫌疑池",
+  "人工風險單正样本","125 人（L1a）","风控员半年只标了 125 个","**样本极少 → 禁止用它做精度评估**",
+  "金标准关注 IP","17 个（2022 年标注）","风控员手工维护的关注名单","L0 一票否决锚点（须先验活跃性）",
+  "对打对（完美反向）","999 对，最长 1,185 把全反向","两个号一庄一闲对着打，输赢抵消","**洗码套利的直接证据**",
+  "对打对号码间距","中位数 32；36.5% 相差≤10","搭档的会员号是连着注册的","批量开号的铁证",
+  "跨 IP 复现","42 对搭档换过多个 IP，最多 22 个","换门牌不换搭档","换 IP 躲不掉，关系才是资产",
+  "IP 单链密度榜首","一个 IP 挂 2,132 人，全在同一条三级代理线下","一个门牌一条线塞两千人","「信用ISN底下同IP」的量化形式",
+  "/24 网段结构","前千段中 967 段是运营商共享出口（一段 248~256 个 IP）","东南亚手机上网的常态","网段稀有度指标必须先排除它们",
+  "尾注日度差（roi_diff）","139 天均值 +0.33%，符号 78/139 天为正","晚下注的人并没有稳定赢","**尾注规则不成立，保持现状**"
+)
+aurora_dt(E1, caption="E1 全局分布总表 · 139 天全量点清（后文一切引用此表）", len=20)
+```
+
+::: {.callout-important}
+## 怎么用这张表（给业务方的读法）
+1. **看分母**：任何「命中 X 个客人」的说法，都要除以 **721,190**——
+   命中 2,000 人不是「抓到很多」，是千分之三。
+2. **看样本**：人工風險單只有 **125** 个正样本，所以本报告
+   **不报精度、不报召回**，只报「结构证据是否闭合」。
+3. **看对象**：967 个饱和网段是电信基础设施，不是团伙；
+   靶心是「少门牌、多人头、单条代理线」的稀疏段。
+4. **看方向**：尾注那条线，全局 139 天摆在这里，赢面随机——
+   **不要为不存在的漏洞去改产品、罚客人**。
+:::
 
 ---
 
@@ -661,6 +749,19 @@ MASE 以「同桌相邻局 `gi005` 的平均绝对差分」为 naive one-step �
 
 > 剩余 0.13% 不吻合的局需单独排查，候选原因：改单、跨日结算、边注口径差异。
 
+::: {.callout-tip}
+## 商业措施：对账为什么每月都要跑
+
+**说人话**：这是拿我们自己一注一注加出来的总数，去跟系统每把牌记的官方数字对账。
+对得上，说明「同一注单只算最新一版」这条去重规则没算错、没漏算、没重复算——
+后面所有涉及钱的结论才站得住。
+
+1. **每月一号跑一次**，纳入数据质量例行监控（责任人：数据组）；
+2. 误差一旦跳出「远小于自然波动」的区间，**当月金额类结论全部暂停对外**，
+   先查同步任务与去重逻辑；
+3. 这份对账也是**给审计与监管看的底稿**：能证明流水口径可复现、可追溯。
+:::
+
 ### 标签：L1a 只有 125 个正样本 —— **本项目的分水岭**
 
 ```{r}
@@ -753,12 +854,23 @@ tibble::tribble(
 ```
 
 ::: {.callout-warning}
-**所有 `op` 的 `join_rate` 均为 0。**
+## 说人话：这张「风控历史名单」跟注单对不上号
 
-此前判断「窗口前移至 2022 即可使用」**是错的**——问题不是时间窗，
-而是 `risklist.bet01` 与 `bet02.bet01` 属于**完全不同的 ID 空间**。
+风控历史名单表里记着近万条记录，但它写的单号跟真正的注单流水
+**不是同一套编号**——好比拿旧楼盘的房号去新楼盘找人，一间都对不上。
+十个操作员的记录**逐一比对，命中率全部为 0**（不是低，是零）。
 
-`risklist` 从标签体系中移除，路径甲同时作废。
+此前判断「把时间窗往前拉到 2022 就能用」**是错的**：问题不在时间，
+在编号体系本身。这张表**永久移除**，靠它做标签的方案（路径甲）同时作废。
+
+## 商业措施
+
+1. **立即**：风控记名单一律记「**会员号 + 日期**」，别只记单号——
+   会员号全平台通用，单号会随系统改版失效。
+2. **本周**：人工标签改用日结报表的**風險單／劃單**（L1a），
+   它与注单窗口重叠、可直接用，是目前唯一可用的人工标记。
+3. **中期**：新风控工单表上线时强制外键指向注单主键，
+   建表评审由数据组把关，杜绝第二张对不上号的名单。
 :::
 
 ## E1 实测：去重率与哨兵局断言
@@ -1048,6 +1160,21 @@ $$\text{下注进度} = \frac{\texttt{bet08} - \texttt{gi004}}{\texttt{gi006} - 
 分母是「开局→开奖」而非「开局→封盘」，故该值**系统性偏小**。
 但**桌内 SD 仅 5 秒，偏差在桌内高度稳定**，按桌分层后不影响相对排序——
 **这是它可用的唯一技术理由**，必须在报告中标注为「代理口径 · 待封盘时间校正」。
+
+::: {.callout-tip}
+## 商业措施：封盘时间要不要补进数据库
+
+**说人话**：库里只记了「这把什么时候开局、什么时候开牌」，
+**没记「什么时候停止下注」**。所以我们只能用「这一注下在整把牌的百分之几处」
+来近似「离封盘还有多久」——快台慢台差别大，只能同台之间比。
+
+1. **不建议**为尾注风控专门开发封盘时间字段——尾注线已判定不成立（见下节），
+   为一条不成立的规则改数据管道不划算；
+2. **建议**在**下一次游戏服务端版本迭代**时顺带落库封盘时间戳（成本近乎为零），
+   将来做产品体验分析（客人是否常来不及下注）时会用得上；
+3. **当前**：本报告所有进度类指标一律标注「代理口径」，
+   任何对外汇报**不得**表述为「第几秒」。
+:::
 :::
 
 ## E1 实测：`bet_progress` 口径失效与替代方案 {#sec-progress-fail}
@@ -1110,6 +1237,18 @@ $$\text{下注进度} = \frac{\texttt{bet08} - \texttt{gi004}}{\texttt{gi006} - 
 `bet02.ip` = 下注 IP（接近真实客户端）。
 
 **需求 §3.1 规定用 `bet02.ip`，该规定正确。**
+:::
+
+::: {.callout-tip}
+## 商业措施：地理维度怎么办
+
+**说人话**：登入日志记的 IP 是「机房大门口的地址」，几千个客人共用一个；
+只有注单上记的 IP 才是客人自己的门牌。**按国家／城市做风控画像这条路走不通。**
+
+1. **立即**：IP 类规则一律以注单 IP 为准，登入日志 IP **禁止入规则**；
+2. **本月**：地理信息降级为**营销参考**（哪国客人多、什么时段活跃），不作风控判据；
+3. **中期**：要做地理风控须走**设备指纹**埋点（客户端侧），
+   比 IP 可靠一个量级，方案提交产品排期。
 :::
 
 ### ⛔ 视频延迟不可用
@@ -2333,7 +2472,7 @@ tibble::tribble(
 #| label: labels
 #| echo: false
 tibble::tribble(
-  ~层, ~来源, ~粒度, ~性质, ~`时间窗(E2)`, ~与2026重叠, ~用途,
+  ~层, ~来源, ~粒度, ~性质, ~时间窗E2, ~与2026重叠, ~用途,
   "**L0**","`alert_ip_setting` 17 IP","IP","人工确认","2022–2025","部分","**一票否决检验**（不可估精度）",
   "**L1a**","`dailyreport_member.risk`","会员×日","平台自评","**2026-03-24~08-06**","✅ **是**","**主训练标签**",
   "**L1b**","`dailyreport_table.risk`","桌台×日","平台自评，阳性 5.0%","2025-01~2026-08","✅ 是","荷官/桌台维度验证",
@@ -2617,6 +2756,129 @@ P3 的人工复核标签是**条件抽样**——只覆盖被规则抓出来送�
 
 **健康指标永不贡献风险分。** 把管道故障混入风险分，
 会把技术问题误判为会员行为异常。
+
+---
+
+# 运行手册：Superset 跑什么、存哪里、叫什么名 {#sec-runbook}
+
+> 给执行同事的一页纸。**照着表从上往下跑**，每条查询在
+> `a168_核验与取数_SQL包.sql` 里可用编号搜到，整段复制粘贴即可运行
+> （已全部字面量化，无需改任何参数）。
+
+::: {.callout-important}
+## 三条硬规矩
+1. **一次一条**——SQL Lab 一个 tab 只贴一条语句，跑完再贴下一条。
+   批量提交会产生僵尸查询，拖垮集群。
+2. **存放位置固定**——全部导出到**报告同目录下的 `data/` 文件夹**，
+   即 `.../a168风控与客户分层评分体系_商业方案.qmd` 旁边新建 `data/`。
+3. **文件名一个字都不能错**——报告按名读取；名字错了图表**不报错、只空白**，
+   这是最坑的失败方式。导出选 **CSV（UTF-8）**，导出前确认 SQL 末尾有 `ORDER BY`。
+:::
+
+## 第一批 · 体检（5 分钟，不用存文件）
+
+先确认地基没塌。这五条都只返回一两行，**看一眼屏幕即可**。
+
+```{r}
+#| label: runbook-batch1
+#| echo: false
+tibble::tribble(
+  ~顺序, ~编号, ~查的是什么, ~预期结果, ~不对怎么办,
+  1,"00-1","有没有「空局」混进百家乐","0","非 0 → 停，口径要重定",
+  2,"00-2","同一注单重复记录的比例","≈0.74%","偏离大 → 查同步任务",
+  3,"00-3","这段时间有多少人下过注","≈721,190 人","这是所有命中率的分母",
+  4,"00-4","开了多少张台","30 张左右","与 31 的差异来自只算百家乐",
+  5,"E1-08","公司测试线代理有几个","214 个","这些线下的会员全部剔除"
+) |> aurora_kb(caption="第一批：地基体检（无需导出）")
+```
+
+## 第二批 · 评分底料（必导 5 份，雷达图与回测全靠它）
+
+**这五份不导，报告里的雷达图和模型竞技场就是空的。**
+
+```{r}
+#| label: runbook-batch2
+#| echo: false
+tibble::tribble(
+  ~顺序, ~编号, ~导出文件名, ~点亮什么, ~约耗时,
+  6,"S-01","**S01_player_score.csv**","玩家雷达 + 玩家综合分","1–3 分钟",
+  7,"S-02","**S02_dealer_score.csv**","荷官雷达 + 荷官综合分","<1 分钟",
+  8,"S-03","**S03_agent_score.csv**","代理雷达 + 代理综合分","<1 分钟",
+  9,"S-04","**S04_analyst_score.csv**","风控员雷达","秒级（表很小）",
+  10,"S-05","**S05_member_month_panel.csv**","★ 净化滚动回测面板","2–5 分钟"
+) |> aurora_kb(caption="第二批：四实体评分 + 回测面板（必导，均存 data/ 目录下）")
+```
+
+## 第三批 · 异常 IP 主线（这是唯一要动手的业务线）
+
+```{r}
+#| label: runbook-batch3
+#| echo: false
+tibble::tribble(
+  ~顺序, ~编号, ~导出文件名, ~业务含义,
+  11,"A-01","**A_anchor.csv**","**先跑这条**：风控 17 个关注 IP 现在还活不活跃",
+  12,"C-01","**C01_ip_chain.csv**","一个 IP 挂多少人、几条代理线（信用枢纽排序）",
+  13,"C-06","**C06_hedge_pairs.csv**","对打搭档名单（谁跟谁天天对着押）",
+  14,"N1","**C08_subnet_sparse.csv**","靶心网段：门牌少、人头多",
+  15,"C-08","**C08_subnet_all.csv**","网段全量（含运营商共享出口，用于甄别白名单）",
+  16,"C-00","**I_ip_player.csv**","会员×IP 明细（阈值网格的底料）",
+  17,"C-02","**I_ip_agg.csv**","IP 汇总三版本盈利口径（主口径为剔退水版）"
+) |> aurora_kb(caption="第三批：异常 IP 证据链（按此顺序跑）")
+```
+
+## 第四批 · 尾注线存档 + 剩余补齐
+
+尾注线**已判定不成立、保持现状**，这批只为存档与画像，可延后。
+
+```{r}
+#| label: runbook-batch4
+#| echo: false
+tibble::tribble(
+  ~顺序, ~编号, ~导出文件名, ~用途,
+  18,"D-06","**S_player_tail.csv**","玩家尾注十一项（只做画像，不做处罚）",
+  19,"D-05","**S_second_dist.csv**","各台下注进度分位（证明要按台分层）",
+  20,"D-03S","**D03S_daily_roi_diff.csv**","日度对照（五重检验的输入，结论已闭合）",
+  21,"E1-07","**T_table_span.csv**","各台一局多长（快台慢台差异）",
+  22,"B-01","**B_online_base.csv**","在场人数基准（「第29秒」的分母）",
+  23,"A-06M","**V_recon.csv**","局级对账（证明去重口径没错）",
+  24,"P-01","**P_player_month.csv**","会员×月面板（跨月稳不稳）",
+  25,"X-01","**X_combo.csv**","两条规则叠加后的重叠与增量",
+  26,"E1-10","**L_label_dist.csv**","風險單/劃單标签分布",
+  27,"E1-11","**R_rebate_dist.csv**","退水档位人群分布（洗码账的输入）",
+  28,"V-01","**V_ipmatch.csv**","登入 IP 与下注 IP 对照（证明前者是网关）"
+) |> aurora_kb(caption="第四批：存档与补齐（可延后）", len=11)
+```
+
+## 跑完之后
+
+```{r}
+#| label: runbook-verify
+#| echo: false
+need <- c("S01_player_score","S02_dealer_score","S03_agent_score",
+          "S04_analyst_score","S05_member_month_panel","A_anchor",
+          "C01_ip_chain","C06_hedge_pairs","C08_subnet_sparse","C08_subnet_all",
+          "I_ip_player","I_ip_agg","S_player_tail","S_second_dist",
+          "D03S_daily_roi_diff","T_table_span","B_online_base","V_recon",
+          "P_player_month","X_combo","L_label_dist","R_rebate_dist","V_ipmatch")
+chk <- tibble::tibble(
+  文件 = paste0(need, ".csv"),
+  状态 = ifelse(file.exists(file.path("data", paste0(need, ".csv"))),
+                "✅ 已就位", "⬜ 待导出"))
+aurora_kb(chk, caption="导出清单自检（渲染时自动核对 data/ 目录）")
+```
+
+**全部就位后**：在报告目录执行 `quarto render a168风控与客户分层评分体系_商业方案.qmd`，
+雷达图、模型天梯、阈值网格会一次性点亮。缺哪份就只有那块空着，**不会报错中断**。
+
+::: {.callout-tip}
+## 只有半小时？跑这四条
+
+`A-01` → `C-01` → `C-06` → `N1`。
+
+这四条撑起整条异常 IP 证据链：金标准还活不活跃、哪个 IP 挂人最多、
+谁跟谁在对打、靶心在哪个网段。**代理结算审计据此即可启动**，
+不必等其余数据。
+:::
 
 ---
 
