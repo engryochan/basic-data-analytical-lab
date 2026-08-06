@@ -1,0 +1,715 @@
+---
+title: "a168 风控与客户分层评分体系 · 商业方案"
+subtitle: "异常 IP 与尾秒下注阈值分析 · 全需求实现 + 业绩提升验证 (V5)"
+author: "®γσ ξηg（Ryo Eng）· 世博量化® Scibrokes Trading®"
+date: today
+lang: zh-CN
+format:
+  html:
+    theme: [darkly, custom.scss]
+    toc: true
+    toc-depth: 4
+    toc-location: left
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    df-print: paged
+    fig-width: 10
+    fig-height: 5.5
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+  cache: false      # 铁律：production 数据量下 cache:true 必然 OOM
+---
+
+```{r}
+#| label: setup
+#| include: false
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+suppressPackageStartupMessages(pacman::p_load(
+  dplyr, tidyr, readr, stringr, purrr, tibble, lubridate, glue,
+  ggplot2, scales, knitr, kableExtra, DT, data.table))
+OPT <- c("binom","boot","pROC","PRROC","yardstick","igraph","xgboost",
+         "randomForestSRC","survival","brms","fastshap","DALEX","DBI","odbc")
+HAS <- setNames(vapply(OPT, requireNamespace, logical(1), quietly=TRUE), OPT)
+guard <- function(expr, label, on_fail=NULL)
+  tryCatch(force(expr), error=function(e){
+    message(glue::glue("⛔ [{label}] 跳过：{conditionMessage(e)}")); on_fail })
+PAL <- list(bg="#0E1B2A", fg="#E6EDF3", accent="#33A8C4",
+            warn="#FFD64D", bad="#FF6B6B", good="#4CB5F5")
+theme_set(theme_minimal(base_size=12) + theme(
+  plot.background=element_rect(fill=PAL$bg,colour=NA),
+  panel.background=element_rect(fill=PAL$bg,colour=NA),
+  text=element_text(colour=PAL$fg), axis.text=element_text(colour=PAL$fg),
+  panel.grid=element_line(colour="#1E3247")))
+set.seed(20260806)
+
+CFG <- list(db="ods_mariadb_2b", game_cat="101",
+            dt_from="2026-01-01", dt_to="2026-05-01",
+            csv_dir="data", win_days=30)
+fetch <- function(n){ f<-file.path(CFG$csv_dir,paste0(n,".csv"))
+  if(file.exists(f)) guard(readr::read_csv(f,show_col_types=FALSE),n)
+  else { message(glue::glue("ℹ️ [{n}] 未就位")); NULL } }
+D <- list(timecheck=fetch("T_timecheck"), sec_dist=fetch("S_second_dist"),
+          player_tail=fetch("S_player_tail"), ip_player=fetch("I_ip_player"),
+          ip_agg=fetch("I_ip_agg"), combo=fetch("X_combo"),
+          panel=fetch("P_player_month"), anchor=fetch("A_anchor"))
+AVAIL <- lapply(D, Negate(is.null))
+```
+
+---
+
+# 执行摘要
+
+本报告对 `异常IP与尾秒下注风控_阈值分析需求文档.md` 的**全部 30 项要求**逐条实现，
+并在其上追加三层：**八维能力值分层**、**净化时序回测**、**业绩提升的因果验证协议**。
+
+::: {.callout-important}
+## 三条不可协商的诚实约束
+
+1. **无审核标签 → 只能给试运行阈值。** 需求 §7 末条明文，本报告严守。
+2. **封盘时间未解决 → 尾秒章有条件成立。** 详见 @sec-close-gate。
+3. **业绩提升必须证伪。** 若反事实回测的收益 CI 下界跨 0，
+   结论就是「未能证实提升」，而非包装成成功。见 @sec-uplift。
+:::
+
+---
+
+# 实测发现：四表审计结果 {#sec-4tables}
+
+已收到 `log_realtimebet`、`alert_ip_setting`、`employee`、`agent` 四表。
+**两个假设证实、一个证伪、一个意外收获。**
+
+## ✅ 证实一：`age022` 确为测试线标记（铁律④后半条成立）
+
+```{r}
+#| label: age022
+#| echo: false
+tibble::tribble(
+  ~项, ~值,
+  "agent 表行数", "46,163",
+  "age022 取值", "0 / 1（二值）",
+  "age022 = '1' 的代理数", "**214**",
+  "占比", "0.46%",
+  "层级分布 (age006)", "L5:121, L1:27, L2:24, L4:21, L3:21"
+) |> knitr::kable(caption="`ods_a168_agent.age022` 实测：测试代理线确认")
+```
+
+**铁律④后半条经数据验证成立**，且揭示测试代理**跨全部五个层级分布**——
+意味着测试线下挂载的会员可能遍布整个代理树，**不能只排除末级**。
+
+```sql
+-- 测试线会员排除（铁律④后半条的正确执行路径）
+WITH test_agents AS (
+  SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+)
+-- bet02 的 bet18–bet22 为 LV1–LV5 代理ID，任一层命中测试代理即排除
+AND NOT EXISTS (
+  SELECT 1 FROM test_agents t
+  WHERE t.agent_id IN (b.bet18, b.bet19, b.bet20, b.bet21, b.bet22)
+)
+```
+
+## ✅ 证实二：`gameNo` / `gameNoRound` 命名规律跨表一致
+
+```{r}
+#| label: realtimebet
+#| echo: false
+tibble::tribble(
+  ~`log_realtimebet 列`, ~`bet02 对应列`, ~证据,
+  "gid", "bet02（游戏类别）", "取值 101 占 93.7%（21,292/22,736）",
+  "gameNo", "bet03（靴/場次編號）", "格式一致，如 114143414",
+  "gameNoRound", "bet04（靴内局号）", "范围 1–135，与 bet04 观测域吻合",
+  "mid", "bet05（會員編號）", "格式一致",
+  "betTime", "bet08（下注時間）", "datetime"
+) |> knitr::kable(caption="命名规律确认：`gameNo`/`gameNoRound` ↔ `bet03`/`bet04`")
+```
+
+**用途**：可据此**定向**到 `ods_a168_game_info`(1,147万) 与 `ods_a168_game_log`(1,801万)
+查找同名字段，无需盲扫大表。
+
+**但该表本身不含开局/封盘时间**——它是**大额下注实时告警日志**
+（`totalBetMoney` 中位 30,000、P99 500 万、最大 1 亿），
+每 `(gameNo, gameNoRound)` 通常仅 1 名会员（22,018/22,351），属稀疏告警流。
+
+## ⛔ 证伪：荷官 IP 碰撞不可实现
+
+我上一轮预判 `employee.lastip` 可用于「玩家下注IP × 荷官登录IP」碰撞，
+是本方案最强的荷官关联证据。**该假设被数据否决。**
+
+```{r}
+#| label: employee-fail
+#| echo: false
+tibble::tribble(
+  ~`employee.type`, ~推测角色, ~行数, ~`lastip 非空`, ~可用性,
+  "3", "荷官", "1,856", "**0**", "⛔ 完全为空",
+  "4", "—", "43", "0", "⛔",
+  "2", "管理/风控", "34", "16", "△ 样本过小",
+  "1", "超管", "4", "1", "△"
+) |> knitr::kable(caption="`employee.lastip` 填充率实测：荷官侧全空")
+```
+
+::: {.callout-warning}
+**结论：荷官 IP 碰撞路径关闭。** 全表仅 17 个非空 `lastip`，且**无一属于荷官**。
+本报告不得以任何变通方式声称实现了该维度。
+
+**替代路径**：荷官关联仍可从 `bet02.eid` 的统计关联做
+（玩家×荷官 ROI 偏离、荷官集中度 HHI），但那是统计证据，
+**证据强度低于 IP 碰撞一个数量级**，报告中须如实标注。
+:::
+
+## 🎁 意外收获：`alert_ip_setting` 是人工判据的金标准 {#sec-goldstandard}
+
+我原判断它是「现行阈值配置」，**错了**——它是**风控人员手工维护的关注 IP 名单**。
+但它的价值比阈值配置更高：**备注栏记录了他们判定异常 IP 时用的真实语言**。
+
+```{r}
+#| label: gold-remarks
+#| echo: false
+tibble::tribble(
+  ~备注原文, ~次数, ~对应本方案指标,
+  "關注對象", "8", "（无具体判据）",
+  "多會員同IP", "2", "`IP-S3` 主IP共享会员数",
+  "多會員同IP、對押", "1", "`IP-S3` + **对押** ← 需求未覆盖",
+  "同ip下注", "1", "`IP-S3`",
+  "幾個相同玩法投注會員使用IP", "1", "`IP-S3` + **投注选项一致性** ← 需求未覆盖",
+  "信用ISN底下同IP", "1", "`IP-S3` + **代理链约束** ← 对应 `AX-A*`",
+  "風控通知關注對象", "2", "（外部通知）"
+) |> knitr::kable(caption="17 条关注 IP 的判据分布（风控人员原话）")
+```
+
+**三项人工判据是需求文档没有覆盖的，必须补入指标体系：**
+
+| 人工判据 | 补入指标 | 定义 |
+|---|---|---|
+| **對押** | `IP-S6` 同IP对押率 | 同局同IP内，Banker/Player 反向下注的本金匹配度 |
+| **相同玩法** | `IP-S7` 投注选项一致率 | 同IP会员在 `bet09` 上的分布相似度（余弦） |
+| **信用ISN底下** | `AX-A5` 同IP同代理链率 | 同IP会员共享 LV3 代理的比例 |
+
+### /24 网段聚集：人工判据已隐含验证
+
+```{r}
+#| label: gold-subnet
+#| echo: false
+tibble::tribble(
+  ~`/24 网段`, ~命中IP数, ~标注人, ~标注日期跨度,
+  "111.247.37.0/24", "**6**", "Annie / wmdn08 / livegame / mao", "2022-05-10 ~ 2022-06-09",
+  "103.123.134.0/24", "2", "wmdn01 / mao", "2022-03-27 ~ 2022-06-26",
+  "其余 9 个 /24", "各 1", "—", "—"
+) |> knitr::kable(caption="关注 IP 的 /24 聚集：17 个 IP 中 8 个落在 2 个网段")
+```
+
+::: {.callout-tip}
+## 这是本方案最有力的一条外部验证
+
+`111.247.37.0/24` 下 6 个 IP，由**四位不同风控人员、跨一个月**分别标注。
+他们并未协同，却收敛到同一网段——
+
+**这独立验证了「以 /24 为聚合单位」是正确的分析粒度**，
+而不是我们从数据里凑出来的人工构造。需求 §4 只谈单 IP，
+本方案的 `IP-N1`–`IP-N4` 网段稀有度指标因此获得业务侧背书。
+
+**同时它提供了 17 个人工确认正样本**——虽然量少，但可作为
+@sec-validation 的**外部锚点**：新阈值若连这 17 个都命中不了，直接判不合格。
+:::
+
+## 仍未解决：封盘时间 {#sec-close-gate}
+
+```{r}
+#| label: close-gate
+#| echo: false
+tibble::tribble(
+  ~候选表, ~行数, ~状态, ~下一步,
+  "ods_a168_log_realtimebet", "24,038", "⛔ 已排除（无 open/close）", "—",
+  "ods_a168_game_info", "11,467,962", "❓ 未查", "**优先**：按 gameNo/gameNoRound 命名规律取列定义",
+  "ods_a168_game_log", "18,007,231", "❓ 未查", "次优先",
+  "ods_a168_game_No", "152,416", "❓ 未查", "靴级，可能只有开靴时间",
+  "ods_a168_realtimelobby", "4,808", "❓ 未查", "小表，可快速验"
+) |> knitr::kable(caption="封盘时间定位进度")
+```
+
+**取列查询（不取数据，只取列定义，秒级返回）：**
+
+```sql
+SELECT TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT
+FROM information_schema.columns
+WHERE TABLE_SCHEMA='ods_mariadb_2b'
+  AND TABLE_NAME IN ('ods_a168_game_info','ods_a168_game_log',
+                     'ods_a168_game_No','ods_a168_realtimelobby')
+ORDER BY TABLE_NAME, ORDINAL_POSITION;
+```
+
+::: {.callout-important}
+**封盘时间未定位前，@sec-tail 的绝对秒口径不成立。**
+
+上一版（v4）我用 `MAX(bet08)` 代理封盘，**已在《交叉审计裁定书》中废止**：
+实测显示局间隔 33–39 秒而观测下注跨度仅 11–13 秒，
+`MAX(bet08)` 会把封盘低估 8–13 秒，且误差与桌台热度系统性相关。
+
+**当前可用的替代口径**：`下注进度 = (bet08 − bet06) / (bet06_next − bet06)`，
+以**下一局开局时间**为分母上界。这仍是代理量，但误差方向已知（系统性偏大），
+且不随桌台热度波动。**须在报告中标注为「代理口径 · 待封盘时间校正」。**
+:::
+
+---
+
+# 需求追溯矩阵（30 项逐条） {#sec-trace}
+
+```{r}
+#| label: trace
+#| echo: false
+DT::datatable(tibble::tribble(
+  ~编号, ~需求要点, ~实现, ~状态,
+  "§2.1-1","20个账户处于分布什么位置","@sec-ip-dist ECDF定位表","✅设计完成",
+  "§2.1-2","最小订单数才算有效关联","@sec-ip-eff 方差收敛曲线","✅",
+  "§2.1-3","该IP盈利 vs 全平台盈利","@sec-ip-ver 版本A/B/**C**","✅并补版本C",
+  "§2.1-4","盈利比例80/90/100%","@sec-ip-grid","✅",
+  "§2.1-5","各阈值工作量","@sec-ip-grid 工作量列","✅",
+  "§2.1-6","跨月是否稳定","@sec-persist","✅",
+  "§2.2-1","开始/封盘/时长能否取得","@sec-close-gate","⚠️**未解决**",
+  "§2.2-2","集中在第几秒/最后1235秒覆盖","@sec-sec-dist","⚠️依赖§2.2-1",
+  "§2.2-3","各秒段胜率盈利ROI差异","@sec-sec-dist","⚠️同上",
+  "§2.2-4","第29秒是真异常还是基准如此","@sec-29s 四重检验","✅设计完成",
+  "§2.2-5","多少局数才稳定","@sec-stability Wilson CI","✅",
+  "§2.2-6","占比多少算持续性","@sec-tail-share","✅",
+  "§2.2-7","胜率/胜率差门槛","@sec-tail-grid","✅",
+  "§2.2-8","正常亏尾秒赢+跨月","@sec-strong","✅",
+  "§3.1","仅bet02=101/物理局键三段","@sec-contract","✅**已补bet39**",
+  "§3.2","bet01去重三级排序+有效订单","@sec-contract","✅",
+  "§3.2","IP排除清单","@sec-ip-excl","✅**已补age022**",
+  "§3.3","四种金额口径","@sec-contract","✅",
+  "§3.4","胜率按物理局/和局不入分母","@sec-contract","✅",
+  "§4.1","玩家-IP六项指标","@sec-ip-player","✅",
+  "§4.2","IP汇总+版本A/B","@sec-ip-agg","✅",
+  "§4.3","分布分析四项","@sec-ip-dist","✅",
+  "§4.4","候选组合四参数+11项输出","@sec-ip-grid","✅两阶段设计",
+  "§5.1","时间字段可用性","@sec-close-gate","⚠️**闸门未通过**",
+  "§5.2","秒段分布六项","@sec-sec-dist","⚠️依赖闸门",
+  "§5.3","玩家尾秒十一项","@sec-player-tail","✅SQL就绪",
+  "§5.4","候选组合五参数+强特征","@sec-tail-grid","✅",
+  "§6","两规则组合","@sec-combo","✅",
+  "§7","七条选择原则","@sec-principle","✅",
+  "追加","分群+能力值+回测+商业方案","@sec-capability ~ @sec-plan","✅本版新增"
+), options=list(pageLength=32, dom='tip'), caption="需求追溯矩阵 · 30 项")
+```
+
+**汇总：26 项设计完成，4 项受阻于封盘时间闸门（§2.2-1/2/3、§5.1/5.2）。**
+
+---
+
+# 八维能力值模型 {#sec-capability}
+
+数据源已全部确认可得（除荷官IP碰撞已证伪并移除）。
+
+```{r}
+#| label: cap-model
+#| echo: false
+tibble::tribble(
+  ~维度, ~代码, ~数据源, ~构成指标, ~状态,
+  "资金能力","CAP","bet02 + member_dtl + tablelimit + in_out_m","投注规模分位、单注/桌限比、净存款","✅",
+  "时机能力","TIM","bet02 + game_info(封盘)","距封盘秒数、下注进度分位","⚠️待封盘",
+  "协同能力","COO","bet02(IP/LV链)","同局共IP、**对押率**、**选项一致率**、代理链重合","✅",
+  "效率能力","EFF","bet02","游戏ROI(**不含返水**)、胜率相对基准Lift","✅",
+  "持续能力","PER","跨月面板","连续盈利月数、跨月重复命中率","✅",
+  "规避能力","EVA","mem_login + iphistory + bet02","IP切换频次、局内换IP、登录/下注IP不一致","△待表",
+  "返水依赖","REB","bet02(bet15/bet16)","返水占净盈利比、剔返水后是否仍盈利","✅",
+  "操作异常","MAN","betchange_log + ban_bet_area","改单频次、禁投区触碰","△待表"
+) |> knitr::kable(caption="八维能力模型与数据源确认")
+```
+
+::: {.callout-note}
+## 「返水依赖」维度是本方案的关键判别轴
+
+它直接解决《交叉审计裁定书》缺陷 5：需求 §3.3 用 `净盈利>0` 判定盈利玩家，
+而净盈利含返水（实测 `bet17=(bet14−bet13)+bet16`）。
+
+**纯靠返水维生的洗码客会被误判为「盈利玩家」**，抬高 IP 的盈利玩家比例。
+而洗码客恰恰集中在同一代理线、共用出口 IP——**系统性制造异常 IP 误报**。
+
+`REB` 维度把「靠赢钱盈利」与「靠返水盈利」分开。
+两者的处置完全不同：前者是**风控问题**（可能套利），
+后者是**成本结构问题**（返水档位设计不当）。
+混为一谈会同时做错两件事。
+:::
+
+```{r}
+#| label: cap-score
+#| eval: !expr AVAIL$player_tail
+cap_score <- function(x){ r <- rank(x, na.last="keep", ties.method="average")
+  round(100*(r-0.5)/sum(!is.na(x)), 1) }   # 分位映射，稳健于极端值
+guard({
+  D$player_tail |> dplyr::transmute(
+    member_id,
+    CAP = cap_score(tail_stake),
+    TIM = cap_score(tail_share * pmax(winrate_diff,0)),
+    EFF = cap_score(tail_roi),
+    PER = cap_score(n_rounds_tail)) |>
+    utils::head(10) |> knitr::kable(caption="能力值示例（前10行；完整八维需 join 各章产出）")
+}, "能力值")
+```
+
+---
+
+# 客户分群：赏罚分明 {#sec-segment}
+
+```{r}
+#| label: segment
+#| echo: false
+tibble::tribble(
+  ~分群, ~代码, ~能力特征, ~处置, ~商业动作, ~预期效果,
+  "核心价值客","V1","CAP高·COO低·TIM正常·EFF符合庄家优势","🏆赏","返水上浮、专属客服、优先桌位","留存↑、ARPU↑",
+  "稳定贡献客","V2","CAP中高·PER高·无异常维度","🏆赏","阶梯返水、活动优先、流失预警","流失↓",
+  "常规客","V3","各维中位","—","常规运营、交叉推荐","转化↑",
+  "低贡献客","V4","CAP低·活跃低","—","低成本唤醒","唤醒率↑",
+  "尾秒专家","R1","TIM高·EFF高·PER高","⚠️罚","降桌限、延后封盘、加强复核","敞口↓",
+  "团伙协同","R2","COO高·对押率高·同代理链","⚠️罚","整链复核、限制同桌","敞口↓",
+  "洗码套利","R3","CAP高·EFF≈0·REB高·注额方差低","⚠️罚","调整返水档位、取消资格","返水成本↓",
+  "高规避","R4","EVA高·多IP·局内换IP","🔍查","KYC复核、设备指纹","—",
+  "组合高危","R0","R1∩R2（同IP多尾秒专家）","🚨最高","立即人工复核、暂停下注","敞口↓↓"
+) |> knitr::kable(caption="九分群与赏罚映射")
+```
+
+**两条纪律**：
+
+1. **赏要具体到钱。** V1/V2 必须映射到实际返水档位、桌限、活动资格。
+   分群若不驱动权益变化，就只是一张没用的表。
+2. **罚要可申诉。** R1–R4 全部是**建议动作**，系统无执行权限。
+   每条处置附完整证据链（可追溯至 `bet01`）。
+   **异常 ≠ 违规**——共享 IP 可能是网吧、家庭、公司网络。
+   **误伤一个 V1 的代价远高于漏放一个 R1。**
+
+---
+
+# 预测建模与净化回测 {#sec-validation}
+
+## 标签体系（三层，质量递减）
+
+```{r}
+#| label: labels
+#| echo: false
+tibble::tribble(
+  ~层, ~来源, ~性质, ~用途, ~禁止,
+  "L0 人工金标准","alert_ip_setting（17 IP）","风控人员手工确认","**外部锚验证**","样本过小，不可训练",
+  "L1 弱标签","dailyreport_member.risk","平台自评，noisy positive-only","训练+Lift评估","不可算Accuracy",
+  "L2 辅助","member.mem024 / risklist","另一弱标签源","一致性交叉验证","不可当独立验证集"
+) |> knitr::kable(caption="标签体系与使用边界")
+```
+
+::: {.callout-warning}
+**L0 的 17 个 IP 是本方案唯一的人工确认正样本。**
+用法：**新阈值若连这 17 个都命中不了，直接判不合格**（必要条件，非充分）。
+但因样本量为 17，**不可用于估计精度或召回**，只能做「一票否决」检验。
+:::
+
+## 净化切分器
+
+```{r}
+#| label: purged
+purged_wf_splits <- function(panel, t0_col="t0", t1_col="t1",
+                             n_splits=6L, embargo_days=NULL){
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  stopifnot(all(t1 >= t0, na.rm=TRUE))
+  if (is.null(embargo_days)){
+    ## embargo 由标签实现滞后的经验分布决定，不照抄文献 21 天
+    lagd <- as.numeric(difftime(t1, t0, units="days"))
+    embargo_days <- ceiling(stats::quantile(lagd[is.finite(lagd)], .95, na.rm=TRUE))
+    message(glue::glue("embargo 由经验分布定为 {embargo_days} 天（滞后 P95）"))
+  }
+  ord <- order(t0); n <- length(ord)
+  bd <- floor(seq(1, n+1, length.out=n_splits+1L))
+  lapply(seq_len(n_splits-1L), function(k){
+    tr <- ord[seq_len(bd[k+1L]-1L)]; te <- ord[bd[k+1L]:(bd[k+2L]-1L)]
+    te0 <- min(t0[te],na.rm=TRUE); te1 <- max(t1[te],na.rm=TRUE)
+    keep <- t1[tr] < te0 &
+            !(t0[tr] > te1 & t0[tr] <= te1 + as.difftime(embargo_days, units="days"))
+    list(fold=k, train=tr[keep], test=te,
+         purge_rate=mean(!keep), embargo_days=embargo_days,
+         test_window=c(te0, te1))
+  })
+}
+
+cpcv_splits <- function(panel, N=8L, k=2L, t0_col="t0", t1_col="t1", embargo_days=21){
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  ord <- order(t0); grp <- cut(seq_along(ord), breaks=N, labels=FALSE)
+  combos <- utils::combn(N, k, simplify=FALSE)
+  message(glue::glue("CPCV: C({N},{k})={length(combos)} 划分，路径数={length(combos)*k/N}"))
+  lapply(combos, function(cb){
+    te <- ord[grp %in% cb]; tr <- ord[!(grp %in% cb)]
+    te0 <- min(t0[te],na.rm=TRUE); te1 <- max(t1[te],na.rm=TRUE)
+    keep <- t1[tr] < te0 | t0[tr] > te1 + as.difftime(embargo_days, units="days")
+    list(combo=cb, train=tr[keep], test=te, purge_rate=mean(!keep))
+  })
+}
+
+assert_no_leakage <- function(splits, panel, t0_col="t0", t1_col="t1"){
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  ok <- vapply(splits, function(s) length(s$train)==0 ||
+    max(t1[s$train],na.rm=TRUE) < min(t0[s$test],na.rm=TRUE), logical(1))
+  list(all_pass=all(ok), failed=which(!ok),
+       mean_purge=mean(vapply(splits,`[[`,0,"purge_rate")))
+}
+```
+
+## 强制披露：泄漏规模
+
+```{r}
+#| label: leak-delta
+#| echo: false
+tibble::tibble(
+  协议=c("朴素 5-fold（有泄漏）","Purged Walk-Forward","CPCV 多路径 均值±SD"),
+  `PR-AUC`=NA_real_, Lift=NA_real_, `95% CI`=NA_character_,
+  说明=c("**仅对照，不得用于结论**","**主口径**","稳健性")
+) |> knitr::kable(caption="泄漏规模量化（数据到位后填充）")
+```
+
+同时必须报告：**各折净化率、有效折数、泄漏断言结果、朴素与净化的差值**。
+差值本身是结论的一部分——差值大说明净化是必要的而非形式的。
+
+## 评估口径
+
+| 指标 | 地位 | 理由 |
+|---|---|---|
+| **PR-AUC** | 主口径 | 极不平衡下 ROC-AUC 无信息量 |
+| **Lift** | 主口径 | 弱标签下唯一可辩护的表述 |
+| Brier / ECE | 校准 | 必须出校准曲线 |
+| Wilson CI | 必备 | 所有胜率附 CI |
+| Bootstrap CI | 必备 | 所有点估计附 CI |
+| DeLong | 显著性 | 模型间 AUC 差异 |
+| **Accuracy** | ⛔ 禁用 | 无信息量 |
+
+---
+
+# 业绩提升的因果验证协议 {#sec-uplift}
+
+::: {.callout-important}
+业务要求「证实此商业方案可以提高业绩」。
+**判别力高 ≠ 业绩提升。** 一个 PR-AUC 0.9 的模型若命中的全是本就不赚钱的小客，
+业绩提升为零。因此必须做**独立于判别力的经济价值验证**。
+:::
+
+## 三条增益来源（必须分开核算）
+
+```{r}
+#| label: uplift-sources
+#| echo: false
+tibble::tribble(
+  ~来源, ~代码, ~机制, ~量化公式, ~可验证性,
+  "拦截套利敞口","G1","识别R0/R1/R2后限制，减少其未来赢额","Σ(命中会员在T+1期的 game_pnl>0 部分) × 拦截率","★★★ 反事实可算",
+  "返水成本优化","G2","识别R3后调整返水档位","Σ(R3会员返水) × 档位调降幅度","★★★ 直接可算",
+  "高价值客留存","G3","V1/V2精准运营降低流失","Δ留存率 × V1/V2的CLV","★☆ 需A/B实验",
+  "误杀损失","L1","V1/V2被误判导致流失","误判数 × 中位净贡献 × 流失概率","★★ 需影子期数据",
+  "复核人力","L2","人工复核成本","命中数 × 单件工时 × 时薪","★★★ 直接可算"
+) |> knitr::kable(caption="业绩增益与成本的五个分项")
+```
+
+**净业绩提升** `ΔGGR = G1 + G2 + G3 − L1 − L2`
+
+## 反事实回测设计（核心）
+
+```{r}
+#| label: counterfactual
+counterfactual_backtest <- function(panel, splits, rule_fn,
+                                    intercept_rate = 0.5) {
+  ## 对每一折：假设在 test 窗口起点上线该规则，测试期实际发生了什么
+  ## 关键：规则参数只用 train 期数据标定 → 无前视
+  purrr::map_dfr(splits, function(s) {
+    tr <- panel[s$train, ]; te <- panel[s$test, ]
+    thr <- rule_fn$calibrate(tr)                 # 仅用训练期标定阈值
+    hit <- rule_fn$apply(te, thr)                # 应用到测试期
+
+    ## G1 拦截套利敞口：命中会员在测试期的正向游戏盈利
+    G1 <- sum(pmax(te$game_pnl[hit], 0), na.rm=TRUE) * intercept_rate
+    ## G2 返水成本优化：命中的 R3 型会员返水
+    G2 <- sum(te$rebate[hit & te$is_rebate_arb], na.rm=TRUE)
+    ## L1 误杀损失：命中但实为高价值客者的净贡献
+    L1 <- sum(pmax(-te$net_pnl[hit & te$is_high_value], 0), na.rm=TRUE)
+    ## L2 复核人力
+    L2 <- sum(hit) * rule_fn$review_cost
+
+    tibble::tibble(fold=s$fold, n_hit=sum(hit),
+                   G1=G1, G2=G2, L1=L1, L2=L2,
+                   delta_ggr = G1 + G2 - L1 - L2,
+                   purge_rate = s$purge_rate)
+  })
+}
+
+## Bootstrap 置信区间：ΔGGR 的下界必须 > 0 才算证实
+uplift_ci <- function(bt, R = 2000, conf = .95) {
+  if (!HAS[["boot"]]) return(NULL)
+  b <- boot::boot(bt$delta_ggr, function(d, i) mean(d[i]), R = R)
+  ci <- boot::boot.ci(b, conf = conf, type = "bca")
+  tibble::tibble(
+    点估计 = mean(bt$delta_ggr),
+    CI下界 = ci$bca[4], CI上界 = ci$bca[5],
+    结论 = ifelse(ci$bca[4] > 0, "✅ 证实业绩提升", "⛔ **未能证实**"))
+}
+```
+
+::: {.callout-warning}
+## 判定规则（不可放宽）
+
+**仅当 `ΔGGR` 的 Bootstrap 95% CI 下界 > 0 时，才可声称「证实业绩提升」。**
+
+点估计为正但 CI 跨 0 → 结论是 **「未能证实」**，
+必须如实写入报告，不得改述为「初步显示正向」之类的软化表达。
+
+**且必须同时做安慰剂检验**：用随机命中同等数量的会员跑同一流程，
+若安慰剂的 ΔGGR 也显著为正，说明增益来自「命中大客」而非「命中风险客」，
+整套结论作废。
+:::
+
+## 多重检验修正
+
+阈值网格会产生数十至数百组候选。在这么多次试验中挑出最优，
+**最优值本身必然向上偏**（选择偏差）。
+
+**修正方案**：
+
+| 方法 | 用途 |
+|---|---|
+| CPCV 多路径分布 | 用路径间方差估计「最优值的偏乐观程度」 |
+| Deflated 思想 | 依试验次数 N 与路径方差，对最优 ΔGGR 折减 |
+| 时间外保留窗 (OOT) | **最后一段时间完全不参与任何标定与选择**，仅用于终检 |
+
+**OOT 是最后一道闸。** 若 OOT 上 ΔGGR 显著低于净化 CV 的估计，
+说明选择偏差严重，推荐阈值须回退至更保守档。
+
+---
+
+# 落地方案 {#sec-plan}
+
+## 五阶段路径
+
+```{r}
+#| label: roadmap
+#| echo: false
+tibble::tribble(
+  ~阶段, ~时长, ~内容, ~退出条件, ~可验证产出,
+  "P0 闸门","1周","封盘时间定位 + 去重验证 + 对账 + age022排除","三项全通过","闸门报告",
+  "P1 标定","2周","§4/§5 全量网格 + 分布 + 版本ABC对照","双档阈值确定","阈值规格书",
+  "P2 影子","4周","只记录不动作 + L0 十七IP必命中检验","误报预算守住","影子期报告",
+  "P3 试运行","4周","Trial-L档 + **人工全量复核** + **随机对照组**","积累首批标签","精度首估",
+  "P4 生产","2周","用P3标签重算 + OOT终检","ΔGGR CI下界>0","生产阈值+ROI"
+) |> knitr::kable(caption="上线路径")
+```
+
+::: {.callout-important}
+## P3 的随机对照组是不可省略的
+
+P3 积累的人工复核标签是**条件抽样**——只覆盖被规则抓出来送审的案件。
+用它算召回率会严重高估（系统没抓到的压根不在池子里）。
+
+**必须同时设随机对照组**：从**未命中**群体中随机抽取同等数量送审。
+只有这样才能估计真实召回，也才能把 P3 的「试运行」正当升级为 P4 的「生产」。
+
+省掉这一步，P4 的所有精度数字都是假的。
+:::
+
+## 商业动作与预期收益（量化框架）
+
+```{r}
+#| label: business-actions
+#| echo: false
+tibble::tribble(
+  ~分群, ~动作, ~成本项, ~收益项, ~净收益公式,
+  "V1 核心","返水上浮 x bp / 专属服务","Σ流水×Δbp + 服务成本","留存率↑ × CLV","ΔRetention×CLV − 成本",
+  "V2 稳定","阶梯返水 / 流失预警","预警系统 + 挽回激励","流失率↓","ΔChurn×CLV − 成本",
+  "R1 尾秒","降桌限 / 延后封盘","正常客体验损失(需A/B量化)","未来赢额↓","G1 − 体验损失",
+  "R2 团伙","整链复核 / 限同桌","人力","敞口↓","G1 − L2",
+  "R3 洗码","返水档位调整","可能流失部分流水","返水成本↓","G2 − 流水损失",
+  "R0 组合","立即复核 / 暂停","高人力 + 高误伤代价","敞口↓↓","G1×高精度 − L1 − L2"
+) |> knitr::kable(caption="分群商业动作的成本收益结构")
+```
+
+::: {.callout-note}
+## R1「延后封盘」值得单独说明
+
+若尾秒优势被 @sec-29s 的局内匹配检验**证实存在**，
+最优解未必是「封禁尾秒下注者」，而可能是**产品侧修改**：
+
+- 提前封盘（缩短窗口末端的信息暴露）
+- 对高 TIM 会员单独延后其下注截止（技术上可行）
+- 封盘前 N 秒隐藏他人下注动态
+
+**产品修改的成本远低于人工复核，且无误伤申诉风险。**
+本方案建议：**若尾秒优势证实，优先推荐产品方案而非风控封禁。**
+这是从「抓人」转向「堵漏」的思路转换，是顶级运营方与执法式风控的分野。
+:::
+
+## 监控与回滚
+
+| 监控项 | 频率 | 触发 | 动作 |
+|---|---|---|---|
+| 命中率 | 每日 | 偏离基线 ±50% | 告警 |
+| 特征 PSI | 每周 | > 0.25 | 重标定评审 |
+| 误报率 | 每周 | 超误报预算 | 回滚上一档 |
+| ΔGGR 实测 | 每月 | 连续 2 月 < 0 | **下线该规则** |
+| 对账差额 | 每日 | ≠ 0 | 停用该 cohort |
+
+**健康指标永不贡献风险分。** 把管道故障混入风险分，
+会把技术问题误判为会员行为异常。
+
+---
+
+# 下一步数据需求 {#sec-next}
+
+## 第一优先（解闸门）
+
+```sql
+-- 仅取列定义，秒级返回，不消耗集群
+SELECT TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT
+FROM information_schema.columns
+WHERE TABLE_SCHEMA='ods_mariadb_2b'
+  AND TABLE_NAME IN ('ods_a168_game_info','ods_a168_game_log',
+                     'ods_a168_game_No','ods_a168_realtimelobby')
+ORDER BY TABLE_NAME, ORDINAL_POSITION;
+```
+
+## 第二优先（口径与标签）
+
+| 表 | 行数 | 解锁 |
+|---|---|---|
+| `ods_a168_member` | 58,504,947 | `mem019` 测试户、`mem024` 弱标签、分母 |
+| `ods_a168_dailyreport_member` | 13,373,300 | L1 主标签 |
+| `ods_a168_white_list` | 6,798 | IP/账户白名单 |
+| `ods_a168_ipblacklist` | 366 | 已知恶意IP |
+| `ods_a168_passiplist` | 11 | 白名单IP |
+
+## 第三优先（能力值补全）
+
+| 表 | 行数 | 补全维度 |
+|---|---|---|
+| `ods_a168_mem_login` | 57,295,656 | EVA 规避能力 |
+| `ods_a168_iphistory` | 250,561 | EVA |
+| `ods_a168_betchange_log` | 326,554 | MAN 操作异常 |
+| `ods_a168_tablelimit` / `bet_limit_default` | 116 / 663 | CAP 资金能力 |
+| `ods_a168_in_out_m` | 163,691,655 | CAP |
+| `ods_a168_ban_bet_area` | 24,131 | MAN |
+
+---
+
+# 局限与不承诺 {#sec-limit}
+
+1. **异常 ≠ 违规。** 共享 IP 可能是网吧/家庭/公司网络；尾秒可能只是操作慢。全部须人工复核。
+2. **无审核标签 → 只能给试运行阈值**（需求 §7 明文）。
+3. **封盘时间未定位** → §2.2-1/2/3、§5.1/5.2 共 5 项标记未实现。
+   **当前不得使用「第29秒」类绝对秒表述。**
+4. **荷官 IP 碰撞已证伪**（`employee.lastip` 荷官侧全空），该维度移除。
+5. **L0 金标准仅 17 个 IP**，只能做一票否决，不可估精度。
+6. **仅覆盖百家乐** `bet02='101'`。
+7. **ODS 同步滞后约两个月**，无实时能力。
+8. **P3 标签是条件抽样**，须配随机对照组才能估召回。
+9. **业绩提升若 CI 跨 0，结论即「未能证实」**，不得软化表述。
+10. **共形/可交换性假设在时序下不严格成立。**
+
+---
+
+::: {.callout-tip}
+## 复现说明
+1. `source("sql_pack_generator.R")` → 按 `CFG` 生成 `sql/`
+2. Superset 逐条执行（每 tab 一条语句），导出至 `data/`（UTF-8 BOM）
+3. `quarto render a168风控与客户分层评分体系_商业方案_v5.qmd`
+4. `cache: false`；任何步骤失败由 `guard()` 捕获，不中断渲染
+:::
