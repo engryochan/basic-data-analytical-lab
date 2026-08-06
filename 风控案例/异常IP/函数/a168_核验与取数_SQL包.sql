@@ -36,10 +36,28 @@
    ║  ★ V_ipmatch.csv           ← V-01   三方IP明细对照                  ║
    ║ 其余 8 条（00-1~00-4/E1-03/E1-08/N1b/V2）只看屏幕结果，不必导出。   ║
    ║ ▶ 导出前先跑 §08 的 COUNT-01 数行数，超 10 万用 COUNT-08a/b 分批。  ║
+   ║ ▶ 导出编码务必 UTF-8：表头是中文，存成 ANSI/GBK 会让 Python 报      ║
+   ║   'invalid start byte'。若已存成 GBK 也无妨——报告已内建编码自适应。 ║
    ╚══════════════════════════════════════════════════════════════════╝
    行业正名速查：bet03靴号 bet04第几把 bet05会员 bet09玩法 bet11汇率
    bet13本金 validbet洗码量 bet14派彩 bet16退水 bet17净输赢
    bet18–22五级代理线 bet39桌号 eid荷官  ——详见报告第〇章。 */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   00-0 · 通用取列工具（遇到 "Column X cannot be resolved" 先跑这条）
+   ▸ 导出：不需要 —— 屏幕看结果即可
+   ▸ 用途：只读元数据，秒级返回，不扫任何数据行
+   ▸ 用法：把表名换成报错的那张表即可；可一次查多张（IN 列表）
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT TABLE_NAME AS 表名, ORDINAL_POSITION AS 序号, COLUMN_NAME AS 字段名,
+       DATA_TYPE AS 类型, COLUMN_COMMENT AS 中文注释
+FROM information_schema.columns
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND TABLE_NAME IN ('ods_a168_alert_ip_setting','ods_a168_member_dtl',
+                     'ods_a168_white_list','ods_a168_employee')
+ORDER BY TABLE_NAME, ORDINAL_POSITION;
+/* 说明：ODS 层字段名多为 mem003/age022 这类代号，中文注释栏是唯一线索。
+   本 SQL 包中标 ⚠️ 的表，其列名均来自局部样本判读，正式使用前应先跑本条确认。 */
 
 /* ═══════════════════════════════════════════════════════════════════════
    00-1 · 哨兵局断言（预期 0；非 0 须重评口径）
@@ -182,6 +200,13 @@ GROUP BY risk, orders ORDER BY n_rows DESC;
    ▸ 导出：**数据库/R_rebate_dist.csv**
    ▸ 用途：退水档位人群分布，洗码经济学输入
    ═══════════════════════════════════════════════════════════════════════ */
+/* ⚠️ mem003 列名源自 E2 局部样本判读，未经 E1 实测确认。
+   若报 Column cannot be resolved，先跑下面这条取列定义： */
+-- SELECT ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT
+-- FROM information_schema.columns
+-- WHERE TABLE_SCHEMA='ods_mariadb_2b' AND TABLE_NAME='ods_a168_member_dtl'
+-- ORDER BY ORDINAL_POSITION;
+
 SELECT mem003 AS rebate_rate, COUNT(*) AS n_member,
        COUNT(*)*1.0/SUM(COUNT(*)) OVER() AS pct
 FROM ods_mariadb_2b.ods_a168_member_dtl
@@ -1075,10 +1100,25 @@ GROUP BY lv3 ORDER BY 真实流水 DESC;
    ▸ 导出：**数据库/S04_analyst_score.csv**
    ▸ 用途：★ 风控员评分雷达 + 综合分
    ═══════════════════════════════════════════════════════════════════════ */
-SELECT operator AS 标注人, COUNT(*) AS 标注产量,
-       MIN(create_time) AS first_dt, MAX(create_time) AS last_dt
+/* ✅ 字段已实测确认（2026-08-06 全表 17 行到手）：
+     ip=IP地址  creator=标注人  addtime=标注时间  remarks=备注(判定理由)
+   注意：全表仅 17 行，直接 SELECT * 导出即可，聚合反而丢失 IP 与备注原文。 */
+
+/* ── S-04a · 全表导出（推荐，17 行一次到位）─────────────────────────
+   ▸ 导出：**数据库/S04_analyst_score.csv**                              */
+SELECT id, ip, creator AS 标注人, addtime AS 标注时间, remarks AS 判定理由,
+       CONCAT(SPLIT_PART(ip,'.',1),'.',SPLIT_PART(ip,'.',2),'.',
+              SPLIT_PART(ip,'.',3),'.0/24') AS subnet_24
 FROM ods_mariadb_2b.ods_a168_alert_ip_setting
-GROUP BY operator ORDER BY 标注产量 DESC;
+ORDER BY addtime;
+
+/* ── S-04b · 标注人产量汇总（可选，看一眼即可，无需导出）───────────
+   实测结果：mao 6 / wmdn08 4 / Annie 3 / livegame 2 / wmdn10 1 / wmdn01 1 */
+SELECT creator AS 标注人, COUNT(*) AS 标注产量,
+       SUM(CASE WHEN NULLIF(TRIM(remarks),'') IS NULL THEN 1 ELSE 0 END) AS 理由空白数,
+       MIN(addtime) AS 首次标注, MAX(addtime) AS 末次标注
+FROM ods_mariadb_2b.ods_a168_alert_ip_setting
+GROUP BY creator ORDER BY 标注产量 DESC;
 
 
 /* ═══════════════════════════════════════════════════════════════════════

@@ -1,0 +1,48 @@
+# ── Python 环境与包（体积大，绝不入库；用 setup 块自动重建）──
+.venv-a168/
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+.Python
+pip-log.txt
+pip-wheel-meta数据库/
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+share/python-wheels/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+site-packages/
+pyvenv.cfg
+
+# ── R 环境 ──
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+renv/library/
+
+# ── Quarto 渲染产物 ──
+*_files/
+*_cache/
+/.quarto/
+*.html
+
+# ── 生产数据：含真实会员与 IP，严禁入库 ──
+数据库/
+*.csv
+!数据库/.gitkeep
+
+# ── 系统 ──
+.DS_Store
+Thumbs.db

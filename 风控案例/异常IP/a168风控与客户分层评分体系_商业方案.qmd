@@ -87,6 +87,116 @@ execute:
 ---
 
 ```{r}
+#| label: setup-python
+#| include: false
+## ═══════════════════════════════════════════════════════════════════════
+##  Python 环境自举：建虚拟环境 → 装齐所有建模包 → 写 .gitignore
+##  设计原则：
+##    ① 环境建在**项目内** .venv-a168/，与报告同目录，不污染系统 Python；
+##    ② 包体积大（torch 约 2GB），**一律不进 Git**——本块自动写 .gitignore；
+##    ③ 装过就跳过，二次渲染秒过；装不上不中断渲染（该模型自动跳过）。
+## ═══════════════════════════════════════════════════════════════════════
+if (!requireNamespace("reticulate", quietly = TRUE)) install.packages("reticulate")
+
+PYENV <- ".venv-a168"          # 项目内虚拟环境目录名（已列入 .gitignore）
+
+## ★ 数据目录只在这里定义一次；R 与 Python 两侧统一取用，改名只改这一行
+DATA_DIR <- "数据库"
+if (!dir.exists(DATA_DIR)) dir.create(DATA_DIR, showWarnings = FALSE)
+
+## ── ① 先写 .gitignore：确保任何 Python 包文件永不进 Git ──────────────
+GITIGNORE <- c(
+  "# ── Python 环境与包（体积大，绝不入库；用 setup 块自动重建）──",
+  ".venv-a168/", ".venv/", "venv/", "env/", "ENV/",
+  "__pycache__/", "*.py[cod]", "*$py.class", "*.so", "*.pyd",
+  ".Python", "pip-log.txt", "pip-wheel-metadata/", "*.egg-info/",
+  ".eggs/", "build/", "dist/", "wheels/", "share/python-wheels/",
+  ".ipynb_checkpoints/", ".pytest_cache/", ".mypy_cache/", ".ruff_cache/",
+  "site-packages/", "pyvenv.cfg",
+  "",
+  "# ── R 环境 ──",
+  ".Rproj.user/", ".Rhistory", ".RData", ".Ruserdata", "renv/library/",
+  "",
+  "# ── Quarto 渲染产物 ──",
+  "*_files/", "*_cache/", "/.quarto/", "*.html",
+  "",
+  "# ── 生产数据：含真实会员与 IP，严禁入库 ──",
+  "数据库/", "*.csv", "!数据库/.gitkeep",
+  "",
+  "# ── 系统 ──",
+  ".DS_Store", "Thumbs.db")
+if (!file.exists(".gitignore") ||
+    !grepl(".venv-a168", paste(readLines(".gitignore", warn=FALSE), collapse="\n"), fixed=TRUE)) {
+  writeLines(GITIGNORE, ".gitignore")
+  message("✅ .gitignore 已写入：Python 包、生产数据一律不进 Git")
+}
+
+## ── ② 绑定 Python：先探测、后新建（★ 不强切，避免会话冲突）───────────
+##    reticulate 一个 R 会话只能绑定一个 Python，初始化后不可更改。
+##    已绑定 → 沿用并补装缺包；未绑定 → 建项目内 .venv-a168。
+PY_CORE  <- c("numpy","pandas","scipy","plotly","scikit-learn")
+PY_MODEL <- c("xgboost","lifelines","scikit-survival","hmmlearn")
+PY_DEEP  <- c("torch","pycox")            # 体积大，装不上不影响主线
+PY_BAYES <- c("pymc","arviz")             # 贝叶斯层级，可选
+PY_ALL   <- c(PY_CORE, PY_MODEL, PY_DEEP, PY_BAYES)
+
+## ★ 安装名 ≠ 模块名（scikit-learn→sklearn、scikit-survival→sksurv），必须映射，
+##   否则检测永远判「没装」而无限重装
+MODNAME <- c("numpy"="numpy","pandas"="pandas","scipy"="scipy","plotly"="plotly",
+             "scikit-learn"="sklearn","xgboost"="xgboost","lifelines"="lifelines",
+             "scikit-survival"="sksurv","hmmlearn"="hmmlearn","torch"="torch",
+             "pycox"="pycox","pymc"="pymc","arviz"="arviz")
+
+PY_OK <- FALSE
+already <- tryCatch(reticulate::py_available(initialize = FALSE),
+                    error = function(e) FALSE)
+
+if (already) {
+  ## 情形甲：本会话已绑定 Python（Positron 常自动激活项目 .venv）——沿用之
+  cfg <- tryCatch(reticulate::py_config(), error = function(e) NULL)
+  message("ℹ️ 本会话已绑定 Python，直接沿用：", if (is.null(cfg)) "?" else cfg$python)
+  message("   （若要改用项目内 .venv-a168，请先重启 R 会话再渲染）")
+  PY_OK <- TRUE
+} else {
+  ## 情形乙：尚未绑定——建/复用项目内虚拟环境
+  PY_OK <- tryCatch({
+    has_env <- tryCatch(reticulate::virtualenv_exists(PYENV),
+                        error = function(e) PYENV %in% reticulate::virtualenv_list())
+    if (!has_env) {
+      message("⏳ 首次建立 Python 环境 ", PYENV, "（约 3–5 分钟，仅此一次）…")
+      reticulate::virtualenv_create(PYENV)
+    }
+    reticulate::use_virtualenv(PYENV, required = TRUE)
+    TRUE
+  }, error = function(e) { message("⛔ 建环境失败：", conditionMessage(e)); FALSE })
+}
+
+## ── ②b 缺什么补什么（装进当前已绑定的环境，逐组容错）────────────────
+if (PY_OK) {
+  miss <- PY_ALL[!vapply(PY_ALL, function(p)
+            isTRUE(tryCatch(reticulate::py_module_available(MODNAME[[p]]),
+                            error = function(e) FALSE)), logical(1))]
+  if (length(miss)) {
+    message("⏳ 补装缺失的 Python 包：", paste(miss, collapse=", "))
+    for (grp in list(intersect(miss, PY_CORE),  intersect(miss, PY_MODEL),
+                     intersect(miss, PY_DEEP),  intersect(miss, PY_BAYES)))
+      if (length(grp)) try(reticulate::py_install(grp, pip = TRUE), silent = TRUE)
+  }
+}
+
+if (!PY_OK) message("⛔ Python 未就绪——雷达图与模型竞技场将跳过，R 部分不受影响")
+
+## ── ③ 装了什么，一目了然 ─────────────────────────────────────────────
+if (PY_OK) {
+  chk <- function(m) isTRUE(tryCatch(reticulate::py_module_available(m),
+                                     error = function(e) FALSE))
+  PY_HAS <- vapply(MODNAME, chk, logical(1))
+  message("Python 包就位：",
+          paste(names(PY_HAS), ifelse(PY_HAS, "✅", "⬜"), collapse = "  "))
+}
+```
+
+```{r}
 #| label: setup
 #| include: false
 if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
@@ -96,9 +206,24 @@ suppressPackageStartupMessages(pacman::p_load(
 OPT <- c("binom","boot","pROC","PRROC","yardstick","igraph","xgboost",
          "randomForestSRC","survival","brms","fastshap","DALEX","DBI","odbc")
 HAS <- setNames(vapply(OPT, requireNamespace, logical(1), quietly=TRUE), OPT)
+## guard：任何一节缺数/报错都不中断渲染，并在正文留下「待数据」占位，
+## 避免读者看到莫名其妙的空白（工业级报告不应有无解释的空段）
+NEED <- list(  # 每个 label 对应缺哪份导出文件，供占位提示指路
+  "版本ABC"="I_ip_agg.csv", "最小订单数"="I_ip_player.csv",
+  "关联数定位"="I_ip_agg.csv", "IP网格"="I_ip_player.csv",
+  "强特征"="S_player_tail.csv", "尾段网格"="S_player_tail.csv",
+  "能力值"="S_player_tail.csv")
 guard <- function(expr, label, on_fail=NULL)
   tryCatch(force(expr), error=function(e){
-    message(glue::glue("⛔ [{label}] 跳过：{conditionMessage(e)}")); on_fail })
+    message(glue::glue("⛔ [{label}] 跳过：{conditionMessage(e)}"))
+    need <- if (!is.null(NEED[[label]])) NEED[[label]] else "对应导出文件"
+    ph <- tibble::tibble(
+      状态 = "⬜ 待数据",
+      本节内容 = label,
+      缺什么 = need,
+      怎么办 = glue::glue("按 @sec-runbook 导出 {need} 到 `{DATA_DIR}/`，重渲染即自动出表"))
+    print(aurora_kb(ph, caption = glue::glue("{label}：待数据占位（非错误）")))
+    on_fail })
 ## ── 极光配色（Aurora）：全文主题、表格、图形统一 ─────────────────────
 PAL <- list(bg="#050d1a", fg="#dff7ee", accent="#22d3ee",
             warn="#ffd64d", bad="#ff6b8b", good="#00e5a0", violet="#8b5cf6")
@@ -128,9 +253,23 @@ set.seed(20260806)
 ## ★ E1 全局窗口（139 营业日），禁用任何局部窗口；改窗须同步改 SQL 包字面量
 CFG <- list(db="ods_mariadb_2b", game_cat="101",
             dt_from="2026-03-21", dt_to="2026-08-07",
-            csv_dir="数据库", win_days=30)
+            csv_dir=DATA_DIR, win_days=30)
+## ★ 编码自适应读取：Superset/Excel 导出常为 GB18030 或带 BOM 的 UTF-8，
+##   直接 read_csv 会报 "invalid start byte"。依次试 UTF-8 → GB18030 → Latin1。
+read_any <- function(f){
+  for (enc in c("UTF-8","GB18030","GBK","Latin1")) {
+    x <- try(suppressWarnings(readr::read_csv(
+           f, locale = readr::locale(encoding = enc), show_col_types = FALSE)),
+         silent = TRUE)
+    if (!inherits(x, "try-error") && ncol(x) > 0) {
+      if (enc != "UTF-8") message(glue::glue("ℹ️ [{basename(f)}] 以 {enc} 读入"))
+      return(x)
+    }
+  }
+  message(glue::glue("⛔ [{basename(f)}] 所有编码均读取失败")); NULL
+}
 fetch <- function(n){ f<-file.path(CFG$csv_dir,paste0(n,".csv"))
-  if(file.exists(f)) guard(readr::read_csv(f,show_col_types=FALSE),n)
+  if(file.exists(f)) guard(read_any(f),n)
   else { message(glue::glue("ℹ️ [{n}] 未就位")); NULL } }
 D <- list(recon=fetch("V_recon"), ipmatch=fetch("V_ipmatch"),
           table_span=fetch("T_table_span"), sec_dist=fetch("S_second_dist"),
@@ -604,10 +743,10 @@ tibble::tribble(
 
 ```{r}
 #| label: tail-significance
-#| eval: false
+#| eval: TRUE
 
 ## D-03S 输出：bet_date, n_rounds, vb_tail, vb_norm, roi_tail, roi_norm, roi_diff
-d <- readr::read_csv("数据库/D03S_daily_roi_diff.csv", show_col_types = FALSE)
+d <- readr::read_csv(file.path(DATA_DIR, "D03S_daily_roi_diff.csv"), show_col_types = FALSE)
 
 ## ---- ① 单样本 t 检验（日为独立单元）--------------------------------
 tt <- stats::t.test(d$roi_diff, mu = 0)
@@ -1270,13 +1409,18 @@ $$\text{下注进度} = \frac{\texttt{bet08} - \texttt{gi004}}{\texttt{gi006} - 
 
 | 备注原文 | 次数 | 对应指标 |
 |---|---|---|
-| 關注對象 | 8 | （无具体判据） |
+| 關注對象 | **7** | （无具体判据） |
 | 多會員同IP | 2 | `IP-S3` |
+| 風控通知關注對象 | 2 | （外部通知） |
+| （空白） | **2** | 未写理由——**流程缺陷，见下方措施** |
 | 多會員同IP、**對押** | 1 | `IP-S3` + **`IP-S6`** ← 需求未覆盖 |
 | 同ip下注 | 1 | `IP-S3` |
 | **幾個相同玩法**投注會員使用IP | 1 | `IP-S3` + **`IP-S7`** ← 需求未覆盖 |
 | **信用ISN底下**同IP | 1 | `IP-S3` + **`AX-A5`** ← 需求未覆盖 |
-| 風控通知關注對象 | 2 | （外部通知） |
+
+> **实测斧正（2026-08-06 全表 17 行到手）**：此前记载「關注對象 8 条」有误，
+> 实为 **7 条**，另有 **2 条备注栏完全空白**。字段实测确认为
+> `ip` / `creator`（标注人）/ `addtime`（标注时间）/ `remarks`（备注）。
 
 **三项人工判据补入指标体系**：
 
@@ -1297,9 +1441,12 @@ $$\text{下注进度} = \frac{\texttt{bet08} - \texttt{gi004}}{\texttt{gi006} - 
 
 | /24 网段 | 命中 IP 数 | 标注人 | 日期跨度 |
 |---|---|---|---|
-| `111.247.37.0/24` | **6** | Annie / wmdn08 / livegame / mao | 2022-05-10 ~ 06-09 |
+| `111.247.37.0/24` | **6** | Annie / wmdn08 / livegame / mao（**4 人**） | 2022-05-06 ~ 06-09 |
 | `103.123.134.0/24` | 2 | wmdn01 / mao | 2022-03-27 ~ 06-26 |
 | 其余 9 个 /24 | 各 1 | — | — |
+
+**标注人产量实测**：mao 6 条、wmdn08 4 条、Annie 3 条、livegame 2 条、
+wmdn10 1 条、wmdn01 1 条——**6 位风控员**，非此前记载的 4 位。
 
 ::: {.callout-tip}
 **四位风控人员、跨一个月、未协同，却收敛到同一 /24 网段。**
@@ -1310,6 +1457,33 @@ $$\text{下注进度} = \frac{\texttt{bet08} - \texttt{gi004}}{\texttt{gi006} - 
 同时提供 **17 个人工确认正样本**作为 **L0 金标准**：
 **新阈值若连这 17 个都命中不了，直接判不合格**（必要条件，非充分）。
 样本量为 17，**不可估精度或召回**，仅作一票否决。
+:::
+
+::: {.callout-warning}
+## 实测揭示的硬伤：这份名单已经三年没人维护了
+
+全表 17 条的时间分布：**2022 年 16 条、2025 年 1 条、2023–2024 年整整两年零记录**，
+最后一条是 2025-07-18（还是空白备注）。而主键 id 从 116 跳到 141，
+**中间缺 9 个号**——说明历史上有过删除或未同步，这 17 条并非全部历史。
+
+**说人话**：风控员在 2022 年集中盯过一批 IP，之后这套「关注名单」就荒废了。
+它现在的价值是**历史判据样本**（教我们风控员当年凭什么下判断），
+**不是**现行有效的黑名单。
+
+## 商业措施
+
+1. **立即**：金标准的一票否决条款**降级为参考**——三年前的 IP
+   在 2026 窗口大概率早已换人换机（跑 `A-01` 用数据确认，不要靠推测）；
+   新阈值命不中它们**不构成否决**。
+2. **本月**：把这套人工判据**产品化**——`IP-S3`（多会员同 IP）、
+   `IP-S6`（对押）、`IP-S7`（相同玩法）、`AX-A5`（信用 ISN 同链）
+   四条已进指标体系，风控员不必再手工记 IP，系统自动出候选名单。
+3. **本月**：关注名单表**加两个必填字段**——「判定理由」与「复核结论」。
+   现有 17 条里 2 条理由空白、17 条**全部没有后续结论**，
+   等于标了却不知道最后查没查、是不是真的。这是评估命中率的前提。
+4. **中期**：风控员评分（S-04）的「命中率」维度目前**无法计算**——
+   因为没有复核结论字段。措施 3 落地满 3 个月后才可启用该维度，
+   在此之前 S-04 只计「标注产量」与「判据明确度」两项。
 :::
 
 ## C-01 / C-06 / C-08 实测核验（2026-08-06 交付） {#sec-c-verify}
@@ -1772,7 +1946,8 @@ FROM ip_player GROUP BY window_id, bet_ip;
 
 ```{r}
 #| label: ip-abc
-#| eval: !expr AVAIL$ip_agg
+#| eval: TRUE
+# eval: !expr AVAIL$ip_agg
 guard({
   x <- D$ip_agg |> dplyr::mutate(
     rate_A=n_prof_A/pmax(n_member_eff,1),
@@ -1805,7 +1980,8 @@ guard({
 
 ```{r}
 #| label: ip-min-orders
-#| eval: !expr AVAIL$ip_player
+#| eval: TRUE
+# !expr AVAIL$ip_player
 guard({
   ip <- D$ip_player
   purrr::map_dfr(c(1,5,10,20,30,50,100,200), function(m){
@@ -1826,7 +2002,8 @@ guard({
 
 ```{r}
 #| label: ip-position
-#| eval: !expr AVAIL$ip_agg
+#| eval: TRUE
+# eval: !expr AVAIL$ip_agg
 guard({
   x <- D$ip_agg; q <- stats::ecdf(x$n_member_eff); k <- c(2,3,5,10,20,30,50,100)
   tibble::tibble(关联玩家数=k,
@@ -1847,7 +2024,8 @@ IP订单占比 `20%/50%/80%`、盈利玩家比例 `70%/80%/90%/100%`。
 
 ```{r}
 #| label: ip-grid
-#| eval: !expr AVAIL$ip_player
+#| eval: TRUE
+# eval: !expr AVAIL$ip_player
 ip_hit <- function(ipp, min_members, min_orders, min_share, min_rate, ver="C"){
   e <- ipp |> dplyr::filter(n_orders_ip>=min_orders, ip_order_share>=min_share)
   agg <- e |> dplyr::group_by(bet_ip) |> dplyr::summarise(
@@ -2034,7 +2212,8 @@ FROM flag GROUP BY member_id;
 
 ```{r}
 #| label: strong
-#| eval: !expr AVAIL$player_tail
+#| eval: TRUE
+# eval: !expr AVAIL$player_tail
 guard({
   p <- D$player_tail; s <- p |> dplyr::filter(tail_game_pnl>0, norm_game_pnl<=0)
   tibble::tibble(
@@ -2058,7 +2237,8 @@ guard({
 
 ```{r}
 #| label: tail-grid
-#| eval: !expr AVAIL$player_tail
+#| eval: TRUE
+# eval: !expr AVAIL$player_tail
 tail_hit <- function(p,min_rounds,min_share,min_wr,min_diff)
   dplyr::filter(p, n_rounds_tail>=min_rounds, tail_share>=min_share,
                 tail_winrate>=min_wr, winrate_diff>=min_diff)
@@ -2172,7 +2352,8 @@ tibble::tribble(
 
 ```{r}
 #| label: cap-score
-#| eval: !expr AVAIL$player_tail
+#| eval: TRUE
+# eval: !expr AVAIL$player_tail
 cap_score <- function(x){ r <- rank(x, na.last="keep", ties.method="average")
   round(100*(r-0.5)/sum(!is.na(x)),1) }   # 分位映射，稳健于极端值
 guard({
@@ -2236,34 +2417,66 @@ aurora_dt(评分设计, caption="四实体 · 赏罚分明评分设计", len=22)
 #| label: radar-scores
 #| echo: true
 # ── 四实体评分 + 互动雷达（plotly）：全局聚合 CSV → 归一化 → 赏−罚 ──
-import os, numpy as np, pandas as pd
-import plotly.graph_objects as go
+# 环境由第一个 chunk（setup-python）自举，此处只做守卫，缺包不中断渲染
+import os, sys
+try:
+    import numpy as np, pandas as pd
+    import plotly.graph_objects as go
+    ENV_OK = True
+except ImportError as e:
+    print(f"⛔ Python 环境缺件（{e}）——本节跳过，不影响其余章节")
+    ENV_OK = False
 
 AUR = dict(bg="#050d1a", fg="#dff7ee", g="#00e5a0", c="#22d3ee",
            v="#8b5cf6", p="#f0abfc", bad="#ff6b8b")
+DATA_DIR = r.DATA_DIR          # ★ 目录名统一由 R 侧 setup 提供，勿在此写死
+RADAR_HTML = []                # 雷达图 HTML 片段容器（交由 R 块内嵌）
+SCORE_TBL  = []                # 综合分汇总（交由 R 块出表）
 ENT = {  # 实体: (文件, 维度列->赏罚方向 +1赏 / -1罚)
- "玩家": ("数据库/S01_player_score.csv",
+ "玩家": (f"{DATA_DIR}/S01_player_score.csv",
    {"流水贡献":1,"游戏输赢贡献":1,"活跃稳定":1,
     "对打指数":-1,"批量注册嫌疑":-1,"IP结构风险":-1,"人工标记史":-1}),
- "荷官": ("数据库/S02_dealer_score.csv",
+ "荷官": (f"{DATA_DIR}/S02_dealer_score.csv",
    {"在桌洗码量":1,"客群广度":1,"对打局占比":-1,"异常对关联":-1,"風險單密度":-1}),
- "代理": ("数据库/S03_agent_score.csv",
+ "代理": (f"{DATA_DIR}/S03_agent_score.csv",
    {"线下规模":1,"真实流水":1,"对打渗透率":-1,"单链密度":-1,"退水消耗比":-1}),
- "风控员":("数据库/S04_analyst_score.csv",
+ "风控员":(f"{DATA_DIR}/S04_analyst_score.csv",
    {"标注产量":1,"命中率":1,"复核时效":1,"误标率":-1})}
+
+def read_any(path):
+    """★ 编码自适应：Superset/Excel 导出常为 GB18030 或带 BOM 的 UTF-8。
+       依次尝试，全失败才报错——杜绝 'invalid start byte' 中断渲染。"""
+    for enc in ("utf-8-sig", "utf-8", "gb18030", "gbk", "big5", "latin1"):
+        try:
+            df = pd.read_csv(path, encoding=enc)
+            if enc not in ("utf-8-sig", "utf-8"):
+                print(f"ℹ️ [{os.path.basename(path)}] 以 {enc} 读入")
+            return df
+        except (UnicodeDecodeError, LookupError):
+            continue
+    raise UnicodeDecodeError("read_any", b"", 0, 1,
+                             f"{path} 所有候选编码均失败")
 
 def pct_norm(s):                       # 分位归一 0–100：抗极端值
     return s.rank(pct=True).mul(100)
 
-for ent,(path,dims) in ENT.items():
+for ent,(path,dims) in (ENT.items() if ENV_OK else []):
     if not os.path.exists(path):
         print(f"ℹ️ [{ent}] {path} 未就位——跑 SQL 包 §06 导出后自动渲染"); continue
-    df = pd.read_csv(path)
+    df = read_any(path)
+    df.columns = [str(c).strip().replace("\ufeff","") for c in df.columns]  # 去BOM/空格
+    have = {d:s for d,s in dims.items() if d in df.columns}       # ★ 有几维算几维
     miss = [d for d in dims if d not in df.columns]
-    if miss: print(f"⛔ [{ent}] 缺列 {miss}，跳过"); continue
+    if miss:
+        print(f"ℹ️ [{ent}] 缺 {len(miss)} 维（{miss}）——"
+              f"以现有 {len(have)} 维作图；缺的维度多在 Python 侧由 C-06/C-01 并入")
+    if len(have) < 2:
+        print(f"⛔ [{ent}] 可用维度不足 2，跳过"); continue
+    dims = have                                                    # 用实际可用维度
     N = df[list(dims)].apply(pct_norm)
-    df["赏"] = N[[d for d,s in dims.items() if s>0]].mean(axis=1)
-    df["罚"] = N[[d for d,s in dims.items() if s<0]].mean(axis=1)
+    pos = [d for d,s in dims.items() if s>0]; neg = [d for d,s in dims.items() if s<0]
+    df["赏"] = N[pos].mean(axis=1) if pos else 0.0
+    df["罚"] = N[neg].mean(axis=1) if neg else 0.0
     df["综合分"] = df["赏"] - df["罚"]          # 赏罚分明：正=该赏，负=该罚
     # 雷达：高危组(综合分P5以下) vs 优质组(P95以上) vs 全体均值
     grp = {"优质组(赏)": df[df.综合分>=df.综合分.quantile(.95)],
@@ -2276,14 +2489,52 @@ for ent,(path,dims) in ENT.items():
             theta=list(dims)+[list(dims)[0]], name=name,
             line=dict(color=col,width=2), fill="toself", opacity=.55))
     fig.update_layout(title=f"{ent} · 维度画像雷达（分位 0–100）",
-        paper_bgcolor=AUR["bg"], font=dict(color=AUR["fg"]),
+        paper_bgcolor=AUR["bg"], plot_bgcolor=AUR["bg"],
+        font=dict(color=AUR["fg"]), height=460,
         polar=dict(bgcolor="rgba(10,25,45,.6)",
-                   radialaxis=dict(range=[0,100],gridcolor="#1e3a52")),
-        legend=dict(bgcolor="rgba(0,0,0,0)"))
-    fig.show()
-    top = df.nlargest(10,"综合分"); bot = df.nsmallest(10,"综合分")
-    print(f"[{ent}] 综合分分布: P5={df.综合分.quantile(.05):.1f} "
-          f"P50={df.综合分.median():.1f} P95={df.综合分.quantile(.95):.1f}")
+                   radialaxis=dict(range=[0,100],gridcolor="#1e3a52"),
+                   angularaxis=dict(gridcolor="#1e3a52")),
+        legend=dict(bgcolor="rgba(0,0,0,0)"),
+        margin=dict(l=60,r=60,t=60,b=40))
+    ## ★ 不用 fig.show()：reticulate 块的 show() 在 quarto render 时常丢失。
+    ##   改为产出 HTML 片段，由下一个 R 块以 asis 内嵌，保证图落在文档里。
+    RADAR_HTML.append(fig.to_html(full_html=False,
+                      include_plotlyjs=("cdn" if not RADAR_HTML else False),
+                      default_height="460px"))
+    SCORE_TBL.append({"实体":ent, "样本数":len(df),
+        "可用维度":len(dims),
+        "综合分P5":round(df.综合分.quantile(.05),1),
+        "综合分P50":round(df.综合分.median(),1),
+        "综合分P95":round(df.综合分.quantile(.95),1),
+        "该赏人数(≥P95)":int((df.综合分>=df.综合分.quantile(.95)).sum()),
+        "该罚人数(≤P5)":int((df.综合分<=df.综合分.quantile(.05)).sum())})
+    df.sort_values("综合分",ascending=False).to_csv(
+        f"{DATA_DIR}/_scored_{ent}.csv", index=False, encoding="utf-8-sig")
+```
+
+```{r}
+#| label: radar-embed
+#| echo: false
+#| output: asis
+## ★ 把 Python 侧生成的 plotly 片段内嵌进本文档（保证图表显示在报告里）
+h <- tryCatch(reticulate::py$RADAR_HTML, error = function(e) NULL)
+if (length(h)) {
+  for (x in h) cat(x, "\n\n")
+} else {
+  cat("::: {.callout-note}\n",
+      "四实体雷达图待 `S01`–`S04` 四份评分底料导出后自动出图",
+      "（见 @sec-runbook 第二批）。\n:::\n")
+}
+```
+
+```{r}
+#| label: radar-summary
+#| echo: false
+s <- tryCatch(reticulate::py$SCORE_TBL, error = function(e) NULL)
+if (length(s)) {
+  dplyr::bind_rows(lapply(s, tibble::as_tibble)) |>
+    aurora_kb(caption="四实体综合分汇总（赏罚分明：≥P95 该赏、≤P5 该罚）")
+} else invisible(NULL)
 ```
 
 ## 赏罚处置表（综合分 → 动作）
@@ -2312,8 +2563,14 @@ for ent,(path,dims) in ENT.items():
 #| label: py-arena
 #| echo: true
 # ── 统一竞技场：净化滚动回测器 + 模型注册表（缺库/缺数自动跳过不炸渲染）──
-import os, warnings, numpy as np, pandas as pd
+# 环境由第一个 chunk（setup-python）自举
+import os, warnings
 warnings.filterwarnings("ignore")
+try:
+    import numpy as np, pandas as pd
+    ENV_OK = True
+except ImportError as e:
+    print(f"⛔ Python 环境缺件（{e}）——竞技场跳过"); ENV_OK = False
 
 class PurgedWalkForward:
     """按营业日滚动：训练窗→embargo隔离→测试窗；
@@ -2332,11 +2589,19 @@ class PurgedWalkForward:
             yield tr, te
             cur += pd.Timedelta(days=self.te)
 
-PANEL = "数据库/S05_member_month_panel.csv"     # SQL包 §06 S-05：会员×月评分面板
-if not os.path.exists(PANEL):
+ARENA_TBL = []                 # 模型天梯容器（交由 R 块出表）
+PANEL = f"{r.DATA_DIR}/S05_member_month_panel.csv"     # SQL包 §06 S-05：会员×月评分面板
+if not ENV_OK:
+    pass
+elif not os.path.exists(PANEL):
     print("ℹ️ 面板未就位——跑 S-05 导出后本竞技场自动全跑")
 else:
-    df = pd.read_csv(PANEL)
+    def read_any(path):                # 编码自适应（同上，块内独立可用）
+        for enc in ("utf-8-sig","utf-8","gb18030","gbk","big5","latin1"):
+            try: return pd.read_csv(path, encoding=enc)
+            except (UnicodeDecodeError, LookupError): continue
+        raise RuntimeError(f"{path} 所有候选编码均失败")
+    df = read_any(PANEL)
     ycol, feats = "risk_label", [c for c in df.columns
                    if c not in ("member_id","bet_date","round_key","risk_label")]
     X, y = df[feats].fillna(0), df[ycol]
@@ -2419,7 +2684,27 @@ else:
     if board:
         lb = pd.DataFrame(board, columns=["模型","AUC均值","AUC波动","折数"]
              ).sort_values("AUC均值", ascending=False)
+        lb["AUC均值"] = lb["AUC均值"].round(4); lb["AUC波动"] = lb["AUC波动"].round(4)
+        ARENA_TBL = lb.to_dict("records")        # ★ 交给 R 块出极光表
         print(lb.to_string(index=False))
+    else:
+        ARENA_TBL = []
+```
+
+```{r}
+#| label: arena-table
+#| echo: false
+a <- tryCatch(reticulate::py$ARENA_TBL, error = function(e) NULL)
+if (length(a)) {
+  dplyr::bind_rows(lapply(a, tibble::as_tibble)) |>
+    aurora_kb(caption="模型天梯 · 净化滚动回测（60 训练 / 7 隔离 / 14 测试，整局 purge）")
+} else {
+  tibble::tibble(
+    状态 = "⬜ 待数据",
+    说明 = "导出 `S05_member_month_panel.csv` 后，本天梯自动跑满全部模型并出榜",
+    涵盖模型 = "XGBoost · 随机森林 · CoxPH · RSF · PCA+聚类 · Autoencoder · Transformer · HMM · 贝叶斯层级"
+  ) |> aurora_kb(caption="模型天梯 · 净化滚动回测（待面板数据）")
+}
 ```
 
 ## 顶级公司评估标准对照
@@ -2773,10 +3058,42 @@ P3 的人工复核标签是**条件抽样**——只覆盖被规则抓出来送�
    即 `.../a168风控与客户分层评分体系_商业方案.qmd` 旁边新建 `数据库/`。
 3. **文件名一个字都不能错**——报告按名读取；名字错了图表**不报错、只空白**，
    这是最坑的失败方式。导出选 **CSV（UTF-8）**，导出前确认 SQL 末尾有 `ORDER BY`。
-4. **先数行数再导**——跑 SQL 包 §08 的 `COUNT-01`（一次出 5 个数字），
+4. **导出编码选 UTF-8**——表头是中文，存成 ANSI/GBK 会让 Python 报
+   `invalid start byte`。若已经存成 GBK 也不必重导：报告内建**编码自适应读取**
+   （UTF-8 → GB18030 → GBK → Big5 → Latin1 依次尝试），会在日志里注明用了哪种。
+5. **先数行数再导**——跑 SQL 包 §08 的 `COUNT-01`（一次出 5 个数字），
    超过 10 万行的用 `COUNT-08a` 按会员号区间切分，**不要用 OFFSET 翻页**：
    之前 277 批数据出现 36.49% 重复，根因就是分页没有稳定排序。
 :::
+
+## 第零批 · 环境（第一次渲染时自动完成，不用手动做任何事）
+
+报告的**第一个代码块**会自己把 Python 环境备齐：
+
+1. 在报告同目录建 `.venv-a168/` 虚拟环境（**装在项目里，不动系统 Python**）；
+2. 依次装：核心计算（numpy/pandas/scipy/plotly/scikit-learn）→
+   建模（xgboost/lifelines/scikit-survival/hmmlearn）→
+   深度学习（torch/pycox）→ 贝叶斯（pymc/arviz）；
+3. 自动写 `.gitignore`。
+
+::: {.callout-important}
+## Git 纪律：这些东西一律不进库
+
+`.gitignore` 由 setup 块自动写入，覆盖三类：
+
+| 类别 | 排除内容 | 原因 |
+|---|---|---|
+| **Python 包** | `.venv-a168/`、`__pycache__/`、`*.pyc`、`site-packages/`、`*.egg-info/` | 单是 torch 就约 2 GB，且跨平台不通用——**换台机器重新渲染一次即可自动重建**，没有任何理由入库 |
+| **生产数据** | `数据库/`、`*.csv` | 含真实会员号与 IP，**属个资，严禁入库** |
+| 渲染产物 | `*_files/`、`*_cache/`、`.quarto/`、`*.html` | 可再生 |
+
+**入库的只有两份源文件**：`.qmd` 报告与 `.sql` 查询包。
+任何人 clone 下来，跑一次 `quarto render` 就能得到完全一样的环境。
+:::
+
+首次约 3–5 分钟（主要在装 torch），之后每次渲染秒过。
+装不上的包**不会中断渲染**——对应模型自动跳过并在日志里标 ⬜，
+其余章节照常出。
 
 ## 第一批 · 体检（5 分钟，不用存文件）
 
@@ -2865,7 +3182,7 @@ need <- c("S01_player_score","S02_dealer_score","S03_agent_score",
           "P_player_month","X_combo","L_label_dist","R_rebate_dist","V_ipmatch")
 chk <- tibble::tibble(
   文件 = paste0(need, ".csv"),
-  状态 = ifelse(file.exists(file.path("数据库", paste0(need, ".csv"))),
+  状态 = ifelse(file.exists(file.path(DATA_DIR, paste0(need, ".csv"))),
                 "✅ 已就位", "⬜ 待导出"))
 aurora_kb(chk, caption="导出清单自检（渲染时自动核对 数据库/ 目录）")
 ```
