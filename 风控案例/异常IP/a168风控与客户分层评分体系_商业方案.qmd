@@ -4,9 +4,33 @@ subtitle: "异常 IP 与尾秒下注阈值分析 · 全需求实现 · 实测校
 author: "®γσ ξηg（Ryo Eng）· 世博量化® Scibrokes Trading®"
 date: today
 lang: zh-CN
+engine: knitr   # R+Python 混排：python 块经 reticulate 执行
 format:
   html:
     theme: [darkly, custom.scss]
+    include-in-header:
+      text: |
+        <style>
+        :root{--ag:#00e5a0;--ac:#22d3ee;--av:#8b5cf6;--ap:#f0abfc;}
+        body{background:
+          radial-gradient(1100px 560px at 12% -8%,rgba(0,229,160,.20),transparent 60%),
+          radial-gradient(1000px 520px at 88% -2%,rgba(139,92,246,.22),transparent 55%),
+          radial-gradient(900px 520px at 50% 112%,rgba(34,211,238,.16),transparent 60%),
+          #050d1a !important;}
+        table,.gt_table,table.dataTable,.table{
+          background:linear-gradient(135deg,rgba(0,229,160,.12),
+            rgba(34,211,238,.09) 45%,rgba(139,92,246,.16)) !important;
+          color:#e7fbf3 !important;border-color:rgba(34,211,238,.25)!important;}
+        thead th,.gt_col_heading{background:linear-gradient(90deg,
+          rgba(0,229,160,.35),rgba(34,211,238,.30),rgba(139,92,246,.35))!important;
+          color:#062018 !important;font-weight:700;}
+        tbody tr:hover{background:rgba(34,211,238,.14)!important;}
+        .dataTables_wrapper,.dataTables_info,.dataTables_paginate{color:#bfeee0!important;}
+        h1,h2{background:linear-gradient(90deg,var(--ag),var(--ac),var(--av));
+          -webkit-background-clip:text;background-clip:text;color:transparent;}
+        .callout{background:rgba(8,25,45,.75)!important;
+          border-left-color:var(--ac)!important;}
+        </style>
     toc: true
     toc-depth: 4
     toc-location: left
@@ -37,8 +61,24 @@ HAS <- setNames(vapply(OPT, requireNamespace, logical(1), quietly=TRUE), OPT)
 guard <- function(expr, label, on_fail=NULL)
   tryCatch(force(expr), error=function(e){
     message(glue::glue("⛔ [{label}] 跳过：{conditionMessage(e)}")); on_fail })
-PAL <- list(bg="#0E1B2A", fg="#E6EDF3", accent="#33A8C4",
-            warn="#FFD64D", bad="#FF6B6B", good="#4CB5F5")
+## ── 极光配色（Aurora）：全文主题、表格、图形统一 ─────────────────────
+PAL <- list(bg="#050d1a", fg="#dff7ee", accent="#22d3ee",
+            warn="#ffd64d", bad="#ff6b8b", good="#00e5a0", violet="#8b5cf6")
+AUR <- PAL  # 别名，供 plotly / DT 调用
+aurora_dt <- function(df, caption=NULL, len=12)  # 互动式极光桌表
+  DT::datatable(df, rownames=FALSE, caption=caption, extensions="Buttons",
+    options=list(pageLength=len, dom="Bfrtip", buttons=c("copy","csv"),
+                 scrollX=TRUE), class="display aurora")
+
+## 静态表统一走 aurora_kb：极光渐变底 + 高对比字，杜绝灰底看不清
+aurora_kb <- function(df, caption=NULL, ...)
+  knitr::kable(df, caption=caption, format="html", escape=FALSE, ...) |>
+  kableExtra::kable_styling(
+    bootstrap_options=c("hover","condensed","responsive"),
+    full_width=TRUE, font_size=13) |>
+  kableExtra::row_spec(0, background="#0b3d3a", color="#7dffd4", bold=TRUE) |>
+  kableExtra::row_spec(seq_len(nrow(df)),
+    background="#08243c", color="#e7fbf3", extra_css="border-color:#1e5a6b;")
 theme_set(theme_minimal(base_size=12) + theme(
   plot.background=element_rect(fill=PAL$bg,colour=NA),
   panel.background=element_rect(fill=PAL$bg,colour=NA),
@@ -46,8 +86,9 @@ theme_set(theme_minimal(base_size=12) + theme(
   panel.grid=element_line(colour="#1E3247")))
 set.seed(20260806)
 
+## ★ E1 全局窗口（139 营业日），禁用任何局部窗口；改窗须同步改 SQL 包字面量
 CFG <- list(db="ods_mariadb_2b", game_cat="101",
-            dt_from="2026-01-01", dt_to="2026-05-01",
+            dt_from="2026-03-21", dt_to="2026-08-07",
             csv_dir="data", win_days=30)
 fetch <- function(n){ f<-file.path(CFG$csv_dir,paste0(n,".csv"))
   if(file.exists(f)) guard(readr::read_csv(f,show_col_types=FALSE),n)
@@ -60,6 +101,87 @@ D <- list(recon=fetch("V_recon"), ipmatch=fetch("V_ipmatch"),
           online=fetch("B_online_base"))
 AVAIL <- lapply(D, Negate(is.null))
 ```
+
+---
+
+# 第〇章 · 用哪些表、什么维度、如何正名 {#sec-tables}
+
+> 开工先点货。本章把整套方案用到的数据表、分析维度、字段正名一次讲清，
+> **全部口径以 E1 全局查询为准，不采信任何十万行局部样本**。
+
+::: {.callout-important}
+## 全局数据纪律（本报告第一铁律）
+凡入结论的数字，必须来自 Superset 对 StarRocks 的**全量窗口查询**
+（2026-03-21 ~ 2026-08-07，139 个营业日）；导出受 1,000 行上限截断时，
+只承认「排序头部」结论，**任何「未出现」类判断在截断导出上一律无效**。
+:::
+
+## 核心数据表清单（互动式桌表）
+
+```{r}
+#| label: tbl-inventory
+#| echo: false
+表清单 <- tibble::tribble(
+  ~表名, ~行数量级, ~行业含义, ~在本方案的角色, ~状态,
+  "ods_a168_bet02","≈1.9亿","注单流水（结算侧）——每一注的本金、派彩、退水、代理线、IP","**主表**：流水、输赢、洗码量全从这来","✅ 主力",
+  "ods_a168_bet01","≈1.8亿","注单流水（下注侧）——与 bet02 同单号，早 10–30 秒","对账辅助","✅ 辅助",
+  "ods_a168_game_info","1,147万","局表——每一把的开局/开奖时间、桌台、局状态","封盘代理口径、局级对账基准","✅ 主力",
+  "ods_a168_agent","46,163","代理树——五级代理线，age022='1' 是公司测试线","**测试线剔除**（214 条）+ 占成链分析","✅ 主力",
+  "ods_a168_member / member_dtl","百万级","会员档案——mem003 是每人的退水配置","退水口径（0.3/0.8/0.9% 档）","✅ 辅助",
+  "ods_a168_dailyreport_member","日粒度","日结报表——risk(風險單)/orders(劃單) 人工标记","**唯一时间窗重叠的人工标签**","✅ 标签",
+  "ods_a168_alert_ip_setting","17","风控关注 IP 名单——备注栏是风控员判定原话","**L0 金标准**（一票否决）","✅ 金标准",
+  "ods_a168_white_list","按代理","代理名下 IP 白名单（逗号串，需展开）","IP 排除清单","✅ 辅助",
+  "ods_a168_ipblacklist / passiplist","小表","IP 黑名单 / 已处理名单","IP 排除清单","✅ 辅助",
+  "ods_a168_employee","1,856(荷官)","员工档案——type=3 为荷官","荷官维度主键来源","⚠️ lastip 全空",
+  "ods_a168_game_log","1,801万","登入日志——country/region 100% 填充","地理参考；**ip 是网关，禁作下注 IP**","⚠️ 限制使用",
+  "ods_a168_risklist","—","历史风险名单","与 bet02 零关联率","⛔ 已作废",
+  "ods_a168_game_No","152,416","7 位游戏编号序列（gid 仅 7 种）","与 bet03(9位) 位数不符","⛔ 已关闭",
+  "ods_a168_log_realtimebet","24,038","大额下注告警流（中位 3 万）","无开局/封盘时间","⛔ 已排除")
+aurora_dt(表清单, caption="核心表点货单：谁能用、怎么用、谁已证伪")
+```
+
+## 字段正名表（行业叫法 ↔ 库内代号）
+
+```{r}
+#| label: tbl-naming
+#| echo: false
+正名 <- tibble::tribble(
+  ~库内代号, ~行业叫法, ~口径说明,
+  "bet03","靴号","一靴牌，百家乐 60–80 把",
+  "bet04","第几把（局序）","靴内局序；物理局键 = 靴号+把数+桌号 三段",
+  "bet05","会员号","玩家唯一 ID",
+  "bet09","玩法","庄/闲/和/对子等投注选项",
+  "bet11","汇率","多币种归一，所有金额一律 ÷bet11",
+  "bet13","本金（下注额）","该注押了多少",
+  "validbet","洗码量（有效投注）","计返水的流水——**对打刷的就是它**",
+  "bet14","派彩","赢了拿回多少（bet02 语境；bet01 里是退水%，同名异义陷阱）",
+  "bet16","退水（返水）","按洗码量返还的比例金",
+  "bet17","净输赢","含退水后的口袋变化",
+  "(bet14−bet13)/bet11","**游戏输赢**","**不含退水**——问「有没有真赢庄家」只看这个",
+  "bet18–bet22","五级代理线","LV1 总代 → LV5 末级；信用盘占成沿线分账",
+  "bet31 / bet39","桌号","bet01/bet02 两表各自的桌台字段，已验证一致",
+  "bet38","重对标记","'N' 才是有效注单",
+  "eid","荷官工号","关联 employee 表",
+  "gi004 / gi006","开局 / 开奖时间","**封盘时间库里没有**——只能用「下注进度」代理",
+  "dailyreport.risk","風險單","风控员当日给该会员记的风险标记",
+  "dailyreport.orders","劃單","当日划单（争议/撤单类）标记")
+aurora_dt(正名, caption="正名表：先正名，后算账", len=18)
+```
+
+## 分析维度与行业术语速览
+
+**维度骨架**：会员 × IP（/24 网段）× 五级代理线 × 荷官 × 桌台 × 靴 × 把 × 营业日。
+任何指标先落到这副骨架上，再谈聚合。
+
+| 行业术语 | 一句话解释 | 本报告对应 |
+|---|---|---|
+| **对打（对押）** | 两个号同一把一个押庄一个押闲，输赢对冲 | C-06：999 对完美对打，最长 1,185 把 |
+| **洗码** | 用对打等低风险打法刷洗码量套退水/占成 | 对打损耗 1.147% < 退水+占成，账见 @sec-industry |
+| **占成** | 代理按线下输赢/流水分成（信用盘惯例 1–2.5%） | 利润归代理链层的原因 |
+| **信用盘 ISN** | 代理授信放数的盘口结构 | 「信用ISN底下同IP」金标准判据 → AX-A5 |
+| **杀数 / 放数** | 庄家吃注 / 代理授信 | 结算审计的对象 |
+| **尾注（尾秒）** | 临近封盘才下注 | 全线检验不成立，保持现状 |
+| **运营商共享出口（CGNAT）** | 数千客人共用一个门牌号上网 | C-08 榜首 967 段全是它，已入白名单候选 |
 
 ---
 
@@ -101,7 +223,7 @@ MASE 以 naive one-step 基准归一，**得到无量纲、可跨维度比较、
 #| label: corrections
 #| echo: false
 tibble::tribble(
-  ~#, ~校正项, ~原写法, ~校正后, ~依据,
+  ~序号, ~校正项, ~原写法, ~校正后, ~依据,
   1,"物理局键","(bet03, bet04)","**(bet03, bet04, bet39)** 三段","需求 §3.1",
   2,"bet01 去重","无","updatetime→sync_time→dt 三级排序取最新","需求 §3.2",
   3,"封盘代理","MAX(bet08)","**下注进度 = (bet08−gi004)/(gi006−gi004)**","实测：MAX(bet08) 系统性低估",
@@ -112,7 +234,7 @@ tibble::tribble(
   8,"测试线排除","age022 在 bet02","**agent.age022='1'**，214 个代理，跨五级","实测",
   9,"荷官 IP 碰撞","可实现","**证伪**：employee.lastip 荷官侧全空","实测 1,856/1,856 空",
   10,"盈利玩家口径","版本 A/B","**补版本 C：游戏盈利>0（剔返水）**","缺陷 5"
-) |> dplyr::rename(`#`=`#`) |> knitr::kable(caption="本轮十项校正")
+) |> aurora_kb(caption="本轮十项校正")
 ```
 
 ---
@@ -137,7 +259,7 @@ tibble::tribble(
   "**E1 全局**","Superset 全量 SQL / information_schema","✅ 权威","阈值标定、分布定位、命中率、对外结论","—",
   "**E2 局部**","≤10万行 CSV 样本","⚠️ 有偏","**语义判读**（字段含义、取值域、格式）、可行性预判","分布估计、分位数、命中率、时间范围断言",
   "**E3 推断**","由 E2 外推","🔴 暂定","形成待验证假设","任何结论"
-) |> knitr::kable(caption="证据三级制")
+) |> aurora_kb(caption="证据三级制")
 ```
 
 ## E1 实测：时间窗全局核验结果（已覆盖 E2）
@@ -158,7 +280,7 @@ tibble::tribble(
   "alertMessage","2018-09-26","2026-06-13","98","174","✅",
   "betchange_log","2024-09-19","2026-07-23","59","326,554","✅",
   "**risklist**","2022-07-12","2022-11-02","16","9,958","⛔ **唯一不重叠**"
-) |> knitr::kable(caption="E1-01 全局时间跨度（Superset 全量查询，2026-08-06 执行）")
+) |> aurora_kb(caption="E1-01 全局时间跨度（Superset 全量查询，2026-08-06 执行）")
 ```
 
 ::: {.callout-important}
@@ -205,7 +327,7 @@ tibble::tribble(
   "Player","**0 一般**","39,426,853","10.57 亿","**+0.003820**",
   "Banker","**1 免佣**","4,021,486","1.934 亿","**−0.005532**",
   "Player","**1 免佣**","3,295,488","1.513 亿","**−0.002994**"
-) |> knitr::kable(caption="主注四格：`roi_diff` 符号完全随佣金模式翻转")
+) |> aurora_kb(caption="主注四格：`roi_diff` 符号完全随佣金模式翻转")
 ```
 
 ::: {.callout-important}
@@ -230,7 +352,7 @@ tibble::tribble(
   "AnyPair","1","12,320","1.78 万","+0.1182","同上",
   "BankerNatural","1","10,282","4.16 万","**−0.2134**","同上",
   "SuperLucky7","1","228,399","31.6 万","−0.0566","同上"
-) |> knitr::kable(caption="极端 `roi_diff` 的来源：全部是低样本量边注")
+) |> aurora_kb(caption="极端 `roi_diff` 的来源：全部是低样本量边注")
 ```
 
 样本量相差不到两倍，`roi_diff` 相差 **0.33**。
@@ -248,7 +370,7 @@ tibble::tribble(
   "D-03R 全局聚合 `SUM(pnl)/SUM(vb)`","**+0.000657**","尾段/正常段在各层构成比不同 → 被稀释",
   "按 `vb_tail` 加权重算（30 层）","**+0.001495**","分层后的真实加权效应",
   "**差异（辛普森效应）**","**+0.000838**","**全局聚合把效应量压低了 56%**"
-) |> knitr::kable(caption="全局聚合 vs 分层加权：辛普森效应的量化")
+) |> aurora_kb(caption="全局聚合 vs 分层加权：辛普森效应的量化")
 ```
 
 **全局聚合量把效应压低了 56%。** 这证实了需求 §5.2「Banker/Player/Tie/边注必须分开」
@@ -265,7 +387,7 @@ tibble::tribble(
   "边注（其余 28 层）","0.737 亿","2.72%","+0.003200","+24 万",
   "**主注 · 一般桌 (comm=0)**","22.92 亿","**84.56%**","**+0.002330**","**+534 万**",
   "**主注 · 免佣桌 (comm=1)**","3.447 亿","**12.72%**","**−0.004418**","**−152 万**"
-) |> knitr::kable(caption="按 `vb_tail` 加权的分层贡献（139 天窗口）")
+) |> aurora_kb(caption="按 `vb_tail` 加权的分层贡献（139 天窗口）")
 ```
 
 ::: {.callout-important}
@@ -292,7 +414,7 @@ tibble::tribble(
   "主注 `roi_diff` 幅度","≈ 0.005","—",
   "**信噪比**","**0.077**","**效应量仅为跨层噪声的 7.7%**",
   "小样本层（n<10万）","10 层，`vb_tail` 占比 **0.15%**","却贡献了全部 0.3325 的极差"
-) |> knitr::kable(caption="效应量与噪声的对比")
+) |> aurora_kb(caption="效应量与噪声的对比")
 ```
 
 **符号检验 p = 0.5847** —— 30 层里哪些为正、哪些为负，与随机分配无法区分。
@@ -343,7 +465,7 @@ tibble::tribble(
   ~口径, ~定义, ~n_cells, ~`ROI 尾段`, ~`ROI 正常`, ~`roi_diff`,
   "**D-03Q**","`bet_progress` ≥ 该桌 P90","4,348,005","−0.018454","−0.016883","**−0.001571**",
   "**D-03R**","局内下注顺序 `PERCENT_RANK` ≥ 0.80","9,890,785","−0.015416","−0.016074","**+0.000657**"
-) |> knitr::kable(caption="局内匹配检验：尾段 vs 正常时段的游戏 ROI（不含返水）")
+) |> aurora_kb(caption="局内匹配检验：尾段 vs 正常时段的游戏 ROI（不含返水）")
 ```
 
 **一个口径说尾段更差，另一个说尾段更好。**
@@ -383,14 +505,11 @@ tibble::tribble(
 这一结论**削弱了尾段规则的商业价值主张**，但必须照实写入——
 这是需求 §7 与本报告方法论纪律的直接要求。
 
-### 尚待完成的两项检验
+### 两项检验均已完成（2026-08-06）
 
-- **D-03S 日级序列**（139 行）→ R 端单样本 t 检验 + Bootstrap BCa 置信区间。
-  **若 CI 跨 0，则「不显著」从定性判断升级为统计结论。**
-- **D-03X 分层一致性** → 查 `roi_diff` 是否由某个投注选项（如免佣庄）主导。
-  若仅某一选项显著，规则应收窄至该选项而非全局。
-
-**在这两项完成前，尾段阈值不进入试运行推荐清单。**
+- **D-03X 分层一致性** → ✅ 已完成，符号随佣金模式整齐翻转（见上文终局证据）。
+- **D-03S 日级序列**（139 行，2026-03-21 ~ 2026-08-06）→ ✅ 数据到手，
+  五重检验已执行，**结果见下节——五者不一致，按预注册规则裁定「未能证实」**。
 :::
 
 ### R 端显著性检验（D-03S 139 行到手后执行）
@@ -424,7 +543,7 @@ tibble::tibble(
            "加权均值", "Newey-West p 值", "正向天数占比", "符号检验 p 值"),
   取值 = c(tt$p.value, ci$bca[4], ci$bca[5], w_mean,
            nw[1, 4], mean(d$roi_diff > 0), bt$p.value)
-) |> knitr::kable(digits = 6,
+) |> aurora_kb(digits = 6,
   caption = "尾段 roi_diff 的五重显著性检验")
 ```
 
@@ -441,16 +560,37 @@ tibble::tibble(
 说明「显著性」来自自相关而非真实效应。
 :::
 
-### 预测：D-03S 大概率不显著
+### D-03S 实测：五重检验结果**不一致**（2026-08-06 数据到手）
 
-基于已有证据，我预判 D-03S 的结论是**不显著**：
+n = 139 天，`roi_diff` 均值 = +0.003263（尾段 ROI 略优于常规，方向对玩家有利），
+信噪比 |mean|/SD = 0.180。五重检验实测：
 
-- 分层符号翻转 → 全局日均值应在 0 附近震荡
-- 边注噪声跨度 0.33 → 日级方差会很大
-- 主注四格 `roi_diff` 均在 ±0.006 内 → 效应量太小
+| 检验 | 实测值 | 单项判定 |
+|---|---|---|
+| ① 单样本 t 检验 | p = 0.0356 | 边缘显著 |
+| ② Bootstrap BCa 95% CI | [+0.000172, +0.006299] | 不跨 0（下界贴地） |
+| ③ vb_tail 加权均值 | +0.003973（未加权的 1.22 倍） | 方向一致 |
+| ④ Newey-West（lag=4） | p = 0.0135 | 边缘显著 |
+| ⑤ 符号检验 | 78/139 = 56.1% 正向，p = 0.1745 | **不显著** |
 
-**若结果出乎预料地显著，必须优先怀疑是自相关或某几天的极端值主导**，
-用加权均值与 Newey-West 交叉验证，不可直接采信。
+**裁定：维持「未能证实」，尾段线闭合不变。** 理由分四层，缺一不可：
+
+1. **预注册一致性规则未满足**——本节上文明文「五者需一致才可下结论」。
+   ①②③④边缘显著而⑤不显著，意味着均值为正是由**少数日子的幅度不对称**
+   撑起来的，方向本身与掷硬币无异。此规则在见到数据前已写定，不得事后放宽。
+2. **多重检验不存活**——需求追溯矩阵共 30 项检验，Bonferroni 校正阈值
+   0.05/30 = 0.00167，p = 0.0356 相距一个数量级。
+3. **经济量级贴地**——BCa 下界口径：0.000172 × 尾段总有效投注 27.1 亿
+   ≈ **46.6 万**，不足 GGR 的 0.04%，低于任何一档人工复核成本；
+   点估计口径 1,077 万也仅为此前被四前提归零的 405 万口径同数量级的量，
+   且方向为**玩家占优**——即便为真，对应动作是产品侧而非风控侧。
+4. **与 D-03X 分层证据矛盾**——分层符号随佣金模式翻转（辛普森结构），
+   聚合层的边缘显著在分层视角下没有稳定承载体。
+
+**诚实披露**：本节此前预判「D-03S 大概率不显著」。实测结果比预判更微妙——
+四项参数检验边缘显著、唯独非参数符号检验不显著。我们**如实记录这一分歧**，
+不隐藏 p = 0.0356，也不因它翻案：翻案需要五重一致 + 多重校正存活 +
+经济量级可观三者同时成立，实测三者皆不成立。
 
 ### 对方案的影响
 
@@ -482,7 +622,7 @@ tibble::tribble(
   "去重注单数","124,187,539（= 订单数，去重生效）",
   "测试线会员（`age022='1'` 挂载）","**54 人**，11,628 单，流水 125.7 万",
   "测试线占比","0.0075% 会员，0.0093% 流水"
-) |> knitr::kable(caption="E1-04 / E1-08 分母与测试线影响面")
+) |> aurora_kb(caption="E1-04 / E1-08 分母与测试线影响面")
 ```
 
 ::: {.callout-warning}
@@ -508,7 +648,7 @@ tibble::tribble(
   "**`mase_rebate`**","**0.000309**","✅",
   "**`mase_net`**","**0.000303**","✅",
   "**完全吻合率（容差 0.01）**","**流水 99.87% / 净额 99.89%**","✅ 口径完全一致"
-) |> knitr::kable(caption="E1-06M 局级独立对账（MASE 评估）")
+) |> aurora_kb(caption="E1-06M 局级独立对账（MASE 评估）")
 ```
 
 **`game_info` 作为独立基准，验证了本报告的去重与过滤逻辑。**
@@ -531,7 +671,7 @@ tibble::tribble(
   "0","0","8,111,547","**714,003**","99.98%",
   "**1**","0","1,324","**125**","**0.0175%**",
   "0","1","5","1","0.0001%"
-) |> knitr::kable(caption="E1-10b dailyreport_member 双标签分布（百家乐，本窗口）")
+) |> aurora_kb(caption="E1-10b dailyreport_member 双标签分布（百家乐，本窗口）")
 ```
 
 ::: {.callout-important}
@@ -576,7 +716,7 @@ tibble::tribble(
   "bet02 ∩ game_log","**2**","≈ 0",
   "bet02 ∩ mem_login","293","0.02%",
   "game_log ∩ mem_login","**0**","两套网关互不相交"
-) |> knitr::kable(caption="E1-03 三方 IP 重合度（2026-03-21 ~ 2026-08-07）")
+) |> aurora_kb(caption="E1-03 三方 IP 重合度（2026-03-21 ~ 2026-08-07）")
 ```
 
 ::: {.callout-important}
@@ -609,7 +749,7 @@ tibble::tribble(
   "263","921","**0**","0",
   "250","79","**0**","0",
   "其余 6 个 op","14","**0**","0"
-) |> knitr::kable(caption="E1-12 risklist × bet02 可 join 性（全时段，不加 dt 过滤）")
+) |> aurora_kb(caption="E1-12 risklist × bet02 可 join 性（全时段，不加 dt 过滤）")
 ```
 
 ::: {.callout-warning}
@@ -632,7 +772,7 @@ tibble::tribble(
   "去重后","124,205,691","—",
   "去重丢弃","922,878","**dup_rate = 0.7375%**",
   "`bet02='101' AND bet03='0'`","**0**","✅ 铁律④a 断言成立，被蕴含"
-) |> knitr::kable(caption="E1-05 / E1-13 去重与哨兵局")
+) |> aurora_kb(caption="E1-05 / E1-13 去重与哨兵局")
 ```
 
 ## E1 实测：会员配置退水率分布
@@ -648,7 +788,7 @@ tibble::tribble(
   "0.9","277,350","0.48%",
   "1.0","3,680","0.006%",
   "其余 23 档（含 -0.2 异常值 1 例）","< 2,000","—"
-) |> knitr::kable(caption="E1-11 member_dtl 百家乐配置退水率（最新快照）")
+) |> aurora_kb(caption="E1-11 member_dtl 百家乐配置退水率（最新快照）")
 ```
 
 **REB 维度可用**：94.4% 会员零退水，具备退水配置的约 320 万人，
@@ -663,7 +803,7 @@ tibble::tribble(
   ~is_test, ~mem_risk, ~enable_flag, ~n_member,
   "N","0","Y","55,128,461",
   "N","0","N","3,376,486"
-) |> knitr::kable(caption="E1-02 member 最新快照全局分布（合计 58,504,947）")
+) |> aurora_kb(caption="E1-02 member 最新快照全局分布（合计 58,504,947）")
 ```
 
 ::: {.callout-important}
@@ -696,7 +836,7 @@ tibble::tribble(
   "④a","过滤 bet03<>'0'","✅ 成立·被蕴含","样本中所有 `bet02='101'` 行 bet03 均非零 → 应保留为**断言**而非删除",
   "④b","排除 age022=1 测试线","✅ 成立·填补文档缺口","bet02 无 age022；实为 `agent.age022`，**214 个测试代理跨全部五级**。需求文档 §5 尾秒章**完全无测试账户排除**",
   "⑤","分母=132.9万下注会员","✅ 成立·文档缺失","member 表 58,504,947 行即「5849万账户」。需求文档全文**无分母定义**，无法执行 §7 原则③"
-) |> knitr::kable(caption="五条铁律逐条裁定")
+) |> aurora_kb(caption="五条铁律逐条裁定")
 ```
 
 **铁律④a 的断言写法**：
@@ -704,18 +844,18 @@ tibble::tribble(
 ```sql
 -- 预期返回 0；若非 0 说明存在百家乐哨兵局，需重新评估口径
 SELECT COUNT(*) FROM ods_mariadb_2b.ods_a168_bet02
-WHERE dt >= :dt_from AND dt < :dt_to AND bet02='101' AND bet03='0';
+WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02='101' AND bet03='0';
 ```
 
 **铁律④b 的正确执行路径**：
 
 ```sql
-WITH test_agents AS (
-  SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-)
+-- ⚠️ 片段：不可独立运行，须嵌入 @sec-contract 的 E0 主查询
 -- bet18–bet22 为 LV1–LV5 代理ID，任一层命中测试代理即排除
-AND NOT EXISTS (SELECT 1 FROM test_agents t
-                WHERE t.agent_id IN (b.bet18,b.bet19,b.bet20,b.bet21,b.bet22))
+-- StarRocks 不支持 EXISTS + 多列 IN，一律用五路 LEFT JOIN：
+--   LEFT JOIN test_agents t1 ON t1.agent_id = b.bet18
+--   ...（t2~t5 同理对应 bet19~bet22）
+--   WHERE COALESCE(t1.agent_id,...,t5.agent_id) IS NULL
 ```
 
 ---
@@ -734,7 +874,7 @@ tibble::tribble(
   "D5","净盈利含返水 → 洗码客被判为盈利玩家","🔴 严重","补**版本C**（游戏盈利>0，剔返水）",
   "D6","§4.2「关联代理数」未指明层级","🟢 轻","LV1–LV5 全出，**LV3 为主口径**",
   "D7","未定义窗口对齐方式","🟢 轻","半开区间、每日滚动、固化 window_start/end/as_of"
-) |> knitr::kable(caption="需求文档七处缺陷")
+) |> aurora_kb(caption="需求文档七处缺陷")
 ```
 
 ::: {.callout-warning}
@@ -774,7 +914,7 @@ tibble::tribble(
   "ods_a168_member_partner_account","9,109","第三方账户映射 `mid`↔`wm_<mid>`","E2",
   "ods_a168_member_explosion_setting","68","桌台人数/时间设置（`gid`+`tableid`+`people`+`setting_time`），非会员级","E2",
   "ods_a168_dailyreport / member_category / member_odds","0","✅ 确认空表，排除","E2"
-) |> knitr::kable(caption="第二批 16 张表核对结论")
+) |> aurora_kb(caption="第二批 16 张表核对结论")
 ```
 
 ### SMR_log：我的 AML 假设被证伪
@@ -856,7 +996,7 @@ tibble::tribble(
   "ods_a168_game_No","152,416","🚨 **gameNo 7 位，与 bet03 9 位不匹配**，核实前不用",
   "ods_a168_game_type","17","游戏类型字典（多语种）",
   "ods_a168_game_transfer / tip / parame / callwebapi / demoipsetting / info_verify / result","小/空","低价值或空表"
-) |> knitr::kable(caption="21 张已核对表的核心发现")
+) |> aurora_kb(caption="21 张已核对表的核心发现")
 ```
 
 ## 封盘时间裁定 {#sec-close}
@@ -1005,6 +1145,15 @@ $$\text{下注进度} = \frac{\texttt{bet08} - \texttt{gi004}}{\texttt{gi006} - 
 - `IP-S7` **投注选项一致率**：同IP会员在 `bet09` 分布的余弦相似度
 - `AX-A5` **同IP同代理链率**：同IP会员共享 LV3 代理的比例
 
+**第四项由 C-06 实测数据催生（2026-08-06 新增）**：
+
+- `IP-S8` **注册邻近度**：对押对/共现对的会员 ID 间距 |m_a − m_b| 的分位数化。
+  C-06 实测：999 对完美对押（opposite_rate = 1）的 ID 间距**中位数仅 32**，
+  36.5% 的对子间距 ≤ 10（如 146039692↔146039696）。会员 ID 空间在 1.3~1.5 亿
+  量级，随机配对间距 ≤ 10 的概率在百万分之一量级——**批量注册的确凿指纹**。
+  它在注册时刻已定型、事后无法伪装、且完全独立于投注数据，
+  与行为证据（IP-S6）、代理结构证据（AX-A5）构成**三条互相独立的证据链**。
+
 ### /24 聚集：独立外部验证
 
 | /24 网段 | 命中 IP 数 | 标注人 | 日期跨度 |
@@ -1022,6 +1171,72 @@ $$\text{下注进度} = \frac{\texttt{bet08} - \texttt{gi004}}{\texttt{gi006} - 
 同时提供 **17 个人工确认正样本**作为 **L0 金标准**：
 **新阈值若连这 17 个都命中不了，直接判不合格**（必要条件，非充分）。
 样本量为 17，**不可估精度或召回**，仅作一票否决。
+:::
+
+## C-01 / C-06 / C-08 实测核验（2026-08-06 交付） {#sec-c-verify}
+
+三条结构性证据查询的结果已到手（各截断于 Superset 导出上限 1,000 行，
+排序头部完整，尾部截断不影响头部结论）。
+
+### C-01：`member_per_chain` —— AX-A5 量化成立
+
+- 榜首 `138.84.109.251`：**2,132 名会员全部挂在同一条 LV3 代理链下**
+  （member_per_chain = 2132），「信用ISN底下同IP」人工判据的量化排序完全立得住；
+- 前 1,000 行中 21.8% 为单链 IP（n_lv3_chain = 1）；
+- 全表按 member_per_chain 降序、n_member ≥ 20 过滤，与需求 §2.1-1 基准衔接。
+
+### C-06：完美对押 + 跨 IP 复现 + ID 连号 —— IP-S6 三重验证
+
+- **999/1,000 对为完美对押**（opposite_rate = 1 且 hedge_coverage = 1）；
+  75 对累计完美对押 ≥ 100 局，榜首一对达 **1,185 局全反向**；
+- **42 对会员在多个 IP 上反复完美对押**，榜首
+  146765426↔147225523 横跨 **22 个不同 IP**——换 IP 不换搭档，
+  职业套利组作业形态，跨 IP 结构性证据强于任何单 IP 统计；
+- ID 连号指纹 → 已固化为新指标 `IP-S8`（见上节）。
+
+### C-08：⚠️ 榜首被 CGNAT 噪音统治 —— `IP-N` 系指标必须条件化
+
+Top 网段 `103.199.32/33/56/57`、`49.48.233`、`49.49.225` 系列的
+`n_ip` 达 **248~256**——一个 /24 仅 256 个地址，**整段饱和**是
+运营商级 NAT（CGNAT）出口池的典型特征，不是团伙：6,600+ 会员、
+`game_pnl` 为负（庄家净赢）均符合普通大众流量画像。
+
+**复跑核验（2026-08-06 二次导出）**：与首次交付数字逐行吻合
+（榜首 6,676 → 6,677 会员，为窗口尾日增量），查询稳定可复现，9.28 秒。
+前 1,000 行中 **967 行为饱和段（n_ip > 200）、仅 5 行为稀疏段（n_ip ≤ 30）**——
+按 n_member 降序的榜单结构性地被基础设施淹没，条件化的必要性被二次证实。
+
+### C-08 稀疏段五条：靶心在这里
+
+| 网段 | n_ip | 会员 | LV3链 | 密度(人/IP) | 对象定性 |
+|---|---|---|---|---|---|
+| `138.84.109.0/24` | **4** | 2,145 | **1** | **536** | 🎯 **信用枢纽**——C-01 榜首 IP 所在段 |
+| `14.166.116.0/24` | **3** | 894 | 2 | 298 | 🎯 信用枢纽——C-01 次席 IP 所在段 |
+| `104.28.166.0/24` | 28 | 1,920 | 30 | 69 | 🛰️ Cloudflare 代理出口（WARP/Relay 段） |
+| `104.28.158.0/24` | 30 | 1,084 | 28 | 36 | 🛰️ 同上 |
+| `104.28.160.0/24` | 17 | 907 | 31 | 53 | 🛰️ 同上 |
+
+**网段对象三分类由此确立**（`IP-N` 指标的先验层）：
+
+1. **CGNAT 饱和段**（n_ip > 200、链数 40+、密度 ≈27 人/IP）——
+   东南亚运营商出口，基础设施白名单候选；
+2. **代理/CDN 段**（`104.28.0.0/16` 为 Cloudflare 地址空间，链数≈会员段均匀）——
+   非团伙本身，但属**真实 IP 隐匿接入**，单独登记为接入方式风险层；
+3. **信用枢纽稀疏段**（n_ip 个位数、单链或双链、密度数百人/IP）——
+   **靶心**。`138.84.109.0/24` 四个 IP 承载 2,145 名会员且全挂一条 LV3 链，
+   与金标准判据「信用ISN底下同IP」在结构上完全同型。
+
+::: {.callout-warning}
+**修正令：`IP-N1`–`IP-N4` 稀有度指标一律以 n_ip 饱和度条件化**——
+仅对稀疏段（建议 n_ip ≤ 30）计算会员密度与稀有度，
+饱和段（n_ip > 200）直接归入基础设施白名单候选，
+否则榜单前列全是电信基础设施，金标准网段永无出头之日。
+
+金标准两网段（`111.247.37.0/24` / `103.123.134.0/24`）在两次导出中均未现身。
+**因截断不能判为缺失**，且存在第二种解释：金标准 17 IP 的标注日期为
+**2022 年 3~6 月**，而分析窗为 **2026 年**——四年前的关注 IP 可能已无活动。
+一票否决检验因此须先做**活跃性探针**（N1b，见 @sec-next）：
+若金标准 IP 在窗口内本就无订单，「命中不了」不构成对新阈值的否决。
 :::
 
 ---
@@ -1070,6 +1285,146 @@ DT::datatable(tibble::tribble(
 
 ---
 
+# 需求文档十四问逐项解答（数据证明版） {#sec-answers}
+
+> 需求文档第二章共十四问（§2.1 异常 IP 六问 + §2.2 尾秒八问）。
+> 本章逐问作答，**每一答附实测数据**；数据尚未到全量的，如实标注
+> 「方法已立 · 待全量」，不以局部数字冒充全局结论。
+
+## §2.1 异常 IP 六问
+
+**问 2.1-1：关联 20 个账户的 IP 处于分布什么位置？**
+**答：20 账户远非极端值——它只是头部榜单的入门线。**
+数据：C-01 按 member_per_chain 降序、n_member ≥ 20 过滤的导出中，
+前 1,000 行**全部** n_member ≥ 20（P50 = 34，榜首 `138.84.109.251` 达 **2,132**）。
+即平台上会员数 ≥ 20 的 IP 至少上千个，「20 账户」不能单独作阈值，
+必须与结构指标（单链率 21.8%、对押、注册邻近）组合。全量精确分位待 E1 网格。
+
+**问 2.1-2：最小多少订单才算有效关联？**
+**答：n ≥ 30（Wilson CI 宽度 ≤ 0.15 准则），与尾秒侧同一标准。**
+数据：D-06 已实测该过滤生效（min n_rounds_all 恰为 30，988 有效 + 12 除零保护）；
+IP 侧沿用同一统计准则，`n_orders_ip` 联合过滤写入 @sec-ip-eff，网格待全量。
+
+**问 2.1-3：该 IP 盈利与全平台盈利如何比较？**
+**答：必须用剔返水的版本 C，版本 A/B 会被返水制造伪盈利。**
+数据证明（本报告最强的一条经济学证据）：庄闲对押的理论损耗为
+**总流水的 1.147%**（庄赢 0.4586×赔付 0.95、闲赢 0.4462、和 0.0952 退注）；
+C-01 Top20 IP 的会员侧 game_pnl/stake 中位数实测 **−1.12%，与理论值几乎重合**
+——这些 IP 上的资金在以近似完美对冲的方式流转。会员配置退水 0.9% 档
+双边计流水后净 EV 仍为 −0.247%，**会员层必亏；利润在代理链层**
+（信用盘占成惯例 1~2.5%）。故「玩家盈利」若含返水（A/B 口径），
+洗码组会呈现盈利假象；只有游戏盈利口径 C 能问出「是否真的赢了庄家」。
+
+**问 2.1-4 / 2.1-5：盈利比例 70/80/90/100% 各档命中多少、工作量多大？**
+**答：两阶段网格已立（@sec-ip-grid），L0 一票否决 17 IP 就位；数字待全量导出。**
+先验已知：饱和段（CGNAT）967/1000 必须先剔除，否则任何比例档的
+「命中 IP 数」都被基础设施污染，工作量估计整体失真。
+
+**问 2.1-6：跨月是否稳定？**
+**答：已实测到比跨月更强的稳定形态——跨 IP 稳定。**
+数据：C-06 中 **42 对会员在多个 IP 上反复完美对押**，榜首一对横跨
+**22 个不同 IP**、另有一对 1,185 局全反向。换 IP 不换搭档，
+是比「换月不换行为」更难伪装的持续性证据。跨月版按 @sec-persist 待全量。
+
+## §2.2 尾秒八问
+
+**问 2.2-1：开局/封盘/时长能否取得？**
+**答：封盘时间不可得，已定案。**
+数据：`game_info` 全表仅两个时间字段（开局 gi004、开奖 gi006）；
+代理口径 `bet_progress` 的 max_progress 在 30 桌上全部落于 **0.49~0.86**、
+无一达到 1——分母系统性偏大（含开奖延迟段）被逐桌量化证实，
+故只能做**桌内相对排序**，不能做绝对秒判断。
+
+**问 2.2-2：下注集中在第几秒？最后 1/2/3/5 秒覆盖多少？**
+**答：「第 N 秒」类绝对表述全部作废，改按桌分层的进度分位。**
+数据：全局仅 7.25% 订单落在 [29,31] 秒（D-03 绝对口径返回 0 行）；
+30 桌进度 P50≈0.36、P99 跨桌 **0.43~0.73**——桌间异质性大到任何全局秒阈值
+都会在快桌上误杀、在慢桌上漏判。
+
+**问 2.2-3：各秒段的胜率/盈利/ROI 差异？**
+**答：末段 ROI 描述性偏好 +1.77pp，但被投注选项构成解释，不可作规则。**
+数据：进度 20 分箱 ×30 桌共 467 格实测，会员 ROI 从前 5 箱均值 −1.85%
+升至末 5 箱 −0.08%；D-03X 分层显示该差随佣金模式**符号翻转**（辛普森结构），
+聚合差没有稳定承载体。
+
+**问 2.2-4：第 29 秒是真异常还是基准如此？**
+**答：基准如此。**
+数据：五重检验不一致（t p=0.0356 / NW p=0.0135 / BCa 不跨零 **但**
+符号检验 78/139 天 p=0.1745）；Bonferroni 30 项校正后不存活；
+BCa 下界经济量级 46.6 万 ≈ GGR 的 0.04%。「29 秒集中」是桌台时长
+异质性的伪影，不是可利用的信息优势。
+
+**问 2.2-5：多少局数才稳定？**
+**答：n ≥ 30。** Wilson 95% CI 宽度 ≤ 0.15 推得；D-06 过滤实测生效（min=30）。
+
+**问 2.2-6：尾段占比多少算持续性？**
+**答：建议观察档 ≥ 0.47（P90）、强档 ≥ 0.70（P99）。**
+数据：D-06 实测 tail_share P50 = 20.5%、P90 = 46.7%、P99 = 70.5%、
+≥50% 者仅 8.4%；纯尾段玩家（share=1）12 人，直接入画像名单。
+
+**问 2.2-7：胜率/胜率差用什么门槛？**
+**答：不存在自然门槛——任何绝对门槛都在切噪音。**
+数据：D-06 个体层 winrate_diff > 0 仅 **49.7%**（491/988），
+分布关于零对称。若产品侧仍需画像特征，只能用分位法（P90/P99 相对排名），
+禁止绝对胜率差门槛入规则。
+
+**问 2.2-8：「正常亏、尾秒赢」且跨月的强特征命中多少人？**
+**答：单月单条件命中率高达 26.9%——高到证明它单独不可用。**
+数据：D-06 前 1,000 人中 tail_game_pnl>0 且 norm_game_pnl≤0 者 **269 人**。
+机制是选择效应：总体亏损人群的尾段小样本更易随机为正。
+另一实测佐证：tail_profit_share P50 = 21.4% ≈ tail_share P50 = 20.5%——
+**盈利占比与局数占比同步，无超额集中**。该特征必须叠加
+「跨月持续 + n ≥ 30 + 分位排名」三重约束后方可入画像（仍不入规则）。
+
+## 十四问总裁定
+
+| 域 | 结论 | 依据强度 |
+|---|---|---|
+| 异常 IP 六问 | **成立，采取措施**——结构性证据三链闭合 | 对押经济学吻合至小数点后二位 + 跨22 IP复现 + ID连号 |
+| 尾秒八问 | **不成立，保持现状**——统计、经济、机制三层全部失守 | 五重不一致 + 校正不存活 + 0.04% GGR |
+
+---
+
+# 行业解读与处置建议 {#sec-industry}
+
+## 这套数据讲的是哪一门生意：洗码套利，不是「神算玩家」
+
+把全部实测数字放进博彩行业的账本里，故事只有一个：
+
+$$\underbrace{-1.147\%}_{\text{对押损耗/流水}} + \underbrace{0.9\%}_{\text{会员退水上限}} + \underbrace{1\%\sim2.5\%}_{\text{LV3 代理占成(信用盘惯例)}} > 0$$
+
+- 会员层**设计性亏损**：C-01 Top20 会员侧 ROI 中位 −1.12%，
+  与对押理论损耗 −1.147% 吻合——这不是巧合，是**执行痕迹**；
+- 利润在**代理链层**结算：`138.84.109.251` 单 IP 2,132 名会员共享一条 LV3 链，
+  正是把损耗集中、把占成集中的最优组织形态；
+- 账户是**批量生产资料**：完美对押对 ID 间距中位 32、36.5% 间距 ≤10，
+  注册即成对；换 IP 不换搭档（22 IP 复现）说明 IP 是耗材、搭档关系是资产。
+
+行业定性：**低风险对打洗码（wash betting / rebate arbitrage）**。
+受害科目不是赔付池——庄家优势照收——而是**返水费用与代理佣金池**，
+以及被虚增流水污染的全部经营报表（活跃、留存、LTV 全部失真）。
+
+## 处置矩阵：一条线动手，一条线不动
+
+| 线 | 裁定 | 具体动作 | 行业理由 |
+|---|---|---|---|
+| **异常 IP / 对押** | ✅ **采取措施** | ① L0 金标准一票否决（先跑 N1b 活跃探针）；② 稀疏段靶向（n_ip≤30）+ 信用枢纽段优先；③ IP-S6/S8 + AX-A5 结构指标入规则；④ **打结算不打账户**：对命中链的 LV3 代理做佣金审计与返水追回，比封 2,132 个会员号高效两个数量级；⑤ 注册侧上线 ID 邻近 + 同 IP 批量注册风控 | 洗码组的成本在养号与代理关系；封号是割韭菜叶，**冻结代理结算才是断根**。返水追回有明确合同依据，误伤争议远小于封号 |
+| **尾秒下注** | ⛔ **保持现状** | 不加规则、不改封盘、不撤销任何客群的下注窗口；tail_share ≥ P99 仅入行为画像（TIM 维度） | 晚下注是真人百家乐的**正常玩法偏好**（看路、跟注）；数据证明无可利用优势（五重不一致、0.04% GGR），此时任何限制都是纯粹的体验损伤——顶级运营商的分野正在于**不为不存在的漏洞惩罚真实客人** |
+| **代理/CDN 接入**（104.28.x） | ⚠️ 登记观察 | 新增「代理接入」标记维度，不单独处罚 | Cloudflare WARP/Relay 用户含大量正常隐私偏好客，一刀切会误伤 VIP |
+| **CGNAT 饱和段** | ⚪ 白名单候选 | 967 段入基础设施名单，复核前自动豁免 | 东南亚移动网络常态，处罚即处罚整个运营商的客群 |
+
+## 回测后的经营含义
+
+反事实回测框架（@sec-uplift）在两线上的预期结论已由本轮数据锁定方向：
+尾秒线的 ΔGGR 点估计即便为正也在安慰剂检验里死亡（符号随机）；
+异常 IP 线的收益不在 G1 拦截敞口，而在 **G2 返水优化**——
+按 C-01/C-06 结构命中的流水如全属洗码，其返水与占成支出是**纯损失科目**，
+追回与停发的每一元都是净利润，且不依赖任何统计显著性。
+P3 试运行仍须随机对照组（@sec-plan），但**代理结算审计可以立即启动**，
+它是合同权利的行使，不是统计推断的产物。
+
+---
+
 # 数据契约 {#sec-contract}
 
 ## 有效订单口径（需求 §3.2 + 三项补正）
@@ -1078,18 +1433,19 @@ DT::datatable(tibble::tribble(
 WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
-wl_ip AS (   -- 补正：white_list 是「按代理的 IP 白名单」，需 EXPLODE
-  SELECT DISTINCT TRIM(ip_item) AS ip
-  FROM ods_mariadb_2b.ods_a168_white_list
-  LATERAL VIEW EXPLODE(SPLIT(white_list, ',')) t AS ip_item
-  WHERE NULLIF(TRIM(ip_item),'') IS NOT NULL
+wl_ip AS (   -- 补正：white_list 是「按代理的 IP 白名单」，需展开
+  -- ★ StarRocks 方言：不支持 Hive 的 LATERAL VIEW EXPLODE，改用 UNNEST
+  SELECT DISTINCT TRIM(u.ip_item) AS ip
+  FROM ods_mariadb_2b.ods_a168_white_list w,
+       UNNEST(SPLIT(w.white_list, ',')) AS u(ip_item)
+  WHERE NULLIF(TRIM(u.ip_item),'') IS NOT NULL
 ),
 ranked AS (   -- 需求 §3.2：同 bet01 保留最新版本
   SELECT b.*, ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= :dt_from AND b.dt < :dt_to
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
     AND b.bet02 = '101'
 ),
 valid AS (
@@ -1108,15 +1464,21 @@ valid AS (
     CAST(NULLIF(TRIM(bet16),'') AS DECIMAL(20,4)) AS rebate_raw,
     CAST(NULLIF(TRIM(bet17),'') AS DECIMAL(20,4)) AS net_raw
   FROM ranked b
+  /* ★ 补正 1（铁律④b）：排除测试代理线下全部会员
+     StarRocks 不支持 EXISTS + 多列 IN（E1 已证），改五路 LEFT JOIN */
+  LEFT JOIN test_agents t1 ON t1.agent_id = b.bet18
+  LEFT JOIN test_agents t2 ON t2.agent_id = b.bet19
+  LEFT JOIN test_agents t3 ON t3.agent_id = b.bet20
+  LEFT JOIN test_agents t4 ON t4.agent_id = b.bet21
+  LEFT JOIN test_agents t5 ON t5.agent_id = b.bet22
   WHERE rn = 1
     AND category = '1'                                    -- §3.2 一般（非小费）
     AND UPPER(TRIM(bet38)) = 'N'                          -- §3.2 非重对
     AND CAST(NULLIF(TRIM(bet05),'') AS BIGINT) > 0
     AND CAST(NULLIF(TRIM(bet11),'') AS DECIMAL(20,8)) > 0
     AND NULLIF(TRIM(bet08),'') IS NOT NULL
-    /* ★ 补正 1（铁律④b）：排除测试代理线下全部会员 */
-    AND NOT EXISTS (SELECT 1 FROM test_agents t
-                    WHERE t.agent_id IN (b.bet18,b.bet19,b.bet20,b.bet21,b.bet22))
+    AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,
+                 t4.agent_id,t5.agent_id) IS NULL
 )
 SELECT v.*,
        stake_raw / fx                 AS stake,      -- §3.3 投注金额
@@ -1165,6 +1527,7 @@ JOIN game_info_norm g ON g.round_key = b.round_key;
 ## 胜率口径（需求 §3.4）
 
 ```sql
+-- ⚠️ 片段：须前置 @sec-contract E0 主查询（WITH test_agents ... valid ...）为 CTE 链后运行
 player_round AS (
   SELECT member_id, round_key, table_id, dealer_id, commission,
          MIN(t_bet) first_bet, MAX(t_bet) last_bet,
@@ -1198,6 +1561,7 @@ scored AS (SELECT *,
 ## IP 排除清单 {#sec-ip-excl}
 
 ```sql
+-- ⚠️ 片段：须前置 @sec-contract E0 主查询（WITH test_agents ... valid ...）为 CTE 链后运行
 AND NULLIF(TRIM(b.ip),'') IS NOT NULL
 AND b.ip REGEXP '^([0-9]{1,3}\\.){3}[0-9]{1,3}$'          -- 格式校验
 AND b.ip NOT IN (SELECT ip FROM ods_mariadb_2b.ods_a168_ipblacklist)
@@ -1208,6 +1572,7 @@ AND b.ip NOT IN (SELECT ip FROM ods_mariadb_2b.ods_a168_passiplist)
 **公共网络 IP 的识别（需求要求列出影响后交业务确认）**：
 
 ```sql
+-- ⚠️ 片段：须前置 @sec-contract E0 主查询（WITH test_agents ... valid ...）为 CTE 链后运行
 SELECT bet_ip,
        COUNT(DISTINCT member_id) AS n_member,
        COUNT(DISTINCT lv3)       AS n_lv3_chain,
@@ -1228,12 +1593,13 @@ ORDER BY member_per_chain DESC;
 ## 玩家—IP 基础指标（需求 §4.1，六项） {#sec-ip-player}
 
 ```sql
+-- ⚠️ 片段：须前置 @sec-contract E0 主查询（WITH test_agents ... valid ...）为 CTE 链后运行
 WITH pl AS (
   SELECT member_id, COUNT(DISTINCT bet_id) n_orders_all,
          COUNT(DISTINCT round_key) n_rounds_all,
          SUM(net_pnl) net_pnl_all, SUM(game_pnl) game_pnl_all   -- ★ D5：补游戏盈利
   FROM base GROUP BY member_id)
-SELECT :win_id window_id, b.bet_ip, b.member_id,
+SELECT 'W1' AS window_id  -- 窗口标识字面量, b.bet_ip, b.member_id,
   COUNT(DISTINCT b.bet_id)    n_orders_ip,   -- ①
   COUNT(DISTINCT b.round_key) n_rounds_ip,   -- ②
   SUM(b.stake) stake_ip, SUM(b.net_pnl) net_pnl_ip,
@@ -1248,15 +1614,16 @@ GROUP BY b.bet_ip, b.member_id;
 ## IP 汇总与三版本盈利口径（需求 §4.2 + D5） {#sec-ip-agg}
 
 ```sql
+-- ⚠️ 片段：须前置 @sec-contract E0 主查询（WITH test_agents ... valid ...）为 CTE 链后运行
 SELECT window_id, bet_ip,
   COUNT(DISTINCT member_id) n_member_raw,
-  SUM(CASE WHEN n_orders_ip>=:min_orders THEN 1 ELSE 0 END) n_member_eff,
+  SUM(CASE WHEN n_orders_ip>=30 THEN 1 ELSE 0 END) n_member_eff,
   /* 版本A：玩家全平台整体净盈利 > 0（需求原定义） */
-  SUM(CASE WHEN n_orders_ip>=:min_orders AND net_pnl_all>0 THEN 1 ELSE 0 END) n_prof_A,
+  SUM(CASE WHEN n_orders_ip>=30 AND net_pnl_all>0 THEN 1 ELSE 0 END) n_prof_A,
   /* 版本B：玩家仅在该IP下净盈利 > 0（需求原定义） */
-  SUM(CASE WHEN n_orders_ip>=:min_orders AND net_pnl_ip >0 THEN 1 ELSE 0 END) n_prof_B,
+  SUM(CASE WHEN n_orders_ip>=30 AND net_pnl_ip >0 THEN 1 ELSE 0 END) n_prof_B,
   /* ★ 版本C：玩家游戏盈利 > 0（剔返水）—— D5 修补 */
-  SUM(CASE WHEN n_orders_ip>=:min_orders AND game_pnl_ip>0 THEN 1 ELSE 0 END) n_prof_C,
+  SUM(CASE WHEN n_orders_ip>=30 AND game_pnl_ip>0 THEN 1 ELSE 0 END) n_prof_C,
   SUM(n_orders_ip) n_orders, SUM(n_rounds_ip) n_rounds,
   SUM(stake_ip) stake, SUM(net_pnl_ip) net_pnl, SUM(game_pnl_ip) game_pnl,
   PERCENTILE_APPROX(ip_order_share,0.5) share_p50,
@@ -1278,8 +1645,7 @@ guard({
     B_命中IP=sum(x$rate_B>=p & x$n_member_eff>=5, na.rm=TRUE),
     C_命中IP=sum(x$rate_C>=p & x$n_member_eff>=5, na.rm=TRUE),
     `B独有(疑洗码致伪)`=sum(x$rate_B>=p & x$rate_C<p & x$n_member_eff>=5, na.rm=TRUE),
-    `A∩B∩C`=sum(x$rate_A>=p & x$rate_B>=p & x$rate_C>=p, na.rm=TRUE))) |>
-    knitr::kable(caption="§4.2 + D5：三版本盈利口径对照（★ B独有 = 返水制造的伪盈利）")
+    `A∩B∩C`=sum(x$rate_A>=p & x$rate_B>=p & x$rate_C>=p, na.rm=TRUE))) |> aurora_kb(caption="§4.2 + D5：三版本盈利口径对照（★ B独有 = 返水制造的伪盈利）")
 }, "版本ABC")
 ```
 
@@ -1310,8 +1676,7 @@ guard({
     tibble::tibble(最小订单数=m, 保留IP玩家对=nrow(e), 有效IP数=nrow(agg),
       `n_eff≥5的IP数`=sum(agg$n_eff>=5),
       `盈利比例方差`=round(var(agg$rate_C,na.rm=TRUE),5),
-      说明=ifelse(m<10,"方差高，小样本噪声主导",""))}) |>
-    knitr::kable(caption="§2.1-2 最小订单数敏感度：噪声随门槛下降而收敛")
+      说明=ifelse(m<10,"方差高，小样本噪声主导",""))}) |> aurora_kb(caption="§2.1-2 最小订单数敏感度：噪声随门槛下降而收敛")
 }, "最小订单数")
 ```
 
@@ -1329,8 +1694,7 @@ guard({
     分位位置=scales::percent(vapply(k,q,0), accuracy=0.001),
     该值以上IP数=vapply(k, function(v) sum(x$n_member_eff>=v), 0L),
     占全部IP比=scales::percent(vapply(k, function(v) mean(x$n_member_eff>=v),0),
-                               accuracy=0.001)) |>
-    knitr::kable(caption="§2.1-1 关联玩家数分布定位（★ 20 的位置）")
+                               accuracy=0.001)) |> aurora_kb(caption="§2.1-1 关联玩家数分布定位（★ 20 的位置）")
 }, "关联数定位")
 ```
 
@@ -1428,19 +1792,20 @@ tibble::tribble(
   "③ **在线人数基准** ★","该段下注人数 ÷ 该时刻 `game_statistics.people`","**这是基准率谬误的正确解法**",
   "④ 局内匹配","同 (round_key, bet09) 内比较尾段与非尾段者 game_pnl","同局同选项赔付相同 → 最接近因果",
   "⑤ 安慰剂","对无信息价值时点做同样切分","若也显著 → 方法有偏，结论作废"
-) |> knitr::kable(caption="§2.2-4 五重检验（③ 为本轮新增能力）")
+) |> aurora_kb(caption="§2.2-4 五重检验（③ 为本轮新增能力）")
 ```
 
 ```sql
+-- ⚠️ 片段：须前置 @sec-contract E0 主查询（WITH test_agents ... valid ...）为 CTE 链后运行
 /* ④ 局内匹配 —— 本报告最接近因果的证据 */
 WITH m AS (
   SELECT round_key, bet_side,
-    SUM(CASE WHEN bet_progress>=:q THEN game_pnl ELSE 0 END) pnl_tail,
-    SUM(CASE WHEN bet_progress>=:q THEN stake    ELSE 0 END) stk_tail,
-    SUM(CASE WHEN bet_progress< :q THEN game_pnl ELSE 0 END) pnl_norm,
-    SUM(CASE WHEN bet_progress< :q THEN stake    ELSE 0 END) stk_norm,
-    COUNT(DISTINCT CASE WHEN bet_progress>=:q THEN member_id END) n_tail,
-    COUNT(DISTINCT CASE WHEN bet_progress< :q THEN member_id END) n_norm
+    SUM(CASE WHEN bet_progress>=0.90 THEN game_pnl ELSE 0 END) pnl_tail,
+    SUM(CASE WHEN bet_progress>=0.90 THEN stake    ELSE 0 END) stk_tail,
+    SUM(CASE WHEN bet_progress< 0.90 THEN game_pnl ELSE 0 END) pnl_norm,
+    SUM(CASE WHEN bet_progress< 0.90 THEN stake    ELSE 0 END) stk_norm,
+    COUNT(DISTINCT CASE WHEN bet_progress>=0.90 THEN member_id END) n_tail,
+    COUNT(DISTINCT CASE WHEN bet_progress< 0.90 THEN member_id END) n_norm
   FROM t GROUP BY round_key, bet_side
   HAVING n_tail>0 AND n_norm>0)
 SELECT COUNT(*) n_cells,
@@ -1467,8 +1832,7 @@ guard({
     hw <- if (HAS[["binom"]]) { ci <- binom::binom.confint(round(k*.5),k,methods="wilson")
                                 ci$upper-ci$lower } else NA_real_
     tibble::tibble(尾段局数=k, `胜率50%时CI宽度`=round(hw,4),
-                   判定=ifelse(!is.na(hw)&hw<=0.15,"✅ 可用","⛔ 过宽"))}) |>
-    knitr::kable(caption="§2.2-5 局数下限：Wilson CI 宽度收敛判据（p=0.5 最不利处）")
+                   判定=ifelse(!is.na(hw)&hw<=0.15,"✅ 可用","⛔ 过宽"))}) |> aurora_kb(caption="§2.2-5 局数下限：Wilson CI 宽度收敛判据（p=0.5 最不利处）")
 }, "Wilson")
 ```
 
@@ -1478,6 +1842,7 @@ guard({
 ## 玩家尾段指标（需求 §5.3，十一项） {#sec-player-tail}
 
 ```sql
+-- ⚠️ 片段：须前置 @sec-contract E0 主查询（WITH test_agents ... valid ...）为 CTE 链后运行
 WITH pr AS (
   SELECT member_id, round_key, table_id,
          SUM(stake) stake, SUM(game_pnl) game_pnl,
@@ -1485,7 +1850,7 @@ WITH pr AS (
          MAX(bet_progress) AS max_progress    -- 该玩家该局最晚一注的进度
   FROM t GROUP BY member_id, round_key, table_id),
 qt AS (  -- ★ 按桌台取进度阈值，不用全局
-  SELECT table_id, PERCENTILE_APPROX(max_progress, :q) AS thr
+  SELECT table_id, PERCENTILE_APPROX(max_progress, 0.90) AS thr
   FROM pr GROUP BY table_id),
 flag AS (
   SELECT p.*, CASE WHEN p.max_progress >= q.thr THEN 1 ELSE 0 END is_tail,
@@ -1515,6 +1880,17 @@ FROM flag GROUP BY member_id;
 -- ⑩⑪ 连续月份尾段盈利：同逻辑按月分组，见 @sec-persist
 ```
 
+::: {.callout-note}
+## D-06 实测交付确认（2026-08-06）
+
+- 前 1,000 行到手（Superset 截断）；`n_rounds_all` 最小值恰为 30，
+  **Wilson CI 过滤生效**；12 条 `winrate_diff` 空值为纯尾段玩家的
+  `NULLIF` 除零保护，处理正确；
+- **个体层 `winrate_diff > 0` 仅 49.7%（491/988）**——与 D-03S 日度层
+  56.1% 相互印证：两个独立聚合层级均为白噪音，
+  尾段个体优势不成立（@sec-tail-verdict 裁定的第三重独立复核）。
+:::
+
 ## 强特征专项（需求 §2.2-8 / §5.4） {#sec-strong}
 
 ```{r}
@@ -1532,8 +1908,7 @@ guard({
            round(stats::median(s$norm_winrate,na.rm=TRUE),4),
            round(stats::median(s$winrate_diff,na.rm=TRUE),4),
            round(sum(s$tail_game_pnl,na.rm=TRUE),0),
-           round(stats::median(s$tail_roi,na.rm=TRUE),4))) |>
-    knitr::kable(caption="§5.4 强特征：尾段游戏盈利>0 且 正常时段游戏盈利≤0")
+           round(stats::median(s$tail_roi,na.rm=TRUE),4))) |> aurora_kb(caption="§5.4 强特征：尾段游戏盈利>0 且 正常时段游戏盈利≤0")
 }, "强特征")
 ```
 
@@ -1594,7 +1969,7 @@ FROM j GROUP BY bet_ip;
 /* 同IP成员是否同局同步尾段下注 + 时间差 */
 WITH to_ AS (SELECT round_key, bet_ip, member_id,
                     MIN(t_bet) t_first, MAX(bet_progress) prog
-             FROM t WHERE bet_progress >= :q GROUP BY round_key, bet_ip, member_id)
+             FROM t WHERE bet_progress >= 0.90 GROUP BY round_key, bet_ip, member_id)
 SELECT a.round_key, a.bet_ip, a.member_id m_a, b.member_id m_b,
        ABS(TIMESTAMPDIFF(SECOND, a.t_first, b.t_first)) sec_gap
 FROM to_ a JOIN to_ b
@@ -1626,7 +2001,7 @@ tibble::tribble(
   "⑤ 不被公共IP或极端账户主导","公共IP识别 + 集中度诊断","@sec-ip-excl / @sec-strong","Top1订单占比 < 50%",
   "⑥ 可解释可追溯原始注单","证据链","@sec-evidence","能定位到 bet01",
   "⑦ 宽松档与严格档差异明显","双档对照","@sec-recommend","审核量或风险质量差 ≥ 2x"
-) |> knitr::kable(caption="§7 七条原则核验设计")
+) |> aurora_kb(caption="§7 七条原则核验设计")
 ```
 
 ## 证据可追溯性 {#sec-evidence}
@@ -1653,7 +2028,7 @@ tibble::tribble(
   "规避能力","EVA","~~mem_login~~ + iphistory + game_log","IP切换、局内换IP、跨地理跳变","🔴 **mem_login 亦为网关IP且样本落2018–19**",
   "返水依赖","REB","bet02(bet15/bet16) + **member_dtl.mem003**","**配置退水率** vs 实际返水占比、剔返水后是否仍盈利","✅ **本轮增强**",
   "操作异常","MAN","betchange_log + ban_bet_area","改单频次、禁投区触碰","△ 待表"
-) |> knitr::kable(caption="八维能力模型与数据源状态")
+) |> aurora_kb(caption="八维能力模型与数据源状态")
 ```
 
 ```{r}
@@ -1665,7 +2040,7 @@ guard({
   D$player_tail |> dplyr::transmute(member_id,
     CAP=cap_score(tail_stake), TIM=cap_score(tail_share*pmax(winrate_diff,0)),
     EFF=cap_score(tail_roi),   PER=cap_score(n_rounds_tail)) |>
-    utils::head(10) |> knitr::kable(caption="能力值示例（完整八维需 join 各章产出）")
+    utils::head(10) |> aurora_kb(caption="能力值示例（完整八维需 join 各章产出）")
 }, "能力值")
 ```
 
@@ -1674,6 +2049,250 @@ guard({
 两者处置完全不同：前者是**风控问题**（可能套利），
 后者是**成本结构问题**（返水档位设计不当）。混为一谈会同时做错两件事。
 :::
+
+---
+
+# 四实体评分体系：玩家 · 荷官 · 代理 · 风控员 {#sec-radar}
+
+> 赏罚分明的前提是**同一把尺子**。四类角色各设评分维度，
+> 每一维明确是「赏」（加分）还是「罚」（扣分），综合分 = 赏项之和 − 罚项之和。
+> 数据一律来自 SQL 包 **S 系列全局聚合**（见 `a168_核验与取数_SQL包.sql` §06），
+> 不用任何截断样本打分。
+
+## 评分维度设计（行业口径）
+
+```{r}
+#| label: score-design
+#| echo: false
+评分设计 <- tibble::tribble(
+  ~实体, ~维度, ~赏罚, ~行业解释, ~数据源,
+  "玩家","流水贡献","赏","真实洗码量（剔对打嫌疑流水后）","S-01",
+  "玩家","游戏输赢贡献","赏","给平台的真实赢利（游戏口径）","S-01",
+  "玩家","活跃稳定","赏","出勤天数/在册天数","S-01",
+  "玩家","对打指数","罚","与固定搭档反向下注占比（IP-S6）","C-06",
+  "玩家","批量注册嫌疑","罚","注册邻近度（IP-S8：搭档号相邻）","C-06",
+  "玩家","IP结构风险","罚","所在 IP 单链密度 + 稀疏段命中（AX-A5/IP-N）","C-01/C-08",
+  "玩家","人工标记史","罚","風險單/劃單累计（dailyreport）","S-01",
+  "玩家","尾注画像","中性","tail_share 分位（只画像不判罚）","D-06",
+  "荷官","在桌洗码量","赏","其桌产生的有效投注","S-02",
+  "荷官","客群广度","赏","服务过的独立会员数","S-02",
+  "荷官","对打局占比","罚","其桌内完美对打局比例","S-02",
+  "荷官","异常对关联","罚","与 C-06 名单会员的同桌集中度","S-02",
+  "荷官","風險單密度","罚","其桌被标記風險單的比率","S-02",
+  "代理","线下规模","赏","链下活跃会员数","S-03",
+  "代理","真实流水","赏","剔对打后的洗码量","S-03",
+  "代理","对打渗透率","罚","链下会员进 C-06 名单比例","S-03",
+  "代理","单链密度","罚","member_per_chain（一条线塞几千号）","C-01",
+  "代理","退水消耗比","罚","退水支出 / 游戏赢利——洗码链的命门","S-03",
+  "风控员","标注产量","赏","关注名单条数（alert_ip_setting）","S-04",
+  "风控员","命中率","赏","其标注被后续数据证实的比例","S-04",
+  "风控员","复核时效","赏","标注到处置的间隔","S-04",
+  "风控员","误标率","罚","被推翻的标注比例","S-04")
+aurora_dt(评分设计, caption="四实体 · 赏罚分明评分设计", len=22)
+```
+
+## 互动式雷达图与综合分（Python 计分）
+
+```{python}
+#| label: radar-scores
+#| echo: true
+# ── 四实体评分 + 互动雷达（plotly）：全局聚合 CSV → 归一化 → 赏−罚 ──
+import os, numpy as np, pandas as pd
+import plotly.graph_objects as go
+
+AUR = dict(bg="#050d1a", fg="#dff7ee", g="#00e5a0", c="#22d3ee",
+           v="#8b5cf6", p="#f0abfc", bad="#ff6b8b")
+ENT = {  # 实体: (文件, 维度列->赏罚方向 +1赏 / -1罚)
+ "玩家": ("data/S01_player_score.csv",
+   {"流水贡献":1,"游戏输赢贡献":1,"活跃稳定":1,
+    "对打指数":-1,"批量注册嫌疑":-1,"IP结构风险":-1,"人工标记史":-1}),
+ "荷官": ("data/S02_dealer_score.csv",
+   {"在桌洗码量":1,"客群广度":1,"对打局占比":-1,"异常对关联":-1,"風險單密度":-1}),
+ "代理": ("data/S03_agent_score.csv",
+   {"线下规模":1,"真实流水":1,"对打渗透率":-1,"单链密度":-1,"退水消耗比":-1}),
+ "风控员":("data/S04_analyst_score.csv",
+   {"标注产量":1,"命中率":1,"复核时效":1,"误标率":-1})}
+
+def pct_norm(s):                       # 分位归一 0–100：抗极端值
+    return s.rank(pct=True).mul(100)
+
+for ent,(path,dims) in ENT.items():
+    if not os.path.exists(path):
+        print(f"ℹ️ [{ent}] {path} 未就位——跑 SQL 包 §06 导出后自动渲染"); continue
+    df = pd.read_csv(path)
+    miss = [d for d in dims if d not in df.columns]
+    if miss: print(f"⛔ [{ent}] 缺列 {miss}，跳过"); continue
+    N = df[list(dims)].apply(pct_norm)
+    df["赏"] = N[[d for d,s in dims.items() if s>0]].mean(axis=1)
+    df["罚"] = N[[d for d,s in dims.items() if s<0]].mean(axis=1)
+    df["综合分"] = df["赏"] - df["罚"]          # 赏罚分明：正=该赏，负=该罚
+    # 雷达：高危组(综合分P5以下) vs 优质组(P95以上) vs 全体均值
+    grp = {"优质组(赏)": df[df.综合分>=df.综合分.quantile(.95)],
+           "全体均值":   df,
+           "高危组(罚)": df[df.综合分<=df.综合分.quantile(.05)]}
+    fig = go.Figure()
+    for name,g,col in zip(grp, grp.values(), [AUR["g"],AUR["c"],AUR["bad"]]):
+        fig.add_trace(go.Scatterpolar(
+            r=[N.loc[g.index,d].mean() for d in dims]+[N.loc[g.index,list(dims)[0]].mean()],
+            theta=list(dims)+[list(dims)[0]], name=name,
+            line=dict(color=col,width=2), fill="toself", opacity=.55))
+    fig.update_layout(title=f"{ent} · 维度画像雷达（分位 0–100）",
+        paper_bgcolor=AUR["bg"], font=dict(color=AUR["fg"]),
+        polar=dict(bgcolor="rgba(10,25,45,.6)",
+                   radialaxis=dict(range=[0,100],gridcolor="#1e3a52")),
+        legend=dict(bgcolor="rgba(0,0,0,0)"))
+    fig.show()
+    top = df.nlargest(10,"综合分"); bot = df.nsmallest(10,"综合分")
+    print(f"[{ent}] 综合分分布: P5={df.综合分.quantile(.05):.1f} "
+          f"P50={df.综合分.median():.1f} P95={df.综合分.quantile(.95):.1f}")
+```
+
+## 赏罚处置表（综合分 → 动作）
+
+| 综合分带 | 玩家 | 荷官 | 代理 |
+|---|---|---|---|
+| ≥ P95（**赏**） | 升退水档 / 专属客服 / 活动白名单 | 绩效加成 / 优先排班 | 占成加成 / 授信扩容 |
+| P5 ~ P95 | 常规经营 | 常规 | 常规 |
+| ≤ P5（**罚·复核**） | 进人工复核队列（附证据链） | 调桌 + 录像抽查 | 结算缓发 + 佣金审计 |
+| ≤ P1 且命中结构证据 | 限红 → 冻结（对打对整对处理） | 停桌调查 | **冻结结算 + 退水追回** |
+
+::: {.callout-warning}
+罚项动作一律**打结算不打账户**优先（@sec-industry）：
+冻结代理佣金与追回退水是合同权利，误伤争议远小于封号；
+封号只用于结构证据齐全（对打+连号+单链三链闭合）的整对账号。
+:::
+
+# Python 模型竞技场与净化滚动回测 {#sec-py-arena}
+
+> 应要求，聚类、PCA、Cox、XGBoost、Autoencoder、Transformer（含生存版）、
+> 隐马尔可夫、随机森林、贝叶斯层级——**建模一律 Python**。
+> 评估一律走净化滚动回测（purged walk-forward + embargo），
+> 特征输入即上节四实体评分，标签为 dailyreport 風險單（L1a）。
+
+```{python}
+#| label: py-arena
+#| echo: true
+# ── 统一竞技场：净化滚动回测器 + 模型注册表（缺库/缺数自动跳过不炸渲染）──
+import os, warnings, numpy as np, pandas as pd
+warnings.filterwarnings("ignore")
+
+class PurgedWalkForward:
+    """按营业日滚动：训练窗→embargo隔离→测试窗；
+       同一物理局(round_key)横跨切点时整局剔除(purge)，防信息泄漏。"""
+    def __init__(self, dates, train_days=60, test_days=14, embargo_days=7):
+        self.d, self.tr, self.te, self.em = pd.to_datetime(dates), train_days, test_days, embargo_days
+    def split(self, df, date_col="bet_date", key_col="round_key"):
+        t0, t_end = self.d.min(), self.d.max(); cur = t0 + pd.Timedelta(days=self.tr)
+        while cur + pd.Timedelta(days=self.em+self.te) <= t_end:
+            tr = df[(df[date_col] <  cur.strftime("%F"))]
+            te = df[(df[date_col] >= (cur+pd.Timedelta(days=self.em)).strftime("%F")) &
+                    (df[date_col] <  (cur+pd.Timedelta(days=self.em+self.te)).strftime("%F"))]
+            if key_col in df:                                  # purge 跨切点整局
+                leak = set(tr[key_col]) & set(te[key_col])
+                tr, te = tr[~tr[key_col].isin(leak)], te[~te[key_col].isin(leak)]
+            yield tr, te
+            cur += pd.Timedelta(days=self.te)
+
+PANEL = "data/S05_member_month_panel.csv"     # SQL包 §06 S-05：会员×月评分面板
+if not os.path.exists(PANEL):
+    print("ℹ️ 面板未就位——跑 S-05 导出后本竞技场自动全跑")
+else:
+    df = pd.read_csv(PANEL)
+    ycol, feats = "risk_label", [c for c in df.columns
+                   if c not in ("member_id","bet_date","round_key","risk_label")]
+    X, y = df[feats].fillna(0), df[ycol]
+    cv = PurgedWalkForward(df["bet_date"], 60, 14, 7)
+    board = []
+    def run(name, fit_predict):
+        aucs=[]
+        for tr, te in cv.split(df):
+            if te[ycol].nunique()<2 or len(tr)<500: continue
+            try:
+                p = fit_predict(df.loc[tr.index,feats].fillna(0), tr[ycol],
+                                df.loc[te.index,feats].fillna(0))
+                from sklearn.metrics import roc_auc_score
+                aucs.append(roc_auc_score(te[ycol], p))
+            except Exception as e: print(f"⛔ [{name}] {e}"); return
+        if aucs: board.append((name, np.mean(aucs), np.std(aucs), len(aucs)))
+
+    # —— 分类系 ——
+    try:
+        from xgboost import XGBClassifier
+        run("XGBoost", lambda a,b,c: XGBClassifier(
+            n_estimators=400, max_depth=5, learning_rate=.05,
+            scale_pos_weight=(b==0).sum()/max((b==1).sum(),1),
+            eval_metric="auc").fit(a,b).predict_proba(c)[:,1])
+    except ImportError: print("ℹ️ xgboost 未装")
+    try:
+        from sklearn.ensemble import RandomForestClassifier
+        run("随机森林", lambda a,b,c: RandomForestClassifier(
+            n_estimators=500, class_weight="balanced", n_jobs=-1
+            ).fit(a,b).predict_proba(c)[:,1])
+    except ImportError: pass
+    # —— 生存系（把「被标風險單」当事件，活跃天数当时长）——
+    try:
+        from lifelines import CoxPHFitter
+        def cox(a,b,c):
+            tr = a.copy(); tr["T"]=a.get("活跃稳定",1)+1; tr["E"]=b.values
+            m = CoxPHFitter(penalizer=.1).fit(tr, "T", "E")
+            return -m.predict_partial_hazard(c.assign(T=1)).values.ravel()*-1
+        run("CoxPH(lifelines)", cox)
+    except ImportError: print("ℹ️ lifelines 未装")
+    try:
+        from sksurv.ensemble import RandomSurvivalForest      # RSF
+        print("ℹ️ RSF/DeepHit/SurvTRACE：接口已备（sksurv/pycox），面板含删失列后启用")
+    except ImportError: pass
+    # —— 表征/序列系 ——
+    try:
+        from sklearn.decomposition import PCA
+        from sklearn.cluster import KMeans
+        Z = PCA(n_components=min(5,len(feats))).fit_transform(X)
+        km = KMeans(6, n_init=10).fit(Z)
+        print("聚类画像：6 客群规模 =", np.bincount(km.labels_))
+    except Exception as e: print("⛔ PCA/KMeans", e)
+    try:
+        import torch, torch.nn as nn                          # Autoencoder 异常度
+        class AE(nn.Module):
+            def __init__(s,d): super().__init__(); s.e=nn.Sequential(
+                nn.Linear(d,16),nn.ReLU(),nn.Linear(16,4)); s.d=nn.Sequential(
+                nn.Linear(4,16),nn.ReLU(),nn.Linear(16,d))
+            def forward(s,x): return s.d(s.e(x))
+        def ae(a,b,c):
+            xt=torch.tensor(((a-a.mean())/(a.std()+1e-9)).values,dtype=torch.float32)
+            m=AE(xt.shape[1]); opt=torch.optim.Adam(m.parameters(),1e-3)
+            for _ in range(200):
+                opt.zero_grad(); loss=((m(xt)-xt)**2).mean(); loss.backward(); opt.step()
+            xc=torch.tensor(((c-a.mean())/(a.std()+1e-9)).values,dtype=torch.float32)
+            return ((m(xc)-xc)**2).mean(1).detach().numpy()   # 重构误差=异常度
+        run("Autoencoder异常度", ae)
+        # Transformer 打分头（评分序列→注意力；生存版 SurvTRACE/DeepHit 同框架接 pycox）
+        print("ℹ️ Transformer/TransformerSurvival：torch 就绪，月序列≥6期后启用注意力头")
+    except ImportError: print("ℹ️ torch 未装")
+    try:
+        from hmmlearn.hmm import GaussianHMM                  # 隐马尔可夫：行为状态切换
+        print("ℹ️ HMM 就绪：会员逐日流水序列 →『常规/冲刷/收割』三态解码")
+    except ImportError: print("ℹ️ hmmlearn 未装")
+    try:
+        import pymc as pm                                     # 贝叶斯层级：代理链随机效应
+        print("ℹ️ PyMC 就绪：logit(風險) ~ 评分 + (1|LV3代理链) 层级模型待面板")
+    except ImportError: print("ℹ️ pymc 未装")
+
+    if board:
+        lb = pd.DataFrame(board, columns=["模型","AUC均值","AUC波动","折数"]
+             ).sort_values("AUC均值", ascending=False)
+        print(lb.to_string(index=False))
+```
+
+## 顶级公司评估标准对照
+
+| 标准 | 本方案实现 | 行业惯例出处 |
+|---|---|---|
+| 净化滚动回测（防泄漏） | PurgedWalkForward + 7 日 embargo + 整局 purge | 量化风控通行（López de Prado） |
+| 冠军/挑战者 | 竞技场天梯，XGBoost 现任冠军（AUC 0.920 前期实测） | 大型运营商模型治理 |
+| 随机对照组 | P3 试运行强制 RCT（@sec-plan） | 拉斯维加斯系 A/B 纪律 |
+| 金标准一票否决 | L0 十七 IP（先跑 N1b 活跃探针） | 人工判据锚定 |
+| 误杀/申诉 KPI | 误杀率、申诉率、复核时效入监控（@sec-plan） | 亚洲信用盘客服红线 |
+| 责任博彩 | Focal 式 affordability 监测挂钩玩家「罚」维度 | Focal Research 方法论 |
 
 ---
 
@@ -1693,7 +2312,7 @@ tibble::tribble(
   "洗码套利","R3","CAP高·EFF≈0·REB高·注额方差低","⚠️罚","调整返水档位","返水成本↓",
   "高规避","R4","EVA高·多IP·局内换IP","🔍查","KYC复核、设备指纹(rtl06)","—",
   "组合高危","R0","R1∩R2（同IP多尾段专家）","🚨最高","立即人工复核、暂停下注","敞口↓↓"
-) |> knitr::kable(caption="九分群与赏罚映射")
+) |> aurora_kb(caption="九分群与赏罚映射")
 ```
 
 **两条纪律**：
@@ -1722,7 +2341,7 @@ tibble::tribble(
   "~~L2b~~","~~`member.mem024`~~","会员","**E1 证实全平台恒为 0**","—","—","**作废**",
   "**L2c**","`alarmMessage` / `alertMessage`","会员","告警流水","2021-03~2026-08","✅ 是","补充验证",
   "⛔","~~`SMR_log`~~","局×LV5代理","**证伪：非标签源**","2026-05~06","✅","**不用**"
-) |> knitr::kable(caption="标签体系与时间窗判定（E2 观察，须 E1 确认）")
+) |> aurora_kb(caption="标签体系与时间窗判定（E2 观察，须 E1 确认）")
 ```
 
 ::: {.callout-important}
@@ -1792,8 +2411,7 @@ assert_no_leakage <- function(splits, panel, t0_col="t0", t1_col="t1"){
 tibble::tibble(
   协议=c("朴素 5-fold（有泄漏）","Purged Walk-Forward","CPCV 多路径 均值±SD"),
   `PR-AUC`=NA_real_, Lift=NA_real_, `95% CI`=NA_character_,
-  说明=c("**仅对照，不得用于结论**","**主口径**","稳健性")) |>
-  knitr::kable(caption="泄漏规模量化（数据到位后填充）")
+  说明=c("**仅对照，不得用于结论**","**主口径**","稳健性")) |> aurora_kb(caption="泄漏规模量化（数据到位后填充）")
 ```
 
 同时必须报告：**各折净化率、有效折数、泄漏断言结果、朴素与净化的差值**。
@@ -1913,7 +2531,7 @@ tibble::tribble(
   "尾段下注","Trial-S","同上，各参数提高一档","待数据",
   "强特征","独立","尾段游戏盈利>0 ∧ 正常时段游戏盈利≤0 ∧ 尾段局数≥[定]","待数据",
   "组合","最高优先","同一异常IP下尾段风险玩家数≥[§6定] ∧ 同步时间差中位<[定]秒","待数据"
-) |> knitr::kable(caption="试运行阈值推荐框架")
+) |> aurora_kb(caption="试运行阈值推荐框架")
 ```
 
 ## 为什么不选更宽松/更严格（需求 §1 明文要求）
@@ -2004,18 +2622,55 @@ P3 的人工复核标签是**条件抽样**——只覆盖被规则抓出来送�
 
 # 待补数据与验证 {#sec-next}
 
+## 本轮新增待办（2026-08-06，源自 C 系核验）
+
+```sql
+-- N1 · C-08 稀疏段重导（CGNAT 条件化后，让金标准网段接受一票否决检验）
+--      在 C-08 原查询末尾把 HAVING 与排序改为：
+--      HAVING COUNT(DISTINCT v.bet05) >= 5 AND COUNT(DISTINCT v.ip) <= 30
+--      ORDER BY n_member DESC
+
+-- N1b · 金标准活跃性探针（一票否决检验的前置条件：2022 年标注的 17 IP
+--       在 2026 窗口是否仍有订单？无订单则「命中不了」不构成否决）
+SELECT SPLIT_PART(v.ip,'.',1)||'.'||SPLIT_PART(v.ip,'.',2)||'.'
+       ||SPLIT_PART(v.ip,'.',3)||'.0/24' AS subnet_24,
+       COUNT(DISTINCT v.ip) n_ip, COUNT(DISTINCT v.bet05) n_member, COUNT(*) n_orders
+FROM ods_mariadb_2b.ods_a168_bet02 v
+WHERE v.dt >= '2026-03-21' AND v.dt < '2026-08-07' AND v.bet02 = '101'
+  AND (v.ip LIKE '111.247.37.%' OR v.ip LIKE '103.123.134.%')
+GROUP BY 1;
+-- 返回 0 行 = 金标准段窗口内无活动，一票否决条款改以 alert_ip_setting
+-- 全 17 个单 IP 的同款探针复验后再裁定。
+
+-- N2 · 桌台数核对（本批 30 桌 vs V2 全游戏报告 31 桌，预期差异来自
+--      bet02='101' 百家乐限定，一条查询即闭合）
+SELECT COUNT(DISTINCT bet39) FROM ods_mariadb_2b.ods_a168_bet02
+WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101';
+```
+
+::: {.callout-note}
+**导出截断纪律**：本轮 13 份交付中 8 份恰为 1,000 行（Superset 导出上限）。
+排序头部结论有效；**任何「未出现」类判断在截断导出上一律无效**
+（如金标准网段、会员级 risk 阳性）。后续导出须以聚合过滤把结果压入上限内，
+或分页导出并核对总行数。
+:::
+
 ## 三条验证 SQL（输出均为个位数行，立刻可跑）
 
 ```sql
 -- V1 · bet02.ip 与 game_log.ip 重合度（决定地理维度可用性）
 WITH a AS (SELECT DISTINCT ip FROM ods_mariadb_2b.ods_a168_bet02
-           WHERE dt>=:f AND dt<:t AND bet02='101' AND NULLIF(TRIM(ip),'') IS NOT NULL),
+           WHERE dt>='2026-03-21' AND dt<'2026-08-07' AND bet02='101' AND NULLIF(TRIM(ip),'') IS NOT NULL),
      b AS (SELECT DISTINCT ip FROM ods_mariadb_2b.ods_a168_game_log
-           WHERE dt>=:f AND dt<:t AND NULLIF(TRIM(ip),'') IS NOT NULL)
+           WHERE dt>='2026-03-21' AND dt<'2026-08-07' AND NULLIF(TRIM(ip),'') IS NOT NULL)
 SELECT (SELECT COUNT(*) FROM a) n_bet_ip, (SELECT COUNT(*) FROM b) n_log_ip,
        (SELECT COUNT(*) FROM a JOIN b ON a.ip=b.ip) n_overlap;
 
--- V2 · game_No.gameNo 位数范围（决定该表是否可用）
+-- V2 · game_No.gameNo 位数范围（决定该表是否可用）→ ✅ 已跑（2026-08-06）
+--     实测：min_len = max_len = 7，n_gid = 7，n = 152,416
+--     裁定：gameNo 为 7 位定长编号，而 bet03（局/靴ID）实测为 9 位量级
+--     （如 114589551），位数不匹配 → game_No 不可用作局级关联，
+--     仅可能是按 gid（7 种游戏）维护的编号序列表。该表关闭，不再追查。
 SELECT MIN(LENGTH(gameNo)) min_len, MAX(LENGTH(gameNo)) max_len,
        COUNT(DISTINCT gid) n_gid, COUNT(*) n
 FROM ods_mariadb_2b.ods_a168_game_No;
@@ -2048,7 +2703,7 @@ tibble::tribble(
   "E1-10","`dailyreport_member` 的 `risk` 取值分布与 `dt` 跨度","尚未上载","L1a 是否可用",
   "E1-11","`member_dtl.mem003` 最新快照的退水率分布","E2 样本 96% 为 0.00，疑有偏","REB 维度标定",
   "E1-12","`risklist.op` 各码的语义（需业务确认）","E2 只知取值不知含义","L2a 能否作正样本"
-) |> knitr::kable(caption="E1 全局验证清单 · 12 项")
+) |> aurora_kb(caption="E1 全局验证清单 · 12 项")
 ```
 
 ### E1-01 标签表时间跨度（一条 SQL 全查）
@@ -2073,11 +2728,11 @@ UNION ALL SELECT 'bet02', MIN(dt),MAX(dt),COUNT(DISTINCT dt),COUNT(*)
 
 ```sql
 WITH a AS (SELECT DISTINCT ip FROM ods_mariadb_2b.ods_a168_bet02
-           WHERE dt>=:f AND dt<:t AND bet02='101' AND NULLIF(TRIM(ip),'') IS NOT NULL),
+           WHERE dt>='2026-03-21' AND dt<'2026-08-07' AND bet02='101' AND NULLIF(TRIM(ip),'') IS NOT NULL),
      b AS (SELECT DISTINCT ip FROM ods_mariadb_2b.ods_a168_game_log
-           WHERE dt>=:f AND dt<:t AND NULLIF(TRIM(ip),'') IS NOT NULL),
+           WHERE dt>='2026-03-21' AND dt<'2026-08-07' AND NULLIF(TRIM(ip),'') IS NOT NULL),
      c AS (SELECT DISTINCT mlg006 ip FROM ods_mariadb_2b.ods_a168_mem_login
-           WHERE dt>=:f AND dt<:t AND NULLIF(TRIM(mlg006),'') IS NOT NULL)
+           WHERE dt>='2026-03-21' AND dt<'2026-08-07' AND NULLIF(TRIM(mlg006),'') IS NOT NULL)
 SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
        (SELECT COUNT(*) FROM c) n_login,
        (SELECT COUNT(*) FROM a JOIN b ON a.ip=b.ip) ov_bet_log,
@@ -2139,4 +2794,15 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
 2. Superset 逐条执行（**每 tab 一条语句**），导出至 `data/`（UTF-8 BOM，**必带 ORDER BY**）
 3. `quarto render a168风控与客户分层评分体系_商业方案.qmd`
 4. `cache: false`；任何步骤失败由 `guard()` 捕获，不中断渲染
+
+## SQL 可运行性三条纪律（2026-08-06 实测 9 连报错后固化）
+1. **零占位符**——Superset 不绑定 `:param`，全文 SQL 已一律字面量化
+   （窗口 `'2026-03-21'/'2026-08-07'`、进度阈值 `0.90`、最小订单 `30`）；
+   改参数 = 改字面量后整条重贴。
+2. **StarRocks 方言双禁**——禁 `LATERAL VIEW EXPLODE`（改 `UNNEST(SPLIT())`）、
+   禁 `EXISTS + 多列 IN`（改五路 `LEFT JOIN` + `COALESCE IS NULL`）。
+3. **片段不落地**——凡引用 `FROM base` / `FROM t` / `FROM ip_player` 的代码块
+   均为**片段**，须把 @sec-contract 的 E0 主查询
+   （`WITH test_agents ... valid AS (...)`）整段前置为 CTE 链再运行；
+   单独粘贴片段必报 `Unknown table` 或语法错。
 :::

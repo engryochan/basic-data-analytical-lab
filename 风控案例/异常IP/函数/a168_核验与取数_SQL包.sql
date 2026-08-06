@@ -1,107 +1,198 @@
-/* ============================================================================
-   a168 风控与客户分层评分体系 · 核验与取数 SQL 包  v3
-   ----------------------------------------------------------------------------
-   目标库   : StarRocks  ods_mariadb_2b   【只读模式，无 DDL/DML 权限】
-   执行环境 : Superset SQL Lab —— 每个 tab 只提交一条语句
-   配套报告 : a168风控与客户分层评分体系_商业方案.qmd
-   ----------------------------------------------------------------------------
-   v3 相对 v2 的三处结构性修正
-     1. 【只读】删除全部 CREATE TABLE —— 每条查询自足，BASE 块内联
-     2. 【方言】StarRocks 不支持 EXISTS 带非等值谓词
-        → 测试代理排除改为五次 LEFT JOIN + COALESCE(...) IS NULL（纯等值）
-     3. 【实测】<MID> = bet05；白名单 unnest 未验证，暂从 BASE 移出为独立测试
-   ----------------------------------------------------------------------------
-   架构原则（只读模式下的正确分工）
-     SQL 端  → 只产出【聚合结果】，行数控制在可导出范围
-     R 端    → 承担 join、阈值网格、purged walk-forward、回测
-     大中间表（玩家×IP 约数百万行）导出 CSV 后在 R/data.table 处理
-   ----------------------------------------------------------------------------
-   已确定参数
-     '2026-03-21' / '2026-08-07'   分析窗（bet02 实测 139 天）
-     '101'                          百家乐
-     bet05                          dailyreport_member 的会员ID列
-   ============================================================================ */
+/* ╔═══════════════════════════════════════════════════════════════════════╗
+   ║  a168_核验与取数_SQL包.sql · 全量正典（2026-08-06 定稿）                 ║
+   ║  配套报告：a168风控与客户分层评分体系_商业方案.qmd（两文件铁律）          ║
+   ╚═══════════════════════════════════════════════════════════════════════╝
+   使用纪律（实测 9 连报错后固化，逐条血泪）：
+   ① 每条查询自包含、零占位符——复制整段直接在 Superset SQL Lab 运行；
+   ② StarRocks 方言：禁 LATERAL VIEW EXPLODE（用 UNNEST）、
+      禁 EXISTS+多列 IN（用五路 LEFT JOIN + COALESCE IS NULL）；
+   ③ 逐条提交，禁批量（僵尸查询风险）；导出加 ORDER BY（防分页重复）；
+   ④ 导出上限 1,000 行：只承认排序头部结论，「未出现」类判断一律无效；
+   ⑤ 全局窗口 2026-03-21 ~ 2026-08-07（139 营业日），改窗改字面量。
+   ╔══ 导出总览（★ = 报告渲染必需；文件名错则报告静默空转）══════════╗
+   ║ 必导 23 份，全部落在报告同级 data/ 目录，UTF-8 BOM，导出前带 ORDER BY ║
+   ║  ★ S01_player_score.csv    ← S-01   玩家评分雷达                    ║
+   ║  ★ S02_dealer_score.csv    ← S-02   荷官评分雷达                    ║
+   ║  ★ S03_agent_score.csv     ← S-03   代理评分雷达                    ║
+   ║  ★ S04_analyst_score.csv   ← S-04   风控员评分雷达                  ║
+   ║  ★★ S05_member_month_panel.csv ← S-05 净化滚动回测面板（竞技场输入）║
+   ║  ★ V_recon.csv             ← A-06M  局级对账 MASE                   ║
+   ║  ★ I_ip_player.csv         ← C-00   会员×IP 明细                    ║
+   ║  ★ S_player_tail.csv       ← D-06   玩家尾段十一项                  ║
+   ║  ★ S_second_dist.csv       ← D-05   桌台进度分位                    ║
+   ║  ★ T_table_span.csv        ← E1-07  桌台局时长                      ║
+   ║    C01_ip_chain.csv        ← C-01   信用枢纽排序                    ║
+   ║    C06_hedge_pairs.csv     ← C-06   对打对名单                      ║
+   ║    C08_subnet_all.csv      ← C-08   网段全量                        ║
+   ║    C08_subnet_sparse.csv   ← N1     稀疏段靶向                      ║
+   ║    D03S_daily_roi_diff.csv ← D-03S  日度尾段对照                    ║
+   ║    L_label_dist.csv        ← E1-10  标签分布                        ║
+   ║    R_rebate_dist.csv       ← E1-11  退水档位分布                    ║
+   ║  ★ I_ip_agg.csv            ← C-02   IP汇总三版本口径                ║
+   ║  ★ X_combo.csv             ← X-01   两规则组合矩阵                  ║
+   ║  ★ P_player_month.csv      ← P-01   会员×月面板（跨月持续）         ║
+   ║  ★ B_online_base.csv       ← B-01   在线人数基准（29秒分母）        ║
+   ║  ★ A_anchor.csv            ← A-01   L0金标准17IP锚点                ║
+   ║  ★ V_ipmatch.csv           ← V-01   三方IP明细对照                  ║
+   ║ 其余 8 条（00-1~00-4/E1-03/E1-08/N1b/V2）只看屏幕结果，不必导出。   ║
+   ╚══════════════════════════════════════════════════════════════════╝
+   行业正名速查：bet03靴号 bet04第几把 bet05会员 bet09玩法 bet11汇率
+   bet13本金 validbet洗码量 bet14派彩 bet16退水 bet17净输赢
+   bet18–22五级代理线 bet39桌号 eid荷官  ——详见报告第〇章。 */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   00-1 · 哨兵局断言（预期 0；非 0 须重评口径）
+   E1 已证为 0，此为字面量复核版
+   ▸ 导出：不需要 —— 屏幕看结果即可（返回 1 行）
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT COUNT(*) AS n_sentinel FROM ods_mariadb_2b.ods_a168_bet02
+WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02='101' AND bet03='0';
 
 
-/* ############################################################################
-   PART A · 剩余核验（A-03/05/10a/11/12/13 已完成）
-   ############################################################################ */
+/* ═══════════════════════════════════════════════════════════════════════
+   00-2 · 注单去重率（E1 实测 0.74%）
+   
+   ▸ 导出：不需要 —— 屏幕看结果即可（返回 1 行）
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT COUNT(*) AS n_raw, COUNT(DISTINCT bet01) AS n_dedup,
+       1 - COUNT(DISTINCT bet01)*1.0/COUNT(*) AS dup_rate
+FROM ods_mariadb_2b.ods_a168_bet02
+WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02='101';
 
-/* --- A-04 铁律⑤分母（EXISTS → LEFT JOIN 重写）------------------------- */
-WITH ta AS (
+
+/* ═══════════════════════════════════════════════════════════════════════
+   00-3 · 铁律⑤分母：窗口内百家乐有效下注会员数（E1 实测 721,190）
+   
+   ▸ 导出：不需要 —— 屏幕看结果即可（返回 1 行）
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent
-  WHERE age022 = '1'
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
-rk AS (
-  SELECT b.bet01, b.bet05, b.bet11, b.bet38, b.category, b.bet08,
-         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
-         ROW_NUMBER() OVER (
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
+  SELECT b.*, ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
   WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-)
-SELECT
-  COUNT(*)                AS n_valid_orders,
-  COUNT(DISTINCT r.bet05) AS n_betting_members,
-  COUNT(DISTINCT r.bet01) AS n_distinct_bet_id
-FROM rk r
-LEFT JOIN ta t1 ON t1.aid = r.bet18
-LEFT JOIN ta t2 ON t2.aid = r.bet19
-LEFT JOIN ta t3 ON t3.aid = r.bet20
-LEFT JOIN ta t4 ON t4.aid = r.bet21
-LEFT JOIN ta t5 ON t5.aid = r.bet22
-WHERE r.rn = 1
-  AND r.category = '1'
-  AND UPPER(TRIM(r.bet38)) = 'N'
-  AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-  AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-  AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
-  AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL;
-
-
-/* --- A-08 测试代理线影响面（同上重写）--------------------------------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent
-  WHERE age022 = '1'
 ),
-tg AS (
-  SELECT b.bet05 AS member_id,
-         CASE WHEN COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-              THEN 0 ELSE 1 END AS is_test_line,
-         CAST(NULLIF(TRIM(b.bet13),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) AS stake
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  LEFT JOIN ta t1 ON t1.aid = b.bet18
-  LEFT JOIN ta t2 ON t2.aid = b.bet19
-  LEFT JOIN ta t3 ON t3.aid = b.bet20
-  LEFT JOIN ta t4 ON t4.aid = b.bet21
-  LEFT JOIN ta t5 ON t5.aid = b.bet22
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-    AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
 )
-SELECT is_test_line,
-       COUNT(*)                  AS n_orders,
-       COUNT(DISTINCT member_id) AS n_members,
-       SUM(stake)                AS turnover
-FROM tg
-GROUP BY is_test_line;
+SELECT COUNT(DISTINCT member_id) AS n_member_denominator FROM bs;
 
 
-/* --- A-10b dailyreport_member 双标签分布（risk 風險單 / orders 劃單）--- */
-SELECT risk, orders,
-       COUNT(*)              AS n_rows,
-       COUNT(DISTINCT bet05) AS n_members,
-       MIN(dt) AS dt_min, MAX(dt) AS dt_max
+/* ═══════════════════════════════════════════════════════════════════════
+   00-4 · N2 · 桌台数核对（本批 30 vs V2 报告 31 的闭合）
+   
+   ▸ 导出：不需要 —— 屏幕看结果即可（返回 1 行）
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT COUNT(DISTINCT bet39) AS n_tables FROM ods_mariadb_2b.ods_a168_bet02
+WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02='101';
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   E1-03 · 三方 IP 重合度（裁定：game_log.ip 为网关，禁作下注 IP）
+   E1 实测：1.32M vs 1,668，重合仅 2
+   ▸ 导出：不需要 —— 屏幕看结果即可（返回 1 行）
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH a AS (SELECT DISTINCT ip FROM ods_mariadb_2b.ods_a168_bet02
+           WHERE dt>='2026-03-21' AND dt<'2026-08-07' AND bet02='101'
+             AND NULLIF(TRIM(ip),'') IS NOT NULL),
+     b AS (SELECT DISTINCT ip FROM ods_mariadb_2b.ods_a168_game_log
+           WHERE dt>='2026-03-21' AND dt<'2026-08-07'
+             AND NULLIF(TRIM(ip),'') IS NOT NULL)
+SELECT (SELECT COUNT(*) FROM a) AS n_bet_ip,
+       (SELECT COUNT(*) FROM b) AS n_log_ip,
+       (SELECT COUNT(*) FROM a JOIN b ON a.ip=b.ip) AS n_overlap;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   E1-07 · 局时长按桌分位（尾注阈值分层依据；桌内SD≈5s、桌间SD=18.2s）
+   
+   ▸ 导出：**data/T_table_span.csv**
+   ▸ 用途：报告 fetch("T_table_span")：桌台局时长分层
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT gi011 AS table_id, COUNT(*) AS n_rounds,
+       AVG(UNIX_TIMESTAMP(gi006)-UNIX_TIMESTAMP(gi004))  AS mean_sec,
+       PERCENTILE_APPROX(UNIX_TIMESTAMP(gi006)-UNIX_TIMESTAMP(gi004),0.5) AS p50,
+       PERCENTILE_APPROX(UNIX_TIMESTAMP(gi006)-UNIX_TIMESTAMP(gi004),0.9) AS p90,
+       PERCENTILE_APPROX(UNIX_TIMESTAMP(gi006)-UNIX_TIMESTAMP(gi004),0.99) AS p99
+FROM ods_mariadb_2b.ods_a168_game_info
+WHERE gi001='101' AND gi013='1' AND is_lock='N'
+  AND gi004>='2026-03-21' AND gi004<'2026-08-07'
+GROUP BY gi011 ORDER BY n_rounds DESC;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   E1-08 · 测试线规模（E1 实测 214 代理，跨五级）
+   
+   ▸ 导出：不需要 —— 屏幕看结果即可（返回 1 行）
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT COUNT(*) AS n_test_agents FROM ods_mariadb_2b.ods_a168_agent WHERE age022='1';
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   E1-10 · 風險單/劃單全局分布（标签可用性）
+   
+   ▸ 导出：**data/L_label_dist.csv**
+   ▸ 用途：風險單/劃單标签分布，标签可用性存档
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT risk, orders, COUNT(*) AS n_rows,
+       COUNT(DISTINCT bet05) AS n_member,
+       MIN(dt) AS first_dt, MAX(dt) AS last_dt
 FROM ods_mariadb_2b.ods_a168_dailyreport_member
-WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
-  AND bet02 = '101'
-GROUP BY risk, orders
-ORDER BY n_rows DESC;
+GROUP BY risk, orders ORDER BY n_rows DESC;
 
 
+/* ═══════════════════════════════════════════════════════════════════════
+   E1-11 · 会员退水配置分布（0.3/0.8/0.9% 档人群——洗码经济学输入）
+   
+   ▸ 导出：**data/R_rebate_dist.csv**
+   ▸ 用途：退水档位人群分布，洗码经济学输入
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT mem003 AS rebate_rate, COUNT(*) AS n_member,
+       COUNT(*)*1.0/SUM(COUNT(*)) OVER() AS pct
+FROM ods_mariadb_2b.ods_a168_member_dtl
+GROUP BY mem003 ORDER BY n_member DESC;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   A-06M · 局级对账 · MASE 评估（实测跑通原文收编）
+   MASE<<1 → 去重与口径正确；已确认 gi005 为归一化口径
+   ▸ 导出：**data/V_recon.csv**
+   ▸ 用途：报告 fetch("V_recon")：局级对账 MASE
+   ═══════════════════════════════════════════════════════════════════════ */
 /* --- A-06M 局级对账 · MASE 评估（已确认 gi005 为归一化口径）---------
    MASE = MAE / scale，scale = 同桌相邻局 gi_turnover 的平均绝对差分
    （Hyndman & Koehler 2006 的 naive one-step 基准）
@@ -184,36 +275,24 @@ WHERE lag_turnover IS NOT NULL;
      pct_exact_*    → 完全一致（容差 0.01）的局占比，直观补充指标         */
 
 
-/* --- A-14 白名单展开可行性测试（unnest 是否支持）---------------------- */
-SELECT COUNT(*) AS n_ip
-FROM ods_mariadb_2b.ods_a168_white_list,
-     unnest(split(white_list, ',')) AS t(ip_item)
-WHERE NULLIF(TRIM(ip_item),'') IS NOT NULL;
-/* 若报错，改试：
-   SELECT COUNT(*) FROM ods_mariadb_2b.ods_a168_white_list
-   LATERAL VIEW EXPLODE(SPLIT(white_list, ',')) t AS ip_item;
-   两者皆不支持 → 白名单在 R 端展开，SQL 侧不做 IP 白名单过滤 */
-
-
-/* ############################################################################
-   BASE 块 · 每条下游查询的公共前缀（只读模式下必须内联）
-   ----------------------------------------------------------------------------
-   使用方法：复制下面 WITH ... base AS (...) 整段，粘到目标查询前面，
-             然后接目标查询的 SELECT。本文件已为每条查询预先内联。
-   ############################################################################
-
-WITH ta AS (
+/* ═══════════════════════════════════════════════════════════════════════
+   C-00 · 会员×IP 明细（评分与 §4.1 六项指标的底料）
+   最小订单 30（Wilson 准则）控制导出量
+   ▸ 导出：**data/I_ip_player.csv**
+   ▸ 用途：报告 fetch("I_ip_player")：会员×IP 明细（§4.1 六项）
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   SELECT DISTINCT age001 AS aid
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
-rk AS (
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
   SELECT b.*, ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
   WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
 ),
-vd AS (
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
   SELECT r.*
   FROM rk r
   LEFT JOIN ta t1 ON t1.aid = r.bet18
@@ -227,78 +306,16 @@ vd AS (
     AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
     AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
 ),
-gi AS (
-  SELECT gi002 AS sh, gi003 AS rd, gi011 AS tb,
-         CAST(NULLIF(TRIM(gi004),'') AS DATETIME) AS t_open,
-         CAST(NULLIF(TRIM(gi006),'') AS DATETIME) AS t_rev
-  FROM ods_mariadb_2b.ods_a168_game_info
-  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND gi001 = '101'
-    AND gi013 = '1' AND is_lock = 'N'
-),
-base AS (
-  SELECT
-    v.bet01 AS bet_id, v.bet05 AS member_id,
-    CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
-    v.bet39 AS table_id, v.bet40 AS room_id, v.eid AS dealer_id,
-    v.commission AS comm, v.bet09 AS bet_side, v.ip AS bet_ip,
-    v.bet20 AS lv3, v.bet22 AS lv5,
-    CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
-    CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
-    CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
-    (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
-     - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
-    CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
-    CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl,
-    TIMESTAMPDIFF(SECOND, g.t_open, CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME)) * 1.0
-      / NULLIF(TIMESTAMPDIFF(SECOND, g.t_open, g.t_rev), 0) AS bet_progress
-  FROM vd v
-  JOIN gi g ON v.bet03 = g.sh AND v.bet04 = g.rd AND v.bet39 = g.tb
-)
-
-   ############################################################################ */
-
-
-/* ############################################################################
-   PART C · 异常 IP（需求 §4）—— 全部自足
-   ############################################################################ */
-
-/* --- C-02 玩家×IP 基础指标（导出后在 R 端做网格）---------------------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-),
-rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
-           PARTITION BY b.bet01
-           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-),
-vd AS (
-  SELECT r.*
-  FROM rk r
-  LEFT JOIN ta t1 ON t1.aid = r.bet18
-  LEFT JOIN ta t2 ON t2.aid = r.bet19
-  LEFT JOIN ta t3 ON t3.aid = r.bet20
-  LEFT JOIN ta t4 ON t4.aid = r.bet21
-  LEFT JOIN ta t5 ON t5.aid = r.bet22
-  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
-    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
-    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-),
-bs AS (
-  SELECT v.bet01 AS bet_id, v.bet05 AS member_id, v.ip AS bet_ip,
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
          CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
-         v.bet20 AS lv3,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
          CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
          (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
           - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
@@ -308,215 +325,42 @@ bs AS (
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
   FROM vd v
 ),
-pl AS (
-  SELECT member_id,
-         COUNT(DISTINCT bet_id)    AS n_orders_all,
-         COUNT(DISTINCT round_key) AS n_rounds_all,
-         SUM(net_pnl)              AS net_pnl_all,
-         SUM(game_pnl)             AS game_pnl_all
-  FROM bs GROUP BY member_id
-)
-SELECT
-  b.bet_ip, b.member_id, MAX(b.lv3) AS lv3,
-  COUNT(DISTINCT b.bet_id)    AS n_orders_ip,
-  COUNT(DISTINCT b.round_key) AS n_rounds_ip,
-  SUM(b.stake)    AS stake_ip,
-  SUM(b.game_pnl) AS game_pnl_ip,
-  SUM(b.rebate)   AS rebate_ip,
-  SUM(b.net_pnl)  AS net_pnl_ip,
-  MAX(p.n_orders_all) AS n_orders_all,
-  MAX(p.n_rounds_all) AS n_rounds_all,
-  MAX(p.net_pnl_all)  AS net_pnl_all,
-  MAX(p.game_pnl_all) AS game_pnl_all,
-  COUNT(DISTINCT b.bet_id) * 1.0 / NULLIF(MAX(p.n_orders_all), 0) AS ip_order_share
-FROM bs b
-JOIN pl p ON b.member_id = p.member_id
+pl AS (SELECT member_id, COUNT(*) AS n_orders_all,
+              COUNT(DISTINCT round_key) AS n_rounds_all,
+              SUM(net_pnl) AS net_pnl_all, SUM(game_pnl) AS game_pnl_all
+       FROM bs GROUP BY member_id)
+SELECT b.bet_ip, b.member_id, MAX(b.lv3) AS lv3,
+  COUNT(*) AS n_orders_ip, COUNT(DISTINCT b.round_key) AS n_rounds_ip,
+  SUM(b.stake) AS stake_ip, SUM(b.game_pnl) AS game_pnl_ip,
+  SUM(b.rebate) AS rebate_ip, SUM(b.net_pnl) AS net_pnl_ip,
+  MAX(pl.n_orders_all) AS n_orders_all, MAX(pl.n_rounds_all) AS n_rounds_all,
+  MAX(pl.net_pnl_all) AS net_pnl_all, MAX(pl.game_pnl_all) AS game_pnl_all,
+  COUNT(*)*1.0/NULLIF(MAX(pl.n_orders_all),0) AS ip_order_share
+FROM bs b JOIN pl ON pl.member_id=b.member_id
 WHERE NULLIF(TRIM(b.bet_ip),'') IS NOT NULL
 GROUP BY b.bet_ip, b.member_id
-ORDER BY b.bet_ip, b.member_id;
-/* 预估行数：数百万级。导出 CSV 后，C-03/C-04/C-05 全部在 R 端完成，
-   避免只读模式下重复扫描 1.25 亿行。                                    */
+HAVING COUNT(*) >= 30
+ORDER BY n_orders_ip DESC;
 
 
-/* --- C-01 公共网络 IP 识别（聚合到 IP，结果集小）---------------------- */
-WITH ta AS (
+/* ═══════════════════════════════════════════════════════════════════════
+   C-01 · 信用枢纽排序 · member_per_chain（AX-A5 量化，实测榜首 2,132 人单链）
+   
+   ▸ 导出：**data/C01_ip_chain.csv**
+   ▸ 用途：信用枢纽排序，玩家/代理评分的 IP 结构罚项来源
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   SELECT DISTINCT age001 AS aid
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
-rk AS (
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
   SELECT b.*, ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
   WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
 ),
-vd AS (
-  SELECT r.*
-  FROM rk r
-  LEFT JOIN ta t1 ON t1.aid = r.bet18
-  LEFT JOIN ta t2 ON t2.aid = r.bet19
-  LEFT JOIN ta t3 ON t3.aid = r.bet20
-  LEFT JOIN ta t4 ON t4.aid = r.bet21
-  LEFT JOIN ta t5 ON t5.aid = r.bet22
-  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
-    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-)
-SELECT
-  v.ip AS bet_ip,
-  COUNT(DISTINCT v.bet05) AS n_member,
-  COUNT(DISTINCT v.bet20) AS n_lv3_chain,
-  COUNT(DISTINCT v.bet05) * 1.0 / NULLIF(COUNT(DISTINCT v.bet20), 0) AS member_per_chain,
-  COUNT(*) AS n_orders,
-  SUM(CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8))) AS stake,
-  SUM((CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
-       - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8))) AS game_pnl,
-  SUM(CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8))) AS net_pnl
-FROM vd v
-WHERE NULLIF(TRIM(v.ip),'') IS NOT NULL
-GROUP BY v.ip
-HAVING COUNT(DISTINCT v.bet05) >= 20
-ORDER BY member_per_chain DESC, n_member DESC;
-
-
-/* --- C-08 /24 网段聚集 -------------------------------------------------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-),
-rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
-           PARTITION BY b.bet01
-           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-),
-vd AS (
-  SELECT r.*
-  FROM rk r
-  LEFT JOIN ta t1 ON t1.aid = r.bet18
-  LEFT JOIN ta t2 ON t2.aid = r.bet19
-  LEFT JOIN ta t3 ON t3.aid = r.bet20
-  LEFT JOIN ta t4 ON t4.aid = r.bet21
-  LEFT JOIN ta t5 ON t5.aid = r.bet22
-  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
-    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-    AND NULLIF(TRIM(r.ip),'') IS NOT NULL
-)
-SELECT
-  CONCAT(SPLIT_PART(v.ip,'.',1), '.', SPLIT_PART(v.ip,'.',2), '.',
-         SPLIT_PART(v.ip,'.',3), '.0/24') AS subnet_24,
-  COUNT(DISTINCT v.ip)    AS n_ip,
-  COUNT(DISTINCT v.bet05) AS n_member,
-  COUNT(DISTINCT v.bet20) AS n_lv3_chain,
-  COUNT(*)                AS n_orders,
-  SUM(CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8))) AS stake,
-  SUM((CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
-       - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8))) AS game_pnl,
-  SUM(CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
-      / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8))) AS valid_bet
-FROM vd v
-GROUP BY 1
-HAVING COUNT(DISTINCT v.bet05) >= 5
-ORDER BY n_member DESC;
-
-
-/* --- C-06 同 IP 对押率（限定 n_member>=2 的 IP，控制笛卡尔积）--------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-),
-rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
-           PARTITION BY b.bet01
-           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-),
-vd AS (
-  SELECT r.*
-  FROM rk r
-  LEFT JOIN ta t1 ON t1.aid = r.bet18
-  LEFT JOIN ta t2 ON t2.aid = r.bet19
-  LEFT JOIN ta t3 ON t3.aid = r.bet20
-  LEFT JOIN ta t4 ON t4.aid = r.bet21
-  LEFT JOIN ta t5 ON t5.aid = r.bet22
-  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
-    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-    AND NULLIF(TRIM(r.ip),'') IS NOT NULL
-),
-sd AS (
-  SELECT CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
-         v.ip AS bet_ip, v.bet05 AS member_id,
-         SUM(CASE WHEN UPPER(v.bet09) LIKE '%BANKER%'
-             THEN CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
-                  / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8))
-             ELSE 0 END) AS amt_b,
-         SUM(CASE WHEN UPPER(v.bet09) LIKE '%PLAYER%'
-             THEN CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
-                  / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8))
-             ELSE 0 END) AS amt_p
-  FROM vd v
-  GROUP BY CONCAT_WS('|', v.bet03, v.bet04, v.bet39), v.ip, v.bet05
-),
-multi AS (
-  SELECT round_key, bet_ip
-  FROM sd GROUP BY round_key, bet_ip HAVING COUNT(DISTINCT member_id) >= 2
-),
-sd2 AS (
-  SELECT s.* FROM sd s JOIN multi m
-    ON s.round_key = m.round_key AND s.bet_ip = m.bet_ip
-),
-pr AS (
-  SELECT a.bet_ip AS bet_ip, a.member_id AS m_a, b.member_id AS m_b,
-         LEAST(a.amt_b, b.amt_p) + LEAST(a.amt_p, b.amt_b) AS matched,
-         a.amt_b + a.amt_p + b.amt_b + b.amt_p             AS total
-  FROM sd2 a
-  JOIN sd2 b ON a.round_key = b.round_key AND a.bet_ip = b.bet_ip
-            AND a.member_id < b.member_id
-)
-SELECT bet_ip, m_a, m_b,
-       COUNT(*) AS n_same_round,
-       SUM(CASE WHEN matched > 0 THEN 1 ELSE 0 END) AS n_opposite_round,
-       SUM(CASE WHEN matched > 0 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS opposite_rate,
-       SUM(2 * matched) / NULLIF(SUM(total), 0) AS hedge_coverage
-FROM pr
-GROUP BY bet_ip, m_a, m_b
-HAVING COUNT(*) >= 10
-ORDER BY hedge_coverage DESC, n_same_round DESC;
-
-
-/* ############################################################################
-   PART D · 尾段下注（需求 §5）—— 全部自足，按桌台分层
-   ############################################################################ */
-
-/* --- D-00 bet_progress 实际分布（★ 必先跑：D-03 返回 0 的根因）--------
-   实测：局跨度(开局→开奖)约 40 秒，下注跨度仅 11–13 秒
-   → bet_progress 上限约 0.3，绝对阈值 0.90 不可达
-   → 尾段阈值必须取「桌台内的高分位」，不可拍固定值
-   ------------------------------------------------------------------------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-),
-rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
-           PARTITION BY b.bet01
-           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-),
-vd AS (
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
   SELECT r.*
   FROM rk r
   LEFT JOIN ta t1 ON t1.aid = r.bet18
@@ -530,433 +374,11 @@ vd AS (
     AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
     AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
 ),
-gi AS (
-  SELECT gi002 AS sh, gi003 AS rd, gi011 AS tb,
-         CAST(NULLIF(TRIM(gi004),'') AS DATETIME) AS t_open,
-         CAST(NULLIF(TRIM(gi006),'') AS DATETIME) AS t_rev
-  FROM ods_mariadb_2b.ods_a168_game_info
-  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND gi001 = '101'
-    AND gi013 = '1' AND is_lock = 'N'
-),
-bs AS (
-  SELECT v.bet39 AS table_id,
-         TIMESTAMPDIFF(SECOND, g.t_open,
-           CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME)) AS sec_elapsed,
-         TIMESTAMPDIFF(SECOND, g.t_open, g.t_rev)      AS round_span,
-         TIMESTAMPDIFF(SECOND, g.t_open,
-           CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME)) * 1.0
-           / NULLIF(TIMESTAMPDIFF(SECOND, g.t_open, g.t_rev), 0) AS bet_progress
-  FROM vd v
-  JOIN gi g ON v.bet03 = g.sh AND v.bet04 = g.rd AND v.bet39 = g.tb
-)
-SELECT table_id,
-       COUNT(*)                              AS n_orders,
-       AVG(sec_elapsed)                      AS mean_sec_elapsed,
-       AVG(round_span)                       AS mean_round_span,
-       PERCENTILE_APPROX(bet_progress, 0.50) AS p50,
-       PERCENTILE_APPROX(bet_progress, 0.75) AS p75,
-       PERCENTILE_APPROX(bet_progress, 0.90) AS p90,
-       PERCENTILE_APPROX(bet_progress, 0.95) AS p95,
-       PERCENTILE_APPROX(bet_progress, 0.99) AS p99,
-       MAX(bet_progress)                     AS max_progress
-FROM bs
-WHERE bet_progress BETWEEN 0 AND 1
-GROUP BY table_id
-HAVING COUNT(*) >= 1000
-ORDER BY n_orders DESC;
-/* 用 p90 / p95 作为该桌的尾段切点，代回 D-03 与 D-05。 */
-
-
-/* --- D-01 下注进度分布（按桌台）--------------------------------------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-),
-rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
-           PARTITION BY b.bet01
-           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-),
-vd AS (
-  SELECT r.*
-  FROM rk r
-  LEFT JOIN ta t1 ON t1.aid = r.bet18
-  LEFT JOIN ta t2 ON t2.aid = r.bet19
-  LEFT JOIN ta t3 ON t3.aid = r.bet20
-  LEFT JOIN ta t4 ON t4.aid = r.bet21
-  LEFT JOIN ta t5 ON t5.aid = r.bet22
-  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
-    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
-    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-),
-gi AS (
-  SELECT gi002 AS sh, gi003 AS rd, gi011 AS tb,
-         CAST(NULLIF(TRIM(gi004),'') AS DATETIME) AS t_open,
-         CAST(NULLIF(TRIM(gi006),'') AS DATETIME) AS t_rev
-  FROM ods_mariadb_2b.ods_a168_game_info
-  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND gi001 = '101'
-    AND gi013 = '1' AND is_lock = 'N'
-),
-bs AS (
-  SELECT v.bet39 AS table_id, v.bet05 AS member_id,
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
          CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
-         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
-         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
-         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
-          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
-         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
-         TIMESTAMPDIFF(SECOND, g.t_open,
-           CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME)) * 1.0
-           / NULLIF(TIMESTAMPDIFF(SECOND, g.t_open, g.t_rev), 0) AS bet_progress
-  FROM vd v
-  JOIN gi g ON v.bet03 = g.sh AND v.bet04 = g.rd AND v.bet39 = g.tb
-)
-SELECT table_id,
-       FLOOR(bet_progress * 20)  AS progress_bin_20,
-       COUNT(*)                  AS n_orders,
-       COUNT(DISTINCT member_id) AS n_players,
-       COUNT(DISTINCT round_key) AS n_rounds,
-       SUM(stake)     AS stake,
-       SUM(valid_bet) AS valid_bet,
-       SUM(game_pnl)  AS game_pnl,
-       SUM(rebate)    AS rebate,
-       SUM(game_pnl) / NULLIF(SUM(valid_bet), 0) AS roi
-FROM bs
-WHERE bet_progress BETWEEN 0 AND 1
-GROUP BY table_id, FLOOR(bet_progress * 20)
-ORDER BY table_id, progress_bin_20;
-
-
-/* --- D-03Q 局内匹配检验 · 桌台分位版（替代固定 0.90，D-03 已废）------
-   尾段 = bet_progress >= 该桌台的 P90（由 D-00 实证，绝对阈值不可用）
-   ------------------------------------------------------------------------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-),
-rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
-           PARTITION BY b.bet01
-           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-),
-vd AS (
-  SELECT r.*
-  FROM rk r
-  LEFT JOIN ta t1 ON t1.aid = r.bet18
-  LEFT JOIN ta t2 ON t2.aid = r.bet19
-  LEFT JOIN ta t3 ON t3.aid = r.bet20
-  LEFT JOIN ta t4 ON t4.aid = r.bet21
-  LEFT JOIN ta t5 ON t5.aid = r.bet22
-  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
-    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
-    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-),
-gi AS (
-  SELECT gi002 AS sh, gi003 AS rd, gi011 AS tb,
-         CAST(NULLIF(TRIM(gi004),'') AS DATETIME) AS t_open,
-         CAST(NULLIF(TRIM(gi006),'') AS DATETIME) AS t_rev
-  FROM ods_mariadb_2b.ods_a168_game_info
-  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND gi001 = '101'
-    AND gi013 = '1' AND is_lock = 'N'
-),
-bs AS (
-  SELECT CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
-         v.bet39 AS table_id, v.bet09 AS bet_side, v.bet05 AS member_id,
-         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
-         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
-          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
-         TIMESTAMPDIFF(SECOND, g.t_open,
-           CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME)) * 1.0
-           / NULLIF(TIMESTAMPDIFF(SECOND, g.t_open, g.t_rev), 0) AS bet_progress
-  FROM vd v
-  JOIN gi g ON v.bet03 = g.sh AND v.bet04 = g.rd AND v.bet39 = g.tb
-),
-thr AS (
-  SELECT table_id, PERCENTILE_APPROX(bet_progress, 0.90) AS q90
-  FROM bs WHERE bet_progress BETWEEN 0 AND 1
-  GROUP BY table_id
-),
-fl AS (
-  SELECT b.*, CASE WHEN b.bet_progress >= t.q90 THEN 1 ELSE 0 END AS is_tail
-  FROM bs b JOIN thr t ON b.table_id = t.table_id
-  WHERE b.bet_progress BETWEEN 0 AND 1
-),
-cell AS (
-  SELECT round_key, bet_side,
-    SUM(CASE WHEN is_tail = 1 THEN game_pnl  ELSE 0 END) AS pnl_tail,
-    SUM(CASE WHEN is_tail = 1 THEN valid_bet ELSE 0 END) AS vb_tail,
-    SUM(CASE WHEN is_tail = 0 THEN game_pnl  ELSE 0 END) AS pnl_norm,
-    SUM(CASE WHEN is_tail = 0 THEN valid_bet ELSE 0 END) AS vb_norm,
-    COUNT(DISTINCT CASE WHEN is_tail = 1 THEN member_id END) AS n_tail,
-    COUNT(DISTINCT CASE WHEN is_tail = 0 THEN member_id END) AS n_norm
-  FROM fl
-  GROUP BY round_key, bet_side
-)
-SELECT COUNT(*) AS n_matched_cells,
-       SUM(vb_tail) AS vb_tail_total,
-       SUM(vb_norm) AS vb_norm_total,
-       SUM(pnl_tail) / NULLIF(SUM(vb_tail), 0) AS roi_tail,
-       SUM(pnl_norm) / NULLIF(SUM(vb_norm), 0) AS roi_norm,
-       SUM(pnl_tail) / NULLIF(SUM(vb_tail), 0)
-         - SUM(pnl_norm) / NULLIF(SUM(vb_norm), 0) AS roi_diff
-FROM cell
-WHERE n_tail > 0 AND n_norm > 0;
-/* n_matched_cells 若仍为 0，说明桌内 bet_progress 分布过于集中，
-   需改用「局内下注顺序位次」而非时间比例，见 D-03R。                */
-
-
-/* --- D-03R 局内下注顺序版（bet_progress 分布退化时的备选）------------
-   尾段 = 该玩家在本局的下注顺序位次处于末段（按顺序而非时间）
-   ------------------------------------------------------------------------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-),
-rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
-           PARTITION BY b.bet01
-           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-),
-vd AS (
-  SELECT r.*
-  FROM rk r
-  LEFT JOIN ta t1 ON t1.aid = r.bet18
-  LEFT JOIN ta t2 ON t2.aid = r.bet19
-  LEFT JOIN ta t3 ON t3.aid = r.bet20
-  LEFT JOIN ta t4 ON t4.aid = r.bet21
-  LEFT JOIN ta t5 ON t5.aid = r.bet22
-  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
-    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
-    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-),
-bs AS (
-  SELECT CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
-         v.bet09 AS bet_side, v.bet05 AS member_id,
-         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
-         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
-         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
-          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl
-  FROM vd v
-),
-ord AS (
-  SELECT b.*,
-         PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round,
-         COUNT(*)      OVER (PARTITION BY round_key)                 AS n_in_round
-  FROM bs b
-),
-cell AS (
-  SELECT round_key, bet_side,
-    SUM(CASE WHEN pr_in_round >= 0.80 THEN game_pnl  ELSE 0 END) AS pnl_tail,
-    SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END) AS vb_tail,
-    SUM(CASE WHEN pr_in_round <  0.80 THEN game_pnl  ELSE 0 END) AS pnl_norm,
-    SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END) AS vb_norm,
-    COUNT(DISTINCT CASE WHEN pr_in_round >= 0.80 THEN member_id END) AS n_tail,
-    COUNT(DISTINCT CASE WHEN pr_in_round <  0.80 THEN member_id END) AS n_norm
-  FROM ord
-  WHERE n_in_round >= 5
-  GROUP BY round_key, bet_side
-)
-SELECT COUNT(*) AS n_matched_cells,
-       SUM(vb_tail) AS vb_tail_total,
-       SUM(vb_norm) AS vb_norm_total,
-       SUM(pnl_tail) / NULLIF(SUM(vb_tail), 0) AS roi_tail,
-       SUM(pnl_norm) / NULLIF(SUM(vb_norm), 0) AS roi_norm,
-       SUM(pnl_tail) / NULLIF(SUM(vb_tail), 0)
-         - SUM(pnl_norm) / NULLIF(SUM(vb_norm), 0) AS roi_diff
-FROM cell
-WHERE n_tail > 0 AND n_norm > 0;
-
-
-/* --- D-03S 日级 roi_diff 序列（★ 显著性检验的输入，139 行）-----------
-   聚合 ROI 没有标准误，无法判断 +0.000657 是信号还是噪声。
-   本条按日输出两口径的 roi_diff，R 端做单样本 t 检验 + Bootstrap CI，
-   并可直接用于 purged walk-forward 的时间外稳定性检验。
-   ------------------------------------------------------------------------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-),
-rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
-           PARTITION BY b.bet01
-           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-),
-vd AS (
-  SELECT r.*
-  FROM rk r
-  LEFT JOIN ta t1 ON t1.aid = r.bet18
-  LEFT JOIN ta t2 ON t2.aid = r.bet19
-  LEFT JOIN ta t3 ON t3.aid = r.bet20
-  LEFT JOIN ta t4 ON t4.aid = r.bet21
-  LEFT JOIN ta t5 ON t5.aid = r.bet22
-  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
-    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
-    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-),
-bs AS (
-  SELECT v.dt AS bet_date,
-         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
-         v.bet09 AS bet_side,
-         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
-         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
-         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
-          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl
-  FROM vd v
-),
-ord AS (
-  SELECT b.*,
-         PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round,
-         COUNT(*)      OVER (PARTITION BY round_key)                 AS n_in_round
-  FROM bs b
-)
-SELECT bet_date,
-  COUNT(DISTINCT round_key) AS n_rounds,
-  SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END) AS vb_tail,
-  SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END) AS vb_norm,
-  SUM(CASE WHEN pr_in_round >= 0.80 THEN game_pnl ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END), 0) AS roi_tail,
-  SUM(CASE WHEN pr_in_round <  0.80 THEN game_pnl ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END), 0) AS roi_norm,
-  SUM(CASE WHEN pr_in_round >= 0.80 THEN game_pnl ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END), 0)
-    - SUM(CASE WHEN pr_in_round <  0.80 THEN game_pnl ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END), 0) AS roi_diff
-FROM ord
-WHERE n_in_round >= 5
-GROUP BY bet_date
-ORDER BY bet_date;
-/* R 端：t.test(roi_diff)、boot::boot 求 BCa CI；
-   若 CI 跨 0 → 报告写「未观察到统计显著的尾段优势」。          */
-
-
-/* --- D-03X 分层一致性（按投注选项 × 是否免佣）------------------------
-   两口径符号相反已说明结论不稳健；本条进一步查是否由某个选项主导。
-   ------------------------------------------------------------------------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-),
-rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
-           PARTITION BY b.bet01
-           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-),
-vd AS (
-  SELECT r.*
-  FROM rk r
-  LEFT JOIN ta t1 ON t1.aid = r.bet18
-  LEFT JOIN ta t2 ON t2.aid = r.bet19
-  LEFT JOIN ta t3 ON t3.aid = r.bet20
-  LEFT JOIN ta t4 ON t4.aid = r.bet21
-  LEFT JOIN ta t5 ON t5.aid = r.bet22
-  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
-    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
-    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-),
-bs AS (
-  SELECT CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
-         v.bet09 AS bet_side, v.commission AS comm,
-         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
-         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
-         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
-          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl
-  FROM vd v
-),
-ord AS (
-  SELECT b.*,
-         PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round,
-         COUNT(*)      OVER (PARTITION BY round_key)                 AS n_in_round
-  FROM bs b
-)
-SELECT bet_side, comm,
-  COUNT(*) AS n_orders,
-  SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END) AS vb_tail,
-  SUM(CASE WHEN pr_in_round >= 0.80 THEN game_pnl ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END), 0) AS roi_tail,
-  SUM(CASE WHEN pr_in_round <  0.80 THEN game_pnl ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END), 0) AS roi_norm,
-  SUM(CASE WHEN pr_in_round >= 0.80 THEN game_pnl ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END), 0)
-    - SUM(CASE WHEN pr_in_round <  0.80 THEN game_pnl ELSE 0 END)
-    / NULLIF(SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END), 0) AS roi_diff
-FROM ord
-WHERE n_in_round >= 5
-GROUP BY bet_side, comm
-HAVING COUNT(*) >= 10000
-ORDER BY roi_diff DESC;
-
-
-/* --- D-05 玩家×物理局明细（导出后 R 端算尾段十一项指标）-------------- */
-WITH ta AS (
-  SELECT DISTINCT age001 AS aid
-  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
-),
-rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
-           PARTITION BY b.bet01
-           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b
-  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
-),
-vd AS (
-  SELECT r.*
-  FROM rk r
-  LEFT JOIN ta t1 ON t1.aid = r.bet18
-  LEFT JOIN ta t2 ON t2.aid = r.bet19
-  LEFT JOIN ta t3 ON t3.aid = r.bet20
-  LEFT JOIN ta t4 ON t4.aid = r.bet21
-  LEFT JOIN ta t5 ON t5.aid = r.bet22
-  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
-    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
-    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
-    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
-    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
-),
-gi AS (
-  SELECT gi002 AS sh, gi003 AS rd, gi011 AS tb,
-         CAST(NULLIF(TRIM(gi004),'') AS DATETIME) AS t_open,
-         CAST(NULLIF(TRIM(gi006),'') AS DATETIME) AS t_rev
-  FROM ods_mariadb_2b.ods_a168_game_info
-  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND gi001 = '101'
-    AND gi013 = '1' AND is_lock = 'N'
-),
-bs AS (
-  SELECT v.bet05 AS member_id,
-         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
-         v.bet39 AS table_id, v.eid AS dealer_id, v.commission AS comm,
-         v.ip AS bet_ip,
+         v.bet39 AS table_id,
          CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
          CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
@@ -968,35 +390,398 @@ bs AS (
          CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
          CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl,
-         TIMESTAMPDIFF(SECOND, g.t_open,
-           CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME)) * 1.0
-           / NULLIF(TIMESTAMPDIFF(SECOND, g.t_open, g.t_rev), 0) AS bet_progress
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
   FROM vd v
-  JOIN gi g ON v.bet03 = g.sh AND v.bet04 = g.rd AND v.bet39 = g.tb
 )
-SELECT member_id, round_key, table_id, dealer_id, comm,
-       COUNT(*)          AS n_orders,
-       MIN(t_bet)        AS first_bet_ts,
-       MAX(t_bet)        AS last_bet_ts,
-       MAX(bet_progress) AS max_progress,
-       MAX(bet_ip)       AS bet_ip,
-       SUM(stake)        AS stake,
-       SUM(valid_bet)    AS valid_bet,
-       SUM(game_pnl)     AS game_pnl,
-       SUM(rebate)       AS rebate,
-       SUM(net_pnl)      AS net_pnl,
-       CASE WHEN SUM(game_pnl) > 0 THEN 1 ELSE 0 END AS is_win,
-       CASE WHEN SUM(game_pnl) < 0 THEN 1 ELSE 0 END AS is_lose,
-       CASE WHEN SUM(game_pnl) = 0 THEN 1 ELSE 0 END AS is_tie
+SELECT bet_ip,
+       COUNT(DISTINCT member_id) AS n_member,
+       COUNT(DISTINCT lv3)       AS n_lv3_chain,
+       COUNT(DISTINCT member_id)*1.0/NULLIF(COUNT(DISTINCT lv3),0) AS member_per_chain,
+       COUNT(*) AS n_orders, SUM(stake) AS stake,
+       SUM(game_pnl) AS game_pnl, SUM(net_pnl) AS net_pnl
 FROM bs
-GROUP BY member_id, round_key, table_id, dealer_id, comm
-ORDER BY member_id, first_bet_ts;
-/* ⚠️ 行数量级数千万，远超 10 万导出上限 —— 本条【不导出，仅供参考结构】。
-   实际做法：把 D-05 作为 CTE 内嵌进 D-06 / D-07 / D-08，
-   在 SQL 端直接聚合到 ≤10 万行的最终结果再导出。                        */
+WHERE NULLIF(TRIM(bet_ip),'') IS NOT NULL
+GROUP BY bet_ip
+HAVING COUNT(DISTINCT member_id) >= 20
+ORDER BY member_per_chain DESC;
 
 
+/* ═══════════════════════════════════════════════════════════════════════
+   C-06 · 同IP对打对 · 对冲覆盖（实测 999 对完美对打、最长 1,185 把）
+   本金匹配容差 10%；玩法编码若与库内不符，改 bet_side 判别清单即可
+   ▸ 导出：**data/C06_hedge_pairs.csv**
+   ▸ 用途：对打对名单，IP-S6/IP-S8 与荷官/代理罚项来源
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+),
+side AS (   -- 每人每把在该IP的净方向（庄=+ 闲=−，按本金）
+  SELECT bet_ip, round_key, member_id,
+         SUM(CASE WHEN bet_side IN ('1','B','庄','莊') THEN stake
+                  WHEN bet_side IN ('2','P','闲','閒') THEN -stake
+                  ELSE 0 END) AS dir_stake
+  FROM bs WHERE NULLIF(TRIM(bet_ip),'') IS NOT NULL
+  GROUP BY bet_ip, round_key, member_id
+  HAVING ABS(SUM(CASE WHEN bet_side IN ('1','B','庄','莊') THEN stake
+                      WHEN bet_side IN ('2','P','闲','閒') THEN -stake
+                      ELSE 0 END)) > 0
+),
+pairs AS (
+  SELECT a.bet_ip, a.member_id AS m_a, b.member_id AS m_b,
+         COUNT(*) AS n_same_round,
+         SUM(CASE WHEN a.dir_stake*b.dir_stake < 0 THEN 1 ELSE 0 END) AS n_opposite_round,
+         SUM(CASE WHEN a.dir_stake*b.dir_stake < 0
+                   AND ABS(ABS(a.dir_stake)-ABS(b.dir_stake))
+                       <= 0.1*GREATEST(ABS(a.dir_stake),ABS(b.dir_stake))
+                  THEN 1 ELSE 0 END) AS n_hedged
+  FROM side a JOIN side b
+    ON a.bet_ip=b.bet_ip AND a.round_key=b.round_key
+   AND a.member_id < b.member_id
+  GROUP BY a.bet_ip, a.member_id, b.member_id
+  HAVING COUNT(*) >= 30
+)
+SELECT bet_ip, m_a, m_b, n_same_round, n_opposite_round,
+       n_opposite_round*1.0/n_same_round AS opposite_rate,
+       n_hedged*1.0/NULLIF(n_opposite_round,0) AS hedge_coverage
+FROM pairs
+ORDER BY opposite_rate DESC, n_opposite_round DESC;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   C-08 · /24 网段聚集 · 原版（按会员数降序；实测榜首为 CGNAT 饱和段）
+   
+   ▸ 导出：**data/C08_subnet_all.csv**
+   ▸ 用途：/24 网段全量（含 CGNAT），白名单候选甄别
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+)
+SELECT
+  CONCAT(SPLIT_PART(bet_ip,'.',1),'.',SPLIT_PART(bet_ip,'.',2),'.',
+         SPLIT_PART(bet_ip,'.',3),'.0/24') AS subnet_24,
+  COUNT(DISTINCT bet_ip)    AS n_ip,
+  COUNT(DISTINCT member_id) AS n_member,
+  COUNT(DISTINCT lv3)       AS n_lv3_chain,
+  COUNT(*) AS n_orders, SUM(stake) AS stake,
+  SUM(game_pnl) AS game_pnl, SUM(valid_bet) AS valid_bet
+FROM bs WHERE NULLIF(TRIM(bet_ip),'') IS NOT NULL
+GROUP BY 1
+HAVING COUNT(DISTINCT member_id) >= 5
+ORDER BY n_member DESC;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   N1 · /24 网段 · 稀疏段靶向版（CGNAT 条件化：n_ip ≤ 30）
+   信用枢纽层完整摊开：少门牌、多人头、单链密
+   ▸ 导出：**data/C08_subnet_sparse.csv**
+   ▸ 用途：稀疏段靶向榜，信用枢纽层
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+)
+SELECT
+  CONCAT(SPLIT_PART(bet_ip,'.',1),'.',SPLIT_PART(bet_ip,'.',2),'.',
+         SPLIT_PART(bet_ip,'.',3),'.0/24') AS subnet_24,
+  COUNT(DISTINCT bet_ip)    AS n_ip,
+  COUNT(DISTINCT member_id) AS n_member,
+  COUNT(DISTINCT lv3)       AS n_lv3_chain,
+  COUNT(DISTINCT member_id)*1.0/NULLIF(COUNT(DISTINCT bet_ip),0) AS member_per_ip,
+  COUNT(*) AS n_orders, SUM(valid_bet) AS valid_bet, SUM(game_pnl) AS game_pnl
+FROM bs WHERE NULLIF(TRIM(bet_ip),'') IS NOT NULL
+GROUP BY 1
+HAVING COUNT(DISTINCT member_id) >= 5 AND COUNT(DISTINCT bet_ip) <= 30
+ORDER BY n_member DESC;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   N1b · 金标准活跃探针（2022 年标注 IP 在 2026 窗口是否仍活跃）
+   返回 0 行 = 金标准段窗口内无活动 → 一票否决条款改按 17 个单 IP 复验
+   ▸ 导出：不需要 —— 屏幕看结果即可（0 行即结论）
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT CONCAT(SPLIT_PART(ip,'.',1),'.',SPLIT_PART(ip,'.',2),'.',
+       SPLIT_PART(ip,'.',3),'.0/24') AS subnet_24,
+       COUNT(DISTINCT ip) AS n_ip, COUNT(DISTINCT bet05) AS n_member,
+       COUNT(*) AS n_orders
+FROM ods_mariadb_2b.ods_a168_bet02
+WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02='101'
+  AND (ip LIKE '111.247.37.%' OR ip LIKE '103.123.134.%')
+GROUP BY 1;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   D-05 · 桌台进度统计（30 桌分位；封盘代理口径证据）
+   
+   ▸ 导出：**data/S_second_dist.csv**
+   ▸ 用途：报告 fetch("S_second_dist")：桌台进度分位
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+),
+gi AS (SELECT gi011 AS table_id,
+              CONCAT_WS('|', gi002, gi003, gi011) AS round_key,
+              gi004 AS t_open, gi006 AS t_reveal
+       FROM ods_mariadb_2b.ods_a168_game_info
+       WHERE gi001='101' AND gi013='1' AND is_lock='N'
+         AND gi004>='2026-03-21' AND gi004<'2026-08-07'),
+pr AS (SELECT b.table_id, b.round_key,
+              (UNIX_TIMESTAMP(b.t_bet)-UNIX_TIMESTAMP(g.t_open))*1.0
+              /NULLIF(UNIX_TIMESTAMP(g.t_reveal)-UNIX_TIMESTAMP(g.t_open),0) AS progress
+       FROM bs b JOIN gi g ON g.round_key=b.round_key)
+SELECT table_id, COUNT(*) AS n_orders,
+       PERCENTILE_APPROX(progress,0.5)  AS p50,
+       PERCENTILE_APPROX(progress,0.75) AS p75,
+       PERCENTILE_APPROX(progress,0.9)  AS p90,
+       PERCENTILE_APPROX(progress,0.95) AS p95,
+       PERCENTILE_APPROX(progress,0.99) AS p99,
+       MAX(progress) AS max_progress
+FROM pr WHERE progress BETWEEN 0 AND 1.5
+GROUP BY table_id ORDER BY n_orders DESC;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   D-03S · 日度尾段对照（139 行；五重检验的输入，裁定已闭合）
+   
+   ▸ 导出：**data/D03S_daily_roi_diff.csv**
+   ▸ 用途：五重显著性检验输入（139 行）
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+),
+gi AS (SELECT CONCAT_WS('|', gi002, gi003, gi011) AS round_key,
+              gi004 AS t_open, gi006 AS t_reveal
+       FROM ods_mariadb_2b.ods_a168_game_info
+       WHERE gi001='101' AND gi013='1' AND is_lock='N'
+         AND gi004>='2026-03-21' AND gi004<'2026-08-07'),
+pr AS (SELECT b.bet_date, b.round_key, b.valid_bet, b.game_pnl,
+              (UNIX_TIMESTAMP(b.t_bet)-UNIX_TIMESTAMP(g.t_open))*1.0
+              /NULLIF(UNIX_TIMESTAMP(g.t_reveal)-UNIX_TIMESTAMP(g.t_open),0) AS progress
+       FROM bs b JOIN gi g ON g.round_key=b.round_key)
+SELECT bet_date, COUNT(DISTINCT round_key) AS n_rounds,
+  SUM(CASE WHEN progress>=0.90 THEN valid_bet ELSE 0 END) AS vb_tail,
+  SUM(CASE WHEN progress< 0.90 THEN valid_bet ELSE 0 END) AS vb_norm,
+  SUM(CASE WHEN progress>=0.90 THEN game_pnl ELSE 0 END)
+    /NULLIF(SUM(CASE WHEN progress>=0.90 THEN valid_bet ELSE 0 END),0) AS roi_tail,
+  SUM(CASE WHEN progress< 0.90 THEN game_pnl ELSE 0 END)
+    /NULLIF(SUM(CASE WHEN progress< 0.90 THEN valid_bet ELSE 0 END),0) AS roi_norm,
+  SUM(CASE WHEN progress>=0.90 THEN game_pnl ELSE 0 END)
+    /NULLIF(SUM(CASE WHEN progress>=0.90 THEN valid_bet ELSE 0 END),0)
+  - SUM(CASE WHEN progress< 0.90 THEN game_pnl ELSE 0 END)
+    /NULLIF(SUM(CASE WHEN progress< 0.90 THEN valid_bet ELSE 0 END),0) AS roi_diff
+FROM pr WHERE progress BETWEEN 0 AND 1.5
+GROUP BY bet_date ORDER BY bet_date;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   D-06 · 玩家尾段十一项指标（实测跑通原文收编）
+   个体层 winrate_diff>0 = 49.7% 白噪音，尾段裁定第三重复核
+   ▸ 导出：**data/S_player_tail.csv**
+   ▸ 用途：报告 fetch("S_player_tail")：玩家尾段十一项
+   ═══════════════════════════════════════════════════════════════════════ */
 /* --- D-06 玩家尾段十一项指标（SQL 端完成，加过滤控制在 10 万行内）----
    过滤：n_rounds_all >= 30（低于此样本量的玩家 Wilson CI 宽度 > 0.15，
          阈值无区分意义，见需求 §2.2-5）
@@ -1095,52 +880,587 @@ HAVING COUNT(*) >= 30
 ORDER BY member_id;
 
 
-/* ############################################################################
-   PART G · 标签（L1a / L1b）
-   ############################################################################ */
+/* ═══════════════════════════════════════════════════════════════════════
+   S-01 · 玩家评分底料（全局聚合；对打指数/注册邻近在 Python 侧并入 C-06）
+   导出为 data/S01_player_score.csv
+   ▸ 导出：**data/S01_player_score.csv**
+   ▸ 用途：★ 玩家评分雷达 + 综合分
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+),
+lab AS (SELECT bet05 AS member_id,
+               SUM(CASE WHEN risk='1' THEN 1 ELSE 0 END) AS n_risk_days,
+               SUM(CASE WHEN orders='1' THEN 1 ELSE 0 END) AS n_order_days
+        FROM ods_mariadb_2b.ods_a168_dailyreport_member GROUP BY bet05)
+SELECT b.member_id,
+  SUM(b.valid_bet) AS 流水贡献,
+  -SUM(b.game_pnl) AS 游戏输赢贡献,          -- 会员输=平台赢，取负号
+  COUNT(DISTINCT b.bet_date) AS 活跃稳定,
+  SUM(b.rebate) AS 退水支出,
+  COUNT(DISTINCT b.bet_ip) AS n_ip,
+  COUNT(DISTINCT b.lv3) AS n_chain,
+  COALESCE(MAX(l.n_risk_days),0)+COALESCE(MAX(l.n_order_days),0) AS 人工标记史
+FROM bs b LEFT JOIN lab l ON l.member_id=b.member_id
+GROUP BY b.member_id
+HAVING COUNT(DISTINCT b.round_key) >= 30
+ORDER BY 流水贡献 DESC;
 
-/* --- G-01 L1a 会员级弱标签（bet05 已确认）----------------------------- */
-SELECT bet05 AS member_id,
-       MAX(CAST(NULLIF(TRIM(risk),'')   AS INT)) AS risk_max,
-       MAX(CAST(NULLIF(TRIM(orders),'') AS INT)) AS orders_max,
-       SUM(CAST(NULLIF(TRIM(risk),'')   AS INT)) AS risk_days,
-       COUNT(*) AS n_report_days,
-       MIN(dt) AS first_dt, MAX(dt) AS last_dt
-FROM ods_mariadb_2b.ods_a168_dailyreport_member
-WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
-  AND bet02 = '101'
-GROUP BY bet05
-ORDER BY bet05;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   S-02 · 荷官评分底料
+   对打局占比/異常对关联在 Python 侧并 C-06 名单；导出 data/S02_dealer_score.csv
+   ▸ 导出：**data/S02_dealer_score.csv**
+   ▸ 用途：★ 荷官评分雷达 + 综合分
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+)
+SELECT dealer_id,
+  SUM(valid_bet) AS 在桌洗码量,
+  COUNT(DISTINCT member_id) AS 客群广度,
+  COUNT(DISTINCT round_key) AS n_rounds,
+  COUNT(DISTINCT table_id) AS n_tables,
+  SUM(game_pnl) AS 桌面输赢
+FROM bs WHERE NULLIF(TRIM(dealer_id),'') IS NOT NULL
+GROUP BY dealer_id ORDER BY 在桌洗码量 DESC;
 
 
-/* --- G-02 L1b 桌台级标签 ---------------------------------------------- */
-SELECT time AS report_date, bet39 AS table_id, bet02 AS game_cat,
-       risk, orders, count AS n_bets,
-       CAST(NULLIF(TRIM(bet13),'') AS DECIMAL(20,4)) AS stake_raw,
-       CAST(NULLIF(TRIM(validbet),'') AS DECIMAL(20,4)) AS validbet_raw
-FROM ods_mariadb_2b.ods_a168_dailyreport_table
-WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
-ORDER BY time, bet39;
+/* ═══════════════════════════════════════════════════════════════════════
+   S-03 · 代理（LV3 链）评分底料
+   对打渗透率在 Python 侧并 C-06；导出 data/S03_agent_score.csv
+   ▸ 导出：**data/S03_agent_score.csv**
+   ▸ 用途：★ 代理评分雷达 + 综合分
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+)
+SELECT lv3,
+  COUNT(DISTINCT member_id) AS 线下规模,
+  SUM(valid_bet) AS 真实流水,
+  SUM(rebate)    AS 退水支出,
+  SUM(game_pnl)  AS 链下游戏输赢,
+  SUM(rebate)/NULLIF(-SUM(game_pnl),0) AS 退水消耗比   -- >1 = 退水吃光赢利
+FROM bs WHERE NULLIF(TRIM(lv3),'') IS NOT NULL
+GROUP BY lv3 ORDER BY 真实流水 DESC;
 
 
-/* ============================================================================
-   只读模式下的执行策略
-   ----------------------------------------------------------------------------
-   已完成 : A-03 A-05 A-07 A-10a A-11 A-12 A-13
-   待执行 : A-04 A-06 A-08 A-10b A-14
-   主取数 : D-05（玩家×物理局明细，按周分批导出）
-            C-02（玩家×IP，一次导出）
-            G-01 G-02（标签）
-   小结果 : C-01 C-08 D-01 D-03 —— 直接看数即可，无需导出
-   ----------------------------------------------------------------------------
-   R 端承接（因只读无法物化，全部下游计算移至 R）
-     data.table::fread 读入 D-05 分批文件 → rbindlist
-     按桌台 quantile(max_progress, 0.9) 定尾段阈值
-     算尾段十一项指标 → 阈值网格 → Wilson CI
-     C-02 → 三版本盈利口径（A/B/C）→ IP 阈值网格
-     周面板 t0/t1 → embargo := ceiling(quantile(lag, .95)) → purged WF
-   ----------------------------------------------------------------------------
-   导出注意
-     · 必带 ORDER BY，UTF-8 BOM
-     · D-05 按 dt 分周切片，避免单次导出过大
-   ============================================================================ */
+/* ═══════════════════════════════════════════════════════════════════════
+   S-04 · 风控员评分底料（金标准名单产出者）
+   命中率/时效由 Python 侧对回 N1/N1b 结果计算；导出 data/S04_analyst_score.csv
+   ▸ 导出：**data/S04_analyst_score.csv**
+   ▸ 用途：★ 风控员评分雷达 + 综合分
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT operator AS 标注人, COUNT(*) AS 标注产量,
+       MIN(create_time) AS first_dt, MAX(create_time) AS last_dt
+FROM ods_mariadb_2b.ods_a168_alert_ip_setting
+GROUP BY operator ORDER BY 标注产量 DESC;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   S-05 · 会员×月评分面板（净化滚动回测的输入）
+   导出 data/S05_member_month_panel.csv；risk_label 即 L1a 標籤
+   ▸ 导出：**data/S05_member_month_panel.csv**
+   ▸ 用途：★★ 净化滚动回测面板（模型竞技场唯一输入）
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+),
+lab AS (SELECT bet05 AS member_id, DATE_TRUNC('month', dt) AS ym,
+               MAX(CASE WHEN risk='1' THEN 1 ELSE 0 END) AS risk_label
+        FROM ods_mariadb_2b.ods_a168_dailyreport_member
+        GROUP BY bet05, DATE_TRUNC('month', dt))
+SELECT b.member_id, DATE_TRUNC('month', b.bet_date) AS bet_date,
+  SUM(b.valid_bet) AS 流水贡献, -SUM(b.game_pnl) AS 游戏输赢贡献,
+  COUNT(DISTINCT b.bet_date) AS 活跃稳定, SUM(b.rebate) AS 退水支出,
+  COUNT(DISTINCT b.bet_ip) AS n_ip, COUNT(DISTINCT b.lv3) AS n_chain,
+  MIN(b.round_key) AS round_key,
+  COALESCE(MAX(l.risk_label),0) AS risk_label
+FROM bs b LEFT JOIN lab l
+  ON l.member_id=b.member_id AND l.ym=DATE_TRUNC('month', b.bet_date)
+GROUP BY b.member_id, DATE_TRUNC('month', b.bet_date)
+HAVING COUNT(*) >= 30
+ORDER BY b.member_id, bet_date;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   V2 · game_No 位数核验 → ✅ 已跑（2026-08-06）
+   实测 7/7/7/152,416 → 与 bet03(9位)不符，该表已关闭
+   ▸ 导出：不需要 —— 已跑完，结论存档，无需重跑
+   ═══════════════════════════════════════════════════════════════════════ */
+SELECT MIN(LENGTH(gameNo)) AS min_len, MAX(LENGTH(gameNo)) AS max_len,
+       COUNT(DISTINCT gid) AS n_gid, COUNT(*) AS n
+FROM ods_mariadb_2b.ods_a168_game_No;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   C-02 · IP 汇总 · 三版本盈利口径（版本C 剔退水为主口径）
+   报告 fetch("I_ip_agg") 缺口补齐；最小订单 30
+   ▸ 导出：**data/I_ip_agg.csv**
+   ▸ 用途：§4.2 三版本对照与阈值网格
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.* FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+),
+pl AS (SELECT member_id, COUNT(*) AS n_orders_all,
+              SUM(net_pnl) AS net_pnl_all, SUM(game_pnl) AS game_pnl_all
+       FROM bs GROUP BY member_id),
+ipm AS (SELECT b.bet_ip, b.member_id, COUNT(*) AS n_orders_ip,
+               COUNT(DISTINCT b.round_key) AS n_rounds_ip,
+               SUM(b.stake) AS stake_ip, SUM(b.net_pnl) AS net_pnl_ip,
+               SUM(b.game_pnl) AS game_pnl_ip,
+               MAX(p.net_pnl_all) AS net_pnl_all, MAX(p.game_pnl_all) AS game_pnl_all,
+               COUNT(*)*1.0/NULLIF(MAX(p.n_orders_all),0) AS ip_order_share
+        FROM bs b JOIN pl p ON p.member_id=b.member_id
+        WHERE NULLIF(TRIM(b.bet_ip),'') IS NOT NULL
+        GROUP BY b.bet_ip, b.member_id)
+SELECT 'W1' AS window_id, bet_ip,
+  COUNT(*) AS n_member_raw,
+  SUM(CASE WHEN n_orders_ip>=30 THEN 1 ELSE 0 END) AS n_member_eff,
+  SUM(CASE WHEN n_orders_ip>=30 AND net_pnl_all>0 THEN 1 ELSE 0 END) AS n_prof_A,
+  SUM(CASE WHEN n_orders_ip>=30 AND net_pnl_ip >0 THEN 1 ELSE 0 END) AS n_prof_B,
+  SUM(CASE WHEN n_orders_ip>=30 AND game_pnl_ip>0 THEN 1 ELSE 0 END) AS n_prof_C,
+  SUM(n_orders_ip) AS n_orders, SUM(n_rounds_ip) AS n_rounds,
+  SUM(stake_ip) AS stake, SUM(net_pnl_ip) AS net_pnl, SUM(game_pnl_ip) AS game_pnl,
+  PERCENTILE_APPROX(ip_order_share,0.5) AS share_p50,
+  PERCENTILE_APPROX(ip_order_share,0.9) AS share_p90
+FROM ipm GROUP BY bet_ip
+HAVING SUM(CASE WHEN n_orders_ip>=30 THEN 1 ELSE 0 END) >= 5
+ORDER BY n_member_eff DESC;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   X-01 · 两规则组合矩阵（异常IP × 尾注；尾注侧仅作画像）
+   报告 fetch("X_combo") 缺口补齐
+   ▸ 导出：**data/X_combo.csv**
+   ▸ 用途：§6 两规则重叠与增量分析
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.* FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+),
+gi AS (SELECT CONCAT_WS('|', gi002, gi003, gi011) AS round_key,
+              gi004 AS t_open, gi006 AS t_reveal
+       FROM ods_mariadb_2b.ods_a168_game_info
+       WHERE gi001='101' AND gi013='1' AND is_lock='N'
+         AND gi004>='2026-03-21' AND gi004<'2026-08-07'),
+pr AS (SELECT b.member_id, b.bet_ip, b.valid_bet, b.game_pnl,
+              (UNIX_TIMESTAMP(b.t_bet)-UNIX_TIMESTAMP(g.t_open))*1.0
+              /NULLIF(UNIX_TIMESTAMP(g.t_reveal)-UNIX_TIMESTAMP(g.t_open),0) AS progress
+       FROM bs b JOIN gi g ON g.round_key=b.round_key),
+ipn AS (SELECT bet_ip, COUNT(DISTINCT member_id) AS n_member_ip
+        FROM bs WHERE NULLIF(TRIM(bet_ip),'') IS NOT NULL GROUP BY bet_ip),
+mk AS (SELECT p.member_id,
+         MAX(CASE WHEN i.n_member_ip >= 20 THEN 1 ELSE 0 END) AS flag_ip,
+         SUM(CASE WHEN p.progress>=0.90 THEN 1 ELSE 0 END)*1.0/COUNT(*) AS tail_share,
+         SUM(p.valid_bet) AS valid_bet, SUM(p.game_pnl) AS game_pnl
+       FROM pr p LEFT JOIN ipn i ON i.bet_ip=p.bet_ip
+       WHERE p.progress BETWEEN 0 AND 1.5
+       GROUP BY p.member_id HAVING COUNT(*) >= 30)
+SELECT flag_ip,
+       CASE WHEN tail_share>=0.47 THEN 1 ELSE 0 END AS flag_tail_p90,
+       COUNT(*) AS n_member, SUM(valid_bet) AS valid_bet,
+       SUM(game_pnl) AS game_pnl,
+       SUM(game_pnl)/NULLIF(SUM(valid_bet),0) AS roi
+FROM mk GROUP BY 1,2 ORDER BY 1 DESC,2 DESC;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   P-01 · 会员×月面板（跨月持续性；与 S-05 同源不同粒度）
+   报告 fetch("P_player_month") 缺口补齐
+   ▸ 导出：**data/P_player_month.csv**
+   ▸ 用途：@sec-persist 跨月稳定性检验
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.* FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+)
+SELECT member_id, DATE_TRUNC('month', bet_date) AS ym,
+  COUNT(DISTINCT round_key) AS n_rounds, COUNT(DISTINCT bet_date) AS n_days,
+  SUM(valid_bet) AS valid_bet, SUM(game_pnl) AS game_pnl,
+  SUM(rebate) AS rebate, SUM(net_pnl) AS net_pnl,
+  SUM(game_pnl)/NULLIF(SUM(valid_bet),0) AS roi
+FROM bs GROUP BY member_id, DATE_TRUNC('month', bet_date)
+HAVING COUNT(DISTINCT round_key) >= 30
+ORDER BY member_id, ym;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   B-01 · 在线人数基准（「第29秒」悖论的分母）
+   报告 fetch("B_online_base") 缺口补齐
+   ▸ 导出：**data/B_online_base.csv**
+   ▸ 用途：§2.2-4 秒段集中度须除以在场人数基准
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.* FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+),
+gi AS (SELECT CONCAT_WS('|', gi002, gi003, gi011) AS round_key,
+              gi004 AS t_open, gi006 AS t_reveal
+       FROM ods_mariadb_2b.ods_a168_game_info
+       WHERE gi001='101' AND gi013='1' AND is_lock='N'
+         AND gi004>='2026-03-21' AND gi004<'2026-08-07'),
+pr AS (SELECT b.table_id, b.round_key, b.member_id, b.valid_bet, b.game_pnl,
+              FLOOR((UNIX_TIMESTAMP(b.t_bet)-UNIX_TIMESTAMP(g.t_open))) AS sec_elapsed
+       FROM bs b JOIN gi g ON g.round_key=b.round_key)
+SELECT table_id, sec_elapsed,
+       COUNT(*) AS n_orders, COUNT(DISTINCT member_id) AS n_player,
+       COUNT(DISTINCT round_key) AS n_rounds,
+       SUM(valid_bet) AS valid_bet, SUM(game_pnl) AS game_pnl
+FROM pr WHERE sec_elapsed BETWEEN 0 AND 120
+GROUP BY table_id, sec_elapsed ORDER BY table_id, sec_elapsed;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   A-01 · L0 金标准锚点（17 个人工确认 IP 的窗口内表现）
+   报告 fetch("A_anchor") 缺口补齐；须先跑 N1b 确认活跃性
+   ▸ 导出：**data/A_anchor.csv**
+   ▸ 用途：一票否决检验：新阈值必须命中这些锚点
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH gold AS (SELECT DISTINCT TRIM(ip) AS ip
+              FROM ods_mariadb_2b.ods_a168_alert_ip_setting
+              WHERE NULLIF(TRIM(ip),'') IS NOT NULL)
+SELECT g.ip,
+       COUNT(b.bet01) AS n_orders,
+       COUNT(DISTINCT b.bet05) AS n_member,
+       MIN(b.dt) AS first_dt, MAX(b.dt) AS last_dt
+FROM gold g
+LEFT JOIN ods_mariadb_2b.ods_a168_bet02 b
+  ON TRIM(b.ip)=g.ip AND b.dt>='2026-03-21' AND b.dt<'2026-08-07' AND b.bet02='101'
+GROUP BY g.ip ORDER BY n_orders DESC;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   V-01 · 三方 IP 明细对照（地理维度作废的存档证据）
+   报告 fetch("V_ipmatch") 缺口补齐
+   ▸ 导出：**data/V_ipmatch.csv**
+   ▸ 用途：game_log.ip 为网关的逐条证据
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH a AS (SELECT DISTINCT TRIM(ip) AS ip FROM ods_mariadb_2b.ods_a168_bet02
+           WHERE dt>='2026-03-21' AND dt<'2026-08-07' AND bet02='101'
+             AND NULLIF(TRIM(ip),'') IS NOT NULL),
+     b AS (SELECT TRIM(ip) AS ip, COUNT(DISTINCT mid) AS n_member_log,
+                  MAX(country_code) AS country, MAX(city) AS city
+           FROM ods_mariadb_2b.ods_a168_game_log
+           WHERE dt>='2026-03-21' AND dt<'2026-08-07'
+             AND NULLIF(TRIM(ip),'') IS NOT NULL
+           GROUP BY TRIM(ip))
+SELECT b.ip, b.n_member_log, b.country, b.city,
+       CASE WHEN a.ip IS NULL THEN 0 ELSE 1 END AS in_bet_ip
+FROM b LEFT JOIN a ON a.ip=b.ip
+ORDER BY b.n_member_log DESC;
