@@ -787,6 +787,137 @@ FROM cell
 WHERE n_tail > 0 AND n_norm > 0;
 
 
+/* --- D-03S 日级 roi_diff 序列（★ 显著性检验的输入，139 行）-----------
+   聚合 ROI 没有标准误，无法判断 +0.000657 是信号还是噪声。
+   本条按日输出两口径的 roi_diff，R 端做单样本 t 检验 + Bootstrap CI，
+   并可直接用于 purged walk-forward 的时间外稳定性检验。
+   ------------------------------------------------------------------------- */
+WITH ta AS (
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet09 AS bet_side,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl
+  FROM vd v
+),
+ord AS (
+  SELECT b.*,
+         PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round,
+         COUNT(*)      OVER (PARTITION BY round_key)                 AS n_in_round
+  FROM bs b
+)
+SELECT bet_date,
+  COUNT(DISTINCT round_key) AS n_rounds,
+  SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END) AS vb_tail,
+  SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END) AS vb_norm,
+  SUM(CASE WHEN pr_in_round >= 0.80 THEN game_pnl ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END), 0) AS roi_tail,
+  SUM(CASE WHEN pr_in_round <  0.80 THEN game_pnl ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END), 0) AS roi_norm,
+  SUM(CASE WHEN pr_in_round >= 0.80 THEN game_pnl ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END), 0)
+    - SUM(CASE WHEN pr_in_round <  0.80 THEN game_pnl ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END), 0) AS roi_diff
+FROM ord
+WHERE n_in_round >= 5
+GROUP BY bet_date
+ORDER BY bet_date;
+/* R 端：t.test(roi_diff)、boot::boot 求 BCa CI；
+   若 CI 跨 0 → 报告写「未观察到统计显著的尾段优势」。          */
+
+
+/* --- D-03X 分层一致性（按投注选项 × 是否免佣）------------------------
+   两口径符号相反已说明结论不稳健；本条进一步查是否由某个选项主导。
+   ------------------------------------------------------------------------- */
+WITH ta AS (
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet09 AS bet_side, v.commission AS comm,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl
+  FROM vd v
+),
+ord AS (
+  SELECT b.*,
+         PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round,
+         COUNT(*)      OVER (PARTITION BY round_key)                 AS n_in_round
+  FROM bs b
+)
+SELECT bet_side, comm,
+  COUNT(*) AS n_orders,
+  SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END) AS vb_tail,
+  SUM(CASE WHEN pr_in_round >= 0.80 THEN game_pnl ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END), 0) AS roi_tail,
+  SUM(CASE WHEN pr_in_round <  0.80 THEN game_pnl ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END), 0) AS roi_norm,
+  SUM(CASE WHEN pr_in_round >= 0.80 THEN game_pnl ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN pr_in_round >= 0.80 THEN valid_bet ELSE 0 END), 0)
+    - SUM(CASE WHEN pr_in_round <  0.80 THEN game_pnl ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN pr_in_round <  0.80 THEN valid_bet ELSE 0 END), 0) AS roi_diff
+FROM ord
+WHERE n_in_round >= 5
+GROUP BY bet_side, comm
+HAVING COUNT(*) >= 10000
+ORDER BY roi_diff DESC;
+
+
 /* --- D-05 玩家×物理局明细（导出后 R 端算尾段十一项指标）-------------- */
 WITH ta AS (
   SELECT DISTINCT age001 AS aid
