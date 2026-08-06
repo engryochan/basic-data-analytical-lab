@@ -1,0 +1,294 @@
+---
+title: "真人荷官博彩平台风控与客户分层评分体系"
+subtitle: "基于 StarRocks ODS 层 1.8 亿注单全局数据的商业方案（第一版·骨架）"
+author: "Ryo（雷欧）"
+date: last-modified
+lang: zh
+format:
+  html:
+    theme: darkly
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    fig-width: 9
+    fig-height: 5
+    self-contained: true
+    css: |
+      :root { --nav: #0b1e2d; --teal: #2ec4b6; }
+      body { background:#0b1e2d; color:#e6edf3; }
+      h1,h2,h3 { color:#2ec4b6; border-bottom:1px solid #17394d; padding-bottom:.2em; }
+      .callout { border-left:4px solid #2ec4b6; }
+      table { font-size:.9em; }
+      code { color:#8be9c9; }
+execute:
+  echo: true
+  warning: false
+  message: false
+  eval: false        # 骨架阶段统一 false；接入 StarRocks 后按章开启
+---
+
+```{r setup}
+#| include: false
+# 技术栈：纯 SQL 取数(Superset SQL Lab / StarRocks) → R 建模与可视化
+# 连接方式接入生产环境后填写；骨架阶段所有 chunk eval:false
+library(pacman)
+p_load(DBI, data.table, dplyr, igraph, ggplot2, DT, plotly, scales)
+SCHEMA <- "ods_mariadb_2b"        # 全局铁律：所有表引用带此前缀
+```
+
+::: {.callout-note}
+**文档状态说明（诚实标注，不含虚构数据）**
+本文为**骨架版**。章节按证据成熟度分三类标注：
+✅ **已证**——已用全局 1.8 亿数据验证；
+⏳ **待数据**——方法已定，等指定 SQL 结果回填真实数值；
+🔬 **待调研**——等顶级博彩行业阈值基准 / purged walk-forward 方法论调研返回后定稿。
+全文严禁硬编造数值：凡真实数字均来自 Superset 全局查询，凡未获取的一律显式留槽，不臆造。
+:::
+
+# 执行摘要 {#sec-exec}
+
+⏳ *待三条后台行业调研 + 收尾 SQL 回填后撰写终稿。* 核心论点框架：
+
+1. **数据资产**：平台 129 张 ODS 表、2,291 字段（字典 100% 正名覆盖），可拼出 ~16 个维度域的完整风控数据宇宙，远超"仅 bet01/bet02 两表"的原始需求边界。
+2. **方法论定位**：从"无监督推断"升级为**半监督**——发现平台自带风险标签 `dailyreport_member.risk`，可作为评分模型的对齐锚点与效果验证基准。
+3. **风控能力**：策略性后段下注、团伙同桌合谋、荷官关联作弊三条核心规则已在全局数据跑通；并新增 IP 集群、脚本户、改单证据、内部人员、打水套利等多条维度。
+4. **落地闭环**：多维信号 → 综合风险评分卡 → Redis KV + API 实时供后端调用 → 亏损玩家差异化返水 → purged walk-forward 回测证明业绩增长。
+
+# 数据基座与维度全景 {#sec-base}
+
+## 数据规模与正确分母 {#sec-scale}
+
+✅ **已证**（全局查询）：
+
+| 指标 | 数值 | 来源 |
+|---|---|---|
+| bet01 原始行数 | 190,212,592 | `COUNT(*)` |
+| bet01 去重后 | 188,824,401（重复率 0.73%） | `COUNT(DISTINCT bet01)` |
+| 干净基座行数（去重+排哨兵局） | 188,768,771 | 基座 CTE |
+| **真实下注会员数** | **1,329,006** | 基座 `COUNT(DISTINCT bet05)` |
+| member 账户总数 | 58,498,874 | `member` 主表 |
+| 测试线代理数（`age022=1`） | 214 | `agent` |
+
+::: {.callout-important}
+**关键校正**：`member` 表 5,849 万是**账户数**，98% 为休眠/测试/一次性账户。所有风控比率的**正确分母是 132.9 万真实下注会员**，绝不可用 5,849 万稀释。正式分析前须先剔除 214 个测试代理（`age022=1`）下挂会员。
+:::
+
+## 维度域全景（~16 域） {#sec-dims}
+
+✅ 每一域均有已验证或高置信 join key：
+
+```
+① 注单明细      bet01 / bet02 / bet(60列,待厘清)
+② 物理局        game_info (gi002=場次, gi004开局, gi006开奖, gi013状态)
+③ 桌台限红      tablelimit (tableid=bet31, bettime=封盘窗口, min/maxbet)
+④ 赔率/EV       odds_default (area × odds → 理论期望值)
+⑤ 现成风险标签  dailyreport_member.risk / .orders  ★半监督锚点★
+⑥ 改单证据      betchange_log (old/new_bet05, old/new_ip) ★作弊实锤★
+⑦ 真实盈亏      bet02.bet17(結果, 折 bet11 汇率)
+⑧ 钱包资金流    wallet_dtl (user↔bet05) / log_age_cash_change (lacc06异动)
+⑨ 充提款        payment_order / wallet_feedbackerr
+⑩ 汇率归一      conversion / currency
+⑪ 打水套利      RedPacket_Order / RedPacketSetup (need_valid打码, black_list)
+⑫ 设备/行为     realtimebet(UA) / member_click_counter(零点击=脚本)
+⑬ 网络          iphistory / mem_login / ipblacklist / white_list
+⑭ 会员+代理树   member (mem007~011 五级代理链, L1~L5=573→16192)
+⑮ 内部人员      employee(type=3荷官) / emp_login / control / log_mem_change
+⑯ 活标签源      alarmMessage (剔 type 9/11/12 噪声后)
+```
+
+# 字段口径与"同名异义"陷阱 {#sec-schema}
+
+✅ **已证**——顶级标准要求：跨表列引用一律带表别名 + 中文正名，禁止隐式对齐。
+
+::: {.callout-warning}
+**致命陷阱**：`bet01` 与 `bet02` 从 `bet14` 起同名列含义**完全不同**——
+`bet14` 在 bet01=退水%數、在 bet02=**派彩**；`bet17` 在 bet02=**結果(净盈亏)**。
+若误用 `b1.bet14` 取派彩，将安静产出全错报表（类型都是 decimal，不报错）。
+此外列名 `bet02` 同时是"表名"与"遊戲類別編號"列名，须始终带别名前缀。
+:::
+
+**核心金额口径（已确立）**：
+
+$$\text{投注额} = \frac{bet13}{bet11}, \quad \text{净盈亏} = \frac{bet17}{bet11}, \quad \text{有效投注} = validbet$$
+
+::: {.callout-note}
+**已证伪并排除**：`aggregate_transaction` 全表仅 75 行（残留弃用表，非游戏结算）；
+`game_result` 空表；`risklist` 注单号世代与当前 bet01 无法 join（停在 2022，已废）。
+真人局盈亏口径最终锁定为 `bet02.bet17`，不走聚合钱包表。
+:::
+
+字段↔正名完整对照见 @sec-appendix 附录。
+
+# 半监督标签体系 {#sec-label}
+
+## 平台自带风险标签（本方案方法论基石） {#sec-risk-label}
+
+✅ **重大发现**：`dailyreport_member` 含平台官方标记，按"会员×日×游戏"粒度：
+
+- **`risk` — 風險單 1:是**：平台风控已判定的风险单标记
+- **`orders` — 劃單 1:是**：平台已介入处理（划单/注销）标记
+- `dailyreport_table` 提供**桌台粒度**的同类标记（荷官维度对照）
+
+⏳ **待数据**回填以下关键量（决定半监督强度）：
+
+```{r risk-label-strength}
+#| eval: false
+# 待跑：risk 标签的真实分布——覆盖多少会员、占比、跨月稳定性
+# SELECT COUNT(DISTINCT bet05) AS 风险会员数,
+#        SUM(CASE WHEN risk='1' THEN 1 ELSE 0 END) AS 风险单数, ...
+# FROM ods_mariadb_2b.ods_a168_dailyreport_member GROUP BY ...
+```
+
+::: {.callout-important}
+方法论定位因此升级：本体系并非纯无监督，而是**半监督**——用 `risk` 作为
+(a) 各规则阈值的对齐/校准基准，(b) 综合评分卡的效果验证 ground-truth，
+(c) purged walk-forward 回测的标签源。这使"业绩增长证明"从模型 AUC 好看，
+落到"命中平台已认定风险 + 扩线发现平台漏网"的可验证结论。
+:::
+
+## 辅助/替代标签源分级 {#sec-alt-label}
+
+✅ 体检结论：
+
+| 标签源 | 覆盖 | 结论 |
+|---|---|---|
+| `dailyreport_member.risk` | 待测 | ★主标签 |
+| `alarmMessage` | 2021–至今, 119.7万条, 6586会员, 15类型 | 活标签；须剔 type 9/11/12(单账号刷屏噪声) |
+| `betchange_log` | 待测 | 改单实锤(见 @sec-profile) |
+| `risklist` | 停 2022, 无法 join | ❌ 废弃 |
+| `agents_LoginPass.betfeedback` | 16993 代理仅锁 1 | ❌ 基本未启用 |
+
+# 核心风控规则 {#sec-rules}
+
+三条规则均已在全局数据跑通（最终修正版：带 CAST、干净基座、物理局聚合）。
+
+## 规则一·策略性后段下注 {#sec-rule1}
+
+✅ **已证**。逻辑：每局第 50 把及之后订单占比 ≥70% 且订单 >100。
+
+```{r rule1}
+#| eval: false
+# 见 SQL 交付包 C1。输出：uid, 投注比例, 订单数
+# 已知离群案例 146888126 因 bet03 异常已被基座过滤自动剔除
+```
+
+🔬 **待调研校准**：起始把数(50)、异常占比(70%)、最少订单数(100) 三阈值需与
+"顶级平台信息优势下注检测"行业基准交叉印证后定稿；当前为试运行阈值。
+
+## 规则二·团伙同桌合谋 {#sec-rule2}
+
+✅ **已证**。逻辑：按(桌,局)自连接 + round 规模上限(防 OOM) + 度数分离(去枢纽噪声)。
+
+关键工程校正（血泪教训）：
+- `bet03` 非按桌隔离（单局曾见 10,305 玩家=多人广播局），须配 `bet31` 桌号；
+- round 玩家 >50 的广播局对"同桌"无证据力且致 OOM，故设规模上限；
+- 度数过滤（搭档 ≤5）区分**紧凑小圈子**(真团伙) vs **星形枢纽**(共享网络噪声)。
+
+⏳ 已产出干净候选（如 78791553 组四人互连），待并入 Louvain 与 IP 图交叉验证。
+
+## 规则三·用户与荷官合谋 {#sec-rule3}
+
+✅ **已证**。逻辑：荷官桌胜率 >70% + 全平台盈利 >0 + 订单 >100；
+胜负按**物理局**聚合、用 `bet02.bet17` 判正负、**和局不进分母**。
+
+⏳ 已发现值得优先复核对象（多荷官异常胜率的枢纽用户、被互不相关用户共同命中的荷官）。
+`employee` 表(type=3 荷官)可将 `eid` 还原为实名并查其登录 IP 是否与可疑会员重叠。
+
+# 风险用户画像 {#sec-profile}
+
+## 同 IP 集群（多账户团伙） {#sec-ip}
+
+✅ 方法：IP 切 /24 网段 → 仅保留稀有网段(全平台用户 2–10) → 网段共现自连接 →
+度数分离找闭合小圈。已产出闭合三角(如 51576226 组)、纯净孤立对(10 对 degree=1)。
+
+::: {.callout-note}
+**已证伪并降级**：149618053/150067456 曾疑似团伙，经查其 7 个共享网段全平台用户
+均 1204–3505（非稀有大水塘），IP 证据不成立，已从证据链剔除——体现"证伪即进展"。
+:::
+
+## 技术型/脚本用户 {#sec-script}
+
+✅ 方法（负空间证据）：高注单(>1000) × 极低 UI 点击(`member_click_counter`) = API 直连嫌疑。
+
+## 打水/返水套利用户 {#sec-arb}
+
+⏳ 方法：巨额流水 × 真实盈亏(bet17)≈0 → 靠退水/红包转正。
+需 `agent_dtl`(ag003 退水率/ag015 电投退水) + `RedPacketSetup`(need_valid 打码要求) 算套利空间。
+（原用 aggregate_transaction 的版本已作废——该表空。）
+
+## 改单作弊（内部合谋实锤） {#sec-betchange}
+
+⏳ **待数据**：`betchange_log` 中 `old_bet05 ≠ new_bet05`（注单归属被改）或
+`old_ip ≠ new_ip` 即改单证据，配 `change_log`(操作者+层级+IP) 举证。此为硬证据，非统计推断。
+
+## 内部人员风险 {#sec-insider}
+
+⏳ 维度：`log_mem_change`(后台改限红/配置) + `employee`/`emp_login`(荷官/员工实名与登录IP)
++ `control`/`control_login`(控端)。检测后台账号频繁给特定会员改配置、且其后盈利异常上升。
+
+# 综合风险评分卡 {#sec-score}
+
+🔬 **待调研**（scorecard 方法论 + 多维加权融合行业实践）+ ⏳ **待数据**。设计框架：
+
+$$S_{uid} = \sum_{k} w_k \cdot f_k(\text{signal}_k), \quad \text{signals} \in \{\text{IP集群, 后段, 同桌, 荷官, 脚本, 改单, 打水, 内部}\}$$
+
+- 权重 $w_k$ 校准基准：`dailyreport_member.risk`（半监督对齐）
+- 已识别种子 → 特征工程 → 聚类(HDBSCAN/GMM)扩线找相似画像（沿用既有 Louvain modularity 0.309 流程）
+- 输出：0–100 分 + A/B/C/D 分级
+
+# 阈值设定原则 {#sec-threshold}
+
+🔬 **待调研**：各规则阈值（后段起始把/占比/最少订单、同桌率、荷官胜率、尾秒窗口）
+需以 UKGC/MGA 监管口径 + 反欺诈厂商(SAS/NICE/Featurespace)实务基准佐证。
+需求文档已立选择原则（高位分布、样本充足、跨月稳定、可解释、宽严阈值质量差异）。
+
+✅ 尾秒地基已备：真人局距封盘 中位 26s / P5=4s / P1=1s（`tablelimit.bettime` 精确口径），
+极端尾秒阈值可直接取实测分位数，待行业基准交叉印证。
+
+# 实验验证：Purged Walk-Forward Backtesting {#sec-backtest}
+
+🔬 **待调研**（López de Prado 方法论迁移至风控效果验证）。设计框架：
+
+1. 按时间切训练/验证窗口，**purge** 跨窗口泄漏样本、设 **embargo** 隔离期；
+2. 对照组设计：标记高风险用户采取干预 vs 不干预；
+3. 证明指标：house edge 保有率、GGR、hold% 的可衡量提升（非仅 AUC）；
+4. 用 `dailyreport_member.risk` 作为 ground-truth 计算命中率 + 扩线增量。
+
+# 亏损玩家返水与赏罚分明会员体系 {#sec-rebate}
+
+🔬 **待调研**（顶级返水/cashback 设计 + 防套利联动）+ 设计框架：
+
+- **返水与风险评分联动**：低风险亏损玩家高返水（留存）；高风险/打水户返水冻结或降级；
+- 分层：VIP × 风险等级 二维矩阵，赏（返水/专属）罚（限红/冻结/划单）分明；
+- 现有机制载体：`member_dtl.mem012`(限红)、`RedPacketSetup`(红包)、退水链(bet28~32)。
+
+# 落地架构 {#sec-deploy}
+
+🔬 **待调研**（批量评分 + 低延迟服务层最佳实践）+ 设计框架：
+
+```
+纯SQL批量取数(StarRocks) → R/Python 批量评分管线 → 评分结果落 Redis KV
+   → FastAPI/Plumber 微服务 → 后端实时调用(下注/提现/返水决策)
+```
+
+- 深度模型(如需)以 FastAPI 微服务独立部署，与 R renv 解耦；
+- 批量评分日更 + 实时信号(改单/尾秒)流式补充。
+
+# 附录·维度双显字典 {#sec-appendix}
+
+✅ 字典 `字典_全局.csv` 100% 覆盖 129 表 2,291 字段（含正名列）。
+核心表字段↔正名对照（bet01/bet02/game_info/dailyreport_member/betchange_log/
+wallet_dtl/employee/tablelimit）终稿据此逐字段列出。
+
+---
+
+::: {.callout-note}
+**下一步回填清单**
+🔬 待调研（3 条后台任务返回）：行业阈值基准 / purged walk-forward / 返水+评分卡+架构实践
+⏳ 待数据（指定 SQL 回填）：dailyreport_member.risk 分布强度、betchange_log 改单实例、
+   bet(60列)与 bet01/02 关系、wallet_dtl 映射、C3/D2/D3 终值
+封版顺序：C(地基,已成) → **B(本骨架)** → 回填 → 终稿
+:::

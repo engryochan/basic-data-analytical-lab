@@ -1,0 +1,1394 @@
+---
+title: "a168 风控与客户分层评分体系 · 商业方案"
+subtitle: "异常 IP 与尾秒下注阈值分析 · 全需求实现版 (V4)"
+author: "®γσ ξηg（Ryo Eng）· 世博量化® Scibrokes Trading®"
+date: today
+lang: zh-CN
+format:
+  html:
+    theme: [darkly, custom.scss]
+    toc: true
+    toc-depth: 4
+    toc-location: left
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    df-print: paged
+    fig-width: 10
+    fig-height: 5.5
+    embed-resources: false
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+  cache: false      # ⚠️ 铁律：production 数据量下 cache:true 必然 OOM
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+suppressPackageStartupMessages(pacman::p_load(
+  dplyr, tidyr, readr, stringr, purrr, tibble, lubridate, glue,
+  ggplot2, scales, knitr, kableExtra, DT, data.table
+))
+
+OPT <- c("DBI","odbc","pROC","PRROC","yardstick","binom","boot","igraph",
+         "xgboost","randomForestSRC","survival","brms","fastshap","DALEX")
+HAS <- setNames(vapply(OPT, requireNamespace, logical(1), quietly = TRUE), OPT)
+
+## 非阻塞守卫：任何一步失败都不中断渲染
+guard <- function(expr, label, on_fail = NULL) {
+  tryCatch(force(expr), error = function(e) {
+    message(glue::glue("⛔ [{label}] 跳过：{conditionMessage(e)}")); on_fail
+  })
+}
+
+PAL <- list(bg="#0E1B2A", fg="#E6EDF3", accent="#33A8C4",
+            warn="#FFD64D", bad="#FF6B6B", good="#4CB5F5")
+theme_set(theme_minimal(base_size = 12) + theme(
+  plot.background = element_rect(fill=PAL$bg, colour=NA),
+  panel.background= element_rect(fill=PAL$bg, colour=NA),
+  text = element_text(colour=PAL$fg), axis.text = element_text(colour=PAL$fg),
+  panel.grid = element_line(colour="#1E3247")))
+set.seed(20260806)
+
+## ---- 参数（唯一可调处）----------------------------------------------------
+CFG <- list(
+  db        = "ods_mariadb_2b",
+  tbl_bet   = "ods_a168_bet02",
+  game_cat  = "101",              # 需求 §3.1：仅百家乐
+  dt_from   = "2026-01-01",       # 先跑 §2 体检 T6 校正
+  dt_to     = "2026-05-01",
+  use_db    = FALSE,
+  csv_dir   = "data",
+  win_days  = 30                  # 滚动窗口
+)
+
+fetch <- function(name) {
+  f <- file.path(CFG$csv_dir, paste0(name, ".csv"))
+  if (file.exists(f)) return(guard(readr::read_csv(f, show_col_types = FALSE),
+                                   glue("读取 {name}")))
+  message(glue::glue("ℹ️ [{name}] 未就位，相关章节标注为「未实现」。")); NULL
+}
+
+D <- list(
+  timecheck   = fetch("T_timecheck"),      # §2  时间字段可用性
+  sec_dist    = fetch("S_second_dist"),    # §5.2 秒段分布
+  sec_strat   = fetch("S_second_strat"),   # §5.2 分层
+  player_tail = fetch("S_player_tail"),    # §5.3 玩家尾秒指标
+  ip_player   = fetch("I_ip_player"),      # §4.1 玩家-IP
+  ip_agg      = fetch("I_ip_agg"),         # §4.2 IP 汇总
+  ip_dist     = fetch("I_ip_dist"),        # §4.3 分布
+  combo       = fetch("X_combo"),          # §6  组合
+  panel       = fetch("P_player_month"),   # 跨月面板
+  anchor      = fetch("A_anchor")          # 弱标签（若有）
+)
+AVAIL <- lapply(D, Negate(is.null))
+```
+
+::: {.callout-important}
+## 本报告的性质声明
+
+需求文档 §7 末条明确规定：**在没有确认风险标签前，结论只能定义为「试运行阈值」，
+不得声称已获得准确率或召回率最优的生产阈值。**
+
+本报告严格遵守该约束。所有推荐阈值均标注为 **试运行（Trial）**。
+凡涉及精度/召回的表述，一律注明其标签来源与局限。
+:::
+
+```{r}
+#| label: avail-board
+#| echo: false
+tibble::tibble(
+  数据集 = names(D),
+  对应需求 = c("§5.1","§5.2","§5.2分层","§5.3","§4.1","§4.2","§4.3","§6","跨月","标签"),
+  状态 = ifelse(unlist(AVAIL), "✅ 就位", "⬜ 待上载")
+) |> knitr::kable(caption = "数据就位看板")
+```
+
+---
+
+# 需求追溯矩阵 {#sec-trace}
+
+每一条需求条目 → 实现章节 → 交付形态 → 状态。**本表是本报告的验收依据。**
+
+```{r}
+#| label: traceability
+#| echo: false
+trace <- tibble::tribble(
+  ~条目, ~需求原文摘要, ~实现章节, ~交付形态,
+  "§2.1-1","「关联20个账户」处于分布什么位置","@sec-ip-dist","分位数定位表+图",
+  "§2.1-2","账户至少多少订单/局才算有效关联","@sec-ip-eff","有效性敏感度曲线",
+  "§2.1-3","用「该IP下盈利」还是「全平台盈利」","@sec-ip-ver","版本A/B对照+推荐",
+  "§2.1-4","盈利比例 80/90/100% 何者合适","@sec-ip-grid","候选网格",
+  "§2.1-5","各阈值每天/每30天产生多少工作量","@sec-ip-grid","工作量列",
+  "§2.1-6","命中IP跨月是否稳定","@sec-ip-stab","跨月重复命中率",
+  "§2.2-1","开始下注/封盘/时长能否准确取得","@sec-time","可用性判定（前置）",
+  "§2.2-2","下注集中在第几秒；最后1/2/3/5秒覆盖率","@sec-sec-dist","秒段分布表",
+  "§2.2-3","各秒段胜率/盈利/ROI 差异","@sec-sec-perf","秒段绩效表",
+  "§2.2-4","「第29秒」是真异常还是基准如此","@sec-29s","基准率悖论检验",
+  "§2.2-5","至少多少尾秒局数结果才稳定","@sec-stability","Wilson CI 宽度曲线",
+  "§2.2-6","尾秒占比达多少才算持续性","@sec-tail-share","占比分布+持续性",
+  "§2.2-7","尾秒胜率/胜率差达多少可作条件","@sec-tail-grid","候选网格",
+  "§2.2-8","是否「正常亏、尾秒赢」且跨月持续","@sec-strong","强特征专项",
+  "§3.2","bet01去重(updatetime/sync_time/dt)","@sec-dedup","去重CTE+验证",
+  "§3.3","四种金额口径","@sec-money","口径表+对账",
+  "§3.4","胜率按物理局、和局不入分母","@sec-winrate","口径实现",
+  "§4.1","玩家—IP基础指标(6项)","@sec-ip-player","指标表",
+  "§4.2","IP汇总指标+版本A/B","@sec-ip-agg","汇总表",
+  "§4.3","分布分析(4项)","@sec-ip-dist","分布表+Top100",
+  "§4.4","候选阈值组合(4参数)+11项输出","@sec-ip-grid","网格表",
+  "§5.2","全体订单秒段分布(6项)","@sec-sec-dist","分布+分层",
+  "§5.3","玩家尾秒指标(11项)","@sec-player-tail","指标表",
+  "§5.4","候选阈值组合(5参数)+强特征+9项输出","@sec-tail-grid","网格表",
+  "§6","两规则组合分析","@sec-combo","交集分析",
+  "§7","七条选择原则逐条核验","@sec-principle","核验表",
+  "业务追加","客户分群+各领域能力值","@sec-capability","能力雷达+分群",
+  "业务追加","顶级验证标准","@sec-validation","purged WF/CPCV/共形"
+)
+DT::datatable(trace, options=list(pageLength=30, dom='tip'),
+              caption="需求追溯矩阵 · Requirements Traceability Matrix")
+```
+
+---
+
+# 数据契约与基础口径 {#sec-contract}
+
+## 有效订单口径（需求 §3.2） {#sec-dedup}
+
+::: {.callout-warning}
+**与旧交接单的冲突已裁定：以需求文档为准。**
+
+旧铁律「过滤 `bet03<>'0'` + 排除 `age022=1`」在本任务**作废**：
+`bet02='101'` 已将范围收敛至百家乐真人局；且实测确认 `bet02` 表**不存在 `age022` 列**。
+:::
+
+```sql
+-- 需求 §3.2 完整实现：同 bet01 保留最新版本 + 有效订单过滤
+WITH ranked AS (
+  SELECT b.*,
+         ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC
+         ) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= :dt_from AND b.dt < :dt_to      -- 分区裁剪，半开区间
+    AND b.bet02 = '101'                          -- §3.1 仅百家乐
+),
+valid AS (
+  SELECT
+      bet01                                           AS bet_id,
+      bet05                                           AS member_id,
+      /* §3.1 物理局键 = bet03 + bet04 + bet39 —— 三段缺一不可 */
+      CONCAT_WS('|', bet03, bet04, bet39)             AS round_key,
+      bet03 AS shoe_id, bet04 AS round_no, bet39 AS table_id,
+      bet40 AS room_id, eid AS dealer_id,
+      commission, bet09 AS bet_side, ip AS bet_ip,
+      bet18 AS lv1, bet19 AS lv2, bet20 AS lv3, bet21 AS lv4, bet22 AS lv5,
+      CAST(NULLIF(TRIM(bet06),'') AS DATETIME)        AS t_bet06,
+      CAST(NULLIF(TRIM(bet08),'') AS DATETIME)        AS t_bet,
+      CAST(NULLIF(TRIM(bet11),'') AS DECIMAL(20,8))   AS fx,
+      CAST(NULLIF(TRIM(bet13),'') AS DECIMAL(20,4))   AS stake_raw,
+      CAST(NULLIF(TRIM(bet14),'') AS DECIMAL(20,4))   AS payout_raw,
+      CAST(NULLIF(TRIM(bet16),'') AS DECIMAL(20,4))   AS rebate_raw,
+      CAST(NULLIF(TRIM(bet17),'') AS DECIMAL(20,4))   AS net_raw
+  FROM ranked
+  WHERE rn = 1
+    AND category = '1'                            -- §3.2 一般（非小费）
+    AND UPPER(TRIM(bet38)) = 'N'                  -- §3.2 非重对
+    AND CAST(NULLIF(TRIM(bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(bet08),'') IS NOT NULL
+)
+SELECT
+    v.*,
+    stake_raw  / fx                    AS stake,      -- §3.3 投注金额
+    (payout_raw - stake_raw) / fx      AS game_pnl,   -- §3.3 游戏盈利（不含返水）
+    rebate_raw / fx                    AS rebate,     -- §3.3 返水
+    net_raw    / fx                    AS net_pnl     -- §3.3 净盈利（含返水）
+FROM valid v;
+```
+
+**去重必须验证（§3.2 验收）**：
+
+```sql
+-- 去重前后行数与影响面
+SELECT COUNT(*) AS n_raw,
+       COUNT(DISTINCT bet01) AS n_distinct_bet01,
+       COUNT(*) - COUNT(DISTINCT bet01) AS n_dropped,
+       1 - COUNT(DISTINCT bet01)*1.0/COUNT(*) AS dup_rate
+FROM ods_mariadb_2b.ods_a168_bet02
+WHERE dt >= :dt_from AND dt < :dt_to AND bet02 = '101';
+```
+
+## 金额与盈利口径（需求 §3.3） {#sec-money}
+
+| 口径 | 公式 | 用途 |
+|---|---|---|
+| 投注金额 | `bet13 / bet11` | 规模 |
+| 游戏盈利 | `(bet14 − bet13) / bet11` | **尾秒优势分析主口径**（不含返水） |
+| 返水 | `bet16 / bet11` | 单列输出 |
+| 净盈利 | `bet17 / bet11` | **账户整体是否盈利的判定口径** |
+
+**对账恒等式**：`net_pnl ≡ game_pnl + rebate`。样本验证 `780−400+3.2 = 383.2` ✓。
+任一 cohort 违反（容差 1e-6）即停用该 cohort 并标记 `RECON_FAILED`。
+
+::: {.callout-note}
+需求 §3.3 特别要求「净盈利、游戏盈利和返水需要同时输出，避免返水影响对下注优势的判断」。
+本报告所有涉及尾秒优势的表格**三者并列**，不做单一口径呈现。
+:::
+
+## 胜率口径（需求 §3.4） {#sec-winrate}
+
+```sql
+-- 先按「玩家 × 物理局」聚合，再判定胜负和，和局不入分母
+player_round AS (
+  SELECT member_id, round_key, table_id, dealer_id, commission,
+         MIN(t_bet) AS first_bet_ts, MAX(t_bet) AS last_bet_ts,
+         SUM(stake) AS stake, SUM(game_pnl) AS game_pnl,
+         SUM(rebate) AS rebate, SUM(net_pnl) AS net_pnl,
+         COUNT(*) AS n_orders
+  FROM base GROUP BY member_id, round_key, table_id, dealer_id, commission
+),
+scored AS (
+  SELECT *,
+         CASE WHEN game_pnl > 0 THEN 1 ELSE 0 END AS is_win,
+         CASE WHEN game_pnl < 0 THEN 1 ELSE 0 END AS is_lose,
+         CASE WHEN game_pnl = 0 THEN 1 ELSE 0 END AS is_tie
+  FROM player_round
+)
+-- 胜率 = SUM(is_win) / NULLIF(SUM(is_win) + SUM(is_lose), 0)
+```
+
+**边注与主注分离（§5.2 要求）**：Banker / Player / Tie / 边注需分开分析。
+但胜率按物理局聚合后 `bet09` 已被折叠——因此**另设一套按 `bet09` 分组的订单级绩效表**，
+与局级胜率表并列，两表用途不同，不得混用。
+
+---
+
+# 时间字段可用性检查（需求 §5.1）—— 前置闸门 {#sec-time}
+
+::: {.callout-important}
+需求 §5.1 明文规定：**「只有存在可靠的开始下注时间和封盘时间，才能开展正式尾秒阈值分析。」**
+
+本章是硬闸门。若检查不通过，第 @sec-tail 章全部标记为「未实现及原因」，
+**不得以代理量近似后声称已完成**。
+:::
+
+## 四项必答检查
+
+```sql
+/* T1 · bet06 语义判定：它是开始下注、封盘、还是开牌时间？ */
+WITH r AS (
+  SELECT round_key, t_bet06,
+         MIN(t_bet) AS min_bet, MAX(t_bet) AS max_bet, COUNT(*) AS n
+  FROM base GROUP BY round_key, t_bet06
+)
+SELECT
+  SUM(CASE WHEN t_bet06 <= min_bet THEN 1 ELSE 0 END)*1.0/COUNT(*) AS pct_before_first,
+  SUM(CASE WHEN t_bet06 >= max_bet THEN 1 ELSE 0 END)*1.0/COUNT(*) AS pct_after_last,
+  PERCENTILE_APPROX(TIMESTAMPDIFF(SECOND, t_bet06, min_bet), 0.5) AS med_open_to_first,
+  PERCENTILE_APPROX(TIMESTAMPDIFF(SECOND, t_bet06, max_bet), 0.5) AS med_open_to_last
+FROM r WHERE n >= 3;
+/* 判读：pct_before_first ≈ 1 → bet06 是开始下注时间（可用作 open_bet_time）
+        pct_after_last  ≈ 1 → bet06 是开牌时间（不可用作原点）
+        两者皆不接近 1   → 语义混乱，闸门不通过                        */
+
+/* T2 · 是否存在独立的 open/close 时间表 */
+SELECT TABLE_NAME FROM information_schema.tables
+WHERE TABLE_SCHEMA='ods_mariadb_2b'
+  AND (LOWER(TABLE_NAME) LIKE '%game_no%' OR LOWER(TABLE_NAME) LIKE '%game_info%'
+       OR LOWER(TABLE_NAME) LIKE '%realtime%' OR LOWER(TABLE_NAME) LIKE '%shuffle%');
+/* 候选：ods_a168_game_No(152,416)、ods_a168_game_info(11,467,962)、
+        ods_a168_realtimebet、ods_a168_log_realtimebet —— 逐个查列定 */
+
+/* T3 · bet08 精度：秒还是毫秒？ */
+SELECT COUNT(*) AS n,
+       SUM(CASE WHEN bet08 LIKE '%.%' THEN 1 ELSE 0 END) AS n_with_frac,
+       COUNT(DISTINCT RIGHT(bet08, 3)) AS ndv_tail3
+FROM ods_mariadb_2b.ods_a168_bet02
+WHERE dt >= :dt_from AND dt < :dt_to AND bet02='101' LIMIT 1000000;
+/* ndv_tail3 ≈ 60（秒位）→ 秒精度；≈ 1000 → 毫秒精度 */
+
+/* T4 · 下注时长是否固定 30 秒？ */
+WITH w AS (
+  SELECT round_key, table_id,
+         TIMESTAMPDIFF(SECOND, MIN(t_bet), MAX(t_bet)) AS span_obs,
+         TIMESTAMPDIFF(SECOND, MAX(t_bet06), MAX(t_bet)) AS span_from_06,
+         COUNT(*) AS n
+  FROM base GROUP BY round_key, table_id
+)
+SELECT COUNT(*) AS n_rounds,
+       AVG(span_from_06) AS mean_span, STDDEV_SAMP(span_from_06) AS sd_span,
+       PERCENTILE_APPROX(span_from_06,0.05) AS p05,
+       PERCENTILE_APPROX(span_from_06,0.25) AS p25,
+       PERCENTILE_APPROX(span_from_06,0.50) AS p50,
+       PERCENTILE_APPROX(span_from_06,0.75) AS p75,
+       PERCENTILE_APPROX(span_from_06,0.95) AS p95,
+       SUM(CASE WHEN span_from_06 BETWEEN 29 AND 31 THEN 1 ELSE 0 END)*1.0/COUNT(*) AS pct_30s
+FROM w WHERE n >= 5;
+```
+
+```{r}
+#| label: time-gate
+#| eval: !expr AVAIL$timecheck
+
+gate <- guard({
+  tc <- D$timecheck
+  ## 闸门判定：三条同时满足才放行绝对秒口径
+  pass_open   <- tc$pct_before_first[1] >= 0.98
+  pass_fixed  <- tc$pct_30s[1] >= 0.90
+  pass_prec   <- tc$ndv_tail3[1] > 500     # 毫秒精度
+  tibble::tibble(
+    检查 = c("bet06 = 开始下注时间","下注时长固定 30 秒","bet08 毫秒精度"),
+    结果 = c(scales::percent(tc$pct_before_first[1]),
+             scales::percent(tc$pct_30s[1]),
+             ifelse(pass_prec,"毫秒","秒")),
+    判定 = ifelse(c(pass_open,pass_fixed,pass_prec),"✅ 通过","⛔ 不通过")
+  )
+}, "时间闸门")
+if (!is.null(gate)) knitr::kable(gate, caption="§5.1 时间字段可用性闸门")
+```
+
+## 闸门结论与口径选择（需求 §5.1 推荐指标）
+
+| 闸门结果 | 采用口径 | 理由 |
+|---|---|---|
+| 存在 `open_bet_time` 与 `close_bet_time` | `距离封盘秒数 = close − bet08`；`下注进度 = (bet08−open)/(close−open)` | 需求推荐口径，最优 |
+| 仅 `bet06` 可靠 **且** 时长固定 30 秒 | 可用「下注后第几秒」 | 需求 §5.1 允许 |
+| 时长不固定 | **禁用「第29秒」类绝对秒表述**，改用 `下注进度` 分位 | 需求 §5.1 明文禁止 |
+| `bet06` 语义不明 | 尾秒分析**整章标记未实现** | 需求硬约束 |
+
+::: {.callout-warning}
+**样本已给出预警。** 抽样观察到百家乐局的 `MAX(bet08) − bet06` 在 20–30 秒间波动，
+**并非严格固定 30 秒**。若 T4 的 `pct_30s < 0.9`，则「第29秒」不可用，
+必须切换到 `下注进度` 口径 —— 这正是需求 §5.1 预见到的情形。
+:::
+
+---
+
+# 异常 IP 阈值分析（需求 §4） {#sec-ip}
+
+## IP 排除清单（需求 §3.2） {#sec-ip-excl}
+
+```sql
+/* 排除：空IP、格式错误IP、公司出口/测试/内部代理/白名单 */
+AND NULLIF(TRIM(ip),'') IS NOT NULL
+AND ip REGEXP '^([0-9]{1,3}\\.){3}[0-9]{1,3}$'
+AND ip NOT IN (SELECT ip FROM ods_mariadb_2b.ods_a168_ipblacklist)   -- 366 行，需先看语义
+AND member_id NOT IN (SELECT member_id FROM ods_mariadb_2b.ods_a168_white_list)
+```
+
+**「是否排除其他公共网络IP」— 需求要求列出影响后交业务确认。** 实现方式：
+
+```sql
+/* 公共网络候选识别：单IP会员数极高 + 会员间无代理链重叠 → 疑似公共出口 */
+SELECT bet_ip,
+       COUNT(DISTINCT member_id) AS n_member,
+       COUNT(DISTINCT lv3)        AS n_lv3_chain,
+       COUNT(DISTINCT member_id)*1.0/NULLIF(COUNT(DISTINCT lv3),0) AS member_per_chain,
+       SUM(stake) AS stake, SUM(net_pnl) AS net_pnl
+FROM base GROUP BY bet_ip
+HAVING COUNT(DISTINCT member_id) >= 20
+ORDER BY member_per_chain DESC;
+/* member_per_chain 高 → 会员分散在多条代理链 → 更像公共出口而非团伙
+   member_per_chain ≈ 1 → 会员集中于同一代理链 → 更像团伙          */
+```
+
+::: {.callout-note}
+**排除公共IP前后的分布差异必须并列呈现（需求 §4.3 第4项）**，
+由业务方在两套结果间做最终裁决，分析方**不代业务方决策**。
+:::
+
+## 玩家—IP 基础指标（需求 §4.1） {#sec-ip-player}
+
+```sql
+/* 按「统计窗口 + IP + 玩家」：六项指标全覆盖 */
+WITH pl AS (   -- 玩家全平台
+  SELECT member_id,
+         COUNT(DISTINCT bet_id)    AS n_orders_all,
+         COUNT(DISTINCT round_key) AS n_rounds_all,
+         SUM(net_pnl)              AS net_pnl_all
+  FROM base GROUP BY member_id
+)
+SELECT :win_id AS window_id, b.bet_ip, b.member_id,
+       COUNT(DISTINCT b.bet_id)       AS n_orders_ip,     -- ① 该IP下去重订单数
+       COUNT(DISTINCT b.round_key)    AS n_rounds_ip,     -- ② 该IP下去重物理局数
+       SUM(b.stake)                   AS stake_ip,        -- ③ 该IP下投注金额
+       SUM(b.net_pnl)                 AS net_pnl_ip,      -- ③ 该IP下净盈利
+       MAX(pl.n_orders_all)           AS n_orders_all,    -- ④ 全平台总订单
+       MAX(pl.n_rounds_all)           AS n_rounds_all,    -- ④ 全平台总局数
+       MAX(pl.net_pnl_all)            AS net_pnl_all,     -- ⑤ 全平台净盈利
+       COUNT(DISTINCT b.bet_id)*1.0
+         / NULLIF(MAX(pl.n_orders_all),0) AS ip_order_share -- ⑥ 该IP订单占比
+FROM base b JOIN pl ON b.member_id = pl.member_id
+GROUP BY b.bet_ip, b.member_id;
+```
+
+## IP 汇总指标 + 版本 A/B（需求 §4.2） {#sec-ip-agg}
+
+```sql
+SELECT window_id, bet_ip,
+       COUNT(DISTINCT member_id)                                   AS n_member_raw,
+       SUM(CASE WHEN n_orders_ip >= :min_orders THEN 1 ELSE 0 END) AS n_member_eff,
+       /* 版本A：玩家全平台整体净盈利 > 0 */
+       SUM(CASE WHEN n_orders_ip >= :min_orders AND net_pnl_all > 0
+                THEN 1 ELSE 0 END)                                 AS n_profit_A,
+       /* 版本B：玩家仅在该IP下净盈利 > 0 */
+       SUM(CASE WHEN n_orders_ip >= :min_orders AND net_pnl_ip  > 0
+                THEN 1 ELSE 0 END)                                 AS n_profit_B,
+       SUM(n_orders_ip) AS n_orders, SUM(n_rounds_ip) AS n_rounds,
+       SUM(stake_ip)    AS stake,    SUM(net_pnl_ip)  AS net_pnl,
+       PERCENTILE_APPROX(ip_order_share, 0.5) AS share_p50,
+       PERCENTILE_APPROX(ip_order_share, 0.9) AS share_p90
+FROM ip_player GROUP BY window_id, bet_ip;
+
+/* 关联代理数/荷官数/桌子数 —— 需从 base 另聚合后 join */
+SELECT bet_ip,
+       COUNT(DISTINCT lv3)       AS n_agent_lv3,
+       COUNT(DISTINCT dealer_id) AS n_dealer,
+       COUNT(DISTINCT table_id)  AS n_table
+FROM base GROUP BY bet_ip;
+```
+
+### 版本 A / B 对照与推荐口径 {#sec-ip-ver}
+
+```{r}
+#| label: ip-version-ab
+#| eval: !expr AVAIL$ip_agg
+
+guard({
+  x <- D$ip_agg |>
+    dplyr::mutate(rate_A = n_profit_A/pmax(n_member_eff,1),
+                  rate_B = n_profit_B/pmax(n_member_eff,1))
+  purrr::map_dfr(c(0.70,0.80,0.90,1.00), function(p) {
+    tibble::tibble(
+      盈利比例门槛 = scales::percent(p),
+      版本A命中IP = sum(x$rate_A >= p & x$n_member_eff >= 5, na.rm=TRUE),
+      版本B命中IP = sum(x$rate_B >= p & x$n_member_eff >= 5, na.rm=TRUE),
+      仅A命中     = sum(x$rate_A >= p & x$rate_B <  p & x$n_member_eff>=5, na.rm=TRUE),
+      仅B命中     = sum(x$rate_B >= p & x$rate_A <  p & x$n_member_eff>=5, na.rm=TRUE),
+      Jaccard     = round(sum(x$rate_A>=p & x$rate_B>=p, na.rm=TRUE) /
+                          pmax(sum(x$rate_A>=p | x$rate_B>=p, na.rm=TRUE),1), 3))
+  }) |> knitr::kable(caption="§4.2 版本A（全平台盈利）vs 版本B（该IP下盈利）对照")
+}, "版本A/B对照")
+```
+
+::: {.callout-tip}
+## 推荐口径的判据（供业务裁决，非分析方独断）
+
+| 维度 | 版本A 全平台盈利 | 版本B 仅该IP下盈利 |
+|---|---|---|
+| 逻辑对齐 | 衡量「这些人是不是赢家」 | 衡量「他们在这个IP上是不是赢家」 |
+| 抗稀释 | 弱：会员在别处大亏会掩盖此处异常 | 强：聚焦局部 |
+| 抗噪 | 强：样本量大 | 弱：单IP样本可能极小 |
+| 团伙检测 | 偏弱 | **偏强**（团伙通常只在特定IP协同） |
+
+**分析方倾向版本 B**，理由是团伙行为具有局部性；但**必须同时满足
+「该IP下最小订单数」约束以抑制小样本噪声**（见 @sec-ip-eff）。
+最终采用哪一版由业务方定，本报告两版全量输出。
+:::
+
+## 有效关联账户的最小订单数（需求 §2.1-2） {#sec-ip-eff}
+
+```{r}
+#| label: ip-min-orders
+#| eval: !expr AVAIL$ip_player
+
+guard({
+  ## 敏感度曲线：min_orders 变化如何影响「有效关联玩家数」与噪声水平
+  ip <- D$ip_player
+  purrr::map_dfr(c(1,5,10,20,30,50,100,200), function(m) {
+    e <- ip |> dplyr::filter(n_orders_ip >= m)
+    agg <- e |> dplyr::group_by(bet_ip) |>
+      dplyr::summarise(n_eff = dplyr::n(),
+                       rate_B = mean(net_pnl_ip > 0), .groups="drop")
+    tibble::tibble(
+      最小订单数 = m,
+      保留玩家IP对 = nrow(e),
+      有效IP数 = nrow(agg),
+      `n_eff≥5的IP数` = sum(agg$n_eff >= 5),
+      `盈利比例的方差` = round(var(agg$rate_B, na.rm=TRUE), 5),
+      说明 = ifelse(m < 10, "方差高，小样本噪声主导", ""))
+  }) |> knitr::kable(caption="§2.1-2 最小订单数敏感度：噪声随门槛下降而收敛")
+}, "最小订单数敏感度")
+```
+
+**判据**：选取盈利比例方差**开始平稳**的最小订单数。
+理由是低于该点时，「盈利比例」主要由抽样噪声而非真实行为驱动，
+此时的 80%/90%/100% 门槛没有区分意义。
+
+## 分布分析（需求 §4.3） {#sec-ip-dist}
+
+### 「关联20个账户」处于分布什么位置（需求 §2.1-1）
+
+```{r}
+#| label: ip-20-position
+#| eval: !expr AVAIL$ip_agg
+
+guard({
+  x <- D$ip_agg
+  q <- stats::ecdf(x$n_member_eff)
+  tibble::tibble(
+    关联玩家数 = c(2,3,5,10,20,30,50,100),
+    分位位置 = scales::percent(vapply(c(2,3,5,10,20,30,50,100), q, 0), accuracy=0.001),
+    该值以上IP数 = vapply(c(2,3,5,10,20,30,50,100),
+                          function(k) sum(x$n_member_eff >= k), 0L),
+    占全部IP比 = scales::percent(vapply(c(2,3,5,10,20,30,50,100),
+                          function(k) mean(x$n_member_eff >= k), 0), accuracy=0.001)
+  ) |> knitr::kable(caption="§2.1-1 关联玩家数的分布定位（★ 20 的位置）")
+}, "关联数分位定位")
+```
+
+```{r}
+#| label: ip-dist-band
+#| eval: !expr AVAIL$ip_agg
+
+guard({
+  D$ip_agg |>
+    dplyr::mutate(band = cut(n_member_eff,
+      breaks=c(0,1,2,4,9,19,29,49,99,Inf),
+      labels=c("1","2","3-4","5-9","10-19","20-29","30-49","50-99","100+"))) |>
+    dplyr::group_by(band) |>
+    dplyr::summarise(IP数=dplyr::n(),
+                     关联玩家数=sum(n_member_eff),
+                     盈利玩家比例中位=round(median(n_profit_B/pmax(n_member_eff,1)),3),
+                     总净盈利=round(sum(net_pnl),0), .groups="drop") |>
+    knitr::kable(caption="§4.3-1 按关联玩家数分档的 IP 分布")
+}, "IP分档分布")
+```
+
+### 跨月稳定性（需求 §2.1-6 / §4.3-2） {#sec-ip-stab}
+
+```{r}
+#| label: ip-stability
+#| eval: !expr AVAIL$panel
+
+guard({
+  ## 命中IP在不同月份是否持续，还是短期偶然盈利
+  ## 输出：各档位月度IP数 + 跨月重复命中率
+  tibble::tibble(
+    指标 = c("单月命中IP数（均值）","连续2月命中率","连续3月命中率",
+             "仅单月出现占比","Herfindahl（命中集中度）"),
+    取值 = NA_real_,
+    判读 = c("规模基线","≥0.5 视为稳定","≥0.3 视为高稳定",
+             "过高 → 偶然盈利主导","过高 → 少数IP主导")
+  ) |> knitr::kable(caption="§2.1-6 跨月稳定性（数据到位后填充）")
+}, "IP跨月稳定性")
+```
+
+## 候选阈值组合（需求 §4.4） {#sec-ip-grid}
+
+需求指定四个参数的候选值：
+
+```
+最小关联玩家数     ：5、10、20、30、50
+玩家在该IP下最小订单数：10、30、50、100
+玩家IP订单占比     ：20%、50%、80%
+盈利玩家比例       ：70%、80%、90%、100%
+```
+
+**需求明确允许「先分别分析各参数影响，再选择合理范围组合，避免无意义的全量笛卡尔积」。**
+本报告采用**两阶段设计**：
+
+- **阶段一（边际影响）**：固定其余三参数于中位档，逐参数扫描 → 4 张单因素曲线
+- **阶段二（组合）**：仅在各参数的「拐点邻域」取 2–3 档做组合 → 约 36–54 组
+
+```{r}
+#| label: ip-grid
+#| eval: !expr (AVAIL$ip_player && AVAIL$ip_agg)
+
+ip_hit <- function(ipp, min_members, min_orders, min_share, min_profit_rate,
+                   version = c("B","A")) {
+  version <- match.arg(version)
+  e <- ipp |> dplyr::filter(n_orders_ip >= min_orders, ip_order_share >= min_share)
+  agg <- e |> dplyr::group_by(bet_ip) |>
+    dplyr::summarise(
+      n_eff  = dplyr::n(),
+      n_prof = if (version=="B") sum(net_pnl_ip > 0) else sum(net_pnl_all > 0),
+      n_orders = sum(n_orders_ip), n_rounds = sum(n_rounds_ip),
+      stake = sum(stake_ip), net = sum(net_pnl_ip), .groups="drop") |>
+    dplyr::mutate(rate = n_prof/pmax(n_eff,1))
+  hit <- agg |> dplyr::filter(n_eff >= min_members, rate >= min_profit_rate)
+  members <- e |> dplyr::semi_join(hit, by="bet_ip")
+  list(hit = hit, members = members)
+}
+
+guard({
+  grid <- tidyr::expand_grid(
+    min_members = c(5,10,20,30,50),
+    min_orders  = c(10,30,50,100),
+    min_share   = c(0.2,0.5,0.8),
+    min_rate    = c(0.70,0.80,0.90,1.00))
+  ## 阶段一：单因素（其余固定中位档）
+  base_par <- list(min_members=20, min_orders=30, min_share=0.5, min_rate=0.80)
+  one_way <- purrr::map_dfr(names(base_par), function(p) {
+    vals <- unique(grid[[sub("min_","min_",p)]])
+    purrr::map_dfr(vals, function(v) {
+      par <- base_par; par[[p]] <- v
+      r <- ip_hit(D$ip_player, par$min_members, par$min_orders,
+                  par$min_share, par$min_rate)
+      tibble::tibble(参数=p, 取值=v,
+        命中IP数=nrow(r$hit),
+        命中玩家数=dplyr::n_distinct(r$members$member_id),
+        `每30天审核量`=nrow(r$hit),
+        关联总订单=sum(r$hit$n_orders),
+        总投注=round(sum(r$hit$stake),0),
+        总净盈利=round(sum(r$hit$net),0),
+        关联玩家数P50=stats::quantile(r$hit$n_eff,.5,na.rm=TRUE),
+        关联玩家数P90=stats::quantile(r$hit$n_eff,.9,na.rm=TRUE),
+        关联玩家数Max=suppressWarnings(max(r$hit$n_eff)))
+    })
+  })
+  DT::datatable(one_way, options=list(pageLength=20),
+    caption="§4.4 阶段一 · 单因素影响（其余参数固定于中位档）")
+}, "IP阈值网格-阶段一")
+```
+
+::: {.callout-important}
+## 需求 §4.4 的两项输出必须显式标记
+
+- **「人工抽样后的可疑率和误报率」**：当前无审核标签 →
+  按需求原文标记为 **「暂不可计算」**，不得用弱标签冒充。
+- **「已知公共IP占比」**：依赖 @sec-ip-excl 的公共IP清单业务确认结果。
+  未确认前标记为 **「待业务确认」**。
+:::
+
+---
+
+# 尾秒下注阈值分析（需求 §5） {#sec-tail}
+
+> ⚠️ 本章全部内容以 @sec-time 闸门通过为前提。
+
+## 全体订单秒段分布（需求 §5.2） {#sec-sec-dist}
+
+```sql
+/* 每一秒的订单数、玩家数、局数、投注、游戏盈利、胜率、ROI */
+WITH t AS (
+  SELECT b.*,
+         TIMESTAMPDIFF(SECOND, r.open_ts, b.t_bet)  AS sec_elapsed,
+         TIMESTAMPDIFF(SECOND, b.t_bet, r.close_ts) AS sec_to_close,
+         (TIMESTAMPDIFF(SECOND, r.open_ts, b.t_bet)*1.0)
+           / NULLIF(TIMESTAMPDIFF(SECOND, r.open_ts, r.close_ts),0) AS bet_progress
+  FROM base b JOIN round_time r ON b.round_key = r.round_key
+)
+SELECT sec_to_close,
+       COUNT(*)                       AS n_orders,
+       COUNT(DISTINCT member_id)      AS n_players,
+       COUNT(DISTINCT round_key)      AS n_rounds,
+       SUM(stake)                     AS stake,
+       SUM(game_pnl)                  AS game_pnl,
+       SUM(rebate)                    AS rebate,
+       SUM(net_pnl)                   AS net_pnl,
+       SUM(game_pnl)/NULLIF(SUM(stake),0) AS roi
+FROM t GROUP BY sec_to_close ORDER BY sec_to_close;
+
+/* 最后 1/2/3/5 秒的覆盖率（需求 §5.2-2）*/
+SELECT k AS last_k_sec,
+       SUM(CASE WHEN sec_to_close <= k THEN 1 ELSE 0 END)*1.0/COUNT(*) AS order_cover,
+       COUNT(DISTINCT CASE WHEN sec_to_close <= k THEN member_id END)*1.0
+         / COUNT(DISTINCT member_id) AS player_cover
+FROM t CROSS JOIN (SELECT 1 k UNION SELECT 2 UNION SELECT 3 UNION SELECT 5) ks
+GROUP BY k;
+```
+
+**分层比较（需求 §5.2-3/4）**：按月份、桌子、房间、荷官、`bet09`、`commission` 分层。
+**Banker / Player / Tie / 边注必须分开，禁止混合胜率**——
+因为它们的赔付结构与基础胜率完全不同（庄 ~45.9%、闲 ~44.6%、和 ~9.5%），
+混合后的「胜率」不是任何真实量的估计。
+
+```{r}
+#| label: side-separation
+#| echo: false
+tibble::tibble(
+  投注类型 = c("Banker","Player","Tie","PPair/BPair/Super6 等边注"),
+  理论胜率 = c("≈45.86%","≈44.62%","≈9.52%","各异，远低于50%"),
+  必须分开的理由 = c("含佣金结构","无佣金","超高赔率低频","赔率跨度极大"),
+  混合后果 = rep("胜率成为无意义的加权平均，无法与任何基准比较", 4)
+) |> knitr::kable(caption="§5.2 投注类型必须分离的技术理由")
+```
+
+## 各秒段绩效差异（需求 §2.2-3） {#sec-sec-perf}
+
+```{r}
+#| label: sec-perf
+#| eval: !expr AVAIL$sec_dist
+
+guard({
+  s <- D$sec_dist
+  ## Wilson 区间：低频秒段的胜率不可用点估计
+  wilson <- function(x, n, conf=.95){
+    if (!HAS[["binom"]] || n==0) return(c(NA,NA))
+    ci <- binom::binom.confint(x, n, conf.level=conf, methods="wilson")
+    c(ci$lower, ci$upper)
+  }
+  s |> dplyr::mutate(
+      胜率 = win/pmax(win+lose,1),
+      ROI  = game_pnl/pmax(stake,1e-9)) |>
+    dplyr::rowwise() |>
+    dplyr::mutate(CI下 = wilson(win, win+lose)[1],
+                  CI上 = wilson(win, win+lose)[2]) |>
+    dplyr::ungroup() |>
+    DT::datatable(caption="§2.2-3 各秒段绩效（胜率附 Wilson 95% CI）") |>
+    DT::formatRound(c("胜率","ROI","CI下","CI上"), 4)
+}, "秒段绩效")
+```
+
+## 「第 29 秒」悖论检验（需求 §2.2-4） {#sec-29s}
+
+::: {.callout-important}
+这是整份需求里**方法论要求最高的一问**：
+「第29秒下注是否真的表现异常，还是因为大部分正常玩家也集中在第29秒下注？」
+
+这是典型的**基准率谬误（base rate fallacy）**。正确做法是三重检验：
+:::
+
+```{r}
+#| label: base-rate-test
+#| eval: !expr AVAIL$sec_dist
+
+guard({
+  tibble::tibble(
+    检验 = c("① 绝对水平", "② 相对基准（Lift）", "③ 局内匹配", "④ 安慰剂"),
+    方法 = c(
+      "该秒段的胜率/ROI 点估计 + Wilson CI",
+      "该秒段 ROI ÷ 全体 ROI；同时报告该秒段订单占比",
+      "在同一 (round_key, bet09) 内比较尾秒与非尾秒下注者的 game_pnl",
+      "对无信息价值的时点做同样切分，ROI 差应不显著"),
+    判读 = c(
+      "CI 跨 0 → 不显著，不得作为条件",
+      "**订单占比高而 Lift ≈ 1 → 正是需求担心的情形：人多但无优势**",
+      "同局同选项赔付规则相同，混淆大幅降低 → 最接近因果的证据",
+      "若安慰剂也显著 → 说明方法本身有偏，全部结论作废")
+  ) |> knitr::kable(caption="§2.2-4 「第29秒」四重检验设计")
+}, "基准率检验设计")
+```
+
+```sql
+/* ③ 局内匹配 —— 本报告最接近因果的证据 */
+WITH m AS (
+  SELECT round_key, bet_side,
+         SUM(CASE WHEN sec_to_close <= :N THEN game_pnl ELSE 0 END) AS pnl_tail,
+         SUM(CASE WHEN sec_to_close <= :N THEN stake    ELSE 0 END) AS stk_tail,
+         SUM(CASE WHEN sec_to_close >  :N THEN game_pnl ELSE 0 END) AS pnl_norm,
+         SUM(CASE WHEN sec_to_close >  :N THEN stake    ELSE 0 END) AS stk_norm,
+         COUNT(DISTINCT CASE WHEN sec_to_close <= :N THEN member_id END) AS n_tail,
+         COUNT(DISTINCT CASE WHEN sec_to_close >  :N THEN member_id END) AS n_norm
+  FROM t GROUP BY round_key, bet_side
+  HAVING n_tail > 0 AND n_norm > 0        -- 仅保留同局同选项两侧都有人的样本
+)
+SELECT COUNT(*) AS n_matched_cells,
+       SUM(pnl_tail)/NULLIF(SUM(stk_tail),0) AS roi_tail,
+       SUM(pnl_norm)/NULLIF(SUM(stk_norm),0) AS roi_norm,
+       SUM(pnl_tail)/NULLIF(SUM(stk_tail),0)
+         - SUM(pnl_norm)/NULLIF(SUM(stk_norm),0) AS roi_diff
+FROM m;
+```
+
+::: {.callout-warning}
+**若局内匹配显示 `roi_diff` 不显著，报告必须照实写「尾秒下注在本数据下
+未观察到统计显著的优势」，即使这削弱整个项目的叙事。**
+这一条不可协商——它是本方案能否站得住的分水岭。
+:::
+
+## 玩家尾秒指标（需求 §5.3，十一项全覆盖） {#sec-player-tail}
+
+```sql
+WITH pr AS (   -- 玩家×物理局（§3.4 口径）
+  SELECT member_id, round_key, bet_side_agg,
+         SUM(stake) stake, SUM(game_pnl) game_pnl,
+         SUM(rebate) rebate, SUM(net_pnl) net_pnl,
+         MIN(sec_to_close) AS min_sec_to_close   -- 该玩家该局最晚一注
+  FROM t GROUP BY member_id, round_key
+),
+flag AS (
+  SELECT *, CASE WHEN min_sec_to_close <= :N THEN 1 ELSE 0 END AS is_tail,
+            CASE WHEN game_pnl>0 THEN 1 ELSE 0 END AS w,
+            CASE WHEN game_pnl<0 THEN 1 ELSE 0 END AS l,
+            CASE WHEN game_pnl=0 THEN 1 ELSE 0 END AS d
+  FROM pr
+)
+SELECT member_id,
+  COUNT(*)                                              AS n_rounds_all,      -- ①
+  SUM(is_tail)                                          AS n_rounds_tail,     -- ②
+  SUM(is_tail)*1.0/COUNT(*)                             AS tail_share,        -- ③
+  SUM(is_tail*w) AS tail_win, SUM(is_tail*l) AS tail_lose,
+  SUM(is_tail*d) AS tail_tie,                                                 -- ④
+  SUM(is_tail*w)*1.0/NULLIF(SUM(is_tail*w)+SUM(is_tail*l),0) AS tail_winrate, -- ④
+  SUM((1-is_tail)*w)*1.0
+    /NULLIF(SUM((1-is_tail)*w)+SUM((1-is_tail)*l),0)    AS norm_winrate,      -- ⑤
+  SUM(is_tail*w)*1.0/NULLIF(SUM(is_tail*w)+SUM(is_tail*l),0)
+    - SUM((1-is_tail)*w)*1.0
+      /NULLIF(SUM((1-is_tail)*w)+SUM((1-is_tail)*l),0)  AS winrate_diff,      -- ⑥
+  SUM(is_tail*stake)    AS tail_stake,                                        -- ⑦
+  SUM(is_tail*game_pnl) AS tail_game_pnl,
+  SUM(is_tail*net_pnl)  AS tail_net_pnl,
+  SUM(is_tail*game_pnl)/NULLIF(SUM(is_tail*stake),0)    AS tail_roi,
+  SUM((1-is_tail)*game_pnl) AS norm_game_pnl,                                 -- ⑧
+  SUM((1-is_tail)*game_pnl)/NULLIF(SUM((1-is_tail)*stake),0) AS norm_roi,
+  SUM(CASE WHEN is_tail=1 AND game_pnl>0 THEN game_pnl ELSE 0 END)
+    /NULLIF(SUM(CASE WHEN game_pnl>0 THEN game_pnl ELSE 0 END),0)
+                                                        AS tail_profit_share  -- ⑨
+FROM flag GROUP BY member_id;
+-- ⑩ 连续月份尾秒盈利：同一逻辑按月分组后另表输出（见 @sec-persist）
+```
+
+## 尾秒局数的稳定性下限（需求 §2.2-5） {#sec-stability}
+
+```{r}
+#| label: stability-curve
+#| eval: !expr AVAIL$player_tail
+
+guard({
+  ## Wilson CI 宽度随尾秒局数的收敛：宽度 ≤ 0.15 视为「结果具稳定性」
+  purrr::map_dfr(c(5,10,20,30,50,100,200), function(k) {
+    hw <- if (HAS[["binom"]]) {
+      ci <- binom::binom.confint(round(k*0.5), k, methods="wilson")
+      ci$upper - ci$lower
+    } else NA_real_
+    tibble::tibble(尾秒局数 = k,
+                   `胜率50%时CI宽度` = round(hw, 4),
+                   判定 = ifelse(!is.na(hw) & hw <= 0.15, "✅ 可用", "⛔ 过宽"))
+  }) |> knitr::kable(
+    caption="§2.2-5 尾秒局数下限：CI 宽度收敛判据（在最不利的 p=0.5 处评估）")
+}, "稳定性曲线")
+```
+
+**判据说明**：在 `p=0.5`（方差最大处）评估 Wilson 区间半宽。
+若某玩家仅 10 局尾秒，其胜率 95% CI 宽度约 ±0.30——
+**此时 55% 与 70% 的胜率在统计上不可区分**，任何基于胜率的阈值都是噪声。
+这是需求 §2.2-5 追问的核心。
+
+## 尾秒占比的持续性（需求 §2.2-6） {#sec-tail-share}
+
+```{r}
+#| label: tail-share-dist
+#| eval: !expr AVAIL$player_tail
+
+guard({
+  p <- D$player_tail |> dplyr::filter(n_rounds_all >= 30)
+  q <- stats::ecdf(p$tail_share)
+  tibble::tibble(
+    尾秒占比 = c(.05,.10,.20,.30,.50,.70,.90),
+    分位位置 = scales::percent(vapply(c(.05,.10,.20,.30,.50,.70,.90), q, 0)),
+    该值以上玩家数 = vapply(c(.05,.10,.20,.30,.50,.70,.90),
+                            function(v) sum(p$tail_share >= v), 0L)
+  ) |> knitr::kable(caption="§2.2-6 尾秒占比分布定位")
+}, "尾秒占比分布")
+```
+
+## 强特征专项：正常亏、尾秒赢（需求 §2.2-8 / §5.4） {#sec-strong}
+
+```{r}
+#| label: strong-feature
+#| eval: !expr AVAIL$player_tail
+
+guard({
+  p <- D$player_tail
+  s <- p |> dplyr::filter(tail_game_pnl > 0, norm_game_pnl <= 0)
+  tibble::tibble(
+    指标 = c("命中玩家数","占全体比例","尾秒局数P50","尾秒局数P90",
+             "尾秒胜率中位","正常胜率中位","胜率差中位",
+             "尾秒游戏盈利合计","尾秒ROI中位"),
+    取值 = c(nrow(s),
+             scales::percent(nrow(s)/nrow(p), accuracy=0.01),
+             stats::quantile(s$n_rounds_tail,.5,na.rm=TRUE),
+             stats::quantile(s$n_rounds_tail,.9,na.rm=TRUE),
+             round(stats::median(s$tail_winrate,na.rm=TRUE),4),
+             round(stats::median(s$norm_winrate,na.rm=TRUE),4),
+             round(stats::median(s$winrate_diff,na.rm=TRUE),4),
+             round(sum(s$tail_game_pnl,na.rm=TRUE),0),
+             round(stats::median(s$tail_roi,na.rm=TRUE),4))
+  ) |> knitr::kable(caption="§5.4 强特征：尾秒游戏盈利>0 且 正常时段游戏盈利≤0")
+}, "强特征")
+```
+
+### 盈利是否由少数极端大额订单主导（需求 §5.4 末项）
+
+```{r}
+#| label: concentration
+#| eval: !expr AVAIL$player_tail
+
+guard({
+  ## 对命中玩家，检查其尾秒盈利的集中度
+  tibble::tibble(
+    诊断量 = c("Top1 订单盈利占比","Top5 订单盈利占比","Top10 占比",
+               "Gini 系数","去掉 Top1 后是否仍盈利"),
+    判读 = c("> 50% → 单笔主导，阈值不可靠",
+             "> 70% → 极端集中",
+             "> 85% → 结论由个位数订单驱动",
+             "> 0.8 → 高度不均",
+             "否 → 该玩家不应命中"),
+    取值 = NA_character_
+  ) |> knitr::kable(caption="§5.4 极端订单主导性诊断（数据到位后填充）")
+}, "集中度诊断")
+```
+
+## 候选阈值组合（需求 §5.4） {#sec-tail-grid}
+
+```{r}
+#| label: tail-grid
+#| eval: !expr AVAIL$player_tail
+
+tail_hit <- function(p, min_rounds, min_share, min_wr, min_wr_diff) {
+  p |> dplyr::filter(n_rounds_tail >= min_rounds,
+                     tail_share    >= min_share,
+                     tail_winrate  >= min_wr,
+                     winrate_diff  >= min_wr_diff)
+}
+
+guard({
+  ## 阶段一：单因素（其余固定中位档）
+  base_par <- list(min_rounds=30, min_share=0.30, min_wr=0.60, min_wr_diff=0.10)
+  vals <- list(min_rounds=c(10,20,30,50,100), min_share=c(.10,.20,.30,.50,.70),
+               min_wr=c(.55,.60,.65,.70), min_wr_diff=c(.05,.10,.15,.20))
+  purrr::imap_dfr(vals, function(vv, nm) {
+    purrr::map_dfr(vv, function(v) {
+      par <- base_par; par[[nm]] <- v
+      h <- tail_hit(D$player_tail, par$min_rounds, par$min_share,
+                    par$min_wr, par$min_wr_diff)
+      tibble::tibble(参数=nm, 取值=v,
+        命中玩家数=nrow(h),
+        `每30天审核量`=nrow(h),
+        尾秒局数P50=stats::quantile(h$n_rounds_tail,.5,na.rm=TRUE),
+        尾秒局数P90=stats::quantile(h$n_rounds_tail,.9,na.rm=TRUE),
+        尾秒胜率中位=round(stats::median(h$tail_winrate,na.rm=TRUE),4),
+        正常胜率中位=round(stats::median(h$norm_winrate,na.rm=TRUE),4),
+        胜率差中位=round(stats::median(h$winrate_diff,na.rm=TRUE),4),
+        尾秒投注=round(sum(h$tail_stake,na.rm=TRUE),0),
+        尾秒游戏盈利=round(sum(h$tail_game_pnl,na.rm=TRUE),0),
+        尾秒ROI=round(sum(h$tail_game_pnl,na.rm=TRUE)/
+                      pmax(sum(h$tail_stake,na.rm=TRUE),1e-9),4))
+    })
+  }) |> DT::datatable(options=list(pageLength=20),
+        caption="§5.4 阶段一 · 尾秒阈值单因素影响")
+}, "尾秒阈值网格")
+```
+
+::: {.callout-note}
+需求 §5.4 明确：**「统计置信区间或 Z-score 可以作为阈值可靠性的分析依据，
+但不要求作为线上规则条件。线上规则优先使用可解释的实际秒数、局数、比例、胜率和盈利指标。」**
+
+本报告严格遵守：CI 与 Z-score 仅出现在**分析论证**中（@sec-stability、@sec-sec-perf），
+**最终推荐的线上规则只含秒数、局数、比例、胜率、盈利五类可解释量**。
+:::
+
+---
+
+# 两项规则的组合分析（需求 §6） {#sec-combo}
+
+```sql
+/* 异常IP × 尾秒风险玩家 交集 */
+WITH ip_hit AS (SELECT DISTINCT bet_ip, member_id FROM ip_candidates),
+     ts_hit AS (SELECT DISTINCT member_id FROM tail_candidates),
+     j AS (SELECT i.bet_ip, i.member_id,
+                  CASE WHEN t.member_id IS NOT NULL THEN 1 ELSE 0 END AS is_tail_risk
+           FROM ip_hit i LEFT JOIN ts_hit t ON i.member_id = t.member_id)
+SELECT bet_ip,
+       COUNT(*)               AS n_member_in_ip,
+       SUM(is_tail_risk)      AS n_tail_risk,
+       SUM(is_tail_risk)*1.0/COUNT(*) AS tail_risk_share
+FROM j GROUP BY bet_ip;
+
+/* 同一IP成员是否在相同物理局同步尾秒下注 + 时间差 */
+WITH tail_orders AS (
+  SELECT round_key, bet_ip, member_id, MIN(sec_to_close) AS sec_to_close,
+         MIN(t_bet) AS t_first
+  FROM t WHERE sec_to_close <= :N GROUP BY round_key, bet_ip, member_id
+)
+SELECT a.round_key, a.bet_ip,
+       a.member_id AS m_a, b.member_id AS m_b,
+       ABS(TIMESTAMPDIFF(SECOND, a.t_first, b.t_first)) AS sec_gap
+FROM tail_orders a JOIN tail_orders b
+  ON a.round_key = b.round_key AND a.bet_ip = b.bet_ip
+ AND a.member_id < b.member_id;
+```
+
+```{r}
+#| label: combo-grid
+#| eval: !expr AVAIL$combo
+
+guard({
+  purrr::map_dfr(c(2,3,5), function(k) {
+    x <- D$combo |> dplyr::filter(n_tail_risk >= k)
+    tibble::tibble(
+      `同IP尾秒风险玩家数≥` = k,
+      命中IP数 = nrow(x),
+      命中玩家数 = sum(x$n_tail_risk),
+      共同尾秒局数 = sum(x$n_common_tail_rounds, na.rm=TRUE),
+      投注金额 = round(sum(x$stake, na.rm=TRUE),0),
+      游戏盈利 = round(sum(x$game_pnl, na.rm=TRUE),0),
+      `每30天审核量` = nrow(x),
+      同步时间差中位秒 = round(stats::median(x$med_sec_gap, na.rm=TRUE),2))
+  }) |> knitr::kable(caption="§6 组合门槛：同一异常IP下的尾秒风险玩家数")
+}, "组合分析")
+```
+
+**是否需要单独建立高优先级组合规则——判据：**
+
+| 条件 | 结论 |
+|---|---|
+| 组合命中的**审核量显著低于**两规则各自命中量之和 | ✅ 值得单列（高精度低成本） |
+| 组合命中玩家的**游戏盈利/ROI 显著高于**单规则命中 | ✅ 值得单列（风险质量更高） |
+| 同步时间差**集中在极小值**（如中位 < 2 秒） | ✅ 强协同证据，最高优先级 |
+| 以上皆不满足 | ❌ 不单列，避免规则冗余 |
+
+---
+
+# 阈值选择原则逐条核验（需求 §7） {#sec-principle}
+
+```{r}
+#| label: principle-check
+#| echo: false
+tibble::tribble(
+  ~原则, ~核验方法, ~本报告实现位置, ~通过标准,
+  "① 处于分布高位，非普通行为", "分位定位 + ECDF", "@sec-ip-dist / @sec-tail-share", "命中阈值 ≥ P95",
+  "② 样本量足够，非偶然胜局", "Wilson CI 宽度收敛", "@sec-stability", "CI宽度 ≤ 0.15",
+  "③ 命中规模符合审核能力", "工作量列", "@sec-ip-grid / @sec-tail-grid", "业务给定上限内",
+  "④ 跨月表现稳定", "跨月重复命中率", "@sec-ip-stab / @sec-persist", "连续2月 ≥ 0.5",
+  "⑤ 不被公共IP或极端账户主导", "公共IP占比 + 集中度诊断", "@sec-ip-excl / @sec-tail-grid", "Top1订单占比 < 50%",
+  "⑥ 可解释、可追溯原始注单", "证据链设计", "@sec-evidence", "能定位到 bet01",
+  "⑦ 宽松档与严格档有明显差异", "档位对照", "@sec-recommend", "审核量或风险质量差 ≥ 2x"
+) |> knitr::kable(caption="§7 七条阈值选择原则的核验设计")
+```
+
+## 证据可追溯性设计 {#sec-evidence}
+
+每一条命中必须能向审核人员展示：
+
+1. 触发的**具体规则条件**与该玩家的实际取值
+2. 该取值在**全体分布中的位置**（分位数）
+3. **原始注单 ID 列表**（`bet01`），可直接查库核对
+4. 涉及的**物理局键**（`bet03|bet04|bet39`）与时间戳
+5. 若为组合命中，**同IP其他成员**及其同步时间差
+
+**禁止伪造或估算局号列表。** 证据必须来自实际查询结果。
+
+---
+
+# 客户分层与领域能力值 {#sec-capability}
+
+> 业务追加要求：以顶尖博彩公司标准分类客户群，给出各领域能力值，做到**赏罚分明**。
+
+## 六维能力模型
+
+将每位会员在六个维度上打分（0–100，**由分位数动态映射，无硬编码**）：
+
+```{r}
+#| label: capability-model
+#| echo: false
+tibble::tribble(
+  ~维度, ~英文, ~构成指标, ~高分含义,
+  "资金能力", "Capital", "投注金额、单注上限、活跃天数", "高价值客源",
+  "时机能力", "Timing", "尾秒占比、尾秒胜率差、下注进度分位", "⚠️ 可能利用时序优势",
+  "协同能力", "Coordination", "IP共享度、代理链重合、同局共现、同步时间差", "⚠️ 团伙特征",
+  "效率能力", "Efficiency", "游戏ROI、胜率相对基准的Lift", "⚠️ 持续跑赢庄家优势",
+  "持续能力", "Persistence", "跨月命中重复率、活跃密度、盈利连续月数", "行为稳定（好坏皆放大）",
+  "规避能力", "Evasion", "IP切换频次、多IP数、局内换IP、账户分散度", "⚠️ 反侦察行为"
+) |> knitr::kable(caption="六维能力模型")
+```
+
+```{r}
+#| label: capability-score
+#| eval: !expr (AVAIL$player_tail && AVAIL$ip_player)
+
+cap_score <- function(x) {   # 分位映射 → 0-100，稳健于极端值
+  r <- rank(x, na.last="keep", ties.method="average")
+  round(100 * (r - 0.5) / sum(!is.na(x)), 1)
+}
+
+guard({
+  ## 六维打分（示意骨架；实际指标由各章产出 join）
+  cap <- D$player_tail |>
+    dplyr::transmute(
+      member_id,
+      C_capital  = cap_score(tail_stake + norm_game_pnl*0),   # 以总投注替换
+      C_timing   = cap_score(tail_share * pmax(winrate_diff, 0)),
+      C_efficiency = cap_score(tail_roi),
+      C_persistence = cap_score(n_rounds_tail))
+  ## 协同与规避需 join IP 侧指标
+  utils::head(cap, 10) |> knitr::kable(caption="六维能力值（示例前10行）")
+}, "能力值计算")
+```
+
+## 客户分群：赏罚分明 {#sec-segment}
+
+```{r}
+#| label: segmentation
+#| echo: false
+tibble::tribble(
+  ~分群, ~代码, ~能力特征, ~处置方向, ~商业动作,
+  "核心价值客", "V1", "资金高 · 协同低 · 时机正常 · 效率符合庄家优势", "🏆 赏", "专属客服、返水上浮、生日礼遇、优先桌位",
+  "稳定贡献客", "V2", "资金中高 · 持续能力高 · 无异常维度", "🏆 赏", "阶梯返水、活动优先、流失预警监控",
+  "常规客", "V3", "各维度中位", "— 中性", "常规运营、交叉推荐",
+  "低贡献客", "V4", "资金低 · 活跃低", "— 中性", "低成本触达、唤醒活动",
+  "尾秒专家", "R1", "时机高 · 效率高 · 持续高", "⚠️ 罚", "降低桌限、延后封盘、加强复核",
+  "团伙协同", "R2", "协同高 · 同步时间差极小 · 同代理链", "⚠️ 罚", "整链复核、限制同桌、冻结待查",
+  "洗码套利", "R3", "资金高 · ROI≈0 · 注额方差极低 · 返水占比高", "⚠️ 罚", "取消返水资格、调整返水档位",
+  "高规避", "R4", "规避高 · 多IP · 局内换IP", "🔍 查", "KYC 复核、设备指纹核验",
+  "组合高危", "R0", "R1 ∩ R2（同IP多尾秒专家）", "🚨 最高优先", "立即人工复核、暂停下注权限"
+) |> knitr::kable(caption="客户分群与赏罚对应")
+```
+
+::: {.callout-important}
+## 赏罚分明的两条纪律
+
+**一、赏要具体到钱。** V1/V2 的「赏」不能停留在标签，必须映射到可执行的
+返水档位、桌限、活动资格。分群若不驱动实际权益变化，就只是一张没用的表。
+
+**二、罚要可申诉。** R1–R4 的「罚」全部是**建议动作**，
+系统不具备执行权限。每一条处置必须附 @sec-evidence 的完整证据链，
+且会员有权要求解释。**异常 ≠ 违规**——共享IP可能是网吧、家庭、公司网络；
+尾秒下注可能只是操作习惯慢。**误伤高价值客的代价远高于漏放一个套利者。**
+:::
+
+## 分群的经济价值量化
+
+```{r}
+#| label: segment-value
+#| echo: false
+tibble::tribble(
+  ~量化项, ~公式, ~用途,
+  "分群净贡献", "−SUM(net_pnl)（平台视角，已含返水）", "分群价值排序",
+  "返水成本率", "SUM(rebate) / SUM(stake)", "识别 R3 洗码套利",
+  "风险敞口", "SUM(game_pnl WHERE game_pnl>0) 命中群体", "罚的收益上界",
+  "误杀成本", "V1/V2 中位净贡献 × 预计误杀数", "罚的成本下界",
+  "净收益", "风险敞口 × 精度 − 误杀成本 × 误报数", "**是否值得执行的最终判据**"
+) |> knitr::kable(caption="分群经济价值量化框架")
+```
+
+**决策规则**：仅当 `净收益 > 0` 且**置信区间下界仍 > 0** 时，才建议上线该规则。
+点估计为正但 CI 跨 0，视为证据不足。
+
+---
+
+# 顶级验证与评估标准 {#sec-validation}
+
+## 为何普通 k-fold 在此必然失效
+
+会员的风险行为跨期实现且高度自相关。标准 k-fold 假设行独立，
+洗牌切分会把未来信息泄回训练集；测试窗口紧后的行同样因序列相关泄漏。
+两种效应系统性抬高判别指标。
+
+## Purged Walk-Forward + CPCV
+
+```{r}
+#| label: purged-wf
+
+purged_wf_splits <- function(panel, t0_col="t0", t1_col="t1",
+                             n_splits=6L, embargo_days=NULL) {
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  stopifnot(all(t1 >= t0, na.rm=TRUE))
+  if (is.null(embargo_days)) {
+    ## ★ embargo 由标签实现滞后的经验分布决定，不照抄文献
+    lagd <- as.numeric(difftime(t1, t0, units="days"))
+    embargo_days <- ceiling(stats::quantile(lagd[is.finite(lagd)], .95, na.rm=TRUE))
+    message(glue::glue("embargo 由经验分布定为 {embargo_days} 天（滞后 P95）"))
+  }
+  ord <- order(t0); n <- length(ord)
+  bd <- floor(seq(1, n+1, length.out = n_splits+1L))
+  lapply(seq_len(n_splits-1L), function(k) {
+    tr <- ord[seq_len(bd[k+1L]-1L)]; te <- ord[bd[k+1L]:(bd[k+2L]-1L)]
+    te0 <- min(t0[te], na.rm=TRUE); te1 <- max(t1[te], na.rm=TRUE)
+    keep <- t1[tr] < te0 &
+            !(t0[tr] > te1 & t0[tr] <= te1 + as.difftime(embargo_days, units="days"))
+    list(fold=k, train=tr[keep], test=te,
+         purge_rate=mean(!keep), embargo_days=embargo_days)
+  })
+}
+
+cpcv_splits <- function(panel, N=8L, k=2L, t0_col="t0", t1_col="t1",
+                        embargo_days=21) {
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  ord <- order(t0); grp <- cut(seq_along(ord), breaks=N, labels=FALSE)
+  combos <- utils::combn(N, k, simplify=FALSE)
+  message(glue::glue("CPCV: C({N},{k}) = {length(combos)} 种划分，",
+                     "回测路径数 = {length(combos)*k/N}"))
+  lapply(combos, function(cb) {
+    te <- ord[grp %in% cb]; tr <- ord[!(grp %in% cb)]
+    te0 <- min(t0[te], na.rm=TRUE); te1 <- max(t1[te], na.rm=TRUE)
+    keep <- t1[tr] < te0 |
+            t0[tr] > te1 + as.difftime(embargo_days, units="days")
+    list(combo=cb, train=tr[keep], test=te, purge_rate=mean(!keep))
+  })
+}
+
+assert_no_leakage <- function(splits, panel, t0_col="t0", t1_col="t1") {
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  ok <- vapply(splits, function(s)
+    length(s$train)==0 ||
+      max(t1[s$train], na.rm=TRUE) < min(t0[s$test], na.rm=TRUE), logical(1))
+  list(all_pass=all(ok), failed=which(!ok),
+       mean_purge=mean(vapply(splits, `[[`, 0, "purge_rate")))
+}
+```
+
+## 强制披露：泄漏规模量化
+
+```{r}
+#| label: leakage-delta
+#| echo: false
+tibble::tibble(
+  协议 = c("朴素 5-fold（有泄漏）","Purged Walk-Forward","CPCV 多路径均值±SD"),
+  `PR-AUC` = NA_real_, `ROC-AUC` = NA_real_, `95% CI` = NA_character_,
+  说明 = c("仅作对照，**不得用于结论**","**主口径**","稳健性")
+) |> knitr::kable(caption="泄漏规模量化（数据到位后填充）")
+```
+
+**必须同时披露**：各折净化率、有效折数、泄漏断言结果、朴素与净化的差值。
+**差值本身是结论的一部分。**
+
+## 评估指标口径
+
+| 指标 | 地位 | 理由 |
+|---|---|---|
+| **PR-AUC** | 主口径 | 类别极不平衡下 ROC-AUC 无信息量 |
+| ROC-AUC | 对照 | 仅供横向比较 |
+| Lift | 主口径 | 弱标签下唯一可辩护的表述 |
+| Brier / ECE | 校准 | 必须出校准曲线 |
+| DeLong 检验 | 显著性 | 模型间 AUC 差异 |
+| Bootstrap CI | 必备 | 所有点估计附 CI |
+| Wilson CI | 必备 | 所有胜率附 CI |
+| **Accuracy** | ⛔ 禁用 | 极不平衡下无信息量 |
+
+## 共形预测覆盖保证
+
+对每一条高风险判定输出共形预测集，附有限样本覆盖保证。
+业务含义：可向审核人员陈述「此判定在 90% 名义覆盖率下不含『正常行为』」，
+而非仅给一个无保证的分数。
+
+**局限**：可交换性假设在时序下不严格成立，须用按时间块校准的变体，
+并在结论中声明该假设。
+
+## 跨月持续性检验 {#sec-persist}
+
+```{r}
+#| label: persistence
+#| eval: !expr AVAIL$panel
+
+guard({
+  tibble::tibble(
+    检验 = c("连续月命中率","Cochran's Q（多月一致性）",
+             "月度胜率的方差齐性（Levene）","盈利月数二项检验"),
+    判读 = c("≥0.5 视为稳定",
+             "p 大 → 各月表现一致，支持持续性",
+             "方差不齐 → 表现不稳定，阈值不可靠",
+             "显著多于随机 → 非偶然盈利")
+  ) |> knitr::kable(caption="§2.1-6 / §2.2-8 跨月持续性检验设计")
+}, "持续性检验")
+```
+
+---
+
+# 试运行阈值推荐 {#sec-recommend}
+
+::: {.callout-important}
+需求 §7 末条：**无确认风险标签时，只能定义为「试运行阈值」。**
+以下全部标注 **Trial**，且提供宽松/严格双档以满足原则 ⑦。
+:::
+
+```{r}
+#| label: recommend
+#| echo: false
+tibble::tribble(
+  ~规则, ~档位, ~条件, ~状态,
+  "异常IP", "宽松 Trial-L", "最小关联玩家数 ≥ [由§4.4定] AND 该IP最小订单数 ≥ [定] AND 盈利玩家比例 ≥ [定]", "待数据",
+  "异常IP", "严格 Trial-S", "同上，各参数提高一档", "待数据",
+  "尾秒下注", "宽松 Trial-L", "尾端范围 [由§5.1定] AND 尾秒局数 ≥ [定] AND 占比 ≥ [定] AND 胜率差 ≥ [定]", "待数据",
+  "尾秒下注", "严格 Trial-S", "同上，各参数提高一档", "待数据",
+  "强特征", "独立规则", "尾秒游戏盈利 > 0 AND 正常时段游戏盈利 ≤ 0 AND 尾秒局数 ≥ [定]", "待数据",
+  "组合", "最高优先", "同一异常IP下尾秒风险玩家数 ≥ [由§6定] AND 同步时间差中位 < [定] 秒", "待数据"
+) |> knitr::kable(caption="试运行阈值推荐框架（参数由各章分析填充）")
+```
+
+## 为什么不选更宽松 / 更严格（需求 §1 明文要求）
+
+每一档推荐必须回答三问，格式固定：
+
+```
+【选择 X 的理由】
+  - 分布位置：X 处于 P__，明显高于普通用户
+  - 样本充分性：该档命中玩家的尾秒局数 P50 = __，Wilson CI 宽度 = __
+  - 审核可行性：每30天命中 __ 个，在团队产能内
+  - 跨月稳定：连续2月重复命中率 __
+
+【不选更宽松（X−1档）的理由】
+  - 命中量增至 __（超产能 __%）
+  - 命中群体的胜率差中位降至 __，与正常玩家难以区分
+  - 集中度诊断显示 Top1 订单占比升至 __，结论被极端订单主导
+
+【不选更严格（X+1档）的理由】
+  - 命中量降至 __，覆盖不足，漏放风险敞口 __
+  - 命中群体已是极端个案，规则失去筛查价值
+  - 与 X 档的风险质量差异 < 2x，不满足原则 ⑦
+```
+
+---
+
+# 落地方案 {#sec-deploy}
+
+## 上线路径
+
+| 阶段 | 时长 | 内容 | 退出条件 |
+|---|---|---|---|
+| P0 数据闸门 | 1 周 | §5.1 时间可用性 + 去重验证 + 对账 | 三项全通过 |
+| P1 阈值标定 | 2 周 | §4/§5 全量网格 + 分布分析 | 双档阈值确定 |
+| P2 影子运行 | 4 周 | 只记录不动作 | 误报预算守住 |
+| P3 试运行 | 4 周 | Trial-L 档 + 人工全量复核 | 积累首批审核标签 |
+| P4 标定生产 | 2 周 | 用 P3 标签重算精度，转为生产阈值 | 净收益 CI 下界 > 0 |
+
+::: {.callout-note}
+**P3 是本方案的关键跃迁点。** 目前无审核标签，所以只能给试运行阈值。
+P3 积累的人工复核标签，是把「试运行」升级为「生产」的唯一途径。
+
+⚠️ 但须警惕：**P3 的标签是条件抽样**——只覆盖被规则抓出来送审的案件。
+用它算召回率会严重高估。正确做法是**另设随机抽样对照组**，
+从未命中群体中随机抽取同等数量送审，才能估计真实召回。
+这一条必须写进 P3 的执行方案。
+:::
+
+## 监控与回滚
+
+| 监控项 | 频率 | 触发阈值 | 动作 |
+|---|---|---|---|
+| 命中率 | 每日 | 偏离基线 ±50% | 告警 |
+| 特征 PSI | 每周 | > 0.25 | 重标定评审 |
+| 误报率 | 每周 | 超误报预算 | 回滚上一档 |
+| 对账差额 | 每日 | ≠ 0 | 停用该 cohort |
+| 数据延迟 | 每日 | > 阈值 | 标记 STALE_DATA |
+
+**健康指标永不贡献风险分。** 把管道故障混入风险分，
+会把技术问题误判为会员行为异常——这是严重的设计错误。
+
+---
+
+# 局限与不承诺 {#sec-limit}
+
+1. **异常 ≠ 违规。** 本体系识别统计异常。共享IP可能是网吧/家庭/公司网络；
+   尾秒下注可能只是操作慢。**全部判定须经人工复核。**
+2. **无审核标签，只能给试运行阈值。** 不得声称精度/召回最优（需求 §7 明文）。
+3. **时间字段闸门未通过则尾秒章整章不成立。** 不以代理量近似后声称完成。
+4. **仅覆盖百家乐（`bet02='101'`）。** 其它品类不在范围。
+5. **IP 可伪造。** VPN/代理/NAT 污染信号——这正是引入代理链维度的原因，
+   但代理链亦非完美。
+6. **公共IP清单需业务确认。** 未确认前所有含IP的结论附条件。
+7. **ODS 同步滞后约两个月。** 本体系为离线批处理，无实时能力。
+8. **`validbet` 跨品类口径不一致**（番摊类观察到 `validbet=净额`）。
+   本任务限于百家乐故不受影响，但扩展品类时必须重新核验。
+9. **共形预测的可交换性假设在时序下不严格成立。**
+10. **P3 审核标签是条件抽样**，不可直接用于估计整体召回率。
+
+---
+
+::: {.callout-tip}
+## 复现说明
+
+1. `source("sql_pack_generator.R")` → 按 `CFG` 生成 `sql/`
+2. Superset 逐条执行（**每 tab 一条语句**），导出至 `data/`（UTF-8 BOM）
+3. 设 `CFG$use_db <- TRUE` 或保持 CSV 路径
+4. `quarto render a168风控与客户分层评分体系_商业方案_v4.qmd`
+5. 全程 `cache: false`；任何步骤失败由 `guard()` 捕获，不中断渲染
+:::

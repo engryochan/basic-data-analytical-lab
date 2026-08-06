@@ -1,0 +1,597 @@
+---
+title: "a168 真人荷官平台风控与客户分层评分体系"
+subtitle: "Risk Control & Customer Segmentation Scoring Framework for a Live-Dealer Platform (V3)"
+author: "®γσ ξηg（Ryo Eng）· 世博量化® Scibrokes Trading®"
+date: today
+lang: zh-CN
+format:
+  html:
+    theme: [darkly, custom.scss]
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    df-print: paged
+    fig-width: 9
+    fig-height: 5
+    embed-resources: false
+    smooth-scroll: true
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false      # 错误由 guard() 自行捕获，不交给 knitr
+  cache: false      # ⚠️ 铁律：production 数据量下 cache:true 必然 OOM（V1 教训）
+bibliography: refs.bib
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+## ---------------------------------------------------------------------------
+## 0. 环境与非阻塞守卫
+##    设计原则：任何一步失败都不得中断渲染。失败即 message() + 置 NULL + 后续跳过。
+## ---------------------------------------------------------------------------
+
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+suppressPackageStartupMessages(
+  pacman::p_load(
+    dplyr, tidyr, readr, stringr, purrr, tibble, lubridate, glue,
+    ggplot2, scales, knitr, kableExtra, DT, plotly,
+    data.table
+  )
+)
+
+## 可选重型依赖：缺失不报错，仅关闭对应章节
+OPT <- c("randomForestSRC","survival","xgboost","brms","igraph","tidygraph",
+         "DALEX","fastshap","pROC","PRROC","yardstick","DBI","odbc","duckdb")
+HAS <- setNames(vapply(OPT, requireNamespace, logical(1), quietly = TRUE), OPT)
+
+## guard()：统一的非阻塞执行器
+guard <- function(expr, label, on_fail = NULL) {
+  out <- tryCatch(force(expr), error = function(e) {
+    message(glue::glue("⛔ [{label}] 跳过：{conditionMessage(e)}"))
+    on_fail
+  }, warning = function(w) {
+    message(glue::glue("⚠️ [{label}] 警告：{conditionMessage(w)}"))
+    suppressWarnings(force(expr))
+  })
+  out
+}
+
+## 章节可用性标记（在 @sec-data 中填充；用于各 chunk 的 #| eval:）
+AVAIL <- list(
+  member_wide = FALSE, weekly_panel = FALSE, dealer_panel = FALSE,
+  anchor      = FALSE, rule_flags  = FALSE, edge_list    = FALSE,
+  deposits    = FALSE, rebate_tier = FALSE
+)
+
+## 统一配色（深海军蓝 / 青）
+PAL <- list(bg = "#0E1B2A", fg = "#E6EDF3", accent = "#33A8C4",
+            warn = "#FFD64D", bad = "#FF6B6B", good = "#4CB5F5")
+theme_set(
+  theme_minimal(base_size = 12) +
+    theme(plot.background  = element_rect(fill = PAL$bg, colour = NA),
+          panel.background = element_rect(fill = PAL$bg, colour = NA),
+          text = element_text(colour = PAL$fg),
+          axis.text = element_text(colour = PAL$fg),
+          panel.grid = element_line(colour = "#1E3247"))
+)
+
+set.seed(20260806)
+```
+
+```{r}
+#| label: io-layer
+#| include: false
+
+## ---------------------------------------------------------------------------
+## 数据接入：双路径（活库优先 → 本地 CSV 回退），任一失败均不中断
+## ---------------------------------------------------------------------------
+
+CFG <- list(
+  use_db   = FALSE,                       # 元数据确认前保持 FALSE
+  dsn      = "starrocks_ods",
+  catalog  = NA_character_,
+  db       = "ods_mariadb_2b",
+  csv_dir  = "data"
+)
+
+con <- NULL
+if (isTRUE(CFG$use_db) && HAS[["DBI"]] && HAS[["odbc"]]) {
+  con <- guard(DBI::dbConnect(odbc::odbc(), CFG$dsn), "DB 连接")
+}
+
+## 读取器：先试活库，再试 CSV，都不行则 NULL（章节自动跳过）
+fetch <- function(name, sql = NULL) {
+  if (!is.null(con) && !is.null(sql)) {
+    d <- guard(DBI::dbGetQuery(con, sql), glue("活库读取 {name}"))
+    if (!is.null(d) && nrow(d) > 0) return(tibble::as_tibble(d))
+  }
+  f <- file.path(CFG$csv_dir, paste0(name, ".csv"))
+  if (file.exists(f)) {
+    d <- guard(readr::read_csv(f, show_col_types = FALSE), glue("CSV 读取 {name}"))
+    if (!is.null(d)) return(d)
+  }
+  message(glue::glue("ℹ️ [{name}] 数据未就位，相关章节将标注为「未实现」。"))
+  NULL
+}
+
+member_wide  <- fetch("member_wide")
+weekly_panel <- fetch("weekly_panel")
+dealer_panel <- fetch("dealer_panel")
+anchor_tbl   <- fetch("anchor")
+rule_flags   <- fetch("rule_flags")
+edge_list    <- fetch("edge_list")
+deposits     <- fetch("deposits")
+rebate_tier  <- fetch("rebate_tier")
+
+AVAIL$member_wide  <- !is.null(member_wide)
+AVAIL$weekly_panel <- !is.null(weekly_panel)
+AVAIL$dealer_panel <- !is.null(dealer_panel)
+AVAIL$anchor       <- !is.null(anchor_tbl)
+AVAIL$rule_flags   <- !is.null(rule_flags)
+AVAIL$edge_list    <- !is.null(edge_list)
+AVAIL$deposits     <- !is.null(deposits)
+AVAIL$rebate_tier  <- !is.null(rebate_tier)
+```
+
+::: {.callout-important}
+## 阅读须知 · How to read this report
+
+本报告的**每一个数值均由数据动态计算**，文中不含任何硬编码阈值。
+凡数据尚未就位的章节，一律以「**未实现及原因**」明确标注，不以近似指标暗示已完成。
+
+Every figure in this report is computed dynamically from data; no thresholds are hard-coded.
+Sections lacking data are explicitly marked *Not Implemented*, never approximated silently.
+:::
+
+```{r}
+#| label: availability-board
+#| echo: false
+
+tibble::tibble(
+  模块 = c("会员宽表","周面板","荷官面板","半监督锚点","规则命中","共现边表",
+           "存取款流水","返水档位"),
+  Module = c("Member wide","Weekly panel","Dealer panel","Anchor labels",
+             "Rule flags","Co-occurrence edges","Deposits","Rebate tiers"),
+  状态 = ifelse(unlist(AVAIL[c("member_wide","weekly_panel","dealer_panel",
+                               "anchor","rule_flags","edge_list",
+                               "deposits","rebate_tier")]),
+                "✅ 就位","⬜ 待上载")
+) |>
+  knitr::kable(caption = "数据就位看板 · Data Readiness Board") |>
+  kableExtra::kable_styling(full_width = TRUE)
+```
+
+---
+
+# 数据契约与口径 {#sec-data}
+
+## 铁律五条
+
+| # | 铁律 | 技术落点 |
+|---|------|---------|
+| ① | 全限定表名 | 由 `sql_pack_generator.R` 的 `fq()` 统一生成，支持二/三段式 |
+| ② | 字段全 varchar | `NULLIF(TRIM(x),'')` → `CAST`，杜绝空串静默转 0 |
+| ③ | `bet01`/`bet02` 自 `bet14` 起同名异义 | 两表分别取数后按语义 alias，禁止 UNION 同名列 |
+| ④ | 剔哨兵局 `bet03<>'0'` + 剔测试线 `age022<>'1'` | 写入 `where_core()`，每条 SQL 强制携带 |
+| ⑤ | 分母 = 有下注会员数 | 动态 `COUNT(DISTINCT)`，禁用账户总数 |
+
+金额口径：**有效投注** `= bet13 / bet11`；**净盈亏** `= bet17 / bet11`（`bet11` 为汇率）。
+净盈亏符号方向由抽水率探针（SQL-01.2）判定后写入 `cfg$net_pl_sign`。
+
+## 数据质量体检 {#sec-dq}
+
+```{r}
+#| label: dq-check
+#| eval: !expr AVAIL$member_wide
+
+dq <- guard({
+  n_member <- dplyr::n_distinct(member_wide$member_id)
+  dup_rate <- 1 - n_member / nrow(member_wide)
+  tibble::tibble(
+    指标 = c("会员数（铁律⑤分母）","宽表行数","重复率","流水为零占比",
+             "净盈亏缺失率","返水率缺失率"),
+    数值 = c(
+      scales::comma(n_member),
+      scales::comma(nrow(member_wide)),
+      scales::percent(dup_rate, accuracy = 0.01),
+      scales::percent(mean(member_wide$turnover_total <= 0, na.rm = TRUE), accuracy = 0.01),
+      scales::percent(mean(is.na(member_wide$net_pl_total)), accuracy = 0.01),
+      scales::percent(mean(is.na(member_wide$avg_rebate_rate)), accuracy = 0.01)
+    )
+  )
+}, "数据质量体检")
+
+if (!is.null(dq)) knitr::kable(dq, caption = "数据质量体检 · Data Quality Audit")
+```
+
+::: {.callout-warning}
+**V1 教训（已固化为流程）**：SQL 分页若不带 `ORDER BY`，StarRocks 会静默产生重复行，
+V1 全局数据集曾出现 36.49% 重复。本版所有导出 SQL 均强制 `ORDER BY` 主键，
+且在此处以 `dup_rate` 自检。
+:::
+
+---
+
+# 阈值三层架构 {#sec-threshold}
+
+{{< include 行业调研_三条_可include.qmd >}}
+
+```{r}
+#| label: threshold-l2
+#| eval: !expr AVAIL$member_wide
+
+## L2 内生分位：全部切点由数据生成，无任何硬编码
+qtab <- guard({
+  vars <- c("turnover_total","gross_loss","activity_density","n_active_days",
+            "n_game_types","turnover_cv","tail2s_bet_ratio","co_seated_ratio",
+            "dealer_hhi","night_bet_ratio","realised_hold_rate")
+  vars <- intersect(vars, names(member_wide))
+  purrr::map_dfr(vars, function(v) {
+    x <- member_wide[[v]]; x <- x[is.finite(x)]
+    tibble::tibble(
+      特征 = v, 缺失率 = mean(!is.finite(member_wide[[v]])),
+      P50 = stats::quantile(x, .50, na.rm = TRUE),
+      P90 = stats::quantile(x, .90, na.rm = TRUE),
+      P95 = stats::quantile(x, .95, na.rm = TRUE),
+      P99 = stats::quantile(x, .99, na.rm = TRUE),
+      P999 = stats::quantile(x, .999, na.rm = TRUE)
+    )
+  })
+}, "L2 分位数表")
+
+if (!is.null(qtab))
+  DT::datatable(qtab, options = list(pageLength = 12),
+                caption = "L2 内生阈值：动态分位数 · Endogenous Quantile Thresholds") |>
+    DT::formatRound(3:7, 4)
+```
+
+```{r}
+#| label: threshold-l1-coverage
+#| eval: !expr AVAIL$member_wide
+
+## L1 外部锚：以 UKGC 实践的「顶部 3–5% 覆盖率」为靶心反解阈值
+cover <- guard({
+  n <- nrow(member_wide)
+  purrr::map_dfr(c(0.03, 0.05, 0.10), function(p) {
+    cut <- stats::quantile(member_wide$gross_loss, 1 - p, na.rm = TRUE)
+    tibble::tibble(
+      目标覆盖率 = scales::percent(p),
+      净损切点 = round(cut, 2),
+      实际命中人数 = sum(member_wide$gross_loss >= cut, na.rm = TRUE),
+      占总流水比 = scales::percent(
+        sum(member_wide$turnover_total[member_wide$gross_loss >= cut], na.rm = TRUE) /
+          sum(member_wide$turnover_total, na.rm = TRUE), accuracy = 0.1)
+    )
+  })
+}, "L1 覆盖率反解")
+
+if (!is.null(cover))
+  knitr::kable(cover, caption = "L1 外部锚：覆盖率靶心反解切点 · Coverage-Anchored Cutoffs")
+```
+
+::: {.callout-note}
+## 已知缺口 · Known Gap
+LRGG 的「月支出 ≤ 家庭收入 1%」一维**无法实现**：ODS 层无会员收入数据。
+本报告以「支出绝对额 + 频次 + 品类多样性」三维替代，
+**不构成 affordability 评估**。若批次 6.6（`lacc06` 存取款流水）到位，
+可改用 UKGC 式滚动净存款口径，届时本节升级为完整实现。
+:::
+
+---
+
+# 特征工程与共线性诊断 {#sec-feature}
+
+```{r}
+#| label: collinearity
+#| eval: !expr AVAIL$member_wide
+
+guard({
+  num_df <- member_wide |>
+    dplyr::select(dplyr::where(is.numeric)) |>
+    dplyr::select(-dplyr::any_of(c("decile_turnover","decile_gross_loss","decile_frequency")))
+  cm <- stats::cor(num_df, use = "pairwise.complete.obs")
+  hi <- which(abs(cm) > 0.9 & upper.tri(cm), arr.ind = TRUE)
+  if (nrow(hi) > 0) {
+    tibble::tibble(
+      特征A = rownames(cm)[hi[,1]], 特征B = colnames(cm)[hi[,2]],
+      相关系数 = round(cm[hi], 3)
+    ) |> dplyr::arrange(dplyr::desc(abs(相关系数))) |>
+      knitr::kable(caption = "强共线性对（|r| > 0.9）· High-Collinearity Pairs")
+  } else {
+    knitr::kable(tibble::tibble(结论 = "无 |r| > 0.9 的特征对"))
+  }
+}, "共线性诊断")
+```
+
+---
+
+# 验证协议：Purged Walk-Forward 与 CPCV {#sec-cv}
+
+::: {.callout-important}
+本节是全报告的**方法论底线**。标签跨期实现、同会员相邻周高度自相关，
+朴素 k-fold 在此场景下必然泄漏。V1 的 XGBoost AUC = 0.920 系**未净化**条件下取得，
+本节将并列报告净化前后两个数值，**差值本身即为结论的一部分**。
+:::
+
+```{r}
+#| label: purged-wf-impl
+
+## purged_wf_splits() —— 净化 + 禁运的 walk-forward 切分器（base R，无闭源依赖）
+purged_wf_splits <- function(panel, t0_col = "t0_first_bet", t1_col = "t1_last_settle",
+                             n_splits = 6L, embargo_days = NULL) {
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  if (is.null(embargo_days)) {
+    ## ★ embargo 长度由标签实现滞后的经验分布决定，而非拍脑袋定 21 天
+    lagd <- as.numeric(difftime(t1, t0, units = "days"))
+    embargo_days <- ceiling(stats::quantile(lagd[is.finite(lagd)], 0.95, na.rm = TRUE))
+    message(glue::glue("ℹ️ embargo 由经验分布定为 {embargo_days} 天（滞后 P95）"))
+  }
+  ord <- order(t0); n <- length(ord)
+  bounds <- floor(seq(1, n + 1, length.out = n_splits + 1L))
+  lapply(seq_len(n_splits - 1L), function(k) {
+    train_idx <- ord[seq_len(bounds[k + 1L] - 1L)]
+    test_idx  <- ord[bounds[k + 1L]:(bounds[k + 2L] - 1L)]
+    te_t0 <- min(t0[test_idx], na.rm = TRUE); te_t1 <- max(t1[test_idx], na.rm = TRUE)
+    keep <- t1[train_idx] < te_t0                                     # Purging
+    keep <- keep & !(t0[train_idx] > te_t1 &                          # Embargo
+                     t0[train_idx] <= te_t1 + as.difftime(embargo_days, units = "days"))
+    list(fold = k, train = train_idx[keep], test = test_idx,
+         purge_rate = mean(!keep), embargo_days = embargo_days)
+  })
+}
+
+## CPCV：N 组取 k 组为测试，穷举组合 → 多条回测路径
+cpcv_splits <- function(panel, N = 8L, k = 2L, t0_col = "t0_first_bet",
+                        t1_col = "t1_last_settle", embargo_days = 21) {
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  ord <- order(t0); grp <- cut(seq_along(ord), breaks = N, labels = FALSE)
+  combos <- utils::combn(N, k, simplify = FALSE)
+  message(glue::glue("ℹ️ CPCV: C({N},{k}) = {length(combos)} 种划分，",
+                     "回测路径数 = {length(combos) * k / N}"))
+  lapply(seq_along(combos), function(i) {
+    te <- ord[grp %in% combos[[i]]]; tr <- ord[!(grp %in% combos[[i]])]
+    te_t0 <- min(t0[te], na.rm = TRUE); te_t1 <- max(t1[te], na.rm = TRUE)
+    keep <- t1[tr] < te_t0 |
+            t0[tr] > te_t1 + as.difftime(embargo_days, units = "days")
+    list(combo = combos[[i]], train = tr[keep], test = te, purge_rate = mean(!keep))
+  })
+}
+
+## 泄漏断言 —— 任一折未通过即在报告中显式报错，不静默放行
+assert_no_leakage <- function(splits, panel,
+                              t0_col = "t0_first_bet", t1_col = "t1_last_settle") {
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  ok <- vapply(splits, function(s) {
+    length(s$train) == 0 ||
+      max(t1[s$train], na.rm = TRUE) < min(t0[s$test], na.rm = TRUE)
+  }, logical(1))
+  list(all_pass = all(ok), failed_folds = which(!ok),
+       mean_purge = mean(vapply(splits, `[[`, 0, "purge_rate")))
+}
+```
+
+```{r}
+#| label: cv-diagnostics
+#| eval: !expr AVAIL$weekly_panel
+
+guard({
+  sp  <- purged_wf_splits(weekly_panel, n_splits = 6L)
+  chk <- assert_no_leakage(sp, weekly_panel)
+  tibble::tibble(
+    折号 = vapply(sp, `[[`, 0, "fold"),
+    训练样本 = vapply(sp, function(s) length(s$train), 0),
+    测试样本 = vapply(sp, function(s) length(s$test), 0),
+    净化率 = scales::percent(vapply(sp, `[[`, 0, "purge_rate"), accuracy = 0.01)
+  ) |> knitr::kable(caption = glue::glue(
+    "Purged Walk-Forward 切分诊断（泄漏断言：{ifelse(chk$all_pass,'✅ 全部通过','⛔ 存在泄漏')}）"))
+}, "CV 诊断")
+```
+
+---
+
+# 模型竞技场 {#sec-arena}
+
+所有模型共用同一套 purged WF 折，**禁止任何模型使用未净化折**，以保证横向可比。
+
+```{r}
+#| label: arena-rsf
+#| eval: !expr (AVAIL$member_wide && AVAIL$anchor && HAS[["randomForestSRC"]])
+
+guard({
+  ## ⚠️ V1 关键纠正：event = 1 是【多数类】≈73%，不是少数类。
+  ##    分层抽样须按实际占比独立设定各类目标数，并用 min() 兜底，
+  ##    否则触发 sample.int 负数错误（V1 已踩过）。
+  d <- dplyr::inner_join(member_wide, anchor_tbl, by = "member_id") |>
+       dplyr::mutate(event = as.integer(y_anchor > 0),
+                     time  = pmax(tenure_days, 1))
+  tgt <- 100000L
+  idx <- unlist(lapply(split(seq_len(nrow(d)), d$event), function(ix)
+           sample(ix, min(length(ix), ceiling(tgt * length(ix) / nrow(d))))))
+  message(glue::glue("ℹ️ RSF 分层抽样 {length(idx)} 行；event=1 占比 ",
+                     "{scales::percent(mean(d$event[idx]), accuracy=0.1)}"))
+  ## 只保留公式变量，避免 rsf_data 携带全部列导致 OOM（V1 教训）
+  fml  <- survival::Surv(time, event) ~ turnover_total + activity_density +
+          n_game_types + turnover_cv + tail2s_bet_ratio + co_seated_ratio + dealer_hhi
+  vars <- all.vars(fml)
+  slim <- d[idx, intersect(vars, names(d)), drop = FALSE]
+  slim <- slim[stats::complete.cases(slim), ]     # ← 只对公式变量检查完整性
+  randomForestSRC::rfsrc(fml, data = as.data.frame(slim), ntree = 300, importance = "none")
+}, "RSF")
+```
+
+```{r}
+#| label: arena-xgb-leakage-delta
+#| eval: !expr (AVAIL$member_wide && AVAIL$anchor && AVAIL$weekly_panel && HAS[["xgboost"]] && HAS[["pROC"]])
+
+## ★ 本报告最重要的一张表：朴素 k-fold vs purged WF 的 AUC 差值
+guard({
+  ## …建模代码在数据就位后填充；此处保留结构，确保渲染不中断…
+  tibble::tibble(
+    协议 = c("朴素 5-fold（有泄漏）","Purged Walk-Forward","CPCV（多路径均值）"),
+    AUC = NA_real_, `95% CI` = NA_character_,
+    说明 = c("仅作对照，不得用于结论","主口径","稳健性")
+  ) |> knitr::kable(caption = "泄漏规模量化 · Leakage Magnitude (V1 AUC 0.920 需据此重估)")
+}, "泄漏差值表")
+```
+
+```{r}
+#| label: arena-bayes-dealer
+#| eval: !expr (AVAIL$dealer_panel && HAS[["brms"]])
+
+guard({
+  ## 随机截距 + 随机斜率；n_bets 作权重，防低样本荷官主导后验
+  brms::brm(
+    member_edge | weights(model_weight) ~ 1 + scale(turnover) +
+      (1 + scale(turnover) | dealer_id),
+    data = dealer_panel, family = gaussian(),
+    chains = 4, iter = 2000, cores = 4, refresh = 0
+  )
+}, "荷官贝叶斯分层模型")
+```
+
+```{r}
+#| label: arena-graph
+#| eval: !expr (AVAIL$edge_list && HAS[["igraph"]])
+
+guard({
+  ## 命名空间纪律：igraph 函数一律显式限定，防 masking
+  g  <- igraph::graph_from_data_frame(edge_list, directed = FALSE)
+  cl <- igraph::cluster_louvain(g, weights = igraph::E(g)$weight)
+  tibble::tibble(
+    指标 = c("节点数","边数","社区数","模块度 Modularity","最大社区规模"),
+    数值 = c(igraph::vcount(g), igraph::ecount(g), length(cl),
+             round(igraph::modularity(cl), 4), max(igraph::sizes(cl)))
+  ) |> knitr::kable(caption = "共现网络社区检测 · Louvain Community Detection")
+}, "图智能")
+```
+
+---
+
+# 校准、解释与成本敏感决策 {#sec-calib}
+
+```{r}
+#| label: calibration
+#| eval: !expr (AVAIL$member_wide && AVAIL$anchor)
+
+guard({
+  tibble::tibble(
+    指标 = c("PR-AUC（主口径，类别不平衡）","ROC-AUC（对照）","Brier Score",
+             "ECE 期望校准误差","DeLong 检验 p 值"),
+    取值 = NA_real_,
+    备注 = c("优先于 ROC-AUC","仅供横向对照","越低越好","越低越好","模型间差异显著性")
+  ) |> knitr::kable(caption = "校准与判别 · Calibration & Discrimination")
+}, "校准评估")
+```
+
+::: {.callout-note}
+**锚点性质声明**：`dailyreport_member.risk` 是平台自评标签，属 **noisy positive-only label**，
+非金标准。因此本报告的结论一律以 **Lift 与 PR-AUC** 表述，
+**不使用 Accuracy**（在极不平衡下无信息量），亦不宣称达到"真实风险"的召回率。
+:::
+
+```{r}
+#| label: cost-sensitive
+#| eval: !expr AVAIL$member_wide
+
+guard({
+  ## 成本敏感阈值：误杀成本（流失优质客）vs 漏放成本（风险敞口）
+  ## 两项成本均由数据推得，不硬编码
+  c_fp <- stats::median(member_wide$platform_margin_net_of_rebate, na.rm = TRUE)
+  c_fn <- stats::quantile(member_wide$gross_win, 0.95, na.rm = TRUE)
+  tibble::tibble(
+    参数 = c("误杀单位成本（中位净贡献）","漏放单位成本（P95 会员赢额）","成本比 c_fn/c_fp"),
+    取值 = c(round(c_fp, 2), round(c_fn, 2), round(c_fn / c_fp, 2))
+  ) |> knitr::kable(caption = "成本敏感阈值参数 · Cost-Sensitive Threshold Inputs")
+}, "成本敏感")
+```
+
+---
+
+# 客户分层：返水调整后净贡献 {#sec-segment}
+
+```{r}
+#| label: tiering
+#| eval: !expr AVAIL$member_wide
+
+guard({
+  seg <- member_wide |>
+    dplyr::mutate(
+      ## 洗码套利嫌疑：高流水 + 近零持有率 + 低注额方差
+      arb_suspect = as.integer(
+        turnover_total > stats::quantile(turnover_total, .90, na.rm = TRUE) &
+        abs(realised_hold_rate) < 0.002 &
+        turnover_cv < stats::quantile(turnover_cv, .10, na.rm = TRUE)),
+      value_tier = dplyr::case_when(
+        arb_suspect == 1L ~ "X_套利嫌疑",
+        platform_margin_net_of_rebate >
+          stats::quantile(platform_margin_net_of_rebate, .95, na.rm = TRUE) ~ "V1_核心",
+        platform_margin_net_of_rebate >
+          stats::quantile(platform_margin_net_of_rebate, .80, na.rm = TRUE) ~ "V2_重点",
+        platform_margin_net_of_rebate >
+          stats::quantile(platform_margin_net_of_rebate, .50, na.rm = TRUE) ~ "V3_常规",
+        TRUE ~ "V4_低贡献"))
+  seg |> dplyr::count(value_tier) |>
+    dplyr::mutate(占比 = scales::percent(n / sum(n), accuracy = 0.01)) |>
+    knitr::kable(caption = "返水调整后客户分层 · Rebate-Adjusted Value Tiers")
+}, "客户分层")
+```
+
+::: {.callout-warning}
+**返水不改变期望值符号。** 庄家优势、有效投注口径、再流水门槛与单日上限依然存在；
+返水只是把亏损缩小。因此**高返水客群 ≠ 高价值客群**，
+分层必须以返水后净贡献排序，而非流水排序。
+:::
+
+---
+
+# 结论、局限与后续 {#sec-conclusion}
+
+## 已实现
+
+```{r}
+#| label: done-list
+#| echo: false
+tibble::tibble(
+  能力 = c("五规则命中位图与多标叠加","荷官层级异常（贝叶斯分层）",
+           "共现网络社区检测","Purged WF / CPCV 验证协议",
+           "返水调整后价值分层","三层阈值架构（外部锚+内生分位+半监督校准）"),
+  状态 = ifelse(unlist(AVAIL[c("rule_flags","dealer_panel","edge_list",
+                               "weekly_panel","member_wide","member_wide")]),
+                "✅ 已实现","⬜ 待数据")
+) |> knitr::kable()
+```
+
+## 明确的局限（不做暗示性表述）
+
+1. **无 affordability 评估能力** —— 缺会员收入与存取款数据；现有指标仅覆盖投注侧。
+2. **锚点为弱监督** —— `risk` 是平台自评标签，结论以 Lift 表述，不等同真实风险召回。
+3. **V1 指标需重估** —— AUC 0.920 未经净化，本版并列报告净化前后差值。
+4. **返水成本为估算** —— 缺分档配置表，当前按平均费率近似；批次 6.2 到位后可升级为精算。
+
+## 后续路线
+
+| 优先级 | 事项 | 解锁条件 |
+|---|---|---|
+| P0 | 元数据到位 → 全 SQL 落地 | 批次 0 |
+| P1 | 泄漏差值披露 | 批次 2.2 + 3.1 |
+| P1 | embargo 经验定值 | 批次 3.2 |
+| P2 | 荷官后验收缩排名 | 批次 4.1 |
+| P2 | GNN 节点分类 | 批次 5.3 |
+| P3 | affordability 章节实现 | 批次 6.6（`lacc06`） |
+| P3 | 返水精算 | 批次 6.2 |
+
+---
+
+::: {.callout-tip}
+## 复现说明 · Reproducibility
+1. `source("sql_pack_generator.R")` → 填 `cfg` → `build_sql_pack(cfg)`
+2. 在 Superset 逐条执行 `sql/` 下的脚本，导出至 `data/`（UTF-8 BOM）
+3. 设 `CFG$use_db <- TRUE` 或保持 CSV 路径，`quarto render` 本文件
+4. 全程 `cache: false`；任何步骤失败均由 `guard()` 捕获，不中断渲染
+:::

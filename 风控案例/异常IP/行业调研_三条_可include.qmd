@@ -1,0 +1,277 @@
+---
+# 本文件为片段，供主报告以 {{< include 行业调研_三条_可include.qmd >}} 引入
+# 主报告 YAML 中请保持 cache: false（V1 已因 cache: true 触发 OOM）
+---
+
+# 行业调研与方法论基准 {#sec-benchmark}
+
+本章回答三个问题：**阈值从哪里来、模型怎样才算没作弊、返水如何进入损益口径**。
+三者共同构成 @sec-model 中评分体系的外部效度基础。
+
+## 阈值基准：从"拍脑袋分位数"到"可辩护外部锚" {#sec-threshold}
+
+### 现状问题
+
+V1 报告的全部风险阈值均由内部数据分位数生成（P95/P99）。
+分位数法的缺陷是**自我指涉**——若整体客群本身已偏高风险，P95 也随之抬高，
+阈值失去绝对意义。监管质询与商业谈判场景中，纯内生阈值无法辩护。
+
+### 三套可引用的外部锚
+
+**锚 A｜Lower-Risk Gambling Guidelines（LRGG，加拿大主导，八国十一套人群数据集）**
+
+跨八个西方国家、十一套高质量人群数据集的联合风险曲线分析，得出三条须**同时满足**的下限：
+月支出不超过家庭收入的 1%；每月赌博不超过 4 天；不经常性地参与超过 2 种博彩品类。
+更精细的模态分析给出风险抬升的起点区间：月支出 60–120 加元、月频次 5–8 次、
+占月收入 1–3%、参与 3–4 种品类。
+
+> 对 a168 的映射：LRGG 的三维（金额 / 频次 / 多样性）已在 **SQL-1** 中分别落为
+> `turnover_total`、`activity_density` / `n_active_days`、`n_game_types`。
+> 由于 ODS 层无会员收入数据，"占收入 1%" 这一维无法直接实现——
+> 报告中须**明确声明此为已知口径缺口**，并以"月支出绝对额 + 频次 + 多样性"三维替代，
+> 不得暗示已完成 affordability 评估。
+
+**锚 B｜英国博彩委员会（UKGC）财务风险检查**
+
+UKGC 采用**滚动净存款**作为触发口径：2024 年 8 月起 30 天滚动净存款达 £500 触发检查，
+2025 年 2 月起门槛降至 £150；试点中约 95% 的检查以无摩擦方式在后台完成，
+且明确定位于**高消费账户的顶部约 3%**，而非全体客群。
+更早的白皮书阶段还提出过分层设计：轻度检查（月净损 £125 / 年净损 £500）与
+增强检查（24 小时净损 £1,000 / 90 天净损 £2,000），18–24 岁群体门槛减半。
+
+> 对 a168 的映射：这套"**滚动窗口 + 净损口径 + 顶部百分比覆盖率**"的三段式结构
+> 直接可移植。**SQL-2** 已输出 `gross_loss_roll4w`（4 周滚动净损）与 `week_seq`，
+> 对应 UKGC 的 30/90 天窗口逻辑；`flag_chasing` 对应"追损"这一行为标记。
+> 覆盖率设计上，建议把命中率控制在有下注会员的 **3%–5%** 区间——
+> 这不是内生分位数，而是引用监管实践的**可辩护覆盖率靶心**。
+
+**锚 C｜行为标记（markers of harm）而非单一指标**
+
+方法论文献的共识是：单一指标无法捕捉全部危害，标记因个体与司法辖区而异，
+较优做法是使用多个可分别关联到问题性博彩的独立测度，
+金钱与时间既要以绝对量追踪，也要以相对于可负担性或基线水平的方式追踪。
+常被列举的至险行为包括追损、博彩先占、注额递增、超预算消费。
+
+> 对 a168 的映射：**SQL-1 的 E 段**（`tail2s_bet_ratio`、`co_seated_ratio`、
+> `avg_round_crowding`）与 **SQL-2 的漂移段**（`stake_escalation`、`flag_chasing`）
+> 正是"注额递增"与"追损"的可计算代理。报告中应以**多标记叠加**（SQL-3 的
+> `flag_bitmap` / `n_flags`）作为结论载体，而非任何单一阈值。
+
+### 阈值三层结构（本报告采用）
+
+| 层 | 来源 | 用途 | a168 实现 |
+|---|---|---|---|
+| L1 外部锚 | LRGG / UKGC | 可辩护性、对外沟通 | 覆盖率靶心 3–5%；四周滚动净损窗口 |
+| L2 内生分位 | 本平台数据 P95/P99 | 运营可执行性 | SQL-1 `NTILE(10)` 动态十分位 |
+| L3 半监督校准 | `dailyreport_member.risk` | 精度验收 | SQL-4 Lift / Precision |
+
+**写入报告的原则**：任何阈值必须同时报告其 L1 参照、L2 内生位置、L3 校准 Lift。
+三者不一致时如实呈现分歧，不做单方面裁决。
+
+---
+
+## Purged Walk-Forward：让回测不撒谎 {#sec-purgedwf}
+
+### 为什么普通 k-fold 在本项目必然泄漏
+
+标准 k-fold 假设样本行独立，而时序数据不满足此假设：
+当标签在其后若干时段才实现时，它与相邻标签重叠，普通洗牌切分会把明天的答案泄回训练集；
+测试窗口紧后的行同样因序列相关而泄漏。两种效应都会悄悄抬高回测夏普比，
+交出图上漂亮、上线即亏的策略。
+
+本项目的标签（会员是否在未来 T 期内被判定为高风险）**天然跨期实现**，
+且同一会员的相邻周高度自相关——这是教科书级的泄漏场景。
+
+### 方法：Purging + Embargo + CPCV
+
+净化交叉验证是 k 折交叉验证的变体，由 López de Prado 于 2017 年提出，
+用于防止时序与其他结构化数据中的前视偏差，
+其核心是在标签依赖未来事件时确保训练与测试样本的独立性，
+作为传统交叉验证与 walk-forward 回测的替代——后两者常因信息泄漏与过拟合给出过于乐观的结果。
+净化把与测试集重叠的观测从训练集中移除，禁运则进一步拉开测试与训练之间的间隔。
+
+组合式净化交叉验证（CPCV）通过模拟大量情景来应对 walk-forward 的三个缺陷，
+每个情景给出一条回测路径，从而充分利用数据并避免预热期：
+把 T 个观测不打乱地划为 N 组，测试集取 k 组，则训练/测试划分数为组合数 C(N, k)，
+每一段序列因此被测试多次而非仅一次。
+
+实践参数可参照已发表工作：10 个训练折与 8 个测试折产生 36 条回测路径与 45 种训练组合，
+净化期与禁运期均设为 21 天（约一个营业月）。
+
+### R 端实现（贴合本项目 renv 栈，无需 Python 依赖）
+
+```{r}
+#| label: purged-wf-splits
+#| eval: false
+
+## purged_wf_splits() — 净化 + 禁运的 walk-forward 切分器
+## 输入：panel 需含 t0（特征起点）与 t1（标签实现时刻），由 SQL-2 直接提供
+## 依赖：base R + data.table，刻意不引入 mlfinlab（已闭源商业化）
+purged_wf_splits <- function(panel,
+                             id_col      = "member_id",
+                             t0_col      = "t0_first_bet",
+                             t1_col      = "t1_last_settle",
+                             n_splits    = 6L,
+                             embargo_pct = 0.01) {
+
+  stopifnot(all(c(id_col, t0_col, t1_col) %in% names(panel)))
+  t0 <- as.POSIXct(panel[[t0_col]])
+  t1 <- as.POSIXct(panel[[t1_col]])
+  stopifnot(all(t1 >= t0, na.rm = TRUE))          # 标签不得先于特征实现
+
+  ord      <- order(t0)
+  n        <- length(ord)
+  bounds   <- floor(seq(1, n + 1, length.out = n_splits + 1L))
+  embargo_n <- ceiling(n * embargo_pct)
+
+  lapply(seq_len(n_splits - 1L), function(k) {
+    ## walk-forward：训练集永远在测试集之前（扩张窗口）
+    tr_end   <- bounds[k + 1L] - 1L
+    te_start <- bounds[k + 1L]
+    te_end   <- bounds[k + 2L] - 1L
+
+    train_idx <- ord[seq_len(tr_end)]
+    test_idx  <- ord[te_start:te_end]
+
+    te_t0_min <- min(t0[test_idx], na.rm = TRUE)
+    te_t1_max <- max(t1[test_idx], na.rm = TRUE)
+
+    ## ---- Purging：剔除标签实现时刻侵入测试窗口的训练样本 ----
+    keep <- t1[train_idx] < te_t0_min
+
+    ## ---- Embargo：再剔除紧邻测试窗口之后的一段训练样本 ----
+    ##      （扩张窗口下此段通常为空，保留以支持滚动窗口变体）
+    embargo_cut <- te_t1_max +
+      as.difftime(embargo_n, units = "days")
+    keep <- keep & !(t0[train_idx] > te_t1_max & t0[train_idx] <= embargo_cut)
+
+    list(
+      fold        = k,
+      train       = train_idx[keep],
+      test        = test_idx,
+      n_purged    = sum(!keep),
+      purge_rate  = mean(!keep),
+      test_window = c(te_t0_min, te_t1_max)
+    )
+  })
+}
+
+## 验收断言：任一折中，训练标签实现时刻必须严格早于测试特征起点
+assert_no_leakage <- function(splits, panel,
+                              t0_col = "t0_first_bet",
+                              t1_col = "t1_last_settle") {
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  ok <- vapply(splits, function(s)
+    max(t1[s$train], na.rm = TRUE) < min(t0[s$test], na.rm = TRUE),
+    logical(1))
+  if (!all(ok)) stop("检测到泄漏，折号：", paste(which(!ok), collapse = ", "))
+  message("✔ 无泄漏，", length(splits), " 折全部通过；平均净化率 ",
+          sprintf("%.2f%%", 100 * mean(vapply(splits, `[[`, 0, "purge_rate"))))
+  invisible(TRUE)
+}
+```
+
+### 报告中必须披露的三个数字
+
+1. **净化率**（`purge_rate`）——被剔除的训练样本占比。过高说明标签窗口过长。
+2. **有效折数**——净化后训练集样本量不足的折应剔除并说明。
+3. **朴素 k-fold 与 purged WF 的 AUC 差值**——这是泄漏规模的直接证据。
+   V1 的 XGBoost AUC = 0.920 系在**未净化**条件下取得，
+   终稿必须重跑并同时报告两个数字。**若差值 > 0.05，V1 结论需下调措辞。**
+
+---
+
+## 返水架构：把成本装进损益口径 {#sec-rebate}
+
+### 行业口径拆解
+
+返水（亦称退水、洗码、反水）按**投注流水**而非输赢结果计算，
+只要发生投注行为即可能获得返水。基本公式为 `返水金额 = 有效投注额 × 返水比例`，
+公式本身无差别，差别全在"有效投注"如何定义。
+有效投注量通常包含所有输赢的投注金额，但和局（平局）不计入；
+被取消注单与对冲下注同样常被排除。
+
+三个常被忽略但决定实际成本的结构性条款：
+
+1. **分档费率**：日返水常按流水分档累进，例如有效流水 40 万时
+   按 `(20,000 × 0.48%) + (380,000 × 0.58%)` 分段计算，而非单一费率。
+   体育馆常见 0.3%–0.5%，电子游戏 0.8%–1%，VIP 可达 1.2%–1.5%；
+   费率差异源于各品类 RTP 与抽水结构不同，跨品类直接比较无意义。
+2. **再流水门槛**：返水金常需再打 1 倍乃至更高流水才可提领，
+   即返水不是直接折让，而是一张附带门槛的小额彩金。
+3. **上限与结算周期**：日返水常设单日上限，日流水按每日 00:00–23:59 计，
+   周流水按周一至周日计，次日或次周定时派发。
+
+### 对 a168 的口径落地
+
+| 概念 | 本项目字段 | 说明 |
+|---|---|---|
+| 有效投注 | `bet13 / bet11` | 已在 SQL-1 落为 `turnover`；**和局是否剔除需在 SQL-0 追加确认** |
+| 返水比例 | `bet01.bet14` | 铁律③：此列在 bet01 才是退水%，bet02.bet14 是派彩 |
+| 返水成本 | `turnover × rebate_rate` | SQL-1 已落为 `rebate_cost_est` |
+| 平台净贡献 | `-net_pl - rebate_cost` | SQL-1 已落为 `platform_margin_net_of_rebate` |
+
+**必须在终稿明确的两点：**
+
+1. **返水是成本折让，不改变期望值符号。** 庄家优势（百家乐约 1.06%）、
+   有效投注口径、再流水与单日上限依然存在；返水把亏损缩小，不会让负期望值转正。
+   这一点在客户分层叙事中至关重要——高返水客群不等于高价值客群。
+2. **返水套利（洗码党）是一类独立风险模式。** 其行为签名为：
+   高流水 + 接近零的净盈亏 + 低方差注额 + 对冲式下注。
+   在 SQL-1 特征中表现为 `turnover_total` 高分位、`realised_hold_rate` ≈ 0、
+   `turnover_cv` 极低。**建议列为第 6 条规则** `f_rebate_arb`，
+   并入 SQL-3 的 bitmap（届时改为 6 位）。
+
+### 分层评分中的返水调整
+
+客户价值分层不应以流水排序，而应以**返水后净贡献**排序：
+
+```{r}
+#| label: rebate-adjusted-tiering
+#| eval: false
+
+member_wide |>
+  dplyr::mutate(
+    net_contribution = platform_margin_net_of_rebate,
+    rebate_burden    = rebate_cost_est / pmax(turnover_total, 1),
+    ## 洗码套利嫌疑：高流水 + 近零持有率 + 低注额方差
+    arb_suspect = as.integer(
+      turnover_total     > quantile(turnover_total, 0.90, na.rm = TRUE) &
+      abs(realised_hold_rate) < 0.002 &
+      turnover_cv        < quantile(turnover_cv, 0.10, na.rm = TRUE)
+    )
+  ) |>
+  dplyr::mutate(
+    value_tier = dplyr::case_when(
+      arb_suspect == 1L                                          ~ "X_套利嫌疑",
+      net_contribution > quantile(net_contribution, 0.95, na.rm = TRUE) ~ "V1_核心",
+      net_contribution > quantile(net_contribution, 0.80, na.rm = TRUE) ~ "V2_重点",
+      net_contribution > quantile(net_contribution, 0.50, na.rm = TRUE) ~ "V3_常规",
+      TRUE                                                       ~ "V4_低贡献"
+    )
+  )
+```
+
+---
+
+## 本章参考文献 {.unnumbered}
+
+- Young, M. M., Hodgins, D. C., Brunelle, N., et al. (2021). *Developing Lower-Risk
+  Gambling Guidelines*. CCSA. <https://www.greo.ca/Modules/EvidenceCentre/files/Young%20et%20al%20(2021)_Developing%20lower-risk%20gambling%20guidelines_final.pdf>
+- Hodgins, D. C., Young, M. M., et al. (2023). *International Gambling Studies*, 23(2), 328–344.
+  <https://ideas.repec.org/a/taf/intgms/v23y2023i2p328-344.html>
+- UK Gambling Commission — financial risk assessments, 摘要见 IAGR:
+  <https://iagr.org/industry-news/using-financial-risk-checks-to-reduce-gambling-related-harms/>
+- Hansard, House of Commons (2024-02-26). *Financial Risk Checks for Gambling*.
+  <https://hansard.parliament.uk/Commons/2024-02-26/debates/8860118F-57B3-428D-99CC-D719D3CDEEB4/FinancialRiskChecksForGambling>
+- *Duty of care, data science, and gambling harm: A scoping review of risk assessment models*.
+  ScienceDirect (2025). <https://www.sciencedirect.com/science/article/pii/S2451958825000594>
+- López de Prado, M. (2018). *Advances in Financial Machine Learning*. Wiley.
+  另见 *The 10 Reasons Most Machine Learning Funds Fail* (GARP):
+  <https://www.garp.org/hubfs/Whitepapers/a1Z1W0000054x6lUAA.pdf>
+- *Purged cross-validation*, Wikipedia. <https://en.wikipedia.org/wiki/Purged_cross-validation>
+- CPCV 实践参数示例：*Hopfield Networks for Asset Allocation*, arXiv:2407.17645.
+  <https://arxiv.org/pdf/2407.17645>
+- 返水/有效投注口径行业说明（多家平台条款汇整）：
+  <https://regexland.com/2026/06/world-cup-2026-rebate-data/> ；
+  <https://hackmd.io/@GameSoCool/B1A-h8ov9>
