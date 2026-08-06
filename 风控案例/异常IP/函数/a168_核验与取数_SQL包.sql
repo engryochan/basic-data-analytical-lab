@@ -10,7 +10,7 @@
    ④ 导出上限 1,000 行：只承认排序头部结论，「未出现」类判断一律无效；
    ⑤ 全局窗口 2026-03-21 ~ 2026-08-07（139 营业日），改窗改字面量。
    ╔══ 导出总览（★ = 报告渲染必需；文件名错则报告静默空转）══════════╗
-   ║ 必导 23 份，全部落在报告同级 data/ 目录，UTF-8 BOM，导出前带 ORDER BY ║
+   ║ 必导 23 份，全部落在报告同级 数据库/ 目录，UTF-8 BOM，导出前带 ORDER BY ║
    ║  ★ S01_player_score.csv    ← S-01   玩家评分雷达                    ║
    ║  ★ S02_dealer_score.csv    ← S-02   荷官评分雷达                    ║
    ║  ★ S03_agent_score.csv     ← S-03   代理评分雷达                    ║
@@ -35,6 +35,7 @@
    ║  ★ A_anchor.csv            ← A-01   L0金标准17IP锚点                ║
    ║  ★ V_ipmatch.csv           ← V-01   三方IP明细对照                  ║
    ║ 其余 8 条（00-1~00-4/E1-03/E1-08/N1b/V2）只看屏幕结果，不必导出。   ║
+   ║ ▶ 导出前先跑 §08 的 COUNT-01 数行数，超 10 万用 COUNT-08a/b 分批。  ║
    ╚══════════════════════════════════════════════════════════════════╝
    行业正名速查：bet03靴号 bet04第几把 bet05会员 bet09玩法 bet11汇率
    bet13本金 validbet洗码量 bet14派彩 bet16退水 bet17净输赢
@@ -140,7 +141,7 @@ SELECT (SELECT COUNT(*) FROM a) AS n_bet_ip,
 /* ═══════════════════════════════════════════════════════════════════════
    E1-07 · 局时长按桌分位（尾注阈值分层依据；桌内SD≈5s、桌间SD=18.2s）
    
-   ▸ 导出：**data/T_table_span.csv**
+   ▸ 导出：**数据库/T_table_span.csv**
    ▸ 用途：报告 fetch("T_table_span")：桌台局时长分层
    ═══════════════════════════════════════════════════════════════════════ */
 SELECT gi011 AS table_id, COUNT(*) AS n_rounds,
@@ -165,7 +166,7 @@ SELECT COUNT(*) AS n_test_agents FROM ods_mariadb_2b.ods_a168_agent WHERE age022
 /* ═══════════════════════════════════════════════════════════════════════
    E1-10 · 風險單/劃單全局分布（标签可用性）
    
-   ▸ 导出：**data/L_label_dist.csv**
+   ▸ 导出：**数据库/L_label_dist.csv**
    ▸ 用途：風險單/劃單标签分布，标签可用性存档
    ═══════════════════════════════════════════════════════════════════════ */
 SELECT risk, orders, COUNT(*) AS n_rows,
@@ -178,7 +179,7 @@ GROUP BY risk, orders ORDER BY n_rows DESC;
 /* ═══════════════════════════════════════════════════════════════════════
    E1-11 · 会员退水配置分布（0.3/0.8/0.9% 档人群——洗码经济学输入）
    
-   ▸ 导出：**data/R_rebate_dist.csv**
+   ▸ 导出：**数据库/R_rebate_dist.csv**
    ▸ 用途：退水档位人群分布，洗码经济学输入
    ═══════════════════════════════════════════════════════════════════════ */
 SELECT mem003 AS rebate_rate, COUNT(*) AS n_member,
@@ -190,7 +191,7 @@ GROUP BY mem003 ORDER BY n_member DESC;
 /* ═══════════════════════════════════════════════════════════════════════
    A-06M · 局级对账 · MASE 评估（实测跑通原文收编）
    MASE<<1 → 去重与口径正确；已确认 gi005 为归一化口径
-   ▸ 导出：**data/V_recon.csv**
+   ▸ 导出：**数据库/V_recon.csv**
    ▸ 用途：报告 fetch("V_recon")：局级对账 MASE
    ═══════════════════════════════════════════════════════════════════════ */
 /* --- A-06M 局级对账 · MASE 评估（已确认 gi005 为归一化口径）---------
@@ -278,7 +279,7 @@ WHERE lag_turnover IS NOT NULL;
 /* ═══════════════════════════════════════════════════════════════════════
    C-00 · 会员×IP 明细（评分与 §4.1 六项指标的底料）
    最小订单 30（Wilson 准则）控制导出量
-   ▸ 导出：**data/I_ip_player.csv**
+   ▸ 导出：**数据库/I_ip_player.csv**
    ▸ 用途：报告 fetch("I_ip_player")：会员×IP 明细（§4.1 六项）
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -346,7 +347,7 @@ ORDER BY n_orders_ip DESC;
 /* ═══════════════════════════════════════════════════════════════════════
    C-01 · 信用枢纽排序 · member_per_chain（AX-A5 量化，实测榜首 2,132 人单链）
    
-   ▸ 导出：**data/C01_ip_chain.csv**
+   ▸ 导出：**数据库/C01_ip_chain.csv**
    ▸ 用途：信用枢纽排序，玩家/代理评分的 IP 结构罚项来源
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -409,7 +410,7 @@ ORDER BY member_per_chain DESC;
 /* ═══════════════════════════════════════════════════════════════════════
    C-06 · 同IP对打对 · 对冲覆盖（实测 999 对完美对打、最长 1,185 把）
    本金匹配容差 10%；玩法编码若与库内不符，改 bet_side 判别清单即可
-   ▸ 导出：**data/C06_hedge_pairs.csv**
+   ▸ 导出：**数据库/C06_hedge_pairs.csv**
    ▸ 用途：对打对名单，IP-S6/IP-S8 与荷官/代理罚项来源
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -491,7 +492,7 @@ ORDER BY opposite_rate DESC, n_opposite_round DESC;
 /* ═══════════════════════════════════════════════════════════════════════
    C-08 · /24 网段聚集 · 原版（按会员数降序；实测榜首为 CGNAT 饱和段）
    
-   ▸ 导出：**data/C08_subnet_all.csv**
+   ▸ 导出：**数据库/C08_subnet_all.csv**
    ▸ 用途：/24 网段全量（含 CGNAT），白名单候选甄别
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -555,7 +556,7 @@ ORDER BY n_member DESC;
 /* ═══════════════════════════════════════════════════════════════════════
    N1 · /24 网段 · 稀疏段靶向版（CGNAT 条件化：n_ip ≤ 30）
    信用枢纽层完整摊开：少门牌、多人头、单链密
-   ▸ 导出：**data/C08_subnet_sparse.csv**
+   ▸ 导出：**数据库/C08_subnet_sparse.csv**
    ▸ 用途：稀疏段靶向榜，信用枢纽层
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -634,7 +635,7 @@ GROUP BY 1;
 /* ═══════════════════════════════════════════════════════════════════════
    D-05 · 桌台进度统计（30 桌分位；封盘代理口径证据）
    
-   ▸ 导出：**data/S_second_dist.csv**
+   ▸ 导出：**数据库/S_second_dist.csv**
    ▸ 用途：报告 fetch("S_second_dist")：桌台进度分位
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -705,7 +706,7 @@ GROUP BY table_id ORDER BY n_orders DESC;
 /* ═══════════════════════════════════════════════════════════════════════
    D-03S · 日度尾段对照（139 行；五重检验的输入，裁定已闭合）
    
-   ▸ 导出：**data/D03S_daily_roi_diff.csv**
+   ▸ 导出：**数据库/D03S_daily_roi_diff.csv**
    ▸ 用途：五重显著性检验输入（139 行）
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -779,7 +780,7 @@ GROUP BY bet_date ORDER BY bet_date;
 /* ═══════════════════════════════════════════════════════════════════════
    D-06 · 玩家尾段十一项指标（实测跑通原文收编）
    个体层 winrate_diff>0 = 49.7% 白噪音，尾段裁定第三重复核
-   ▸ 导出：**data/S_player_tail.csv**
+   ▸ 导出：**数据库/S_player_tail.csv**
    ▸ 用途：报告 fetch("S_player_tail")：玩家尾段十一项
    ═══════════════════════════════════════════════════════════════════════ */
 /* --- D-06 玩家尾段十一项指标（SQL 端完成，加过滤控制在 10 万行内）----
@@ -882,8 +883,8 @@ ORDER BY member_id;
 
 /* ═══════════════════════════════════════════════════════════════════════
    S-01 · 玩家评分底料（全局聚合；对打指数/注册邻近在 Python 侧并入 C-06）
-   导出为 data/S01_player_score.csv
-   ▸ 导出：**data/S01_player_score.csv**
+   导出为 数据库/S01_player_score.csv
+   ▸ 导出：**数据库/S01_player_score.csv**
    ▸ 用途：★ 玩家评分雷达 + 综合分
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -950,8 +951,8 @@ ORDER BY 流水贡献 DESC;
 
 /* ═══════════════════════════════════════════════════════════════════════
    S-02 · 荷官评分底料
-   对打局占比/異常对关联在 Python 侧并 C-06 名单；导出 data/S02_dealer_score.csv
-   ▸ 导出：**data/S02_dealer_score.csv**
+   对打局占比/異常对关联在 Python 侧并 C-06 名单；导出 数据库/S02_dealer_score.csv
+   ▸ 导出：**数据库/S02_dealer_score.csv**
    ▸ 用途：★ 荷官评分雷达 + 综合分
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -1010,8 +1011,8 @@ GROUP BY dealer_id ORDER BY 在桌洗码量 DESC;
 
 /* ═══════════════════════════════════════════════════════════════════════
    S-03 · 代理（LV3 链）评分底料
-   对打渗透率在 Python 侧并 C-06；导出 data/S03_agent_score.csv
-   ▸ 导出：**data/S03_agent_score.csv**
+   对打渗透率在 Python 侧并 C-06；导出 数据库/S03_agent_score.csv
+   ▸ 导出：**数据库/S03_agent_score.csv**
    ▸ 用途：★ 代理评分雷达 + 综合分
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -1070,8 +1071,8 @@ GROUP BY lv3 ORDER BY 真实流水 DESC;
 
 /* ═══════════════════════════════════════════════════════════════════════
    S-04 · 风控员评分底料（金标准名单产出者）
-   命中率/时效由 Python 侧对回 N1/N1b 结果计算；导出 data/S04_analyst_score.csv
-   ▸ 导出：**data/S04_analyst_score.csv**
+   命中率/时效由 Python 侧对回 N1/N1b 结果计算；导出 数据库/S04_analyst_score.csv
+   ▸ 导出：**数据库/S04_analyst_score.csv**
    ▸ 用途：★ 风控员评分雷达 + 综合分
    ═══════════════════════════════════════════════════════════════════════ */
 SELECT operator AS 标注人, COUNT(*) AS 标注产量,
@@ -1082,8 +1083,8 @@ GROUP BY operator ORDER BY 标注产量 DESC;
 
 /* ═══════════════════════════════════════════════════════════════════════
    S-05 · 会员×月评分面板（净化滚动回测的输入）
-   导出 data/S05_member_month_panel.csv；risk_label 即 L1a 標籤
-   ▸ 导出：**data/S05_member_month_panel.csv**
+   导出 数据库/S05_member_month_panel.csv；risk_label 即 L1a 標籤
+   ▸ 导出：**数据库/S05_member_month_panel.csv**
    ▸ 用途：★★ 净化滚动回测面板（模型竞技场唯一输入）
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -1159,7 +1160,7 @@ FROM ods_mariadb_2b.ods_a168_game_No;
 /* ═══════════════════════════════════════════════════════════════════════
    C-02 · IP 汇总 · 三版本盈利口径（版本C 剔退水为主口径）
    报告 fetch("I_ip_agg") 缺口补齐；最小订单 30
-   ▸ 导出：**data/I_ip_agg.csv**
+   ▸ 导出：**数据库/I_ip_agg.csv**
    ▸ 用途：§4.2 三版本对照与阈值网格
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -1234,7 +1235,7 @@ ORDER BY n_member_eff DESC;
 /* ═══════════════════════════════════════════════════════════════════════
    X-01 · 两规则组合矩阵（异常IP × 尾注；尾注侧仅作画像）
    报告 fetch("X_combo") 缺口补齐
-   ▸ 导出：**data/X_combo.csv**
+   ▸ 导出：**数据库/X_combo.csv**
    ▸ 用途：§6 两规则重叠与增量分析
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -1308,7 +1309,7 @@ FROM mk GROUP BY 1,2 ORDER BY 1 DESC,2 DESC;
 /* ═══════════════════════════════════════════════════════════════════════
    P-01 · 会员×月面板（跨月持续性；与 S-05 同源不同粒度）
    报告 fetch("P_player_month") 缺口补齐
-   ▸ 导出：**data/P_player_month.csv**
+   ▸ 导出：**数据库/P_player_month.csv**
    ▸ 用途：@sec-persist 跨月稳定性检验
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -1366,7 +1367,7 @@ ORDER BY member_id, ym;
 /* ═══════════════════════════════════════════════════════════════════════
    B-01 · 在线人数基准（「第29秒」悖论的分母）
    报告 fetch("B_online_base") 缺口补齐
-   ▸ 导出：**data/B_online_base.csv**
+   ▸ 导出：**数据库/B_online_base.csv**
    ▸ 用途：§2.2-4 秒段集中度须除以在场人数基准
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
@@ -1430,7 +1431,7 @@ GROUP BY table_id, sec_elapsed ORDER BY table_id, sec_elapsed;
 /* ═══════════════════════════════════════════════════════════════════════
    A-01 · L0 金标准锚点（17 个人工确认 IP 的窗口内表现）
    报告 fetch("A_anchor") 缺口补齐；须先跑 N1b 确认活跃性
-   ▸ 导出：**data/A_anchor.csv**
+   ▸ 导出：**数据库/A_anchor.csv**
    ▸ 用途：一票否决检验：新阈值必须命中这些锚点
    ═══════════════════════════════════════════════════════════════════════ */
 WITH gold AS (SELECT DISTINCT TRIM(ip) AS ip
@@ -1448,7 +1449,7 @@ GROUP BY g.ip ORDER BY n_orders DESC;
 /* ═══════════════════════════════════════════════════════════════════════
    V-01 · 三方 IP 明细对照（地理维度作废的存档证据）
    报告 fetch("V_ipmatch") 缺口补齐
-   ▸ 导出：**data/V_ipmatch.csv**
+   ▸ 导出：**数据库/V_ipmatch.csv**
    ▸ 用途：game_log.ip 为网关的逐条证据
    ═══════════════════════════════════════════════════════════════════════ */
 WITH a AS (SELECT DISTINCT TRIM(ip) AS ip FROM ods_mariadb_2b.ods_a168_bet02
@@ -1464,3 +1465,259 @@ SELECT b.ip, b.n_member_log, b.country, b.city,
        CASE WHEN a.ip IS NULL THEN 0 ELSE 1 END AS in_bet_ip
 FROM b LEFT JOIN a ON a.ip=b.ip
 ORDER BY b.n_member_log DESC;
+
+
+/* ╔═══════════════════════════════════════════════════════════════════════╗
+   ║  §08 · 分批下载工具组（先数行数，再决定要不要分批）                      ║
+   ╚═══════════════════════════════════════════════════════════════════════╝
+   为什么必须先数：Superset 单次导出有上限，超限会**静默截断**（只给你前
+   N 行，不报错）。之前 277 批数据出现 36.49% 重复，根因就是分页时
+   **没有稳定排序**——同一行被翻到两页里。本组工具解决这两件事。
+
+   ★★ 分页铁律 ★★
+   ① 排序键必须**唯一**。按「流水贡献」排序会有并列值，翻页时行会跳动、
+      重复或漏掉。分批下载时**一律改用 member_id 排序**（唯一主键）。
+   ② 优先用「游标翻页」（COUNT-08b）而非 OFFSET：
+      OFFSET 100000 要求引擎先算完前 10 万行再丢掉，越翻越慢；
+      游标翻页每次都走索引，第 1 批和第 50 批一样快。
+   ③ 每批导出后核对行数，最后一批合并时用 member_id 去重复核。
+*/
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COUNT-01 · 五份评分底料的观测值总数（一次跑完，5 个数字全出）
+   ▸ 导出：不需要 —— 屏幕看结果即可（返回 1 行 5 列）
+   ▸ 用途：决定每份要不要分批、分几批
+   ▸ 耗时：约 1–3 分钟（要扫全量注单）
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.* FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet
+  FROM vd v
+),
+lab AS (SELECT bet05 AS member_id FROM ods_mariadb_2b.ods_a168_dailyreport_member
+        GROUP BY bet05)
+SELECT
+  /* S-01 玩家：满 30 局的会员数 */
+  (SELECT COUNT(*) FROM (SELECT member_id FROM bs GROUP BY member_id
+     HAVING COUNT(DISTINCT round_key) >= 30) x)                AS n_S01_玩家,
+  /* S-02 荷官：有注单的荷官数 */
+  (SELECT COUNT(DISTINCT dealer_id) FROM bs
+     WHERE NULLIF(TRIM(dealer_id),'') IS NOT NULL)             AS n_S02_荷官,
+  /* S-03 代理：有注单的 LV3 代理线数 */
+  (SELECT COUNT(DISTINCT lv3) FROM bs
+     WHERE NULLIF(TRIM(lv3),'') IS NOT NULL)                   AS n_S03_代理,
+  /* S-05 面板：会员×月 组合数 */
+  (SELECT COUNT(*) FROM (SELECT member_id, DATE_TRUNC('month', bet_date) ym
+     FROM bs GROUP BY member_id, DATE_TRUNC('month', bet_date)
+     HAVING COUNT(*) >= 30) y)                                 AS n_S05_会员月,
+  /* 参考：窗口内下注会员总数（未过滤 30 局） */
+  (SELECT COUNT(DISTINCT member_id) FROM bs)                   AS n_会员总数;
+
+/* 判读：
+     任何一个数 ≤ 100,000  → 该份直接一次导出，不必分批；
+     100,000 < 数 ≤ 500,000 → 用 COUNT-08b 游标翻页，每批 10 万；
+     > 500,000              → 先考虑收紧 HAVING 门槛（如 >=50 局），
+                              样本量够用即可，不必全量落地。
+   S-04（风控员）来自 alert_ip_setting，全表仅 17 条，永远不用分批。 */
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COUNT-02 · 单份精确计数模板（想单独数某一份时用）
+   ▸ 导出：不需要
+   ▸ 用法：把 §06 里对应查询的最终 SELECT 换成 COUNT(*) 包一层即可
+   ═══════════════════════════════════════════════════════════════════════ */
+-- 例：只数 S-01 玩家数
+WITH ta AS (
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.* FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet
+  FROM vd v
+)
+SELECT COUNT(*) AS n_rows FROM (
+  SELECT member_id FROM bs GROUP BY member_id
+  HAVING COUNT(DISTINCT round_key) >= 30
+) t;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COUNT-08a · 分批方案 A：会员号区间切分（推荐 · 最稳）
+   ▸ 用途：先看会员号怎么分布，再按号段切，每段约 10 万人
+   ▸ 优点：每批条件互斥且完备，绝不会重复也不会漏
+   ═══════════════════════════════════════════════════════════════════════ */
+WITH ta AS (
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.* FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet
+  FROM vd v
+)
+SELECT
+  PERCENTILE_APPROX(CAST(member_id AS BIGINT), 0.2) AS 切点_20pct,
+  PERCENTILE_APPROX(CAST(member_id AS BIGINT), 0.4) AS 切点_40pct,
+  PERCENTILE_APPROX(CAST(member_id AS BIGINT), 0.6) AS 切点_60pct,
+  PERCENTILE_APPROX(CAST(member_id AS BIGINT), 0.8) AS 切点_80pct,
+  MIN(CAST(member_id AS BIGINT)) AS 最小会员号,
+  MAX(CAST(member_id AS BIGINT)) AS 最大会员号
+FROM (SELECT member_id FROM bs GROUP BY member_id
+      HAVING COUNT(DISTINCT round_key) >= 30) t;
+
+/* 拿到 4 个切点后，把 S-01 查询的末尾改成（以第 1 批为例）：
+     GROUP BY b.member_id
+     HAVING COUNT(DISTINCT b.round_key) >= 30
+        AND CAST(b.member_id AS BIGINT) < 【切点_20pct】
+     ORDER BY CAST(b.member_id AS BIGINT);
+   第 2 批：>= 切点_20pct AND < 切点_40pct，依此类推，共 5 批。
+   文件名：S01_player_score_part1.csv … _part5.csv，最后本地合并。 */
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COUNT-08b · 分批方案 B：游标翻页（批次多时用，越翻不会越慢）
+   ▸ 用途：每次取 10 万，记下本批最后一个会员号，下批从它之后继续
+   ═══════════════════════════════════════════════════════════════════════ */
+-- 第 1 批：把 0 保持不变
+-- 第 2 批：把 0 换成第 1 批结果里最后一行的 member_id
+-- 依此类推，直到某批返回不足 100,000 行 = 全部取完
+WITH ta AS (
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.*, ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.* FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
+         v.bet20 AS lv3, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet
+  FROM vd v
+),
+lab AS (SELECT bet05 AS member_id,
+               SUM(CASE WHEN risk='1' THEN 1 ELSE 0 END) AS n_risk_days,
+               SUM(CASE WHEN orders='1' THEN 1 ELSE 0 END) AS n_order_days
+        FROM ods_mariadb_2b.ods_a168_dailyreport_member GROUP BY bet05)
+SELECT b.member_id,
+  SUM(b.valid_bet) AS 流水贡献,
+  COUNT(DISTINCT b.bet_date) AS 活跃稳定,
+  COUNT(DISTINCT b.bet_ip) AS n_ip,
+  COUNT(DISTINCT b.lv3) AS n_chain,
+  COALESCE(MAX(l.n_risk_days),0)+COALESCE(MAX(l.n_order_days),0) AS 人工标记史
+FROM bs b LEFT JOIN lab l ON l.member_id = b.member_id
+WHERE CAST(b.member_id AS BIGINT) > 0        -- ★ 上一批最后一个会员号，第1批填 0
+GROUP BY b.member_id
+HAVING COUNT(DISTINCT b.round_key) >= 30
+ORDER BY CAST(b.member_id AS BIGINT)          -- ★ 唯一键排序，杜绝跨页重复
+LIMIT 100000;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COUNT-09 · 分批合并后的自检（必做，10 秒）
+   ▸ 用途：证明分批没有重复、没有漏
+   ▸ 在本地（R/Python）跑，不是 SQL
+   ═══════════════════════════════════════════════════════════════════════ */
+-- R:
+--   parts <- list.files("data", "^S01_player_score_part.*csv$", full.names=TRUE)
+--   d <- dplyr::bind_rows(lapply(parts, readr::read_csv))
+--   stopifnot(nrow(d) == 【COUNT-01 报出的 n_S01_玩家】)          # 没漏
+--   stopifnot(!anyDuplicated(d$member_id))                        # 没重
+--   readr::write_csv(d, "数据库/S01_player_score.csv")              # 合并落地
+-- Python:
+--   import glob, pandas as pd
+--   d = pd.concat([pd.read_csv(p) for p in glob.glob("数据库/S01_player_score_part*.csv")])
+--   assert len(d) == N_EXPECTED and d.member_id.is_unique
+--   d.to_csv("数据库/S01_player_score.csv", index=False)

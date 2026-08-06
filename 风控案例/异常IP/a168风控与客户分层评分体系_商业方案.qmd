@@ -128,7 +128,7 @@ set.seed(20260806)
 ## ★ E1 全局窗口（139 营业日），禁用任何局部窗口；改窗须同步改 SQL 包字面量
 CFG <- list(db="ods_mariadb_2b", game_cat="101",
             dt_from="2026-03-21", dt_to="2026-08-07",
-            csv_dir="data", win_days=30)
+            csv_dir="数据库", win_days=30)
 fetch <- function(n){ f<-file.path(CFG$csv_dir,paste0(n,".csv"))
   if(file.exists(f)) guard(readr::read_csv(f,show_col_types=FALSE),n)
   else { message(glue::glue("ℹ️ [{n}] 未就位")); NULL } }
@@ -607,7 +607,7 @@ tibble::tribble(
 #| eval: false
 
 ## D-03S 输出：bet_date, n_rounds, vb_tail, vb_norm, roi_tail, roi_norm, roi_diff
-d <- readr::read_csv("data/D03S_daily_roi_diff.csv", show_col_types = FALSE)
+d <- readr::read_csv("数据库/D03S_daily_roi_diff.csv", show_col_types = FALSE)
 
 ## ---- ① 单样本 t 检验（日为独立单元）--------------------------------
 tt <- stats::t.test(d$roi_diff, mu = 0)
@@ -2242,14 +2242,14 @@ import plotly.graph_objects as go
 AUR = dict(bg="#050d1a", fg="#dff7ee", g="#00e5a0", c="#22d3ee",
            v="#8b5cf6", p="#f0abfc", bad="#ff6b8b")
 ENT = {  # 实体: (文件, 维度列->赏罚方向 +1赏 / -1罚)
- "玩家": ("data/S01_player_score.csv",
+ "玩家": ("数据库/S01_player_score.csv",
    {"流水贡献":1,"游戏输赢贡献":1,"活跃稳定":1,
     "对打指数":-1,"批量注册嫌疑":-1,"IP结构风险":-1,"人工标记史":-1}),
- "荷官": ("data/S02_dealer_score.csv",
+ "荷官": ("数据库/S02_dealer_score.csv",
    {"在桌洗码量":1,"客群广度":1,"对打局占比":-1,"异常对关联":-1,"風險單密度":-1}),
- "代理": ("data/S03_agent_score.csv",
+ "代理": ("数据库/S03_agent_score.csv",
    {"线下规模":1,"真实流水":1,"对打渗透率":-1,"单链密度":-1,"退水消耗比":-1}),
- "风控员":("data/S04_analyst_score.csv",
+ "风控员":("数据库/S04_analyst_score.csv",
    {"标注产量":1,"命中率":1,"复核时效":1,"误标率":-1})}
 
 def pct_norm(s):                       # 分位归一 0–100：抗极端值
@@ -2332,7 +2332,7 @@ class PurgedWalkForward:
             yield tr, te
             cur += pd.Timedelta(days=self.te)
 
-PANEL = "data/S05_member_month_panel.csv"     # SQL包 §06 S-05：会员×月评分面板
+PANEL = "数据库/S05_member_month_panel.csv"     # SQL包 §06 S-05：会员×月评分面板
 if not os.path.exists(PANEL):
     print("ℹ️ 面板未就位——跑 S-05 导出后本竞技场自动全跑")
 else:
@@ -2769,10 +2769,13 @@ P3 的人工复核标签是**条件抽样**——只覆盖被规则抓出来送�
 ## 三条硬规矩
 1. **一次一条**——SQL Lab 一个 tab 只贴一条语句，跑完再贴下一条。
    批量提交会产生僵尸查询，拖垮集群。
-2. **存放位置固定**——全部导出到**报告同目录下的 `data/` 文件夹**，
-   即 `.../a168风控与客户分层评分体系_商业方案.qmd` 旁边新建 `data/`。
+2. **存放位置固定**——全部导出到**报告同目录下的 `数据库/` 文件夹**，
+   即 `.../a168风控与客户分层评分体系_商业方案.qmd` 旁边新建 `数据库/`。
 3. **文件名一个字都不能错**——报告按名读取；名字错了图表**不报错、只空白**，
    这是最坑的失败方式。导出选 **CSV（UTF-8）**，导出前确认 SQL 末尾有 `ORDER BY`。
+4. **先数行数再导**——跑 SQL 包 §08 的 `COUNT-01`（一次出 5 个数字），
+   超过 10 万行的用 `COUNT-08a` 按会员号区间切分，**不要用 OFFSET 翻页**：
+   之前 277 批数据出现 36.49% 重复，根因就是分页没有稳定排序。
 :::
 
 ## 第一批 · 体检（5 分钟，不用存文件）
@@ -2806,7 +2809,7 @@ tibble::tribble(
   8,"S-03","**S03_agent_score.csv**","代理雷达 + 代理综合分","<1 分钟",
   9,"S-04","**S04_analyst_score.csv**","风控员雷达","秒级（表很小）",
   10,"S-05","**S05_member_month_panel.csv**","★ 净化滚动回测面板","2–5 分钟"
-) |> aurora_kb(caption="第二批：四实体评分 + 回测面板（必导，均存 data/ 目录下）")
+) |> aurora_kb(caption="第二批：四实体评分 + 回测面板（必导，均存 数据库/ 目录下）")
 ```
 
 ## 第三批 · 异常 IP 主线（这是唯一要动手的业务线）
@@ -2862,9 +2865,9 @@ need <- c("S01_player_score","S02_dealer_score","S03_agent_score",
           "P_player_month","X_combo","L_label_dist","R_rebate_dist","V_ipmatch")
 chk <- tibble::tibble(
   文件 = paste0(need, ".csv"),
-  状态 = ifelse(file.exists(file.path("data", paste0(need, ".csv"))),
+  状态 = ifelse(file.exists(file.path("数据库", paste0(need, ".csv"))),
                 "✅ 已就位", "⬜ 待导出"))
-aurora_kb(chk, caption="导出清单自检（渲染时自动核对 data/ 目录）")
+aurora_kb(chk, caption="导出清单自检（渲染时自动核对 数据库/ 目录）")
 ```
 
 **全部就位后**：在报告目录执行 `quarto render a168风控与客户分层评分体系_商业方案.qmd`，
@@ -3053,7 +3056,7 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
 ::: {.callout-tip}
 ## 复现说明
 1. `source("sql_pack_generator.R")` → 按 `CFG` 生成 `sql/`
-2. Superset 逐条执行（**每 tab 一条语句**），导出至 `data/`（UTF-8 BOM，**必带 ORDER BY**）
+2. Superset 逐条执行（**每 tab 一条语句**），导出至 `数据库/`（UTF-8 BOM，**必带 ORDER BY**）
 3. `quarto render a168风控与客户分层评分体系_商业方案.qmd`
 4. `cache: false`；任何步骤失败由 `guard()` 捕获，不中断渲染
 
