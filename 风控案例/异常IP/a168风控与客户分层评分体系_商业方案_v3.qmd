@@ -593,7 +593,8 @@ fetch <- function(n) {
     idc <- intersect(c("member_id","uid","uid1","uid2","dealer_id","bet_ip","bet05"), names(x))
     for (cl in idc) {
       v <- x[[cl]]
-      if (is.character(v) && !any(grepl("[^0-9]", utils::head(v[!is.na(v)], 1000)))) {
+      if (is.character(v) && length(v[!is.na(v)]) &&
+          !any(grepl("[^0-9]", utils::head(v[!is.na(v)], 1000)))) {
         n <- suppressWarnings(as.numeric(v))
         if (!anyNA(n[!is.na(v)]) && max(n, na.rm = TRUE) < 2^53) x[[cl]] <- n
       }
@@ -602,9 +603,16 @@ fetch <- function(n) {
       if (is.character(x[[cl]])) x[[cl]] <- as.Date(substr(x[[cl]], 1, 10))
     ## ★ 整数化：计数类列以 double 存放白白多占一倍。
     ##   仅当整列都是整数且在 int 范围内才转，不动任何金额/比率列。
+    ##   ⚠️ 2026-08-07 斧正：Date / POSIXct 在 R 里**底层就是 double**，
+    ##      `is.double()` 对它们返回 TRUE，于是 floor() 撞上
+    ##      「Math.Date(fv): floor 对 Date 没有定义」。
+    ##      判据必须加一句「无 class 属性」，只认裸数值向量。
+    is_plain_num <- function(v)
+      is.double(v) && is.null(attr(v, "class")) &&
+      !inherits(v, c("Date","POSIXct","POSIXt","difftime","hms","integer64"))
     for (cl in names(x)) {
       v <- x[[cl]]
-      if (is.double(v) && !all(is.na(v))) {
+      if (is_plain_num(v) && !all(is.na(v))) {
         fv <- v[is.finite(v)]
         if (length(fv) && all(fv == floor(fv)) && max(abs(fv)) < 2^31 - 1)
           x[[cl]] <- as.integer(v)
@@ -962,6 +970,7 @@ tibble::tribble(
   77,"**评分维度扩编**：对标行业实践逐实体给出可扩编维度与所需表，并如实说明风控员雷达为何仍是结构演示（依赖的处置日志表本平台尚无）","新增","@sec-dim-expand · SQL包 §S04p",
   79,"★ `py-arena` 实测报 `OpenBLAS: Memory allocation still failed after 10 retries`：BLAS/OpenMP 线程锁为 1（须在 `import numpy` 前设）+ 分层下采样 3 万行 + float32 + 外层兜底","斧正","@sec-py-arena",
   80,"全文残余 `n_jobs=-1` 三处（随机森林 500 树、Isolation Forest）一并改为 `n_jobs=1` 并降树数；内存三抓手补入「BLAS 线程锁 1」一条","斧正","@sec-py-arena · @sec-t4 · @sec-cache",
+  82,"★ 整数化循环用 `is.double()` 判数值列，但 `Date` 底层就是 double → `Math.Date: floor 对 Date 没有定义`：判据加 `is.null(attr(v,\"class\"))`，只认裸数值向量；并固化为可运行性纪律第 4 条","斧正","setup · fetch()",
   81,"`fetch()` 再压一层：计数类 double 列整数化（不动任何金额/比率列），内存约再省一成","升级","setup",
   78,"术语补入 purged WF / CPCV 验证判别力 / 尾秒 / CGNAT 四条；学术引用（Hyndman & Koehler 2006、López de Prado）加 DOI 链接","新增","@sec-glossary",
   62,"★ `radar-embed` 的 plotly 片段**自带缩进**，裸 asis 会被 Pandoc 当成缩进代码块 → 页面出现一格格滚动条里的 `<div class=\"plotly-graph-div\">` 源码：改用显式 raw-html 围栏包每一段","斧正","@sec-radar",
@@ -979,7 +988,7 @@ tibble::tribble(
   48,"`fmt_n()` 在顶层把 `else` 单独放到下一行 → R parse 报「意外的 else」：函数体改用大括号包住并显式 `return()`","斧正","@sec-tables",
   49,"术语注入改用 Quarto 规范的 raw-html 围栏：裸 raw HTML 块在 Pandoc 里遇空行即终止、边界由启发式决定，显式围栏边界确定","升级","@sec-glossary",
   50,"补丁自身踩坑：替换目标字符串同时出现在正文与代码中，`replace(count=1)` 命中了正文那一处并改坏文件 —— 新 lint 规则（奇数引号/跨行字符串）当场抓出；此后一律用**行首精确匹配**定位代码","斧正","补丁流程"
-) |> aurora_dt(caption="v3 变更清单：40 处斧正 · 25 处新增 · 12 处升级 · 4 处校对（共 81 项）", len = 81)
+) |> aurora_dt(caption="v3 变更清单：41 处斧正 · 25 处新增 · 12 处升级 · 4 处校对（共 82 项）", len = 82)
 ```
 
 ::: {.callout-warning}
@@ -7913,7 +7922,7 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
 3. `quarto render a168风控与客户分层评分体系_商业方案.qmd`
 4. `cache: false`；任何步骤失败由 `guard()` 捕获，不中断渲染
 
-## SQL 可运行性四条纪律（2026-08-06 九连报错 + 2026-08-07 K-01 报错后固化）
+## 可运行性六条纪律（2026-08-06 九连报错 · 2026-08-07 K-01/围栏/类型三连报错后固化）
 1. **零占位符**——Superset 不绑定 `:param`，全文 SQL 已一律字面量化
    （窗口 `'2026-03-21'/'2026-08-07'`、进度阈值 `0.90`、最小订单 `30`）；
    改参数 = 改字面量后整条重贴。
@@ -7923,11 +7932,15 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
    均为**片段**，须把 @sec-contract 的 E0 主查询
    （`WITH test_agents ... valid AS (...)`）整段前置为 CTE 链再运行；
    单独粘贴片段必报 `Unknown table` 或语法错。
-4. **★ 源码任何一行都不得在行首之外出现连续三个反引号。**
+4. **★ R 的类型判据一律不能只看 `is.double()`。**
+   `Date` / `POSIXct` / `difftime` 底层都是 double，`is.double()` 对它们返回 `TRUE`。
+   本文件实测撞过 `Math.Date(fv): floor 对 "Date" 没有定义`。
+   凡要对「数值列」做批量运算，判据必须加 `is.null(attr(v, "class"))`，只认裸数值向量。
+5. **★ 源码任何一行都不得在行首之外出现连续三个反引号。**
    Pandoc 认 R 的引号，编辑器的围栏分词器**不认**——行内出现即从此错位，
    该行之后的所有 chunk 都拿不到 Run Cell / Run Chunk 代码透镜。
    需要在运行时输出围栏时，用 `strrep("`", 3L)` 拼装（本文件已如此处理两处）。
-5. **★ 辅助表列名先 `DESC`，再写 join。**
+6. **★ 辅助表列名先 `DESC`，再写 join。**
    主表 `bet02` 用 `betNN` 代号，辅助表（`dailyreport_member`、`alert_ip_setting`、
    `member_dtl`、`employee`）各有各的命名，**没有一张叫 `member_id`**。
    K-01 首版就是没核对就 join，实跑报 `Column 'member_id' cannot be resolved.`
