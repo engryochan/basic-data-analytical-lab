@@ -1125,7 +1125,56 @@ bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/
 lab AS (SELECT bet05 AS member_id,
                SUM(CASE WHEN risk='1' THEN 1 ELSE 0 END) AS n_risk_days,
                SUM(CASE WHEN orders='1' THEN 1 ELSE 0 END) AS n_order_days
-        FROM ods_mariadb_2b.ods_a168_dailyreport_member GROUP BY bet05)
+        FROM ods_mariadb_2b.ods_a168_dailyreport_member GROUP BY bet05),
+/* ── 扩编维度① 投注产品结构熵 ─────────────────────────────────────
+   香农熵：把该会员的投注额按 23 种投注产品拆开，看分散还是集中。
+   熵高 = 庄闲和边注都押一点，是娱乐型客人的常态；
+   熵低 = 火力集中在少数高赔率边注，是技术型画像的特征之一。
+   赏罚方向为「赏」——熵高的客人对平台更安全。 */
+psplit AS (
+  SELECT member_id, bet_side,
+         SUM(stake) AS s_side,
+         SUM(SUM(stake)) OVER (PARTITION BY member_id) AS s_all
+  FROM bs GROUP BY member_id, bet_side
+),
+ent AS (
+  SELECT member_id,
+         -SUM((s_side/s_all) * LN(s_side/s_all)) AS 投注产品结构熵
+  FROM psplit WHERE s_all > 0 AND s_side > 0
+  GROUP BY member_id
+),
+/* ── 扩编维度② 索提诺稳定性（会员视角的下行风险调整收益）──────────
+   先把注单压成「会员×日」的日 ROI，再算 日ROI均值 ÷ 下行标准差。
+   只统计低于 0 那一侧的波动——赢钱时的波动不是风险。
+   赏罚方向为「罚」：赢得稳的客人正是 T2 技术型风险用户，
+   赢得多但忽输忽赢的反而是正常娱乐客。**不要把方向搞反。** */
+dly AS (
+  SELECT member_id, bet_date,
+         SUM(game_pnl) AS pnl_d, SUM(stake) AS stake_d
+  FROM bs GROUP BY member_id, bet_date
+),
+srt AS (
+  SELECT member_id,
+         AVG(pnl_d / NULLIF(stake_d,0))                                  AS mu_roi_d,
+         SQRT(AVG(POW(LEAST(pnl_d / NULLIF(stake_d,0), 0), 2)))          AS dd_roi_d,
+         AVG(pnl_d / NULLIF(stake_d,0))
+           / NULLIF(SQRT(AVG(POW(LEAST(pnl_d / NULLIF(stake_d,0), 0), 2))), 0)
+                                                                          AS 索提诺稳定性
+  FROM dly GROUP BY member_id
+),
+/* ── 扩编维度③ 生命周期阶段 ──────────────────────────────────────
+   首末注单跨度 × 近期活跃衰减，取值越大代表越处于成熟稳定期。
+   算法：活跃跨度天数 × (1 − 距窗口右端的静默天数 / 窗口总天数)，
+   新客跨度短、流失前兆者静默久，两端都会被压低。窗口 139 天为字面量。
+   赏罚方向为「赏」。 */
+lc AS (
+  SELECT member_id,
+         DATEDIFF(MAX(bet_date), MIN(bet_date)) + 1 AS span_days,
+         DATEDIFF(DATE '2026-08-06', MAX(bet_date)) AS silent_days,
+         (DATEDIFF(MAX(bet_date), MIN(bet_date)) + 1)
+           * (1 - DATEDIFF(DATE '2026-08-06', MAX(bet_date)) / 139.0) AS 生命周期阶段
+  FROM bs GROUP BY member_id
+)
 SELECT b.member_id,
   SUM(b.valid_bet) AS 流水贡献,
   -SUM(b.game_pnl) AS 游戏输赢贡献,          -- 会员输=平台赢，取负号
@@ -1133,8 +1182,16 @@ SELECT b.member_id,
   SUM(b.rebate) AS 退水支出,
   COUNT(DISTINCT b.bet_ip) AS n_ip,
   COUNT(DISTINCT b.lv3) AS n_chain,
-  COALESCE(MAX(l.n_risk_days),0)+COALESCE(MAX(l.n_order_days),0) AS 人工标记史
-FROM bs b LEFT JOIN lab l ON l.member_id=b.member_id
+  COALESCE(MAX(l.n_risk_days),0)+COALESCE(MAX(l.n_order_days),0) AS 人工标记史,
+  -- ★ 扩编三列：报告的玩家雷达按列名取用，列名一字不可改
+  MAX(e.投注产品结构熵)  AS 投注产品结构熵,
+  MAX(sr.索提诺稳定性)   AS 索提诺稳定性,
+  MAX(lcx.生命周期阶段)  AS 生命周期阶段
+FROM bs b
+LEFT JOIN lab l   ON l.member_id  = b.member_id
+LEFT JOIN ent e   ON e.member_id  = b.member_id
+LEFT JOIN srt sr  ON sr.member_id = b.member_id
+LEFT JOIN lc  lcx ON lcx.member_id = b.member_id
 GROUP BY b.member_id
 HAVING COUNT(DISTINCT b.round_key) >= 30
 ORDER BY 流水贡献 DESC;
@@ -1189,15 +1246,55 @@ bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/
          CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
   FROM vd v
+),
+/* ── 扩编维度① 当值时长 ─────────────────────────────────────────
+   以「在册局数」为分层基准。不做这一层分层，裸排名的榜首永远是
+   上班天数最少的新人——他们样本少、波动大，任何比率指标都会虚高。
+   赏罚方向为「赏」。 */
+/* ── 扩编维度② 节奏稳定度 ───────────────────────────────────────
+   每局时长（开局 gi004 → 开牌 gi006）的离散度，取 1/(1+标准差秒数)。
+   节奏忽快忽慢是操作异常的先兆，也会影响玩家体验。赏罚方向为「赏」。 */
+gi AS (
+  SELECT gi011 AS table_id, gi003 AS shoe_no,
+         UNIX_TIMESTAMP(gi006) - UNIX_TIMESTAMP(gi004) AS sec_round
+  FROM ods_mariadb_2b.ods_a168_game_info
+  WHERE gi001 = '101' AND gi013 = '1'
+    AND gi004 >= '2026-03-21' AND gi004 < '2026-08-07'
+),
+pace AS (
+  SELECT b.dealer_id,
+         1.0 / (1.0 + COALESCE(STDDEV_SAMP(g.sec_round), 0)) AS 节奏稳定度
+  FROM bs b JOIN gi g ON g.table_id = b.table_id
+  GROUP BY b.dealer_id
+),
+/* ── 扩编维度③ 特定玩家复现率 ───────────────────────────────────
+   该荷官桌上「出现最频繁的那一位会员」占其总局数的比例。
+   正常荷官服务的是流动客群，比例低；比例畸高说明有固定的人一直跟着他，
+   这是玩家—荷官关联的第一道筛。赏罚方向为「罚」。 */
+mrep AS (
+  SELECT dealer_id, member_id, COUNT(DISTINCT round_key) AS n_r
+  FROM bs GROUP BY dealer_id, member_id
+),
+top1 AS (
+  SELECT dealer_id, MAX(n_r) AS max_member_rounds
+  FROM mrep GROUP BY dealer_id
 )
-SELECT dealer_id,
-  SUM(valid_bet) AS 在桌洗码量,
-  COUNT(DISTINCT member_id) AS 客群广度,
-  COUNT(DISTINCT round_key) AS n_rounds,
-  COUNT(DISTINCT table_id) AS n_tables,
-  SUM(game_pnl) AS 桌面输赢
-FROM bs WHERE NULLIF(TRIM(dealer_id),'') IS NOT NULL
-GROUP BY dealer_id ORDER BY 在桌洗码量 DESC;
+SELECT b.dealer_id,
+  SUM(b.valid_bet) AS 在桌洗码量,
+  COUNT(DISTINCT b.member_id) AS 客群广度,
+  COUNT(DISTINCT b.round_key) AS n_rounds,
+  COUNT(DISTINCT b.table_id) AS n_tables,
+  SUM(b.game_pnl) AS 桌面输赢,
+  -- ★ 扩编三列：报告的荷官雷达按列名取用，列名一字不可改
+  COUNT(DISTINCT b.round_key) AS 当值时长,
+  MAX(p.节奏稳定度) AS 节奏稳定度,
+  MAX(t.max_member_rounds) * 1.0
+    / NULLIF(COUNT(DISTINCT b.round_key), 0) AS 特定玩家复现率
+FROM bs b
+LEFT JOIN pace p ON p.dealer_id = b.dealer_id
+LEFT JOIN top1 t ON t.dealer_id = b.dealer_id
+WHERE NULLIF(TRIM(b.dealer_id),'') IS NOT NULL
+GROUP BY b.dealer_id ORDER BY 在桌洗码量 DESC;
 
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1249,15 +1346,57 @@ bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/
          CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
   FROM vd v
+),
+/* ── 扩编维度① 下线留存 ─────────────────────────────────────────
+   把 139 天窗口一切两半（前 70 天 / 后 69 天），算「两段都活跃的会员
+   占前段活跃会员的比例」。留存高说明这条线在做真实经营；
+   留存趋零而流水不低，多半是一批号刷完就换。赏罚方向为「赏」。 */
+half AS (
+  SELECT lv3, member_id,
+         MAX(CASE WHEN bet_date <  '2026-05-30' THEN 1 ELSE 0 END) AS in_h1,
+         MAX(CASE WHEN bet_date >= '2026-05-30' THEN 1 ELSE 0 END) AS in_h2
+  FROM bs WHERE NULLIF(TRIM(lv3),'') IS NOT NULL
+  GROUP BY lv3, member_id
+),
+ret AS (
+  SELECT lv3,
+         SUM(CASE WHEN in_h1 = 1 AND in_h2 = 1 THEN 1 ELSE 0 END) * 1.0
+           / NULLIF(SUM(in_h1), 0) AS 下线留存
+  FROM half GROUP BY lv3
+),
+/* ── 扩编维度② 新增会员质量 ─────────────────────────────────────
+   只看「窗口内才首次下注」的会员，算其人均净贡献（平台口径，取负号）。
+   这一维把「拉人头」与「拉客人」区分开：新增数量高但人均净贡献接近零
+   甚至为负，说明拉来的是刷返水的号，不是客人。赏罚方向为「赏」。 */
+newm AS (
+  SELECT lv3, member_id,
+         MIN(bet_date) AS first_date,
+         -SUM(net_pnl) AS 平台净得
+  FROM bs WHERE NULLIF(TRIM(lv3),'') IS NOT NULL
+  GROUP BY lv3, member_id
+),
+nq AS (
+  SELECT lv3,
+         AVG(平台净得) AS 新增会员质量,
+         COUNT(*)      AS n_new_member
+  FROM newm WHERE first_date >= '2026-04-20'   -- 窗口首 30 天之后才首注，视为新增
+  GROUP BY lv3
 )
-SELECT lv3,
-  COUNT(DISTINCT member_id) AS 线下规模,
-  SUM(valid_bet) AS 真实流水,
-  SUM(rebate)    AS 退水支出,
-  SUM(game_pnl)  AS 链下游戏输赢,
-  SUM(rebate)/NULLIF(-SUM(game_pnl),0) AS 退水消耗比   -- >1 = 退水吃光赢利
-FROM bs WHERE NULLIF(TRIM(lv3),'') IS NOT NULL
-GROUP BY lv3 ORDER BY 真实流水 DESC;
+SELECT b.lv3,
+  COUNT(DISTINCT b.member_id) AS 线下规模,
+  SUM(b.valid_bet) AS 真实流水,
+  SUM(b.rebate)    AS 退水支出,
+  SUM(b.game_pnl)  AS 链下游戏输赢,
+  SUM(b.rebate)/NULLIF(-SUM(b.game_pnl),0) AS 退水消耗比,  -- >1 = 退水吃光赢利
+  -- ★ 扩编两列：报告的代理雷达按列名取用，列名一字不可改
+  MAX(r.下线留存)      AS 下线留存,
+  MAX(n.新增会员质量)  AS 新增会员质量,
+  MAX(n.n_new_member)  AS 新增会员数
+FROM bs b
+LEFT JOIN ret r ON r.lv3 = b.lv3
+LEFT JOIN nq  n ON n.lv3 = b.lv3
+WHERE NULLIF(TRIM(b.lv3),'') IS NOT NULL
+GROUP BY b.lv3 ORDER BY 真实流水 DESC;
 
 
 /* ╔══════════════════════════════════════════════════════════════════════╗
@@ -3218,9 +3357,10 @@ ORDER BY p.bet_date, z_score DESC;
    ─────────────────────────────────────────────────────────────────────────── */
 SELECT
   COALESCE(NULLIF(TRIM(creator), ''), '未署名')      AS entity_id,
+  -- ★ 下面三个列名与报告的风控专员雷达字典严格对应，一字不可改
   COUNT(*)                                            AS 标注产量,
-  COUNT(DISTINCT TRIM(ip))                            AS 覆盖IP数,
-  AVG(LENGTH(COALESCE(remarks, '')))                  AS 备注详尽度,
+  COUNT(DISTINCT TRIM(ip))                            AS 覆盖IP广度,
+  AVG(LENGTH(COALESCE(remarks, '')))                  AS 判定详尽度,
   MIN(addtime)                                        AS 首次登记,
   MAX(addtime)                                        AS 最近登记
 FROM ods_mariadb_2b.ods_a168_alert_ip_setting
