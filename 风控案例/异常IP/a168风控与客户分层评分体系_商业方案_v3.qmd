@@ -1,17 +1,43 @@
 ---
 title: "a168 风控与客户分层评分体系 · 商业方案"
 subtitle: "三线风控落地 · 四实体赏罚评分 · 滚动回测验证 · 评分服务上线（v3 斧正扩编版）"
-author: "Ryo（雷欧）"
+author: "®γσ ξηg（Ryo Eng）· 世博量化® Scibrokes Trading®"
 date: today
 lang: zh-CN
 engine: knitr   # R+Python 混排：python 块经 reticulate 执行
 format:
   html:
-    theme: [darkly, custom.scss]
+    page-layout: full        # ★ 满宽：走 Quarto 官方开关，不手改 grid
+    grid:
+      sidebar-width: 280px
+      body-width: 1600px     # 只放宽正文栏上限，不动 margin/gutter
+      margin-width: 160px
+      gutter-width: 1.5rem
+    theme: darkly            # custom.scss 不存在会告警，样式全在下方内联 CSS 里
     include-in-header:
       text: |
         <style>
         :root{--ag:#00e5a0;--ac:#22d3ee;--av:#8b5cf6;--ap:#f0abfc;}
+        /* ★ 满宽（2026-08-07 二次修正）：上一版硬改了 .page-columns 的
+           grid-template-columns，把 Quarto 的三栏网格压塌 → 正文栏 0 宽，
+           页面只剩一行行背景条。此处只做**不改布局结构**的温和放宽：
+           栏宽交给 YAML 的 page-layout/grid，CSS 只管内容物不要溢出。 */
+        .cell-output-display,div.cell{max-width:100%;}
+        table,.dataTables_wrapper,.dataTables_scroll,.plotly,.html-widget,
+        .datatables{max-width:100% !important;}
+        table{width:100% !important;}
+        /* ★ 左侧目录：满高、可从顶滚到底（原来被容器高度截断，只显示到一半） */
+        #quarto-margin-sidebar,#quarto-sidebar,nav#TOC,nav[role="doc-toc"],
+        .sidebar-navigation,#TOC{
+          position:sticky;top:0;max-height:100vh !important;height:auto;
+          overflow-y:auto !important;overscroll-behavior:contain;
+          scrollbar-width:thin;padding-bottom:3rem;}
+        #quarto-margin-sidebar::-webkit-scrollbar,nav#TOC::-webkit-scrollbar{width:8px;}
+        #quarto-margin-sidebar::-webkit-scrollbar-thumb,
+        nav#TOC::-webkit-scrollbar-thumb{background:#1e3a52;border-radius:4px;}
+        /* 表格单元格随宽度换行，不横向撑爆 */
+        td,th{white-space:normal !important;word-break:break-word;overflow-wrap:anywhere;}
+        img,svg{max-width:100%;height:auto;}
         body{background:
           radial-gradient(1100px 560px at 12% -8%,rgba(0,229,160,.20),transparent 60%),
           radial-gradient(1000px 520px at 88% -2%,rgba(139,92,246,.22),transparent 55%),
@@ -72,6 +98,7 @@ format:
     toc: true
     toc-depth: 4
     toc-location: left
+    toc-expand: 3            # ★ 目录默认展开三级，避免看起来「只到 19.2」
     number-sections: true
     code-fold: true
     code-tools: true
@@ -204,7 +231,9 @@ suppressPackageStartupMessages(pacman::p_load(
   dplyr, tidyr, readr, stringr, purrr, tibble, lubridate, glue,
   ggplot2, scales, knitr, kableExtra, DT, data.table))
 OPT <- c("binom","boot","pROC","PRROC","yardstick","igraph","xgboost",
-         "randomForestSRC","survival","brms","fastshap","DALEX","DBI","odbc")
+         "randomForestSRC","survival","brms","fastshap","DALEX","DBI","odbc",
+         "digest",  # digest：指纹缓存的内容哈希（缺位会降级为弱哈希并标注）
+         "plotly")  # plotly：互动走势图（缺位自动降级为静态 ggplot，不中断）
 HAS <- setNames(vapply(OPT, requireNamespace, logical(1), quietly=TRUE), OPT)
 ## guard：任何一节缺数/报错都不中断渲染，并在正文留下「待数据」占位，
 ## 避免读者看到莫名其妙的空白（工业级报告不应有无解释的空段）
@@ -218,6 +247,51 @@ NEED <- list(  # 每个 label 对应缺哪份导出文件，供占位提示指�
   "荷官关联"="R03_player_dealer.csv", "技术型"="T02_daily_roi.csv",
   "打水型"="T03_arbitrage.csv", "赏罚经济"="E02_segment_econ.csv",
   "策略回测"="B01_bt_panel.csv")
+## ★ 2026-08-07 斧正：桌表输出成 HTML 源码的根因
+##   knitr 对 kable/kableExtra 对象有两条完全不同的输出路径：
+##     ① **自动打印**（表达式作为 chunk 的值）→ 走 knit_print → asis → 正常渲染
+##     ② **显式 print()**（函数内部调用）→ 走 print.knitr_kable → cat 纯文本
+##        → 被 chunk 当普通输出捕获 → Pandoc 原样escape → **满屏 <table> 源码**
+##   guard() 与 need_data() 的占位表恰好走的是路径②，所以缺数据的小节全是源码。
+##   第一版修法用 cat + `results: asis`，但 asis 会与 knitr 的 `::: {.cell}` 包裹
+##   交错，pandoc 实测报 4 处 "Div unclosed ... closing implicitly"。
+##   **最终修法**：占位表一律作为表达式的**返回值**（guard 失败即返回，need_data
+##   只记原因、由调用处 `else ph_out()` 输出），走 knit_print 正路，全文不需要 asis。
+## ★ 2026-08-07 三修：不再 cat 原始 HTML。
+##   cat + results:asis 会与 knitr 的 `::: {.cell}` 包裹交错，
+##   pandoc 实测报 4 处 "Div unclosed ... closing implicitly"。
+##   正解：让占位表成为表达式的**值**，走 knit_print 正路，全文不需要 asis。
+ph_tbl <- function(label, why = "数据未就位", detail = "") {
+  need <- if (!is.null(NEED[[label]])) NEED[[label]] else "对应导出文件"
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 待数据（非错误）", 本节内容 = label, 原因 = why,
+    缺什么 = if (nzchar(detail)) detail else need,
+    怎么办 = glue::glue("按 @sec-runbook 导出 {need} 到 `{DATA_DIR}/`，重渲染即自动出表")),
+    caption = glue::glue("{label}：以占位呈现（非错误）"))
+}
+## need_data 把未通过的原因记在这里，供 ph_out() 取用
+PH_WHY <- new.env(parent = emptyenv())
+## ★ 占位表必须回答「我明明有这份 CSV，为什么还是占位」。
+##   于是把该文件在体检表里的实际状态一并带出来：文件在不在、几行、
+##   表头对不对、缺哪几列——一眼看到底是没导出、还是导了但列名不符。
+ph_out <- function(label) {
+  why <- if (!is.null(PH_WHY[[label]])) PH_WHY[[label]]$why else "前置校验未通过"
+  det <- if (!is.null(PH_WHY[[label]])) PH_WHY[[label]]$detail else ""
+  fn  <- if (!is.null(NEED[[label]])) NEED[[label]] else NA_character_
+  hp  <- tryCatch(dplyr::bind_rows(HEALTH$rows), error = function(e) NULL)
+  ex  <- if (!is.null(hp) && !is.na(fn) && fn %in% hp$文件)
+           hp[hp$文件 == fn, ][1, ] else NULL
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 待数据（非错误）", 本节内容 = label,
+    未通过原因 = why,
+    缺什么 = if (nzchar(det)) det else (if (is.na(fn)) "对应导出文件" else fn),
+    该文件体检 = if (is.null(ex)) "⬜ 本次渲染未见该文件"
+                 else glue::glue("{ex$状态}｜{ex$行数} 行 × {ex$列数} 列｜来源 {ex$来源SQL}"),
+    下一步 = if (is.null(ex)) glue::glue("按 @sec-runbook 导出 {fn} 到 `{CFG$csv_dir}/`")
+             else ex$应采取措施),
+    caption = glue::glue("{label}：以占位呈现——右侧「该文件体检」直接说明卡在哪一步"))
+}
+
 guard <- function(expr, label, on_fail=NULL)
   tryCatch(force(expr), error=function(e){
     message(glue::glue("⛔ [{label}] 跳过：{conditionMessage(e)}"))
@@ -227,8 +301,9 @@ guard <- function(expr, label, on_fail=NULL)
       本节内容 = label,
       缺什么 = need,
       怎么办 = glue::glue("按 @sec-runbook 导出 {need} 到 `{DATA_DIR}/`，重渲染即自动出表"))
-    print(aurora_kb(ph, caption = glue::glue("{label}：待数据占位（非错误）")))
-    on_fail })
+    if (is.null(on_fail))
+      aurora_kb(ph, caption = glue::glue("{label}：待数据占位（非错误）"))
+    else on_fail })
 ## ── ★ need_data()：前置校验器（接续上一轮「斧正而非跳过」的结论）───────
 ##    根因：旧版把防护责任外包给 chunk 选项 `eval: !expr AVAIL$x`。
 ##    控制台逐段粘贴时 chunk 选项完全失效，代码直接撞 NULL。
@@ -236,13 +311,8 @@ guard <- function(expr, label, on_fail=NULL)
 ##      ① 对象是否为 NULL；② 是否为空表；③ 列名是否齐全。
 ##    任一不满足 → 打印占位表并返回 FALSE，计算根本不会启动。
 need_data <- function(obj, label, cols = character(0)) {
-  ph <- function(why, detail = "") {
-    need <- if (!is.null(NEED[[label]])) NEED[[label]] else "对应导出文件"
-    print(aurora_kb(tibble::tibble(
-      状态 = "⬜ 待数据（非错误）", 本节内容 = label, 原因 = why,
-      缺什么 = if (nzchar(detail)) detail else need,
-      怎么办 = glue::glue("按 @sec-runbook 导出 {need} 到 `{DATA_DIR}/`，重渲染即自动出表")),
-      caption = glue::glue("{label}：前置校验未通过，本节以占位呈现")))
+  ph <- function(why, detail = "") {   # 只记录原因，输出交给调用处的 else ph_out()
+    PH_WHY[[label]] <<- list(why = why, detail = detail)
     FALSE
   }
   if (is.null(obj))                       return(ph("数据对象为 NULL（文件未就位）"))
@@ -264,14 +334,28 @@ finite_only <- function(df, col) df[is.finite(suppressWarnings(as.numeric(df[[co
 PAL <- list(bg="#050d1a", fg="#dff7ee", accent="#22d3ee",
             warn="#ffd64d", bad="#ff6b8b", good="#00e5a0", violet="#8b5cf6")
 AUR <- PAL  # 别名，供 plotly / DT 调用
+## ★ 2026-08-07 斧正：kable/DT 输出的是**原始 HTML**，Pandoc 不再处理其内部，
+##   于是单元格里的 **粗体**、`代码`、以及 sec- 开头的交叉引用全部以字面量示人
+##   （变更清单那一列满屏反引号就是这么来的）。这里在进表前自行转换。
+md_inline <- function(x) {
+  if (!is.character(x)) return(x)
+  x <- gsub("`([^`]+)`", "<code>\\1</code>", x)              # 先码后粗，避免码内 ** 被吃
+  x <- gsub("\\*\\*([^*]+)\\*\\*", "<strong>\\1</strong>", x)
+  x <- gsub("@(sec-[A-Za-z0-9_-]+)", "<a href=\"#\\1\">§\\1</a>", x)  # 交叉引用变可点链接
+  x
+}
+md_cols <- function(df) { df[] <- lapply(df, md_inline); df }
+
 aurora_dt <- function(df, caption=NULL, len=12)  # 互动式极光桌表
-  DT::datatable(df, rownames=FALSE, caption=caption, extensions="Buttons",
+  DT::datatable(md_cols(df), rownames=FALSE, caption=caption, escape=FALSE,
+    extensions="Buttons",
     options=list(pageLength=len, dom="Bfrtip", buttons=c("copy","csv"),
-                 scrollX=TRUE), class="display aurora")
+                 scrollX=TRUE, autoWidth=FALSE), class="display aurora nowrap-off",
+    width="100%")
 
 ## 静态表统一走 aurora_kb：极光渐变底 + 高对比字，杜绝灰底看不清
 aurora_kb <- function(df, caption=NULL, ...)
-  knitr::kable(df, caption=caption, format="html", escape=FALSE, ...) |>
+  knitr::kable(md_cols(df), caption=caption, format="html", escape=FALSE, ...) |>
   kableExtra::kable_styling(
     bootstrap_options=c("hover","condensed","responsive"),
     full_width=TRUE, font_size=13) |>
@@ -292,6 +376,81 @@ CFG <- list(db="ods_mariadb_2b", game_cat="101",
             csv_dir=DATA_DIR, win_days=30)
 ## ★ 编码自适应读取：Superset/Excel 导出常为 GB18030 或带 BOM 的 UTF-8，
 ##   直接 read_csv 会报 "invalid start byte"。依次试 UTF-8 → GB18030 → Latin1。
+## ── ★ 指纹缓存层（2026-08-07 新增）─────────────────────────────────
+##    诉求：重活不要每次渲染都重跑；但「读缓存」的前提是**确证输入没变**。
+##    做法：内容寻址（content-addressed）——把三样东西一起哈希成指纹：
+##      ① 输入数据的**内容**（不是 mtime；改回同样内容的文件 mtime 会变，
+##         而某些同步工具会保留 mtime 却改内容，只看 mtime 两头都错）
+##      ② 全部参数（阈值、随机种子、折长、先验区间…）
+##      ③ 算法版本号（改了公式就必须失效，否则缓存会悄悄喂旧结果）
+##    指纹一致才读缓存；任一变化即重算并落盘，同时把「为什么没命中」记下来。
+## 缓存落盘目录：优先用项目既有的「卷房」，没有则退回 数据库/_cache
+CACHE_DIR <- local({
+  v <- file.path(dirname(DATA_DIR), "卷房")
+  if (dir.exists(v)) v else file.path(DATA_DIR, "_cache")
+})
+if (!dir.exists(CACHE_DIR)) dir.create(CACHE_DIR, recursive = TRUE, showWarnings = FALSE)
+CACHE_LOG <- new.env(parent = emptyenv()); CACHE_LOG$rows <- list()
+
+## 强制重算开关：想推翻全部缓存时设 TRUE（或删掉 数据库/_cache 整个目录）
+FORCE_RECOMPUTE <- isTRUE(as.logical(Sys.getenv("A168_FORCE_RECOMPUTE", "FALSE")))
+
+.hash <- function(x) {
+  if (requireNamespace("digest", quietly = TRUE)) return(digest::digest(x, algo = "xxhash64"))
+  ## digest 缺位时的退化实现：够用但碰撞概率高于 xxhash，会在清单里标注
+  paste0("weak-", format(sum(utils::head(utils::strtoi(charToRaw(
+    paste(utils::capture.output(str(x)), collapse = "")), 16L), 4000)), scientific = FALSE))
+}
+
+## 输入指纹：优先按**文件内容**哈希；文件过大时降级为「行数×列数×抽样内容」
+.fp_input <- function(x, big_mb = 200) {
+  if (is.character(x) && length(x) == 1L && file.exists(x)) {
+    sz <- file.info(x)$size
+    if (requireNamespace("digest", quietly = TRUE) && sz < big_mb * 1024^2)
+      return(list(kind = "file-content", n = sz, h = digest::digest(file = x, algo = "xxhash64")))
+    return(list(kind = "file-meta(大文件降级)", n = sz,
+                h = .hash(list(sz, file.info(x)$mtime))))
+  }
+  if (is.data.frame(x))
+    return(list(kind = "data.frame", n = nrow(x),
+                h = .hash(list(dim(x), names(x), utils::head(x, 200), utils::tail(x, 200),
+                               vapply(x, function(cc) if (is.numeric(cc))
+                                 sum(as.numeric(cc), na.rm = TRUE) else NA_real_, numeric(1))))))
+  list(kind = class(x)[1], n = length(x), h = .hash(x))
+}
+
+## cached(key, expr, inputs, params, version)
+##   inputs：文件路径向量 或 data.frame 列表——凡是会影响结果的数据都要列进来
+##   params：命名 list——凡是会影响结果的参数都要列进来（漏列 = 缓存说谎）
+cached <- function(key, expr, inputs = list(), params = list(), version = "v1") {
+  fps <- lapply(if (is.list(inputs)) inputs else list(inputs), .fp_input)
+  fp  <- .hash(list(fps, params, version))
+  f   <- file.path(CACHE_DIR, glue::glue("{key}__{fp}.rds"))
+  ## 同 key 的旧指纹文件，用来解释「为什么没命中」
+  old <- list.files(CACHE_DIR, pattern = glue::glue("^{key}__.*\\.rds$"), full.names = TRUE)
+  rec <- function(st, note = "") CACHE_LOG$rows[[length(CACHE_LOG$rows) + 1L]] <<- tibble::tibble(
+    缓存键 = key, 版本 = version, 状态 = st,
+    输入 = paste(vapply(fps, function(z) glue::glue("{z$kind}:{z$n}"), ""), collapse = " + "),
+    指纹 = substr(fp, 1, 12), 说明 = note)
+
+  if (!FORCE_RECOMPUTE && file.exists(f)) {
+    rec("🟢 命中缓存", glue::glue("读 {basename(f)}"))
+    return(readRDS(f))
+  }
+  why <- if (FORCE_RECOMPUTE) "FORCE_RECOMPUTE=TRUE，强制重算"
+         else if (length(old)) "指纹变了（数据/参数/版本三者之一已改）——旧缓存作废"
+         else "首次计算"
+  val <- timed(glue::glue("重算 {key}"), expr)   # 惰性求值 + 自动计时
+  ok <- tryCatch({ saveRDS(val, f, compress = "xz"); TRUE }, error = function(e) FALSE)
+  ## 同 key 的过期缓存直接清掉，避免 _cache 目录无限膨胀
+  if (ok && length(old)) unlink(setdiff(old, f))
+  rec(if (ok) "🟡 重算并落盘" else "🔴 重算成功但落盘失败", why)
+  val
+}
+
+## 供 Python 侧复用同一套目录与开关
+CACHE_DIR_PY <- CACHE_DIR
+
 read_any <- function(f){
   for (enc in c("UTF-8","GB18030","GBK","Latin1")) {
     x <- try(suppressWarnings(readr::read_csv(
@@ -304,9 +463,167 @@ read_any <- function(f){
   }
   message(glue::glue("⛔ [{basename(f)}] 所有编码均读取失败")); NULL
 }
-fetch <- function(n){ f<-file.path(CFG$csv_dir,paste0(n,".csv"))
-  if(file.exists(f)) guard(read_any(f),n)
-  else { message(glue::glue("ℹ️ [{n}] 未就位")); NULL } }
+## ══ ★ 三件通用设施（2026-08-07 新增）═════════════════════════════════
+##   ① 数据契约体检：每份导出件读入前后都做指纹与表头核验，不一致就明说该怎么办
+##   ② 计时与进度：超过阈值的任务实时报进度与预计剩余，渲染完出总表
+##   ③ 缓存自动接管：凡走 cached() 的重活，指纹一致即读、不一致即算并落盘
+## ═══════════════════════════════════════════════════════════════════════
+
+## ── ① 数据契约：每份导出件的**必需列**与来源编号 ─────────────────
+##    必需列缺一即判「表头不符」——比运行到一半才 object not found 早得多。
+CONTRACT <- list(
+  I_ip_agg            = list(sql="C-02", cols=c("bet_ip","n_member_eff","n_prof_A","n_prof_B","n_prof_C")),
+  I_ip_player         = list(sql="C-02", cols=c("bet_ip","member_id","n_orders_ip","ip_order_share",
+                                                "stake_ip","net_pnl_ip","net_pnl_all","game_pnl_ip","n_rounds_ip")),
+  S_player_tail       = list(sql="D-06", cols=c("member_id","n_rounds_tail","tail_share","tail_winrate",
+                                                "norm_winrate","winrate_diff","tail_stake","tail_game_pnl",
+                                                "norm_game_pnl","tail_roi")),
+  D03S_daily_roi_diff = list(sql="D-03S", cols=c("bet_date","roi_diff","vb_tail")),
+  R01_late_shoe       = list(sql="R-01", cols=c("uid","n_orders_all","n_orders_late","late_share",
+                                                "stake_ramp","roi_late","roi_early","stake_late","game_pnl_late")),
+  R02_same_table      = list(sql="R-02", cols=c("uid1","uid2","n_same_orders","same_rate")),
+  R03_player_dealer   = list(sql="R-03", cols=c("uid","dealer_id","stake_amount","profit_amount",
+                                                "win_rate","n_related_orders","n_rounds_eff","z_score")),
+  R03b_player_dealer_daily = list(sql="R-03b", cols=c("bet_date","uid","dealer_id",
+                                                "profit_amount","win_rate","z_score")),
+  T02_daily_roi       = list(sql="T-02", cols=c("member_id","bet_date","stake","game_pnl")),
+  T03_arbitrage       = list(sql="T-03", cols=c("member_id","stake","game_pnl","net_pnl","rebate")),
+  E02_segment_econ    = list(sql="E-02c",cols=c("segment","n_member","validbet","ggr","rebate","commission")),
+  B01_bt_panel        = list(sql="B-01", cols=c("member_id","bet_date","stake","game_pnl","net_pnl")),
+  K01_risk_feature_matrix = list(sql="K-01", cols=c("member_id")),
+  C06_hedge_pairs     = list(sql="C-06fix", cols=c("bet_ip","m_a","m_b","opposite_rate")),
+  ## 表行数复核底料：SQL 包 §00 COUNT 预检的导出（两列：表名 / 行数）
+  V_table_counts      = list(sql="§00", cols=c("表名","行数")),
+  ## ── 以下 8 份来自原 SQL 包。cols 留空 = **只做存在性与指纹核验，跳过表头核验**。
+  ##    刻意不臆造必需列：猜错会产生「假红牌」，那比不检查更糟。
+  ##    将来若为它们补上真实必需列，把列名填进去即可自动升级为三重核验。
+  V_recon             = list(sql="原包 V-01", cols=character(0)),
+  V_ipmatch           = list(sql="原包 V-02", cols=character(0)),
+  T_table_span        = list(sql="原包 T-01", cols=character(0)),
+  S_second_dist       = list(sql="原包 D-05", cols=character(0)),
+  P_player_month      = list(sql="原包 P-01", cols=character(0)),
+  A_anchor            = list(sql="原包 A-01", cols=character(0)),
+  B_online_base       = list(sql="原包 B-01基线", cols=character(0)),
+  X_combo             = list(sql="原包 X-01", cols=character(0))
+)
+
+MANIFEST_PATH <- file.path(CACHE_DIR, "_data_manifest.rds")
+MANIFEST_OLD  <- if (file.exists(MANIFEST_PATH))
+                   tryCatch(readRDS(MANIFEST_PATH), error = function(e) list()) else list()
+MANIFEST_NEW  <- list()
+HEALTH <- new.env(parent = emptyenv()); HEALTH$rows <- list()
+
+## ── ② 计时与进度 ────────────────────────────────────────────────
+TIMING <- new.env(parent = emptyenv()); TIMING$rows <- list()
+SLOW_SEC <- 3        # 超过这个秒数就算「重活」，会进计时总表
+
+## 进度写 stderr：knitr 不捕获 stderr，所以渲染时能在控制台实时看到，
+## 又不会把一堆进度行灌进正文。
+.pg <- function(...) cat(..., file = stderr())
+
+timed <- function(label, expr, threshold = SLOW_SEC) {
+  t0 <- Sys.time()
+  .pg(glue::glue("⏳ [{label}] 开始 {format(t0, '%H:%M:%S')} …\n"))
+  val <- expr                                   # 惰性求值：到这里才真跑
+  el  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+  .pg(glue::glue("{if (el >= threshold) '✅' else '·'} [{label}] 完成，用时 {round(el,1)}s\n"))
+  TIMING$rows[[length(TIMING$rows) + 1L]] <<- tibble::tibble(
+    任务 = label, 耗时秒 = round(el, 2),
+    量级 = dplyr::case_when(el < 1 ~ "秒内", el < threshold ~ "数秒",
+                            el < 60 ~ "分钟内", TRUE ~ "★ 分钟级"),
+    开始时刻 = format(t0, "%H:%M:%S"))
+  val
+}
+
+## 带进度条与 ETA 的 map：长循环必用这个，别用裸 map
+map_dfr_pg <- function(x, f, label = "", every = 1L) {
+  n <- length(x); t0 <- Sys.time()
+  out <- purrr::map(seq_len(n), function(i) {
+    r <- f(x[[i]])
+    if (i %% every == 0L || i == n) {
+      el  <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+      eta <- if (i > 0) el / i * (n - i) else NA_real_
+      bar <- paste0(strrep("█", floor(20 * i / n)), strrep("░", 20 - floor(20 * i / n)))
+      .pg(sprintf("\r  %s %s %d/%d %3.0f%%  已用 %5.1fs  剩余 ~%5.1fs",
+                  label, bar, i, n, 100 * i / n, el, eta))
+    }
+    r
+  })
+  .pg("\n")
+  dplyr::bind_rows(out)
+}
+
+## ── ③ 契约化读取：存在？表头对？内容变了没？ ─────────────────────
+fetch <- function(n) {
+  f  <- file.path(CFG$csv_dir, paste0(n, ".csv"))
+  ct <- CONTRACT[[n]]
+  src <- if (is.null(ct)) "—" else ct$sql
+  add <- function(st, act, extra = list()) {
+    HEALTH$rows[[length(HEALTH$rows) + 1L]] <<- tibble::tibble(
+      文件 = paste0(n, ".csv"), 来源SQL = src, 状态 = st,
+      行数 = extra$rows %||% NA_integer_, 列数 = extra$cols %||% NA_integer_,
+      大小MB = extra$mb %||% NA_real_, 指纹 = extra$fp %||% "—", 应采取措施 = act)
+  }
+  `%||%` <- function(a, b) if (is.null(a)) b else a
+
+  if (!file.exists(f)) {
+    add("⬜ 未就位", glue::glue("按 @sec-runbook 跑 SQL {src} 导出到 `{CFG$csv_dir}/`"))
+    message(glue::glue("ℹ️ [{n}] 未就位")); return(NULL)
+  }
+  mb <- round(file.info(f)$size / 1024^2, 2)
+  x  <- guard(if (mb > 50) timed(glue::glue("读取 {n}.csv ({mb}MB)"), read_any(f)) else read_any(f), n)
+  if (is.null(x)) { add("🔴 读取失败", "文件存在但无法解析：检查是否为 HTML 报错页或半截下载"); return(NULL) }
+
+  ## ★ 2026-08-07 斧正：t4-cluster 报「无法分配 750 KiB」——这么小的分配都失败，
+  ##   说明进程内存早已见底。元凶不是 T4 本身，是 R 侧长期持有的几份大表：
+  ##   B01(270MB)+I_ip_player(83MB)+R03(78MB)+T02(53MB)，在 R 里以**字符列**存放
+  ##   会膨胀数倍。reticulate 与 R 同进程，Python 只能在剩下的缝里挤。
+  ##   对策：读入即压缩类型 + 立刻 gc()，把峰值压下去。
+  if (mb > 20) {
+    idc <- intersect(c("member_id","uid","uid1","uid2","dealer_id","bet_ip","bet05"), names(x))
+    for (cl in idc) {
+      v <- x[[cl]]
+      if (is.character(v) && !any(grepl("[^0-9]", utils::head(v[!is.na(v)], 1000)))) {
+        n <- suppressWarnings(as.numeric(v))
+        if (!anyNA(n[!is.na(v)]) && max(n, na.rm = TRUE) < 2^53) x[[cl]] <- n
+      }
+    }
+    for (cl in intersect(c("bet_date","dt","first_day","last_day"), names(x)))
+      if (is.character(x[[cl]])) x[[cl]] <- as.Date(substr(x[[cl]], 1, 10))
+    invisible(gc(FALSE))
+  }
+  fp <- .fp_input(f)$h
+  MANIFEST_NEW[[n]] <<- list(fp = fp, rows = nrow(x), cols = ncol(x),
+                             names = names(x), mb = mb, at = format(Sys.time()))
+  ex <- list(rows = nrow(x), cols = ncol(x), mb = mb, fp = substr(fp, 1, 12))
+
+  ## 表头核验：必需列缺一即红牌
+  no_hdr <- !is.null(ct) && length(ct$cols) == 0L
+  miss <- if (is.null(ct) || no_hdr) character(0) else setdiff(ct$cols, names(x))
+  if (length(miss)) {
+    add("🔴 表头不符", glue::glue(
+      "缺 {length(miss)} 个必需列：{paste(miss, collapse=', ')}。",
+      "核对 SQL {src} 的列别名是否被改；ADS 层常把 bet13→stake、bet14→payout"), ex)
+    return(x)                     # 仍返回，让下游 need_data 给出对应占位
+  }
+  ## 指纹核验：与上次渲染比对
+  old <- MANIFEST_OLD[[n]]
+  hdr_note <- if (no_hdr) "（该文件未登记必需列，仅做存在性与指纹核验）" else ""
+  if (is.null(old)) {
+    add("🆕 首次登记", glue::glue("本次已记录指纹；下次渲染会自动比对内容是否变动{hdr_note}"), ex)
+  } else if (identical(old$fp, fp)) {
+    add("🟢 内容一致", glue::glue(
+      "与上次渲染完全相同 → 依赖它的缓存全部命中，不重算{hdr_note}"), ex)
+  } else {
+    d <- c(if (!identical(old$rows, nrow(x))) glue::glue("行数 {old$rows}→{nrow(x)}"),
+           if (!identical(old$names, names(x))) "列集合有变动",
+           if (identical(old$rows, nrow(x)) && identical(old$names, names(x))) "行列数相同但单元格内容有变")
+    add("🟠 内容已变更", glue::glue(
+      "{paste(d, collapse='；')}。相关缓存已自动失效并重算。",
+      "若非预期，核对该 CSV 的导出时间与窗口是否仍为 2026-03-21~08-07"), ex)
+  }
+  x
+}
 D <- list(recon=fetch("V_recon"), ipmatch=fetch("V_ipmatch"),
           table_span=fetch("T_table_span"), sec_dist=fetch("S_second_dist"),
           player_tail=fetch("S_player_tail"), ip_player=fetch("I_ip_player"),
@@ -317,13 +634,72 @@ D <- list(recon=fetch("V_recon"), ipmatch=fetch("V_ipmatch"),
           r01=fetch("R01_late_shoe"),      r02=fetch("R02_same_table"),
           r03=fetch("R03_player_dealer"),  daily_roi=fetch("T02_daily_roi"),
           t3=fetch("T03_arbitrage"),       seg_econ=fetch("E02_segment_econ"),
-          bt_panel=fetch("B01_bt_panel"))
+          bt_panel=fetch("B01_bt_panel"), d03s=fetch("D03S_daily_roi_diff"),
+          tblcnt=fetch("V_table_counts"), r03b=fetch("R03b_player_dealer_daily"))
+invisible(gc(full = TRUE))   # 大表读完统一回收一次，为 Python 侧腾出空间
+## 本次全部指纹落盘，供下次渲染比对「内容是否一致」
+invisible(tryCatch(saveRDS(MANIFEST_NEW, MANIFEST_PATH), error = function(e) NULL))
 AVAIL <- lapply(D, Negate(is.null))
 ```
 
 ---
 
 # 第〇章 · 用哪些表、什么维度、如何正名 {#sec-tables}
+
+::: {.callout-important}
+## 口径声明一：本报告目前**只分析百家乐**（`bet02 = '101'`）
+
+全文所有 SQL 都带 `bet02 = '101'` 这个过滤条件——**这是一个产品口径的主动选择，不是全平台口径**。
+
+**为什么选它**：百家乐是真人荷官厅的主力玩法，且靴/局结构（`bet03` 靴号、`bet04` 局序）
+最规整，靴末段算牌、同局对押、玩家×荷官关联这三条判据都依赖它。
+其他产品（龙虎、轮盘、骰宝等）的局结构不同，规则不能直接套用。
+
+**因此必须承认的三条局限**：
+
+1. **本报告的所有阈值只对百家乐成立。** 直接搬去其他产品会误伤。
+2. **漏损总量被低估。** 若套利团伙同时在其他产品上打水，本报告看不见那部分。
+3. **会员的净贡献率被算偏。** `@sec-econ` 的 $m$、$\rho$、$\kappa$ 都只统计百家乐流水，
+   而退水与占成是**按全产品结算**的——分母缺了一块。
+
+**处置**：SQL 包新增 **`§DX-05 产品全景`**，一条查询给出全平台各 `bet02` 的注单量、
+投注额、玩家盈亏与庄家 hold%，以及百家乐在其中的占比。
+**跑完它，才知道本报告覆盖了多大一块。** 在此之前，本报告的一切金额结论
+一律须标注「百家乐口径」，不得当作全平台数字对外引用。
+:::
+
+::: {.callout-note}
+## 口径声明二：不止 bet01/bet02 两表，实际跨了八张表
+
+```{r}
+#| label: tbl-crosstable
+#| echo: false
+tibble::tribble(
+  ~表, ~连接键, ~带来什么维度, ~哪些分析依赖它, ~若缺失,
+  "`ods_a168_bet02`","—（主表）","注单本金/派彩/退水/汇率/靴局/桌台/荷官/IP/五级代理线",
+    "全部","无从谈起",
+  "`ods_a168_agent`","`age001` ↔ `bet18~bet22`","公司测试线标记 `age022='1'`",
+    "**每一条查询**都用它剔除 214 条测试线代理","流水虚高，所有比例失真",
+  "`ods_a168_dailyreport_member`","`bet05` ↔ `bet05`","人工風險單/劃單标签、LV1~5 占成、LV1~5 退水",
+    "T4 种子来源①、`@sec-econ` 的 κ","无人工标签、占成恒为 0",
+  "`ods_a168_alert_ip_setting`","`ip` ↔ `bet02.ip`","L0 金标准关注 IP（17 条）+ 风控员判定原话",
+    "T4 种子来源②、AX-A5 专家先验","失去唯一的金标准",
+  "`ods_a168_member_dtl`","`mem001` ↔ `bet05`","退水配置 `mem003`、限额、最大可赢/可输",
+    "`§E02b` 配置档位版分群","改用实测退水率替代（已落实）",
+  "`ods_a168_employee`","工号 ↔ `bet02.eid`","荷官身份、入职时间、在职状态",
+    "荷官评分的当值时长分层","贝叶斯收缩失效，榜首全是新人",
+  "`ods_a168_game_info`","靴/局/桌 ↔ `bet03/bet04/bet39`","开局与封盘时间、局状态",
+    "封盘代理口径、局级对账","尾秒判据失去时间基准",
+  "`ods_a168_bet01`","`bet01` ↔ `bet01`","下注侧时间戳（早 10–30 秒）",
+    "下注/结算双侧对账","无法验证结算侧时间是否被改写"
+) |> aurora_dt(caption = "跨表连接实况：八张表、七个连接键（不是只用 bet01/bet02）", len = 8)
+```
+
+**注意 `ods_a168_agent` 这一行**：它出现在**每一条**查询里。
+不是可选维度，是**有效注单口径的组成部分**——少了它，214 条测试线代理的流水会混进来，
+所有比例、阈值、经济核算一起失真。
+:::
+
 
 > 开工先点货。本章把整套方案用到的数据表、分析维度、字段正名一次讲清，
 > **全部口径以 E1 全局查询为准，不采信任何十万行局部样本**。
@@ -356,7 +732,33 @@ AVAIL <- lapply(D, Negate(is.null))
   "ods_a168_risklist","—","历史风险名单","与 bet02 零关联率","⛔ 已作废",
   "ods_a168_game_No","152,416","7 位游戏编号序列（gid 仅 7 种）","与 bet03(9位) 位数不符","⛔ 已关闭",
   "ods_a168_log_realtimebet","24,038","大额下注告警流（中位 3 万）","无开局/封盘时间","⛔ 已排除")
-aurora_dt(表清单, caption="核心表点货单：谁能用、怎么用、谁已证伪")
+## ★ 2026-08-07 斧正：原表的「行数量级」是早期测试期的静态记忆。
+##   改为**实测优先**：若 V_table_counts.csv 就位（SQL 包 §00 的 COUNT 预检导出），
+##   一律用它现算并标注「实测」；没有的保留历史记录并显式标注「未复核」。
+##   两者绝不混为一谈——静默沿用旧数字比承认没复核危险得多。
+## fmt_n 必须**向量化**：dplyr::mutate 传进来的是整列，
+## 标量版的 if (is.na(n)) 会抛「the condition has length > 1」。
+fmt_n <- function(v) vapply(v, function(n) {
+  if (is.na(n)) return(NA_character_)
+  if (n >= 1e8) return(paste0("≈", round(n / 1e8, 2), "亿"))
+  if (n >= 1e4) return(paste0(format(round(n / 1e4, 1), nsmall = 1), "万"))
+  format(n, big.mark = ",")
+}, character(1), USE.NAMES = FALSE)
+
+LIVE_ROWS <- local({
+  z <- D$tblcnt
+  if (is.null(z) || !all(c("表名", "行数") %in% names(z)))
+    return(stats::setNames(numeric(0), character(0)))
+  stats::setNames(suppressWarnings(as.numeric(z$行数)), as.character(z$表名))
+})
+表清单 <- 表清单 |> dplyr::mutate(
+  实测行数 = fmt_n(unname(LIVE_ROWS[表名])),
+  行数量级 = dplyr::if_else(!is.na(实测行数),
+    paste0(实测行数, "（实测）"), paste0(行数量级, "（历史记录·未复核）"))) |>
+  dplyr::select(-实测行数)
+aurora_dt(表清单, caption = glue::glue(
+  "核心表点货单：谁能用、怎么用、谁已证伪　|　行数标注「实测」者为本次渲染现算，",
+  "标注「历史记录·未复核」者需跑 SQL 包 §00 COUNT 预检后回填"))
 ```
 
 ## 字段正名表（行业叫法 ↔ 库内代号）
@@ -487,8 +889,66 @@ tibble::tribble(
   9,"**四实体雷达一律出图**：真数据缺位时出结构演示图并满幅红字水印标注","升级","@sec-radar",
   10,"**评分落库与接口服务**：三张表 DDL + Redis KV 键设计 + FastAPI 契约 + 灰度回滚路径","新增","@sec-serving",
   11,"表名不一致校对：`ods_a168_bet02`（ODS）vs `ads_a168_bet02`（ADS）列名差异与切换方式","校对","@sec-req3",
-  12,"参考文献核实：`荷官作弊风控阈值分析报告` 的 Z-score 分层结论**覆盖**需求原文的统一 70% 胜率","校对","@sec-r03"
-) |> aurora_dt(caption="v3 变更清单：3 处斧正 · 5 处新增 · 2 处升级 · 2 处校对", len = 12)
+  12,"参考文献核实：`荷官作弊风控阈值分析报告` 的 Z-score 分层结论**覆盖**需求原文的统一 70% 胜率","校对","@sec-r03",
+  13,"R 字符串非法转义 `\\*`（`'\\*' is an unrecognized escape`）：改为双反斜杠","斧正","本表所在块",
+  14,"K-01 实跑报 `Column 'member_id' cannot be resolved`：拆为**纯特征查询**（保证跑通）+ `§K01b` 种子查询（列名占位待核对），五路种子改在 Python 侧合并","斧正","@sec-t4 · SQL包 §K01/§00b",
+  15,"E-02 同类风险：改用实测退水率分档，不再 join `member_dtl`；配置档位版另列 `§E02b`","斧正","@sec-econ · SQL包 §E02",
+  16,"`tail-significance` 直接 `read_csv` + `t.test`，缺数即抛「观察值数量不足」**中断整份渲染**：改 `need_data` 前置校验 + 五项逐项独立降级","斧正","@sec-tail-verdict",
+  17,"C-06 实测零结果 → `bet09` 玩法判别与库内编码不符，`hedge_rate` **静默恒为 0**：新增 §DX-01 诊断、判别改宽口径并集、R 侧加区分度检验自动停用该闸","斧正","@sec-t3 · SQL包 §DX-01",
+  18,"SQL 注释里 `(星号星号)数据库/xxx.csv` 会塌缩成注释终止符导致语法错：全包改写为「数据库/xxx.csv」并固化为写法禁令","斧正","SQL包 §DX-02",
+  19,"§DX-01 实测：`bet09` 为英文玩法名，共 23 种；三处判别改为等值匹配 `Banker`/`Player`，**弃用 LIKE 以免误纳龙宝/天牌边注**","校对","@sec-t3 · SQL包 §DX-01",
+  20,"★ 补齐上一轮唯一已知不完整字段：`dailyreport_member.bet23~27` 即 LV1~5 占成、`bet28~32` 即 LV1~5 退水 —— `commission` 不再恒置 0，新增 `§E02c`","新增","@sec-econ · SQL包 §E02c",
+  21,"`§K01b` 列名实测填实（`bet05`/`risk`/`orders`/`ip`），种子来源①② 可直接导出","斧正","@sec-t4 · SQL包 §K01b",
+  22,"**指纹缓存层**：内容哈希 + 参数 + 版本三合一，一致则读、不一致则算并落盘；R/Python 双侧同目录同语义","新增","@sec-cache",
+  23,"Regime Kernel 实跑 `MemoryError`（KernelRidge 解 n×n 核矩阵）：改分层下采样封顶 3,000 条 + Nyström 近似核","斧正","@sec-arsenal",
+  24,"Regime Kernel 原用同一批样本 fit 与评估（样本内 AUC = 自评自夸）：改 70/30 分层留出评估","斧正","@sec-arsenal",
+  25,"HMM 实跑不收敛：`n_iter` 50→300 并加 `tol`，收敛状态**如实写入备注**而非隐去","斧正","@sec-arsenal",
+  26,"Regime Kernel 二次实跑 `ValueError: least populated class has only 1 member`：按比例抽正样本会把正样本压到 1 个；改为**正样本全留、只降采样负样本**，并设正样本下限，不足即明说跳过","斧正","@sec-arsenal",
+  27,"缓存参数把 `kr_cap` 写死成 3000（变量实为 1000）→ 参数改动无法使缓存失效：改为引用变量","斧正","@sec-cache",
+  28,"**数据契约体检层**：13 份导出件登记必需列，读入时做存在性/表头/指纹三重核验，五种状态各配明确措施","新增","@sec-cache",
+  29,"**计时与进度层**：`timed()` 与 `map_dfr_pg()` 带 ETA 进度条（写 stderr 不污染正文），渲染完出 R/Python 双侧计时总表","新增","@sec-cache",
+  30,"★ 桌表渲染成 HTML 源码的根因定位：`guard()`/`need_data()` 用 `print()` 输出 kable，走的是 `print.knitr_kable` 而非 `knit_print`；改为「占位表作为返回值」走 knit_print，全文不用 asis","斧正","setup + 全文占位表",
+  31,"**术语与代号浮层**：76 条术语库 + 渲染后自动加注脚本，全文悬停即出「本身是什么 + 本方案拿它干什么」两段释义","新增","@sec-glossary",
+  32,"**基准对照层**：每项优化对应一条朴素基线（均值 / 均值+3σ / 阈值冻结 / 什么都不做），并列夏普率、索提诺率、最大回撤、5%分位、MASE 与互动走势图","新增","@sec-benchmark",
+  33,"**子分类体系**：23 种玩法三层结构（主线/和局/边注/噪声）+ 四类实体子分类框架；量化 `LIKE %BANK%` 误纳的四种边注共 50 万笔","新增","@sec-subclass",
+  34,"**时间一致性守卫**：截止日 2026-08-07，维度表未来日期检出与处置清单，含四条待补 TG 查询","新增","@sec-timeguard",
+  35,"**待补数据表清单**：14 张一次列全，按「缺了它哪一章跑不动」排序，P0 六张标为硬阻塞","新增","@sec-needtables",
+  36,"术语注入块在单引号 R 字符串内写了占位符的单引号 → 字符串提前闭合、knitr parse 报「意外的符号」：改为两段拼接，两段内部只用双引号","斧正","@sec-glossary",
+  37,"检查器新增专项规则：跨行字符串内出现同类型引号即告警（旧版括号仍配平故漏检，属假阴性）","升级","检查器 lint.py",
+  38,"`results: asis` 与 knitr `::: {.cell}` 包裹交错 → pandoc 报 4 处 Div unclosed：废除 asis，改 `guard()` 失败返回占位表 + 调用处 `else ph_out()`，23 处 chunk 同步","斧正","setup + 全文占位表",
+  39,"术语表引用列名写成 `在本方案用途`，实际为 `在本方案的用途` → `找不到对象`：两处引用改用反引号精确列名","斧正","@sec-glossary",
+  40,"★ 术语加注在**字符串上**做 replace，第二个术语会命中第一个已生成的 `data-tip` 属性内部 → 页面出现 `<span class=` 残片：改为全程 DOM API（区间切分 + `setAttribute`），结构上不可能再被注入","斧正","@sec-glossary",
+  41,"浮层固定宽度导致窄屏截断：改 `max-width:min(46rem, calc(100vw - 2rem))` + `overflow-wrap:anywhere`，随浏览器宽窄自动换行","升级","@sec-glossary",
+  42,"kable/DT 输出原始 HTML，Pandoc 不再处理其内部 → 单元格里的粗体、行内代码、交叉引用全以字面量示人：新增 `md_inline()` 在进表前转换，DT 同步 `escape=FALSE`","斧正","全文所有表格",
+  43,"**满宽布局**：`page-layout: full` + `body-width` 放宽 + CSS 强制 `max-width:100%`，正文/表格/图/互动组件一律铺满浏览器可视宽度","升级","YAML + 内联 CSS",
+  44,"「行数量级」是早期测试期的静态记忆：改为**实测优先**，本次渲染算得出的标注「实测」，算不出的显式标注「历史记录·未复核」，绝不混为一谈","斧正","@sec-tables",
+  45,"术语库补入 23 种玩法（Banker/Player/Tie/**Big**/Small/BPair/PPair/Super6/Lucky7/DragonBonus/Natural/PerfectPair/AnyPair），每条含正常胜率与在本方案的判别意义","新增","@sec-glossary",
+  46,"**产品口径声明**：全文仅覆盖百家乐 `bet02='101'`，承认三条局限（阈值不可外推、漏损被低估、净贡献率分母缺块）；新增 `§DX-05 产品全景` 量化覆盖面","新增","@sec-tables · SQL包 §DX-05",
+  47,"**跨表连接实况表**：澄清并非只用 bet01/bet02，实际跨八张表七个连接键；标出 `ods_a168_agent` 是有效注单口径的组成部分而非可选维度","新增","@sec-tables",
+  51,"`fmt_n()` 是标量版但被 `mutate` 按整列调用 → 「the condition has length > 1」：改 `vapply` 向量化","斧正","@sec-tables",
+  52,"行数「实测」原本无数据源（LIVE_ROWS 恒为空）：新增 `§00c 表行数复核` 导出 `V_table_counts.csv`，就位即自动改标「实测」","新增","@sec-tables · SQL包 §00c",
+  53,"★ 满宽 CSS 硬改 `.page-columns` 的 `grid-template-columns`，把 Quarto 三栏网格压塌 → 页面只剩一行行背景条：撤回该覆盖，栏宽交回 YAML `page-layout`/`grid`，CSS 只管内容物不溢出","斧正","YAML + 内联 CSS",
+  54,"军械库缓存放在**训练之后**，缓存的只是结果、省不了训练（假缓存）：拆出 `py_cache_get`/`py_cache_put`，命中即整段跳过 GRU/Transformer/HMM","斧正","@sec-arsenal · @sec-cache",
+  55,"缓存落盘目录改到项目既有的「卷房」（不存在则退回 `数据库/_cache`）","升级","@sec-cache",
+  56,"**字段代号词典**：`bet01~bet41`、`gi001~gi013`、`mem001~mem016`、`age001/age022`、`risk/orders` 共 40 余条，并入术语库，全文悬停代号即出释义","新增","@sec-fieldcode",
+  57,"Div 配平自检改为报告内 chunk（读上一次 `.knit.md`），不再另开脚本","升级","@sec-cache",
+  59,"★ `t4-cluster` 报「无法分配 750 KiB」= 进程内存见底（元凶是 R 侧长期持有的四份大表，reticulate 与 R 同进程）：`fetch()` 读入即把 ID 列数值化、日期列转 Date 并 gc；T4 自身下采样 3 万行 + `n_jobs=1` + 树数减半 + 外层兜底","斧正","setup · @sec-t4",
+  62,"★ `radar-embed` 的 plotly 片段**自带缩进**，裸 asis 会被 Pandoc 当成缩进代码块 → 页面出现一格格滚动条里的 `<div class=\"plotly-graph-div\">` 源码：改用显式 raw-html 围栏包每一段","斧正","@sec-radar",
+  63,"左侧目录被容器高度截断（只显示到 19.2）：CSS 设 `max-height:100vh` + `overflow-y:auto` + `position:sticky`，并加 `toc-expand: 3`","斧正","YAML + 内联 CSS",
+  64,"浮层遇右缘/底缘会被视口切掉：新增方位自适应（`gl-right` 右对齐、`gl-up` 向上展开），随视口实时计算","升级","@sec-glossary",
+  65,"行内代码原被跳过加注 → 字段代号（`bet13`/`gi013`/`mem003`）永远没有浮层：`CODE` 移出跳过名单，`PRE` 仍跳过以保住代码块可复制性","斧正","@sec-glossary",
+  66,"术语库补入读者点名的 12 条：下行标准差 / CAS / Cochran's Q / Levene / 二项检验 / CPCV 多路径分布 / Deflated 思想 / OOT / 闸 / 风险维度 / 抗极端值 / 阈值","新增","@sec-glossary",
+  67,"**校对**：T2 一节引用了「CatCity 平台已在用的口径」——CatCity 是另一量化项目，与 a168 无关，属串项目引用，已删除并改写为「本方案首次引入、无历史基线」","校对","@sec-t2",
+  68,"占位表答不出「我明明有这份 CSV 为何还是占位」：`ph_out()` 改为带出该文件的体检结论（在不在、几行几列、表头缺哪些、下一步做什么）","升级","setup",
+  69,"23 种玩法补齐**逐类漏损口径 · 判别要点 · 措施 · 业绩影响**，并接上 @sec-r03 的门槛结论","新增","@sec-bet09-action",
+  70,"R-03 双轨对照缺时序维度：新增 `§R03b` 日粒度导出与逐周对照图（命中数/误判率/关联漏损），并如实说明会员增减与营业额增幅须由 P3 随机对照 + DiD 才能回答","新增","@sec-r03-bt · SQL包 §R03b",
+  61,"★ 源码里两处在**行中间**写了连续三个反引号（`cat()` 里的 raw-html 围栏、Div 自检的措施文案）：Pandoc 认引号、编辑器不认 → 围栏分词器从该行起错位，之后所有 chunk 都失去 Run Cell 代码透镜。改用 `strrep()` 运行时拼装，并固化为写作纪律第 4 条","斧正","全文源码",
+  60,"新增**内存水位表**：列出各数据对象占用、字符列数与瘦身建议，并给出按性价比排序的三个抓手","新增","@sec-cache",
+  58,"★ `arsenal-extra` 在 77% 处带走整个渲染进程且**不留错误信息** = 进程级崩溃（OOM），非 Python 异常：三道闸——建模前分层下采样封顶 2 万行（正样本全留）、torch 改小批量（batch 512 / 60 轮）、最外层 try/except + `error: true`","斧正","@sec-arsenal",
+  48,"`fmt_n()` 在顶层把 `else` 单独放到下一行 → R parse 报「意外的 else」：函数体改用大括号包住并显式 `return()`","斧正","@sec-tables",
+  49,"术语注入改用 Quarto 规范的 raw-html 围栏：裸 raw HTML 块在 Pandoc 里遇空行即终止、边界由启发式决定，显式围栏边界确定","升级","@sec-glossary",
+  50,"补丁自身踩坑：替换目标字符串同时出现在正文与代码中，`replace(count=1)` 命中了正文那一处并改坏文件 —— 新 lint 规则（奇数引号/跨行字符串）当场抓出；此后一律用**行首精确匹配**定位代码","斧正","补丁流程"
+) |> aurora_dt(caption="v3 变更清单：33 处斧正 · 23 处新增 · 10 处升级 · 4 处校对（共 70 项）", len = 70)
 ```
 
 ::: {.callout-warning}
@@ -548,6 +1008,433 @@ tibble::tribble(
 ```
 
 ---
+
+---
+
+# 术语与代号：鼠标悬停即释义 {#sec-glossary}
+
+> 本报告混用三套语言：统计学术语、博彩业行话、以及本项目的内部代号（`D-03S`、`L1a`、`IP-S6`…）。
+> 三套里任何一个词，**在全文任意位置把鼠标停在它上面，都会浮出解释**——
+> 解释一律写成两段：**这个词本身是什么** ＋ **在这份博彩风控方案里拿它干什么**。
+>
+> 实现方式是渲染后由脚本自动扫描正文并加注，**不需要在正文里逐处标记**；
+> 代码块与表头内的同名字符串不会被误伤。
+
+```{r}
+#| label: glossary-def
+#| echo: false
+## 术语库：名称 → 类别 / 一句话定义 / 在本方案的用途
+## 新增术语只改这里一处，正文与浮层同步生效
+GLOSSARY <- tibble::tribble(
+  ~术语, ~类别, ~定义, ~在本方案的用途,
+  # ── 统计推断 ────────────────────────────────────────────────
+  "p值","统计推断","在「没有真效应」的前提下，观察到当前或更极端结果的概率。**不是**「结论为真的概率」。",
+    "尾段 ROI 差、荷官关联异常都靠它判断「是不是碰巧」。p 小只说明碰巧的可能性低，**不等于经济上值得处置**——本报告一律再过一道经济核算。",
+  "Z-score","统计推断","实测值比期望值高出多少个标准差。Z=3 约对应千分之一的偶然概率。",
+    "R-03 判定「玩家在某荷官桌的胜率异常」的主指标。**必须按玩法各算各的基准**：庄 45.86%、和 9.48%、大 62.38%，混算必错。",
+  "Wilson 置信区间","统计推断","小样本比率的稳健区间估计，比常见的正态近似在样本少时准得多。",
+    "判断某玩家的胜率优势是不是样本太少造成的假象。局数 <30 时区间宽度 >0.15，此时任何阈值都无区分力。",
+  "自助法（Bootstrap）","统计推断","把手上的样本反复重抽，用重抽结果的分布来估计不确定性，不依赖正态假设。",
+    "回测净增益的 5% 分位就是这么来的。**上线判据用 5% 分位而非均值**——均值为正只是运气不差，分位为正才是稳。",
+  "BCa 校正","统计推断","自助法的偏差与偏度校正版，区间比裸百分位法更准。",
+    "尾段 ROI 差的五重检验之一。缺 boot 包时自动降级为百分位法并标注。",
+  "Newey-West 稳健标准误","统计推断","当观测在时间上自相关时，修正后的标准误。",
+    "日级序列相邻天高度相关，不修正会把显著性算得虚高。",
+  "双重差分（DiD）","因果推断","比较「受影响组」与「未受影响组」在干预前后的变化之差，剥离共同趋势。",
+    "估计退水弹性 η 与流失敏感度 β 的首选路径。没有它，赏罚幅度只能跑保守先验。",
+  "倾向得分匹配","因果推断","给每个处置对象找特征相近的未处置对照，近似随机实验。",
+    "业绩提升的因果验证：证明 GGR 上升是风控的功劳，不是季节或汇率。",
+  "辛普森悖论","统计陷阱","分层看结论一致，合并后结论反转。",
+    "尾段裁定的核心检验之一：整体看似有优势，分层后消失，即判为「未能证实」。",
+  "基准率谬误","统计陷阱","忽略事件本身极罕见，把高准确率误读成高可信度。",
+    "125 个正样本对 72 万会员——即便模型准确率 99%，命中名单里绝大多数仍是好客人。这就是误伤率必须单独设闸的原因。",
+  "多重比较","统计陷阱","同时检验很多假设时，总有几个「碰巧显著」。",
+    "阈值网格一扫几十格，不校正就会挑到运气最好的那一格。本报告用净化滚动回测的折间一致性来替代事后校正。",
+  # ── 模型评估 ────────────────────────────────────────────────
+  "AUC","模型评估","随机取一正一负，模型给正样本更高分的概率。0.5 为瞎猜。",
+    "竞技场排序用。**极不平衡数据下 AUC 天然偏高**，所以本报告一律并列 PR-AUC，且不用 AUC 对外宣称检测精度。",
+  "PR-AUC","模型评估","精确率-召回率曲线下面积。正样本极稀少时比 AUC 诚实得多。",
+    "125 个正样本的场景下，它才是真指标。",
+  "精确率 / 召回率","模型评估","精确率＝命中里有多少是真的；召回率＝真的里抓到多少。",
+    "精确率低＝误伤好客人（赔终身价值）；召回率低＝漏放套利团伙（赔当期漏损）。本方案偏向保精确率。",
+  "MASE","模型评估","模型误差 ÷ 朴素基线误差。<1 才算比「什么都不做」强。",
+    "全局评估纪律：本报告禁用裸 MAE，一切预测与策略都要跟朴素基线比。",
+  "夏普比率","风险调整收益","超额收益 ÷ 收益的总波动。衡量「赚得稳不稳」。",
+    "策略回测的收益质量指标。缺点是把「赚得多导致的波动」也当成风险罚掉。",
+  "索提诺比率","风险调整收益","超额收益 ÷ **下行**波动。只罚亏损那一侧的波动。",
+    "比夏普更贴风控场景：赢多了不该被罚。T2 技术型玩家判别的主指标——**技术型的指纹是输的时候不该输那么多**。",
+  "最大回撤","风险调整收益","从历史最高点跌到后续最低点的最大跌幅。",
+    "回测里代表「这套规则最坏时会连亏多少」，直接决定试运行期该准备多少缓冲预算。",
+  "CVaR（条件风险价值）","风险调整收益","最坏 5% 情形下的平均损失。比 VaR 多回答一句「破了线之后有多惨」。",
+    "CAS 指标的分母，对肥尾更稳健。",
+  "净化滚动回测","验证方法","按时间前后切折，切点附近的样本整块剔除（净化）并留出禁运期，再前推。",
+    "同一物理局横跨切点会把测试期信息泄漏进训练期。本报告净化整局、禁运 7 日。",
+  "禁运期（Embargo）","验证方法","训练窗结束后空出一段不用，避免结算与人工标记的滞后造成泄漏。",
+    "注单结算与風險單回填有延迟，7 日覆盖绝大部分。",
+  "样本内评估","验证陷阱","用训练时见过的数据评估自己。得到的是拟合优度，不是泛化能力。",
+    "军械库曾犯过一次（Regime Kernel），已改 70/30 留出。**这类错不报错，只安静给漂亮数字。**",
+  # ── 模型方法 ────────────────────────────────────────────────
+  "主成分分析（PCA）","模型方法","把相关的多个变量压成少数互不相关的主成分。",
+    "流水/洗码量/订单数三者相关系数常 >0.9，不正交化就会聚出「大户 vs 小户」而不是「风险 vs 正常」。",
+  "Isolation Forest","模型方法","用随机切分把样本孤立出来所需的次数衡量罕见度。越易孤立越异常。",
+    "T4 双闸之一，回答「这个人罕不罕见」。",
+  "Autoencoder","模型方法","让网络先压缩再还原，还原误差大的即为异常。",
+    "T4 的另一路无监督异常度。",
+  "PU-learning","模型方法","只有正样本与「未标记」样本（**不是负样本**）时的学习方法。",
+    "被查过的是正，没查过的**不等于清白**。当二分类硬训，模型学到的是「查没查过」。Elkan–Noto 校正解决这个。",
+  "XGBoost","模型方法","梯度提升树。表格数据上的常胜军。",
+    "竞技场冠军模型，产出风险分。",
+  "随机森林","模型方法","多棵去相关决策树投票。",
+    "挑战者模型，同时充当 PU-learning 的基学习器。",
+  "Cox 比例风险模型","生存分析","建模「还能活多久」，允许右删失（还没流失的人）。",
+    "估计会员预期剩余生命期 H——赏罚经济学里罚一刀值不值，全看 H 有多长。",
+  "随机生存森林（RSF）","生存分析","Cox 的非线性替代，天然处理交互。",
+    "H 的挑战者模型。",
+  "GRU","模型方法","门控循环网络，处理序列。",
+    "读会员逐日流水序列，回答「这个人的行为是不是在演变」。",
+    "Transformer","模型方法","自注意力网络。注意力权重可解释为「哪几步最关键」。",
+    "GRU 的挑战者，附带「哪几天最关键」的可解释输出。",
+  "隐马尔可夫模型（HMM）","模型方法","假设存在看不见的状态，观测由状态生成。",
+    "把会员行为解码为「常规 / 冲刷 / 收割」三态，为分状态阈值做准备。",
+  "Regime Kernel","模型方法","先用状态模型分段，再在每段内做核回归。",
+    "回答「场内状态切换时，风控阈值该不该换档」。",
+  "Nyström 近似","模型方法","用少量样本近似核矩阵，避免 n×n 爆内存。",
+    "核岭回归在 10 万行上直接算要 80GB，用它降到 MB 级。",
+  "贝叶斯层级模型","模型方法","让每个个体有自己的参数，同时向总体均值收缩。",
+    "**防小样本冤枉人**：只上过 3 天班的荷官，裸 Z-score 必然排在最前，那是噪声不是风险。收缩后榜首才是真异常。",
+  "收缩估计","模型方法","样本越少，估计越往总体均值拉。",
+    "同上。荷官与代理评分的必需环节。",
+  "蒙特卡洛","数值方法","反复随机抽样来估计一个难以解析求解的分布。",
+    "赏罚幅度 δ*、γ* 的上限就是这么算出来的：4,000 次抽样后取 5% 分位。",
+  "弹性","经济学","一个量变动 1% 时另一个量变动百分之几。",
+    "洗码量对退水的弹性 η、流失对下调幅度的敏感度 β——赏罚经济学的两个关键先验。",
+  "提升度（Lift）","关联分析","实测共现次数 ÷ 独立假设下的期望共现次数。",
+    "R-02 团伙同桌的去巧合校正。全场仅 30 张桌，两个夜班高频散客同桌率天然超 30%——那是鸽笼原理，不是团伙。**Lift≥3 才脱离巧合**。",
+  "Jaccard 系数","关联分析","交集 ÷ 并集。",
+    "同桌率的对照口径，避免活跃度差异大的两人被高估。",
+  "Louvain 社群检测","图论","按模块度最大化把网络切成社群。",
+    "把对打对连成网络，找出成规模的团伙链。",
+  "模块度","图论","社群划分质量，越高说明社群结构越明显。",
+    "0.309 表示社群结构存在但不算致密——解读时不可当成铁证。",
+  # ── 博彩业务 ────────────────────────────────────────────────
+  "GGR","博彩业务","博彩毛收入＝玩家总投注 − 总派彩。庄家赢到的钱。",
+    "本方案唯一该被最大化的对象的组成部分。",
+  "hold%（庄家毛利率）","博彩业务","GGR ÷ 投注额。百家乐理论值约 1.06%~1.24%。",
+    "规则有没有价值，看命中人群的 hold% 是否显著低于对照组。**命中一千人却挽不回漏损的规则一律不上线。**",
+  "洗码量（validbet）","博彩业务","计入退水的有效投注额。对押互抵的部分通常不计。",
+    "退水与占成的计算基数，也是打水套利的核心标的。",
+  "退水（rebate）","博彩业务","按洗码量返还给会员的比例。",
+    "罚项的主要抓手：下调 δ 个百分点。上限由经济核算给出，不是拍脑袋。",
+  "占成（commission）","博彩业务","代理按下线输赢分成的比例。",
+    "净贡献公式里的 κ。**曾长期缺失导致 γ* 偏大（赏得过头）**，现由 dailyreport 的 LV1~5 占成列补齐。",
+  "净贡献（NC）","博彩业务","(hold% − 退水率 − 占成率) × 洗码量。会员对平台的真实价值。",
+    "**净贡献率为负的会员，一分钱都不该赏**——这一条否掉了「大流水就是大客户」这个行业最贵的误解。",
+  "靴（shoe）","博彩业务","一副牌从洗好到用尽的整个周期，百家乐一靴约 60–80 把。",
+    "R-01 策略性风控的时间坐标。固定「第 50 把」在短靴是末段、长靴才中段，必须做相对靴位归一。",
+  "算牌 / ramping","博彩业务","靴末段剩余牌可数性提高，真数有利时把注额抬高数倍。",
+    "R-01 的真正指纹。**只统计「有没有晚下注」会丢掉全部信号强度**，必须看注额斜率。",
+  "对押（对打 / hedge）","博彩业务","同一局同时押庄与闲，把游戏输赢锁在接近零。",
+    "洗码套利的核心手法：游戏不输不赢，钱从退水与占成里出。判别必须等值匹配 Banker/Player。",
+  "打水","博彩业务","靠对押刷洗码量套取退水，而非靠赢钱获利。",
+    "T3 类型。**唯一可以靠改一个数字（退水档位）立刻止血的一类。**",
+  "免佣桌","博彩业务","庄家赢不抽 5% 佣金，改用其他规则补偿。",
+    "佣金模式会让金额符号整体翻转，对账时必须分开看。",
+  "限红 / 封盘","博彩业务","限制单注上限 / 提前停止接受下注。",
+    "R-01 的正确落点是**产品参数**而非账户处罚：对全体生效、可 A/B、可回滚，误伤成本远低于封号。",
+  # ── 本项目代号 ──────────────────────────────────────────────
+  "E1","项目代号","Superset 全量查询证据（139 天全窗口）。",
+    "最高效力证据。凡与 E2 冲突，一律以 E1 为准。",
+  "E2","项目代号","局部样本证据（上载 CSV 上限 10 万行且为 LIMIT 抽样）。",
+    "只可用于语义判读，**不可用于任何比例或阈值结论**。",
+  "L0 / L1a / L2b","项目代号","标签层级：L0 金标准（风控关注 IP 名单）、L1a 人工風險單/劃單、L2b 规则派生。",
+    "T4 扩样的种子必须混合来源，只用单一层会让模型学到那条规则本身。",
+  "D-03R / D-03S","项目代号","日级 ROI 对照导出：R 为原始口径、S 为剔返水口径。",
+    "尾段五重显著性检验的输入。**主口径一律用 S（剔返水）**——退水会制造伪盈利。",
+  "D-06","项目代号","玩家尾段十一项指标导出（S_player_tail.csv）。",
+    "尾段裁定与八维能力值的底料。",
+  "C-02 / C-06","项目代号","C-02 同 IP 玩家与汇总；C-06 同 IP 对打对与对冲覆盖。",
+    "T1 同 IP 盈利与 T3 对押率的来源。C-06 曾因玩法判别不匹配返回零行，已校准。",
+  "R-01 / R-02 / R-03","项目代号","三条风控需求：靴末段下注 / 团伙同桌 / 玩家×荷官。",
+    "业务方直接提出的三条线，也是 T4 种子的三路来源。",
+  "T1 / T2 / T3 / T4","项目代号","四类风险用户：同IP盈利 / 技术型 / 打水型 / 聚类扩散。",
+    "T1–T3 是判别问题，T4 是扩样问题，处置落点各不相同。",
+  "DX-01","项目代号","玩法编码全量普查诊断查询。",
+    "确认 bet09 为英文玩法名，共 23 种。凡涉及庄闲判别的查询跑之前必做。",
+  "IP-S6 / IP-S8","项目代号","异常 IP 的对押类与结构类判据编号。",
+    "同 IP 处置的证据编号，供人工复核追溯。",
+  "AX-A5","项目代号","风控员在 alert_ip_setting 备注栏写下的判定原话编号。",
+    "唯一的人类专家先验，量化规则应向它对齐而非取代它。",
+  # ── 玩法（bet09 的 23 种取值，DX-01 实测）──────────────────
+  "Banker","玩法·主线","押庄。庄赢派彩 1:0.95（抽 5% 佣金），理论庄家优势约 1.06%。",
+    "对押判别的正方向。**正常胜率约 45.86%**（和局退还不计入胜负），是 R-03 的 Z-score 基准之一。",
+  "Player","玩法·主线","押闲。闲赢派彩 1:1，理论庄家优势约 1.24%。",
+    "对押判别的反方向。押庄+押闲同局同额 = 完美对冲，即打水的标准手法。",
+  "Tie","玩法·和局","押和。通常 1:8，理论庄家优势高达约 14.4%。",
+    "**正常胜率仅约 9.48%**。若与庄闲同用一条 70% 胜率线，押和的玩家会永久免检——这是废除统一 70% 门槛的直接理由。",
+  "Big","玩法·边注","押本局总发牌数为「大」（5~6 张），理论庄家优势约 4.3%。",
+    "**正常胜率约 62.38%**，是 23 种玩法里最高的之一。统一 70% 门槛对它而言只差 7.6 个百分点，稍有波动就误伤——与 Tie 恰成两端，共同证明胜率门槛必须按玩法分设。",
+  "Small","玩法·边注","押本局总发牌数为「小」（4 张），理论庄家优势约 5.3%。",
+    "与 Big 互补。参与人数仅 729 人，个体行为极易识别。",
+  "BPair / PPair","玩法·边注","押庄对 / 闲对（首两张同点数），通常 1:11，庄家优势约 10.4%。",
+    "高波动边注。打水者几乎不碰——因为它无法与主线构成对冲，反而放大方差。",
+  "Super6","玩法·边注","免佣桌配套：庄以 6 点赢时减半派彩或另设赔率。",
+    "佣金模式判读要点：免佣桌的金额符号规则与一般桌不同，对账时必须分开看。",
+  "Lucky7 / SuperLucky7","玩法·边注","押特定点数或牌型组合的高赔率边注。",
+    "合计约 753 万注单，属主流边注。玩法偏好熵的重要构成。",
+  "DragonBonus（龙宝）","玩法·边注","押赢方点数差达到门槛，按差值梯度赔付。",
+    "★ 名称含 Banker/Player，`LIKE %BANK%` 会把它误纳为主线庄——它与主线**不构成对冲关系**，混入会产出偏高的对押率。判别必须等值匹配。",
+  "Natural（天牌）","玩法·边注","押某方前两张即成 8 或 9 点。",
+    "★ 同样含 Banker/Player 字样，同一个误纳陷阱。",
+  "PerfectPair","玩法·边注","押完全相同的一对（同点同花），庄家优势约 17.1%。",
+    "仅 1,779 人参与，庄家优势最高的玩法之一。参与者集中度高，适合做小样本个体画像。",
+  "AnyPair","玩法·边注","押任意一方成对，庄家优势约 6.2%。",
+    "参与 1,574 人，量级与 PerfectPair 相当。",
+  # ── 本轮补入（读者点名要求）────────────────────────────────
+  "下行标准差","风险调整收益","只统计低于目标收益那一侧的波动，$\\sigma^-=\\sqrt{\\frac1T\\sum\\min(r_t-r_f,0)^2}$。",
+    "索提诺比率的分母。**赢多了不该被罚**——这正是它比夏普更贴风控场景的原因。",
+  "CAS（CVaR-Adjusted Sortino）","风险调整收益","把索提诺的分母由下行标准差换成 CVaR，对肥尾更稳健。",
+    "T2 技术型判别的备选口径。本方案**首次引入**，尚无历史基线，上线首期须与索提诺率并列观察。",
+  "Cochran's Q","统计推断","配对二分类结果在 k 个条件下是否一致的检验（McNemar 的多组推广）。",
+    "多折/多口径下「命中与否」是否一致：若 Q 显著，说明规则在不同时段表现不稳，不可上线。",
+  "Levene 检验","统计推断","检验多组之间**方差是否齐性**，对非正态比 Bartlett 稳健。",
+    "各玩法胜率的波动是否可比。方差不齐 = 不能共用一条胜率门槛，这是废除统一 70% 的统计依据之一。",
+  "二项检验","统计推断","在给定成功概率下，观测成功次数是否显著偏离期望。",
+    "小样本玩家胜率是否异常的精确检验；样本少到 Z 近似失效时用它兜底。",
+  "CPCV 多路径分布","验证方法","组合式净化交叉验证：把时间切块后组合出多条互不重叠的路径，得到**一整个**绩效分布而非单一数字。",
+    "单条回测路径只给一个点估计，容易被运气主导。多路径分布才看得出策略稳不稳。",
+  "Deflated（缩水）思想","验证陷阱","按**尝试过的策略数量**折减夏普/显著性——试得越多，最好那个越可能是运气。",
+    "阈值网格一扫几十格，不做缩水就会挑到运气最好的一格。本方案用折间一致性替代事后校正。",
+  "OOT（Out-of-Time）","验证方法","用训练期之后的时间段做检验，而非随机切分。",
+    "风控模型必须 OOT 验证：随机切分会让未来信息渗进训练，线上表现必然低于回测。",
+  "闸","本方案用语","一道必须通过的判据；多闸串联构成漏斗，全过才进入下一步。",
+    "R-01 三闸、上线四闸、T4 双闸——**任一不过即退回**，不接受「先上再调」。",
+  "风险维度","本方案用语","18 指标框架的六个大类：串谋、策略性投注、荷官关联、系统标记、多维重叠、财务风险。",
+    "每个维度独立打分再合成，避免单一信号主导；多维重叠是最高置信层。",
+  "抗极端值","统计性质","估计量不被少数极端观测拖走的性质（如中位数、分位数、Winsorize）。",
+    "博彩流水极端右偏，前 1% 会员可占三成流水。评分一律走**分位归一**而非原值，就是为此。",
+  "阈值","本方案用语","把连续指标切成「处置 / 不处置」的那条线。",
+    "本方案的阈值一律**由训练窗分位数算出**、逐折重估，绝不写死——写死的阈值既无法回测，也无法证明它比朴素做法强。"
+) |> dplyr::distinct(术语, .keep_all = TRUE)
+```
+
+
+## 字段代号词典：`bet13`、`gi013`、`mem003` 各是什么 {#sec-fieldcode}
+
+> 库内表一律用 `betNN` / `giNNN` / `memNNN` / `ageNNN` 这类代号，字面上完全看不出含义。
+> 本节把用到的代号一次列全，并**并入术语库**——全文任何位置悬停代号即出释义。
+
+```{r}
+#| label: fieldcode-def
+#| echo: false
+FIELDCODE <- tibble::tribble(
+  ~代号, ~所在表, ~业务含义, ~在本方案的用途,
+  # ── bet02 注单表 ────────────────────────────────────────────
+  "bet01","bet01/bet02","注单号（两表同键）","去重主键：同单号取 `updatetime` 最新那版",
+  "bet02","bet02","遊戲編號（`101` = 百家乐）","**产品口径过滤器**。全文只取 101，覆盖面见 `§DX-05`",
+  "bet03","bet02","靴號","靴/局坐标之一。R-01 的相对靴位、局级去重都靠它",
+  "bet04","bet02","靴內局序","R-01「第 50 把」的直接依据；与 bet03 合成 round_key",
+  "bet05","bet02","會員編號","会员主键。全库唯一的玩家标识",
+  "bet08","bet02","下注時間","尾秒判据、夜段占比、时间一致性核验",
+  "bet09","bet02","玩法（英文名，23 种）","对押判别、玩法基准胜率、玩法偏好熵。**必须等值匹配**",
+  "bet10","bet02","幣別","多币种平台的换算前提",
+  "bet11","bet02","匯率","**所有金额一律除以它**才可跨币种相加。漏除即金额错到不可用",
+  "bet13","bet02","下注金額（本金）","投注额、注额斜率、注额变异系数",
+  "bet14","bet02","派彩金額","游戏输赢 = bet14 − bet13（**剔返水口径**）",
+  "bet15","bet02","會員退水%數","配置比率，与 bet16 的金额口径不同，勿混用",
+  "bet16","bet02","退水金額","T3 打水型的核心：返水依赖度、返水净漏损",
+  "bet17","bet02","淨輸贏","含返水的账户口径。与游戏输赢并列使用，判别打水",
+  "bet18~bet22","bet02","LV1~LV5 代理線 ID","**测试线剔除**、单链密度、代理评分",
+  "bet23~bet27","dailyreport","LV1~LV5 占成","`@sec-econ` 的 κ。补齐它之前净贡献率系统性偏乐观",
+  "bet28~bet32","dailyreport","LV1~LV5 退水","分层退水成本，与会员退水分开核算",
+  "bet38","bet02","重對標記（`N` = 非重对）","有效注单口径的组成部分",
+  "bet39","bet02","桌號","同桌判据、桌台多样性、限红落点",
+  "bet41","dailyreport","有效投注（洗码量）","退水与占成的计算基数",
+  "validbet","bet02","有效投注（注单级）","同上，注单粒度",
+  "category","bet02","`1` 一般 / `2` 小費","小费单必须剔除，否则胜率基准被污染",
+  "eid","bet02","荷官工號","R-03 玩家×荷官关联的主键",
+  "ip","bet02","下注時 IP","T1 同 IP 判据。**注意与登录日志的网关 IP 不同**",
+  # ── game_info 局表 ──────────────────────────────────────────
+  "gi001","game_info","局主鍵","局级对账基准",
+  "gi002","game_info","靴號（对 bet03）","局表与注单表的连接键之一",
+  "gi003","game_info","局序（对 bet04）","同上",
+  "gi004","game_info","桌號（对 bet39）","同上",
+  "gi005","game_info","開局時間","封盘代理口径的起点",
+  "gi006","game_info","局狀態","剔除异常局（作废/重开）",
+  "gi009","game_info","開牌/結算時間","尾秒判据的时间基准",
+  "gi010","game_info","局結束時間","局时长、封盘时点推断",
+  "gi011","game_info","荷官/桌台關聯欄","荷官当值归属的交叉验证",
+  "gi013","game_info","局層級標記欄","局级去重与对账的辅助标记；**语义待业务确认**，本报告未据它下任何结论",
+  "is_lock","game_info","封盤標記","封盘时点的直接依据",
+  # ── member_dtl 会员档案 ─────────────────────────────────────
+  "mem001","member_dtl","會員 ID（对 bet05）","会员档案与注单的连接键",
+  "mem002","member_dtl","類別","会员分层的原始字段",
+  "mem003","member_dtl","退水（配置檔位）","`§E02b` 配置档位版分群。本报告主用**实测退水率**替代",
+  "mem004~mem008","member_dtl","LV1~LV5 代理 ID","代理归属的档案侧口径，与注单侧 bet18~22 交叉校验",
+  "mem009 / mem010","member_dtl","最大押分","限红落点：R-01 的产品侧处置就改它",
+  "mem012 / mem014","member_dtl","最大可贏 / 最大可輸金額","风控阈值的档案侧配置",
+  "mem015","member_dtl","新版限額","限红分层的新口径",
+  "mem016","member_dtl","電投退水","电投渠道单独计价，与 mem003 分开",
+  # ── agent 代理树 ────────────────────────────────────────────
+  "age001","agent","代理 ID","与 bet18~22 连接",
+  "age022","agent","測試線標記（`1` = 公司测试）","**每一条查询都用它剔除 214 条测试线代理**",
+  # ── dailyreport 人工标签 ────────────────────────────────────
+  "risk","dailyreport","風險單（`1` = 是）","L1a 人工标签，T4 种子来源①。varchar 承载，须 `CAST` 后比 1",
+  "orders","dailyreport","劃單（`1` = 是）","同上"
+)
+FIELDCODE |> aurora_dt(caption = glue::glue(
+  "字段代号词典（{nrow(FIELDCODE)} 条；全文悬停代号即出释义）"), len = 15)
+```
+
+```{r}
+#| label: fieldcode-merge
+#| echo: false
+## 并入术语库：代号与术语共用同一套浮层，新增代号只改上面一处
+GLOSSARY <- dplyr::bind_rows(
+  GLOSSARY,
+  FIELDCODE |> dplyr::transmute(
+    术语 = 代号, 类别 = paste0("字段代号·", 所在表),
+    定义 = 业务含义, 在本方案的用途 = 在本方案的用途)) |>
+  dplyr::distinct(术语, .keep_all = TRUE)
+tibble::tibble(
+  合并后术语总数 = nrow(GLOSSARY),
+  其中字段代号 = nrow(FIELDCODE),
+  说明 = "浮层脚本在下一个 chunk 注入，读取的就是合并后的这份 GLOSSARY") |>
+  aurora_kb(caption = "术语库合并")
+```
+
+```{r}
+#| label: glossary-inject
+#| echo: false
+#| results: asis
+## 把术语库注入页面：CSS 悬停浮层 + 自动加注脚本
+## 脚本只扫描正文段落/表格单元格/列表，**跳过 pre / code / script / 标题锚点**，
+## 且每个术语在每个小节只标注首次出现，避免满屏下划线。
+gj <- paste0("{", paste(sprintf('"%s":%s',
+  gsub('"', '\\\\"', GLOSSARY$术语),
+  sprintf('"%s"', gsub('"', '\\\\"', gsub("[\r\n]+", " ",
+    paste0("【", GLOSSARY$类别, "】", GLOSSARY$定义, "　▸ 本方案用途：", GLOSSARY$`在本方案的用途`))))),
+  collapse = ","), "}")
+JS_A <- '
+<style>
+.gl-tip{border-bottom:1px dotted var(--ac,#22d3ee);cursor:help;position:relative;}
+.gl-tip::after{content:attr(data-tip);position:absolute;left:0;top:1.5em;z-index:9999;
+  /* ★ 随浏览器宽窄自动换行：宽屏最多 46rem，窄屏留 2rem 边距，绝不横向溢出 */
+  width:max-content;max-width:min(46rem,calc(100vw - 2rem));
+  padding:.7rem .9rem;border-radius:8px;font-size:.86rem;
+  line-height:1.55;font-weight:400;text-align:left;white-space:normal;
+  word-break:break-word;overflow-wrap:anywhere;hyphens:auto;
+  background:linear-gradient(135deg,rgba(8,36,60,.99),rgba(11,61,58,.99));
+  color:#e7fbf3;border:1px solid rgba(34,211,238,.55);
+  box-shadow:0 10px 32px rgba(0,0,0,.55);opacity:0;visibility:hidden;
+  transition:opacity .14s ease;pointer-events:none;}
+.gl-tip:hover::after{opacity:1;visibility:visible;}
+/* 靠右时右对齐展开；靠下时向上展开 */
+.gl-tip.gl-right::after{left:auto;right:0;}
+.gl-tip.gl-up::after{top:auto;bottom:1.5em;}
+</style>
+<script>
+(function(){
+  const GL = '
+JS_B <- ';
+  const terms = Object.keys(GL).sort((a,b)=>b.length-a.length);
+  /* CODE 已移出跳过名单：字段代号（bet13/gi013/mem003…）几乎都写在行内代码里，
+     不放行就等于这批代号永远没有浮层。PRE（代码块）仍然跳过，保住可复制性。 */
+  const SKIP = new Set(["PRE","SCRIPT","STYLE","TEXTAREA","A","H1","H2","H3","H4",
+                        "CAPTION","TH","OPTION","BUTTON","SUMMARY"]);
+  document.addEventListener("DOMContentLoaded", function(){
+    const scope = document.querySelector("main") || document.body;
+    const secs = scope.querySelectorAll("section, div.callout, table");
+    const targets = secs.length ? secs : [scope];
+    targets.forEach(function(sec){
+      const done = new Set();
+      const walker = document.createTreeWalker(sec, NodeFilter.SHOW_TEXT, {
+        acceptNode: function(n){
+          let p = n.parentNode;
+          while(p && p !== sec){ if(SKIP.has(p.tagName) || (p.classList &&
+            p.classList.contains("gl-tip"))) return NodeFilter.FILTER_REJECT; p = p.parentNode; }
+          return n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }});
+      const nodes = []; while(walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(function(node){
+        /* ★ 2026-08-07 斧正：旧版在**字符串上**做 replace，第二个术语的正则会命中
+           第一个术语已生成的 data-tip 属性内部 → 把 span 注入到属性值里 →
+           页面出现 【项目代号】... 凡与 <span class= 这类残片。
+           新版全程走 DOM API：先在原始文本上算出互不重叠的命中区间，
+           再用 createTextNode / setAttribute 拼装。属性值由浏览器自行转义，
+           结构上不可能再被注入。 */
+        const txt = node.nodeValue;
+        const hits = [];
+        terms.forEach(function(t){
+          if(done.has(t)) return;
+          const i = txt.indexOf(t);
+          if(i >= 0) hits.push({t: t, i: i});
+        });
+        if(!hits.length) return;
+        hits.sort(function(a,b){ return a.i - b.i || b.t.length - a.t.length; });
+        const picked = []; let last = -1;
+        hits.forEach(function(h){
+          if(h.i >= last){ picked.push(h); last = h.i + h.t.length; done.add(h.t); }
+        });
+        if(!picked.length) return;
+        const frag = document.createDocumentFragment();
+        let pos = 0;
+        picked.forEach(function(h){
+          if(h.i > pos) frag.appendChild(document.createTextNode(txt.slice(pos, h.i)));
+          const sp = document.createElement("span");
+          sp.className = "gl-tip";
+          sp.setAttribute("data-tip", GL[h.t]);
+          sp.textContent = h.t;
+          frag.appendChild(sp);
+          pos = h.i + h.t.length;
+        });
+        if(pos < txt.length) frag.appendChild(document.createTextNode(txt.slice(pos)));
+        node.parentNode.replaceChild(frag, node);
+      });
+    });
+    /* ★ 浮层方位自适应：靠近右缘时翻到左侧展开，靠近底部时向上展开，
+       否则窄屏或右列的浮层会被视口切掉一半。绑在 mouseenter 上实时算。 */
+    document.body.addEventListener("mouseover", function(ev){
+      const t = ev.target;
+      if(!t || !t.classList || !t.classList.contains("gl-tip")) return;
+      const r = t.getBoundingClientRect();
+      t.classList.toggle("gl-right", r.left > window.innerWidth * 0.55);
+      t.classList.toggle("gl-up",    r.top  > window.innerHeight * 0.60);
+    }, true);
+  });
+})();
+</script>
+'
+## ★ 2026-08-07 二次斧正：上一版在单引号 R 字符串里写了 'PLACEHOLDER_GL'，
+##   内部的单引号把 R 字符串提前关掉 → knitr parse 报「意外的符号」。
+##   现改为**两段拼接、无占位符**：JS_A 以 `const GL = ` 收尾，JS_B 以 `;` 起头，
+##   中间直接插 JSON。两段内部一律只用双引号，杜绝同类型引号自相关闭。
+## ★ 用 Quarto 规范的 raw-html 围栏包住：裸 raw HTML 块在 Pandoc 里遇空行即终止，
+##   边界由启发式决定；显式围栏则边界确定，不会与 knitr 的 cell 包裹互相干扰。
+## ★ 源码里**不写**连续三个反引号：编辑器的围栏分词器不认 R 引号，
+##   行内出现连续三个反引号会让它从此错位，之后所有 chunk 都拿不到代码透镜。
+##   用 strrep() 在运行时拼出来，行为完全一致，编辑器却看不到围栏。
+FENCE <- strrep("`", 3L)
+cat("\n", FENCE, "{=html}\n", JS_A, gj, JS_B, "\n", FENCE, "\n", sep = "")
+```
+
+```{r}
+#| label: glossary-table
+#| echo: false
+GLOSSARY |>
+  dplyr::mutate(释义 = paste0("**", 定义, "**<br>▸ ", `在本方案的用途`)) |>
+  dplyr::select(术语, 类别, 释义) |>
+  aurora_dt(caption = glue::glue(
+    "术语与代号总表（{nrow(GLOSSARY)} 条；全文任意位置悬停同名词即浮出同一段解释）"),
+    len = 15)
+```
+
+::: {.callout-note}
+## 加注规则（免得满屏虚线）
+
+- **每个术语在每个小节只标注首次出现**，同一节里后续出现不再加下划线。
+- **代码块、行内代码、标题、链接内不加注**——避免破坏 `bet09` 这类字段名的可复制性。
+- 新增术语只改 `glossary-def` 一处，正文浮层与总表同步生效，不需要在正文里逐处标记。
+:::
 
 # 证据效度边界：局部样本 vs 全局查询 {#sec-evidence-tier}
 
@@ -826,35 +1713,64 @@ tibble::tribble(
 
 ```{r}
 #| label: tail-significance
-#| eval: TRUE
+## ★ 斧正（2026-08-07）：本块原先直接 readr::read_csv + t.test，
+##   文件缺位或行数不足时抛「'x'观察值数量不足」并**中断整份渲染**。
+##   现改为 need_data 前置校验 + 逐项独立降级：
+##   缺包只跳过该项检验，其余四项照出；样本不足则如实说明，不硬算。
+if (need_data(D$d03s, "五重检验", c("roi_diff", "vb_tail"))) guard({
+  d <- D$d03s |> dplyr::mutate(dplyr::across(
+        dplyr::any_of(c("roi_diff","vb_tail","vb_norm","roi_tail","roi_norm","n_rounds")),
+        ~suppressWarnings(as.numeric(.x))))
+  d <- d[is.finite(d$roi_diff), , drop = FALSE]
+  NMIN <- 3L                                    # t 检验的绝对下限
+  if (nrow(d) < NMIN) {
+    tibble::tibble(
+      状态 = "样本不足，五重检验暂不执行",
+      有效日数 = nrow(d),
+      要求 = glue::glue("roi_diff 至少需 {NMIN} 个有限值（正式裁定建议 ≥30 日）"),
+      怎么办 = "核对 D-03S 导出是否被行数上限截断，或 roi_diff 列是否整列为 NULL") |>
+      aurora_kb(caption = "尾段 roi_diff 五重显著性检验：样本不足")
+  } else {
+    val <- function(expr) tryCatch(expr, error = function(e) NA_real_)
+    ## ① 单样本 t 检验（日为独立单元）
+    tt_p   <- val(stats::t.test(d$roi_diff, mu = 0)$p.value)
+    ## ② Bootstrap BCa 置信区间（不依赖正态假设）；缺 boot 包则降级为百分位法
+    if (HAS[["boot"]] && nrow(d) >= 10) {
+      bc  <- val(timed("BCa 自助法 5000 次",
+                       boot::boot(d$roi_diff, function(x, i) mean(x[i]), R = 5000)))
+      cib <- if (inherits(bc, "boot"))
+               val(boot::boot.ci(bc, type = "bca", conf = .95)$bca[4:5]) else NA_real_
+      if (length(cib) != 2 || anyNA(cib)) cib <- NA_real_
+    } else cib <- NA_real_
+    if (length(cib) != 2) {                     # 降级：普通百分位自助法
+      set.seed(20260807)
+      bs  <- replicate(2000, mean(sample(d$roi_diff, nrow(d), replace = TRUE)))
+      cib <- as.numeric(stats::quantile(bs, c(.025, .975), na.rm = TRUE))
+      ci_note <- "百分位自助法（boot 包缺位或样本 <10，已降级）"
+    } else ci_note <- "BCa 校正自助法"
+    ## ③ 按 vb_tail 加权的均值（避免小日主导）
+    w_mean <- if ("vb_tail" %in% names(d) && any(is.finite(d$vb_tail)))
+                val(stats::weighted.mean(d$roi_diff, w = d$vb_tail, na.rm = TRUE)) else NA_real_
+    ## ④ Newey-West 稳健标准误（日序列存在自相关）
+    nw_p <- if (requireNamespace("lmtest", quietly = TRUE) &&
+                requireNamespace("sandwich", quietly = TRUE))
+              val(lmtest::coeftest(stats::lm(roi_diff ~ 1, data = d),
+                                   vcov. = sandwich::NeweyWest)[1, 4]) else NA_real_
+    ## ⑤ 符号一致性检验（多少天为正）
+    bt_p <- val(stats::binom.test(sum(d$roi_diff > 0), nrow(d), p = .5)$p.value)
 
-## D-03S 输出：bet_date, n_rounds, vb_tail, vb_norm, roi_tail, roi_norm, roi_diff
-d <- readr::read_csv(file.path(DATA_DIR, "D03S_daily_roi_diff.csv"), show_col_types = FALSE)
-
-## ---- ① 单样本 t 检验（日为独立单元）--------------------------------
-tt <- stats::t.test(d$roi_diff, mu = 0)
-
-## ---- ② Bootstrap BCa 置信区间（不依赖正态假设）---------------------
-bc <- boot::boot(d$roi_diff, function(x, i) mean(x[i]), R = 5000)
-ci <- boot::boot.ci(bc, type = "bca", conf = 0.95)
-
-## ---- ③ 按 vb_tail 加权的均值（避免小日主导）------------------------
-w_mean <- stats::weighted.mean(d$roi_diff, w = d$vb_tail)
-
-## ---- ④ Newey-West 稳健标准误（日序列存在自相关）--------------------
-nw <- lmtest::coeftest(lm(roi_diff ~ 1, data = d),
-                       vcov. = sandwich::NeweyWest)
-
-## ---- ⑤ 符号一致性检验（多少天为正）--------------------------------
-bt <- stats::binom.test(sum(d$roi_diff > 0), nrow(d), p = 0.5)
-
-tibble::tibble(
-  检验 = c("t 检验 p 值", "Bootstrap BCa 下界", "Bootstrap BCa 上界",
-           "加权均值", "Newey-West p 值", "正向天数占比", "符号检验 p 值"),
-  取值 = c(tt$p.value, ci$bca[4], ci$bca[5], w_mean,
-           nw[1, 4], mean(d$roi_diff > 0), bt$p.value)
-) |> aurora_kb(digits = 6,
-  caption = "尾段 roi_diff 的五重显著性检验")
+    fmt <- function(x) if (is.na(x)) "⬜ 未执行（缺包或不适用）" else format(round(x, 6), nsmall = 6)
+    tibble::tibble(
+      检验 = c("有效日数", "t 检验 p 值", "自助法 95% 下界", "自助法 95% 上界",
+               "自助法口径", "洗码量加权均值", "Newey-West p 值",
+               "正向天数占比", "符号检验 p 值"),
+      取值 = c(as.character(nrow(d)), fmt(tt_p), fmt(cib[1]), fmt(cib[2]),
+               ci_note, fmt(w_mean), fmt(nw_p),
+               fmt(mean(d$roi_diff > 0, na.rm = TRUE)), fmt(bt_p))) |>
+      aurora_kb(caption = glue::glue(
+        "尾段 roi_diff 五重显著性检验（{nrow(d)} 个营业日；五者不一致即按预注册规则裁定「未能证实」）"))
+  }
+}, "五重检验") else ph_out("五重检验")
 ```
 
 ::: {.callout-note}
@@ -1646,7 +2562,7 @@ DT::datatable(tibble::tribble(
   ~编号, ~需求要点, ~实现, ~状态,
   "§2.1-1","20个账户处于分布什么位置","@sec-ip-dist","✅",
   "§2.1-2","最小订单数才算有效关联","@sec-ip-eff","✅",
-  "§2.1-3","该IP盈利 vs 全平台盈利","@sec-ip-ver 版本A/B/**C**","✅补C",
+  "§2.1-3","该IP盈利 vs 全平台盈利","@sec-ip-agg 版本A/B/**C**","✅补C",
   "§2.1-4","盈利比例 70/80/90/100%","@sec-ip-grid","✅",
   "§2.1-5","各阈值工作量","@sec-ip-grid","✅",
   "§2.1-6","跨月是否稳定","@sec-persist","✅",
@@ -1655,7 +2571,7 @@ DT::datatable(tibble::tribble(
   "§2.2-3","各秒段胜率盈利ROI差异","@sec-sec-dist","⚠️同上",
   "§2.2-4","第29秒是真异常还是基准如此","@sec-29s","✅**含在线人数基准**",
   "§2.2-5","多少局数才稳定","@sec-stability","✅Wilson CI",
-  "§2.2-6","占比多少算持续性","@sec-tail-share","✅",
+  "§2.2-6","占比多少算持续性","@sec-tail-grid","✅",
   "§2.2-7","胜率/胜率差门槛","@sec-tail-grid","✅",
   "§2.2-8","正常亏尾秒赢+跨月","@sec-strong","✅",
   "§3.1","仅101 / 物理局键三段","@sec-contract","✅补bet39",
@@ -2043,7 +2959,7 @@ if (need_data(D$ip_agg, "版本ABC",
     C_命中IP=sum(x$rate_C>=p & x$n_member_eff>=5, na.rm=TRUE),
     `B独有(疑洗码致伪)`=sum(x$rate_B>=p & x$rate_C<p & x$n_member_eff>=5, na.rm=TRUE),
     `A∩B∩C`=sum(x$rate_A>=p & x$rate_B>=p & x$rate_C>=p, na.rm=TRUE))) |> aurora_kb(caption="§4.2 + D5：三版本盈利口径对照（★ B独有 = 返水制造的伪盈利）")
-}, "版本ABC")
+}, "版本ABC") else ph_out("版本ABC")
 ```
 
 ::: {.callout-tip}
@@ -2074,7 +2990,7 @@ if (need_data(D$ip_player, "最小订单数",
       `n_eff≥5的IP数`=sum(agg$n_eff>=5),
       `盈利比例方差`=round(var(agg$rate_C,na.rm=TRUE),5),
       说明=ifelse(m<10,"方差高，小样本噪声主导",""))}) |> aurora_kb(caption="§2.1-2 最小订单数敏感度：噪声随门槛下降而收敛")
-}, "最小订单数")
+}, "最小订单数") else ph_out("最小订单数")
 ```
 
 **判据**：取盈利比例方差**开始平稳**的门槛。低于该点时，
@@ -2100,7 +3016,7 @@ if (need_data(D$ip_agg, "关联数定位", c("n_member_eff"))) guard({
       占全部IP比=scales::percent(vapply(k, function(v) mean(x$n_member_eff>=v),0),
                                  accuracy=0.001)) |> aurora_kb(caption="§2.1-1 关联玩家数分布定位（★ 20 的位置）")
   }
-}, "关联数定位")
+}, "关联数定位") else ph_out("关联数定位")
 ```
 
 ## 候选阈值组合（需求 §4.4） {#sec-ip-grid}
@@ -2143,7 +3059,7 @@ if (need_data(D$ip_player, "IP网格",
       关联玩家数Max=suppressWarnings(max(r$hit$n_eff)))})) |>
     DT::datatable(options=list(pageLength=20),
       caption="§4.4 阶段一 · 单因素影响（版本C口径）")
-}, "IP网格")
+}, "IP网格") else ph_out("IP网格")
 ```
 
 ::: {.callout-important}
@@ -2325,7 +3241,7 @@ if (need_data(D$player_tail, "强特征",
              round(sum(s$tail_game_pnl,na.rm=TRUE),0),
              round(stats::median(s$tail_roi,na.rm=TRUE),4))) |> aurora_kb(caption="§5.4 强特征：尾段游戏盈利>0 且 正常时段游戏盈利≤0")
   }
-}, "强特征")
+}, "强特征") else ph_out("强特征")
 ```
 
 **极端订单主导性诊断（需求 §5.4 末项）**：Top1/Top5/Top10 订单盈利占比、Gini、
@@ -2358,7 +3274,7 @@ if (need_data(D$player_tail, "尾段网格",
       尾段ROI=round(sum(h$tail_game_pnl,na.rm=TRUE)/
                     pmax(sum(h$tail_stake,na.rm=TRUE),1e-9),4))})) |>
     DT::datatable(options=list(pageLength=20), caption="§5.4 阶段一 · 单因素影响")
-}, "尾段网格")
+}, "尾段网格") else ph_out("尾段网格")
 ```
 
 ::: {.callout-note}
@@ -2459,7 +3375,7 @@ if (need_data(D$player_tail, "能力值",
     CAP=cap_score(tail_stake), TIM=cap_score(tail_share*pmax(winrate_diff,0)),
     EFF=cap_score(tail_roi),   PER=cap_score(n_rounds_tail)) |>
     utils::head(10) |> aurora_kb(caption="能力值示例（完整八维需 join 各章产出）")
-}, "能力值")
+}, "能力值") else ph_out("能力值")
 ```
 
 ::: {.callout-note}
@@ -2668,7 +3584,7 @@ if (need_data(D$r01, "策略性风控", COLS_R01)) guard({
   dplyr::bind_rows(econ(g1, gates$闸门[1]), econ(g2, gates$闸门[2]), econ(g3, gates$闸门[3])) |>
     aurora_kb(caption = paste0(
       "R-01 三闸漏斗：命中人数 vs 经济量级（庄家 hold% 为负=这群人在赢庄家）"))
-}, "策略性风控")
+}, "策略性风控") else ph_out("策略性风控")
 ```
 
 ```{r}
@@ -2708,7 +3624,7 @@ if (need_data(D$r01, "策略性风控", c("late_share","roi_late","roi_early","s
                scales::percent(ci[[3]], accuracy=0.01), verdict)) |>
       aurora_kb(caption="R-01 经济裁定：规则命中组是否真的在吃庄家（1,000 次自助重抽）")
   }
-}, "策略性风控")
+}, "策略性风控") else ph_out("策略性风控")
 ```
 
 ::: {.callout-tip}
@@ -2855,7 +3771,7 @@ if (need_data(D$r02, "团伙同桌", COLS_R02)) guard({
         TRUE          ~ "🎯 高置信，优先调查"))
   }) |> aurora_dt(caption = "R-02 阈值网格：裸同桌率 × 提升度（Lift 才是去巧合后的真信号）",
                   len = 16)
-}, "团伙同桌")
+}, "团伙同桌") else ph_out("团伙同桌")
 ```
 
 ```{r}
@@ -2891,7 +3807,7 @@ if (need_data(D$r02, "团伙同桌", c("uid1","uid2","same_rate","lift"))) guard
           "共 {length(sz)} 个社群 / {igraph::vcount(g)} 名会员）"))
     }
   }
-}, "团伙同桌")
+}, "团伙同桌") else ph_out("团伙同桌")
 ```
 
 ::: {.callout-tip}
@@ -3060,7 +3976,7 @@ if (need_data(D$r03, "荷官关联", COLS_R03)) guard({
     rule(d4, "★ 本报告加严：Z≥4 且 该荷官下胜率高出其他荷官 ≥10pp",
              "🚨 最高置信：异常确实集中于该荷官")) |>
     aurora_dt(caption="R-03 四条规则并列：需求原口径 vs 阈值报告口径 vs 本报告加严口径", len = 6)
-}, "荷官关联")
+}, "荷官关联") else ph_out("荷官关联")
 ```
 
 ```{r}
@@ -3085,8 +4001,71 @@ if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","profit_amount","st
       TRUE                          ~ "⚪ 纳入荷官评分罚项，持续监控")) |>
     utils::head(30) |>
     aurora_dt(caption="R-03 荷官榜：按关联漏损排序（直接喂入 @sec-radar 荷官雷达的罚项）", len = 15)
-}, "荷官关联")
+}, "荷官关联") else ph_out("荷官关联")
 ```
+
+### 双轨阈值的时序回测对照 {#sec-r03-bt}
+
+```{r}
+#| label: r03-timeseries
+COLS_R03B <- c("bet_date","uid","dealer_id","stake_amount","profit_amount",
+               "win_rate","n_related_orders","n_rounds_eff","z_score")
+if (need_data(D$r03b, "荷官双轨回测", COLS_R03B)) guard({
+  x <- D$r03b |> dplyr::mutate(
+    bet_date = as.Date(bet_date),
+    dplyr::across(dplyr::any_of(c("stake_amount","profit_amount","win_rate",
+                                  "n_related_orders","n_rounds_eff","z_score")),
+                  ~suppressWarnings(as.numeric(.x))))
+  ## 两条规则并排跑同一条时间轴
+  x <- x |> dplyr::mutate(
+    命中_原规则 = win_rate > .70 & n_related_orders > 100,
+    命中_Z轨   = n_rounds_eff >= 30 & z_score >= 4)
+  wk <- x |> dplyr::mutate(周 = as.Date(cut(bet_date, "week"))) |>
+    dplyr::group_by(周) |>
+    dplyr::summarise(
+      `原规则·命中组合`   = sum(命中_原规则, na.rm = TRUE),
+      `Z轨·命中组合`      = sum(命中_Z轨, na.rm = TRUE),
+      ## 误判率代理：命中里「平台其实是赚的」那部分（profit_amount ≤ 0）
+      `原规则·误判率` = mean(命中_原规则 & profit_amount <= 0, na.rm = TRUE) /
+                        pmax(mean(命中_原规则, na.rm = TRUE), 1e-9),
+      `Z轨·误判率`   = mean(命中_Z轨 & profit_amount <= 0, na.rm = TRUE) /
+                        pmax(mean(命中_Z轨, na.rm = TRUE), 1e-9),
+      `原规则·关联漏损` = sum(profit_amount[命中_原规则], na.rm = TRUE),
+      `Z轨·关联漏损`   = sum(profit_amount[命中_Z轨], na.rm = TRUE),
+      .groups = "drop")
+  long <- wk |> tidyr::pivot_longer(-周, names_to = "序列", values_to = "值") |>
+    tidyr::separate(序列, into = c("规则", "指标"), sep = "·")
+  g <- ggplot2::ggplot(long, ggplot2::aes(周, 值, colour = 规则, group = 规则,
+        text = paste0("周起 ", 周, "　", 规则, "<br>", 指标, "：",
+                      format(round(值, 4), big.mark = ",")))) +
+    ggplot2::geom_line(linewidth = .9) + ggplot2::geom_point(size = 1.6) +
+    ggplot2::facet_wrap(~指标, scales = "free_y", ncol = 1) +
+    ggplot2::scale_colour_manual(values = c(PAL$warn, PAL$good)) +
+    ggplot2::labs(title = "R-03 双轨对照 · 逐周走势",
+                  subtitle = "需求原规则（胜率>70% 且 订单>100）vs 玩法基准 Z 轨（有效局≥30 且 Z≥4）",
+                  x = NULL, y = NULL)
+  if (HAS[["plotly"]]) plotly::ggplotly(g, tooltip = "text") else g
+}, "荷官双轨回测") else ph_out("荷官双轨回测")
+```
+
+::: {.callout-important}
+## 这张图需要 R-03 增加日维度才能出——现有导出没有它
+
+`R03_player_dealer.csv` 是**全窗口聚合**（一个玩家×荷官一行），没有 `bet_date`，
+因此无法做时序对照。**这是真实的能力缺口，不是本报告偷懒。**
+
+需要补一份 **`R03b_player_dealer_daily.csv`**：把 R-03 的 `pd` 聚合从
+`GROUP BY member_id, dealer_id` 改为 `GROUP BY member_id, dealer_id, dt`，
+其余口径（局级去重、玩法基准、Tip 排除）一字不动。SQL 包已附 **`§R03b`**。
+
+拿到它之后，本图会同时给出三条对照：**命中组合数、误判率代理、关联漏损**，
+按周展开、可悬停读数。
+
+**关于「会员增加与流失、营业额、盈利」的增幅**：这三项属于**处置后的因果效应**，
+回测数据本身答不了——需要 @sec-plan 的 P3 随机对照（受影响组 vs 对照组）跑满
+一个结算周期后，用双重差分估计。在那之前，任何「本方案能提升 X% 营业额」的说法
+都是宣称而非证据，本报告不写。
+:::
 
 ::: {.callout-warning}
 ## R-03 三条不可越过的红线
@@ -3164,7 +4143,10 @@ $$\text{Sortino}_i=\frac{\bar r_i-r_f}{\sigma^-_i},\qquad
 **下行标准差 $\sigma^-$ 小**意味着不是运气。
 
 进一步用 **CAS（CVaR-Adjusted Sortino）** 替换分母的 $\sigma^-$ 为
-$\text{CVaR}_{5\%}$，对肥尾更稳健——与 CatCity 平台已在用的口径一致。
+$\text{CVaR}_{5\%}$，对肥尾更稳健。
+**校对说明**：此处原写「与 CatCity 平台已在用的口径一致」——CatCity 是另一个
+量化项目，与 a168 无关，属串项目引用，已删除。CAS 在本方案中是**新引入**的口径，
+尚无历史基线可对齐，首次上线时须与索提诺率并列观察至少一个结算周期。
 :::
 
 ```{r}
@@ -3205,7 +4187,7 @@ if (need_data(D$daily_roi, "技术型", COLS_T2)) guard({
     tibble::tibble(项目 = "T2 阈值建议（索提诺）",
                    数值 = glue::glue("≥ {round(qs[['99%']],3)}（=P99，动态随数据走，非拍脑袋）"))) |>
     aurora_kb(caption = "T2 技术型：索提诺 / CAS 分布与动态阈值（阈值由分位数算出，不写死）")
-}, "技术型")
+}, "技术型") else ph_out("技术型")
 ```
 
 **T2 闸门（三闸全过才算）**：
@@ -3250,10 +4232,15 @@ if (need_data(D$t3, "打水型", COLS_T3)) guard({
     game_ratio = abs(game_pnl) / stake,
     rebate_dep = rebate / pmax(net_pnl, 1e-9))          # 返水依赖度
   eps <- stats::quantile(x$game_ratio, .10, na.rm = TRUE)   # ① 动态 ε = P10
-  tau <- if (all(is.na(x$hedge_rate))) NA_real_
-         else stats::quantile(x$hedge_rate, .90, na.rm = TRUE)  # ③ 动态 τ = P90
+  ## ★ 2026-08-07 教训（C-06 零结果）：若 bet09 玩法判别与库内编码不符，
+  ##   hedge_rate 会**静默恒为 0**——这时 P90 也是 0，闸门形同虚设却不报错。
+  ##   因此先判「这一列是否根本没有区分度」，是则停用该闸并明确告知。
+  hedge_ok <- !all(is.na(x$hedge_rate)) &&
+              stats::var(x$hedge_rate, na.rm = TRUE) > 0 &&
+              max(x$hedge_rate, na.rm = TRUE) > 0
+  tau <- if (hedge_ok) stats::quantile(x$hedge_rate, .90, na.rm = TRUE) else NA_real_
   hit <- x |> dplyr::filter(game_ratio <= eps, net_pnl > 0)
-  if (!is.na(tau)) hit <- hit |> dplyr::filter(is.na(hedge_rate) | hedge_rate >= tau)
+  if (hedge_ok) hit <- hit |> dplyr::filter(is.na(hedge_rate) | hedge_rate >= tau)
   vb <- if (all(is.na(hit$validbet))) hit$stake else hit$validbet
   tibble::tibble(
     项目 = c("ε（游戏输赢比 P10，动态）","τ（对押率 P90，动态）","T3 命中人数",
@@ -3261,7 +4248,8 @@ if (need_data(D$t3, "打水型", COLS_T3)) guard({
              "**返水净漏损** = 返水 − 庄家从他们身上赚到的","返水依赖度中位"),
     数值 = c(
       format(round(eps, 5), nsmall = 5),
-      if (is.na(tau)) "⬜ 缺 hedge_rate 列（需 C-06 并入）" else format(round(tau, 4), nsmall = 4),
+      if (!hedge_ok) "⛔ 未校准：hedge_rate 无区分度（bet09 判别不匹配，见 SQL 包 §DX-01）——本闸已停用"
+      else format(round(tau, 4), nsmall = 4),
       format(nrow(hit), big.mark = ","),
       format(round(sum(vb, na.rm = TRUE), 0), big.mark = ","),
       format(round(sum(hit$rebate, na.rm = TRUE), 0), big.mark = ","),
@@ -3270,8 +4258,59 @@ if (need_data(D$t3, "打水型", COLS_T3)) guard({
              big.mark = ","),
       format(round(stats::median(hit$rebate_dep, na.rm = TRUE), 3), nsmall = 3))) |>
     aurora_kb(caption = "T3 打水型：返水净漏损核算（这一行就是可以立刻省下来的钱）")
-}, "打水型")
+}, "打水型") else ph_out("打水型")
 ```
+
+::: {.callout-important}
+## 实测结案（2026-08-07）：C-06 零结果已定位并修复，对押指标恢复可用
+
+C-06「同IP对打对」实测返回**零结果**。当时判断这不该读作「本平台没有对打」，
+而是判别清单不匹配。**DX-01 全量普查已确认这一判断**：
+`bet09` 存的是**英文玩法名**（`Banker` / `Player` / `Tie` …），
+判别清单里的 `('1','B','庄','莊')` 一个都对不上，所以零命中。
+
+**这类失效最危险的地方在于它是静默的**：判别不匹配 → `is_b`/`is_p` 恒为 0
+→ `hedge_rate` 恒为 0 → 动态阈值 P90 也是 0 → 闸门放行所有人，
+**却不会报任何错**。比报错危险得多，因为它会安静地产出一张看起来正常的表。
+
+**已做的四件事**：
+① SQL 包 **§DX-01** 已跑，玩法编码全量普查完成（见下表）；
+② 三处判别改为**等值匹配** `'Banker'` / `'Player'`；
+③ **弃用 `LIKE '%BANK%'`**——它会把 `BankerDragonBonus`（20.7 万笔）与
+   `BankerNatural`（6.2 万笔）算成庄，那是边注，与主线庄闲不构成对冲关系。
+   这个陷阱比原来的零命中更隐蔽：它会产出一个**看起来合理但偏高**的对押率；
+④ R 代码保留区分度检验作为长期防呆——`hedge_rate` 方差为 0 时自动停用该闸，
+   不把「全 0」当真实分布算分位。
+
+**C-06 的修复方法**：把它 `side` CTE 里的
+`bet_side IN ('1','B','庄','莊')` → `bet_side = 'Banker'`、
+`('2','P','闲','閒')` → `= 'Player'`，改完复跑，对打证据链即可复活。
+:::
+
+```{r}
+#| label: bet09-taxonomy
+#| echo: false
+tibble::tribble(
+  ~层级, ~玩法, ~注单数, ~占比, ~会员数, ~风控含义,
+  "**主线**","Banker","46,821,669","37.26%","571,169","对冲判别的正方向",
+  "**主线**","Player","44,221,416","35.19%","599,892","对冲判别的反方向",
+  "**和局**","Tie","9,642,278","7.67%","151,782","正常胜率仅约 9.5%，绝不可与庄闲同用一条胜率线",
+  "**边注**","BPair / PPair / Super6 / Lucky7 / SuperLucky7 等 20 种","24,962,770","19.87%","—",
+    "★ 每种基准胜率各异；R-03 的 Z-score 必须按玩法各算各的",
+  "**噪声**","Lucky7TwoCard / SuperTie4,5,8,9 / SmallTiger / Bear8","7","≈0%","7",
+    "各仅 1 笔且全在 2026-07-20——判为上线试跑残留，一切统计中剔除"
+) |> aurora_kb(caption="bet09 玩法编码全量普查（DX-01 实测，139 天 1.256 亿注单，共 23 种玩法）")
+```
+
+::: {.callout-note}
+## 这张表连带解决了 R-03 的一个隐患
+
+@sec-r03 采纳阈值报告的结论「不同玩法正常胜率差异极大，废除统一 70% 胜率」时，
+只知道 Banker 45.86% / Tie 9.48% / Big 62.38% 三个数。现在知道**一共 23 种玩法**、
+边注占了近两成注单量——`side_base` CTE 按 `bet09` 逐玩法算基准这件事，
+不是精细化，是**必须**：拿 Tie（基准 9.5%）去套 70% 的线，
+等于对押和局的玩家永久免检。
+:::
 
 ::: {.callout-important}
 ## T3 是唯一「不需要抓人也能立刻止血」的一类
@@ -3306,12 +4345,13 @@ T1 要查代理、T2 要改产品、T4 只能观察——**只有 T3 可以靠�
 
 ```{python}
 #| label: t4-cluster
+#| error: true
 #| echo: true
 # ── T4 · 风险用户扩样：正交化 → PCA 白化 → PU-learning × 无监督异常度 双闸 ──
 # 缺库/缺数一律跳过，不中断渲染
 import os, warnings
 warnings.filterwarnings("ignore")
-T4_TBL, T4_NOTE = [], ""
+T4_TBL, T4_NOTE, T4_SEEDLOG = [], "", []
 try:
     import numpy as np, pandas as pd
     _T4_ENV = True
@@ -3329,87 +4369,186 @@ def _read_any(path):
             continue
     raise RuntimeError(f"{path} 所有候选编码均失败")
 
-if not _T4_ENV:
-    pass
-elif not os.path.exists(T4_PATH):
-    T4_NOTE = "特征矩阵 K01_risk_feature_matrix.csv 未就位——跑 SQL 包 K-01 导出后自动全跑"
-    print("ℹ️ " + T4_NOTE)
-else:
-    df = _read_any(T4_PATH)
-    df.columns = [str(c).strip().replace("\ufeff", "") for c in df.columns]
-    idcol = "member_id" if "member_id" in df.columns else df.columns[0]
-    ycol  = "is_seed" if "is_seed" in df.columns else None
-    feats = [c for c in df.columns
-             if c not in (idcol, ycol, "bet_date") and pd.api.types.is_numeric_dtype(df[c])]
-    if ycol is None or len(feats) < 3 or df[ycol].sum() < 10:
-        T4_NOTE = (f"种子数不足或特征不足（种子 {0 if ycol is None else int(df[ycol].sum())} 个，"
-                   f"数值特征 {len(feats)} 个）——需 ≥10 个种子、≥3 个特征")
+## 最外层兜底：T4 失败不该拖垮整份报告（Python 异常可挡，进程级 OOM 挡不住，
+## 那要靠上面的下采样与单线程从源头避免）。
+try:
+    if not _T4_ENV:
+        pass
+    elif not os.path.exists(T4_PATH):
+        T4_NOTE = "特征矩阵 K01_risk_feature_matrix.csv 未就位——跑 SQL 包 K-01 导出后自动全跑"
         print("ℹ️ " + T4_NOTE)
     else:
-        from sklearn.preprocessing import StandardScaler
-        from sklearn.decomposition import PCA
-        from sklearn.ensemble import IsolationForest, RandomForestClassifier
-        from sklearn.linear_model import LogisticRegression
+        df = _read_any(T4_PATH)
+        df.columns = [str(c).strip().replace("\ufeff", "") for c in df.columns]
+        idcol = "member_id" if "member_id" in df.columns else df.columns[0]
+        if "is_seed" not in df.columns:
+            df["is_seed"] = 0
+        ycol = "is_seed"
+        df[idcol] = df[idcol].astype(str)
 
-        X = df[feats].replace([np.inf, -np.inf], np.nan).fillna(df[feats].median(numeric_only=True)).fillna(0)
-        y = df[ycol].astype(int).values
+        # ── ★ 五路种子合并（K-01 只给纯特征，is_seed 恒为 0，种子一律在此并入）──
+        #    理由见 SQL 包 §K01 说明：辅助表列名各异，把 join 写进特征查询会让
+        #    整章因一张表卡死；分开之后任何一路缺位，其余几路照常撑起 T4。
+        _SEEDS, _seed_log = set(), []
 
-        # ① 共线剔除：|corr|>0.95 只留一个（防规模维度统治距离）
-        cm = X.corr().abs()
-        drop, keep = set(), []
-        for c in cm.columns:
-            if c in drop:
-                continue
-            keep.append(c)
-            drop |= set(cm.index[(cm[c] > 0.95) & (cm.index != c)])
-        X = X[keep]
+        def _add_seed(ids, src):
+            ids = {str(i) for i in ids if pd.notna(i)}
+            new_n = len(ids - _SEEDS)
+            _SEEDS.update(ids)
+            _seed_log.append({"种子来源": src, "命中会员": len(ids), "新增": new_n})
 
-        # ② 标准化 + PCA 白化（保留 90% 方差）
-        Z = StandardScaler().fit_transform(X)
-        p = PCA(n_components=0.90, whiten=True, random_state=20260807)
-        Zp = p.fit_transform(Z)
+        def _try(fn, handler, src):
+            p = f"{r.DATA_DIR}/{fn}"
+            if not os.path.exists(p):
+                _seed_log.append({"种子来源": src, "命中会员": 0, "新增": "⬜ 文件未就位"}); return
+            try:
+                handler(_read_any(p))
+            except Exception as e:
+                _seed_log.append({"种子来源": src, "命中会员": 0, "新增": f"⛔ {e}"})
 
-        # ③ 无监督异常度：Isolation Forest 罕见度
-        iso = IsolationForest(n_estimators=400, contamination="auto",
-                              random_state=20260807, n_jobs=-1).fit(Zp)
-        rare = -iso.score_samples(Zp)                    # 越大越罕见
+        # ①② 人工風險單 / 劃單 + L0 金标准 IP（SQL 包 §K01b，列名核对后导出）
+        _try("K01b_seed_manual.csv",
+             lambda d: _add_seed(d[[c for c in d.columns if "member" in c.lower()][0]],
+                                 "①② 人工標記 + 金标准IP"),
+             "①② 人工標記 + 金标准IP")
+        # ③ R-01 闸三：靴末段占比 + 注额斜率 + 末段真优势，三闸全过
+        _try("R01_late_shoe.csv",
+             lambda d: _add_seed(d.loc[(pd.to_numeric(d["late_share"], errors="coerce") >= .70)
+                                       & (pd.to_numeric(d["stake_ramp"], errors="coerce") >= 2)
+                                       & (pd.to_numeric(d["roi_late"], errors="coerce") > 0)
+                                       & (pd.to_numeric(d["roi_late"], errors="coerce")
+                                          > pd.to_numeric(d["roi_early"], errors="coerce")), "uid"],
+                                 "③ R-01 闸三"),
+             "③ R-01 闸三")
+        # ④ R-02 Lift≥3：去巧合后的真同桌关系，两端会员都入种子
+        def _h02(d):
+            lf = pd.to_numeric(d.get("lift"), errors="coerce")
+            sr = pd.to_numeric(d["same_rate"], errors="coerce")
+            m = (sr >= .30) & (lf.isna() | (lf >= 3))
+            _add_seed(pd.concat([d.loc[m, "uid1"], d.loc[m, "uid2"]]), "④ R-02 Lift≥3")
+        _try("R02_same_table.csv", _h02, "④ R-02 Lift≥3")
+        # ⑤ R-03 Z≥4：优先调查层
+        _try("R03_player_dealer.csv",
+             lambda d: _add_seed(d.loc[(pd.to_numeric(d["n_rounds_eff"], errors="coerce") >= 30)
+                                       & (pd.to_numeric(d["z_score"], errors="coerce") >= 4), "uid"],
+                                 "⑤ R-03 Z≥4"),
+             "⑤ R-03 Z≥4")
 
-        # ④ PU-learning：Elkan–Noto 校正
-        #    在「正 vs 未标记」上训分类器，得 g(x)=P(labeled|x)，
-        #    再用验证集正样本的平均 g 估计 c=P(labeled|positive)，f(x)=g(x)/c
-        from sklearn.model_selection import StratifiedKFold
-        g = np.zeros(len(y), dtype=float)
-        skf = StratifiedKFold(n_splits=min(5, max(2, int(y.sum()))), shuffle=True,
-                              random_state=20260807)
-        for tr_i, te_i in skf.split(Zp, y):
-            clf = RandomForestClassifier(n_estimators=400, class_weight="balanced",
-                                         n_jobs=-1, random_state=20260807).fit(Zp[tr_i], y[tr_i])
-            g[te_i] = clf.predict_proba(Zp[te_i])[:, 1]
-        c_hat = float(np.mean(g[y == 1])) if (y == 1).sum() else 1.0
-        pu = np.clip(g / max(c_hat, 1e-6), 0, 1)         # 校正后的「像不像坏人」
+        if _SEEDS:
+            df[ycol] = ((df[ycol].astype(int) == 1) | df[idcol].isin(_SEEDS)).astype(int)
+        T4_SEEDLOG = _seed_log
 
-        # ⑤ 双闸：罕见度 与 相似度 都进各自 P95 才入池
-        thr_rare = float(np.quantile(rare, 0.95))
-        thr_pu   = float(np.quantile(pu,   0.95))
-        newly = (y == 0) & (rare >= thr_rare) & (pu >= thr_pu)
+        feats = [c for c in df.columns
+                 if c not in (idcol, ycol, "bet_date") and pd.api.types.is_numeric_dtype(df[c])]
+        if len(feats) < 3 or int(df[ycol].sum()) < 10:
+            T4_NOTE = (f"种子数不足或特征不足（合并后种子 {int(df[ycol].sum())} 个，"
+                       f"数值特征 {len(feats)} 个）——需 ≥10 个种子、≥3 个特征。"
+                       f"种子来源逐路情况见下表")
+            print("ℹ️ " + T4_NOTE)
+        else:
+            from sklearn.preprocessing import StandardScaler
+            from sklearn.decomposition import PCA
+            from sklearn.ensemble import IsolationForest, RandomForestClassifier
+            from sklearn.linear_model import LogisticRegression
 
-        out = pd.DataFrame({idcol: df[idcol], "罕见度": rare, "相似度": pu,
-                            "是否种子": y, "T4新命中": newly.astype(int)})
-        out.sort_values(["T4新命中", "相似度"], ascending=False).to_csv(
-            f"{r.DATA_DIR}/_T4_expanded.csv", index=False, encoding="utf-8-sig")
+            X = df[feats].replace([np.inf, -np.inf], np.nan).fillna(
+                    df[feats].median(numeric_only=True)).fillna(0).astype("float32")
+            y = df[ycol].astype(int).values
+            # ★ 与军械库同一道闸：正样本全留、只降采样负样本，封顶后再建模。
+            #   n_jobs 一律设 1——joblib 并行会把数据在进程间复制，内存吃紧时是灾难。
+            _T4_MAXN, _T4_TREES, _T4_JOBS = 30000, 200, 1
+            if len(y) > _T4_MAXN:
+                _rng = np.random.default_rng(20260807)
+                _pos = np.flatnonzero(y == 1); _neg = np.flatnonzero(y == 0)
+                _kneg = max(1, min(len(_neg), _T4_MAXN - len(_pos)))
+                _sel = np.sort(np.concatenate([_pos, _rng.choice(_neg, _kneg, replace=False)]))
+                print(f"ℹ️ 特征矩阵 {len(y):,} 行 → 分层下采样至 {len(_sel):,} 行"
+                      f"（正样本 {len(_pos):,} 全留）")
+                X = X.iloc[_sel].reset_index(drop=True); y = y[_sel]
+                df = df.iloc[_sel].reset_index(drop=True)
 
-        T4_TBL = [
-            {"项目": "参与特征数（去共线后）", "数值": f"{len(keep)} / 原 {len(feats)}"},
-            {"项目": "PCA 主成分数（保 90% 方差）", "数值": str(Zp.shape[1])},
-            {"项目": "已确认种子数", "数值": f"{int(y.sum()):,}"},
-            {"项目": "Elkan–Noto 校正系数 c", "数值": f"{c_hat:.4f}"},
-            {"项目": "罕见度阈值（P95，动态）", "数值": f"{thr_rare:.4f}"},
-            {"项目": "相似度阈值（P95，动态）", "数值": f"{thr_pu:.4f}"},
-            {"项目": "★ T4 新命中人数（双闸）", "数值": f"{int(newly.sum()):,}"},
-            {"项目": "扩样倍数", "数值": f"{int(newly.sum()) / max(int(y.sum()),1):.2f}×"},
-            {"项目": "落盘文件", "数值": "数据库/_T4_expanded.csv"},
-        ]
-        print(pd.DataFrame(T4_TBL).to_string(index=False))
+            # ① 共线剔除：|corr|>0.95 只留一个（防规模维度统治距离）
+            cm = X.corr().abs()
+            drop, keep = set(), []
+            for c in cm.columns:
+                if c in drop:
+                    continue
+                keep.append(c)
+                drop |= set(cm.index[(cm[c] > 0.95) & (cm.index != c)])
+            X = X[keep]
+
+            # ② 标准化 + PCA 白化（保留 90% 方差）
+            Z = StandardScaler().fit_transform(X)
+            p = PCA(n_components=0.90, whiten=True, random_state=20260807)
+            Zp = p.fit_transform(Z)
+
+            # ③ 无监督异常度：Isolation Forest 罕见度
+            iso = IsolationForest(n_estimators=_T4_TREES, contamination="auto",
+                                  random_state=20260807, n_jobs=_T4_JOBS).fit(Zp)
+            rare = -iso.score_samples(Zp)                    # 越大越罕见
+
+            # ④ PU-learning：Elkan–Noto 校正
+            #    在「正 vs 未标记」上训分类器，得 g(x)=P(labeled|x)，
+            #    再用验证集正样本的平均 g 估计 c=P(labeled|positive)，f(x)=g(x)/c
+            from sklearn.model_selection import StratifiedKFold
+            g = np.zeros(len(y), dtype=float)
+            skf = StratifiedKFold(n_splits=min(5, max(2, int(y.sum()))), shuffle=True,
+                                  random_state=20260807)
+            for tr_i, te_i in skf.split(Zp, y):
+                clf = RandomForestClassifier(n_estimators=_T4_TREES, class_weight="balanced",
+                                             n_jobs=_T4_JOBS, random_state=20260807,
+                                             max_depth=12).fit(Zp[tr_i], y[tr_i])
+                g[te_i] = clf.predict_proba(Zp[te_i])[:, 1]
+            c_hat = float(np.mean(g[y == 1])) if (y == 1).sum() else 1.0
+            pu = np.clip(g / max(c_hat, 1e-6), 0, 1)         # 校正后的「像不像坏人」
+
+            # ⑤ 双闸：罕见度 与 相似度 都进各自 P95 才入池
+            thr_rare = float(np.quantile(rare, 0.95))
+            thr_pu   = float(np.quantile(pu,   0.95))
+            newly = (y == 0) & (rare >= thr_rare) & (pu >= thr_pu)
+
+            out = pd.DataFrame({idcol: df[idcol], "罕见度": rare, "相似度": pu,
+                                "是否种子": y, "T4新命中": newly.astype(int)})
+            out.sort_values(["T4新命中", "相似度"], ascending=False).to_csv(
+                f"{r.DATA_DIR}/_T4_expanded.csv", index=False, encoding="utf-8-sig")
+            # 说明：T4 的重活（PU 交叉验证 + Isolation Forest）本身不长，
+            #      真正耗时的是特征矩阵读盘；缓存收益有限，故此处不加缓存层，
+            #      只把结果落盘。缓存该用在哪里，看 @sec-cache 的三条判据。
+
+            T4_TBL = [
+                {"项目": "参与特征数（去共线后）", "数值": f"{len(keep)} / 原 {len(feats)}"},
+                {"项目": "PCA 主成分数（保 90% 方差）", "数值": str(Zp.shape[1])},
+                {"项目": "已确认种子数", "数值": f"{int(y.sum()):,}"},
+                {"项目": "Elkan–Noto 校正系数 c", "数值": f"{c_hat:.4f}"},
+                {"项目": "罕见度阈值（P95，动态）", "数值": f"{thr_rare:.4f}"},
+                {"项目": "相似度阈值（P95，动态）", "数值": f"{thr_pu:.4f}"},
+                {"项目": "★ T4 新命中人数（双闸）", "数值": f"{int(newly.sum()):,}"},
+                {"项目": "扩样倍数", "数值": f"{int(newly.sum()) / max(int(y.sum()),1):.2f}×"},
+                {"项目": "落盘文件", "数值": "数据库/_T4_expanded.csv"},
+            ]
+            print(pd.DataFrame(T4_TBL).to_string(index=False))
+except MemoryError:
+    T4_NOTE = "内存不足：把 _T4_MAXN 减半后重跑，或先关掉占内存的其它程序"
+    print("⛔ " + T4_NOTE)
+except Exception as _e:
+    T4_NOTE = f"{type(_e).__name__}: {_e}"
+    print(f"⛔ T4 异常（{T4_NOTE}）——已跳过，不影响其余章节")
+```
+
+```{r}
+#| label: t4-seedlog
+#| echo: false
+sl <- tryCatch(reticulate::py$T4_SEEDLOG, error = function(e) NULL)
+if (length(sl)) {
+  dplyr::bind_rows(lapply(sl, function(x) tibble::as_tibble(lapply(x, as.character)))) |>
+    aurora_kb(caption = "T4 种子合并明细 · 五路来源（任一路缺位不影响其余几路）")
+} else {
+  tibble::tibble(
+    状态 = "⬜ 未执行种子合并",
+    说明 = "K01_risk_feature_matrix.csv 未就位；该文件的 is_seed 恒为 0，种子全在 Python 侧并入",
+    五路来源 = "①人工風險單 ②L0金标准IP ③R-01闸三 ④R-02 Lift≥3 ⑤R-03 Z≥4") |>
+    aurora_kb(caption = "T4 种子合并明细")
+}
 ```
 
 ```{r}
@@ -3440,8 +4579,9 @@ T4 命中的是「**长得像**已知风险用户」的人，不是「**是**风
 
 工程上还要防一件事：**种子污染**。若种子本身来自某条规则（比如全是 R-02 命中的），
 PU 模型学到的其实是那条规则，扩样只是把规则重跑一遍。
-→ 种子必须**混合来源**（人工確認 + R-01/R-02/R-03 + 金标准 L0），
-并在特征矩阵里**剔除产生种子的那几个特征**，否则就是自我循环。
+→ 种子必须**混合来源**。本方案已落实为**五路合并**（见上方种子明细表），
+且 `K01_risk_feature_matrix.csv` 的特征侧**刻意不含** `late_share` / `same_rate` / `z_score`
+这三个产生种子的量——否则就是自我循环。
 :::
 # 四实体评分体系：玩家 · 荷官 · 代理 · 风控员 {#sec-radar}
 
@@ -3640,10 +4780,15 @@ for ent, (path, dims) in (ENT.items() if ENV_OK else []):
 #| label: radar-embed
 #| echo: false
 #| output: asis
-## ★ 把 Python 侧生成的 plotly 片段内嵌进本文档（保证图表显示在报告里）
+## ★ 2026-08-07 斧正：plotly 的 to_html 片段**自带缩进**，
+##   裸 asis 输出会被 Pandoc 当成「4 空格缩进代码块」，于是页面上出现
+##   一格格滚动条里的 <div class="plotly-graph-div"> 源码——正是截图那个样子。
+##   修法：每段都用显式 raw-html 围栏包住，边界确定、缩进无关。
+##   （源码里不写连续三反引号，用 strrep 拼，见写作纪律第 4 条）
+FENCE <- strrep("`", 3L)
 h <- tryCatch(reticulate::py$RADAR_HTML, error = function(e) NULL)
 if (length(h)) {
-  for (x in h) cat(x, "\n\n")
+  for (x in h) cat("\n", FENCE, "{=html}\n", x, "\n", FENCE, "\n\n", sep = "")
 } else {
   cat("::: {.callout-note}\n",
       "四实体雷达图待 `S01`–`S04` 四份评分底料导出后自动出图",
@@ -3846,6 +4991,380 @@ if (length(a)) {
 
 ---
 
+---
+
+# 与「一般均值」的正面比较：优化幅度到底有多少 {#sec-benchmark}
+
+> 需求：**任何参数、维度、阈值、因子、p 值、顶级计数尤物，务必与一般基本统计学的
+> 均值比较，才能凸显优化与优势**，并给出业绩增幅、误判概率与损失（夏普率、最大回撤等）。
+>
+> 立场先说清：**没有对照的优化都是自我宣称。** 本章把每一件工具都放到同一条基准线旁边，
+> 基准线一律取「统计学上最朴素的那个做法」——通常就是**均值**。
+
+## 一、四条基准线（每一项优化都必须跑赢其中对应的一条）
+
+```{r}
+#| label: bench-baselines
+#| echo: false
+tibble::tribble(
+  ~维度, ~"一般统计学做法（基准）", ~本方案做法, ~凭什么说更优, ~失败则,
+  "**中心估计**","算术均值","分位数（P50/P90/P99）+ 洗码量加权均值",
+    "博彩流水是极端右偏：前 1% 会员可占三成流水。均值被少数巨鲸拖走，中位数才代表典型客人",
+    "退回均值，但必须同时报偏度",
+  "**阈值设定**","均值 ± k×标准差","训练窗分位数（每折独立重估）",
+    "±kσ 假设近似正态；实测洗码量分布右偏严重，σ 本身被极值撑大，阈值会系统性偏松",
+    "退回 ±3σ 并记录折间漂移",
+  "**效应判定**","单次 t 检验的 p 值","五重检验 + 净化滚动回测 + 经济核算三层",
+    "p 小只说明「不太可能是碰巧」，不说明「值得处置」。经济核算才回答后者",
+    "判为「未能证实」，只画像不处置",
+  "**策略评价**","累计收益 / 平均收益","净增益 5% 分位 + MASE + 索提诺 + 最大回撤",
+    "均值为正只是运气不差；分位为正才是稳。MASE<1 才算比「什么都不做」强",
+    "不上线"
+) |> aurora_kb(caption = "四条基准线：本方案的每一项「优化」都对应一条必须跑赢的朴素做法")
+```
+
+## 二、基准对照引擎
+
+```{r}
+#| label: bench-engine
+#| echo: true
+## 给定一条策略的逐期净增益序列，与三条朴素基线并排评价
+## 指标一次给全：均值 / 5%分位 / 夏普 / 索提诺 / 最大回撤 / 胜期占比 / MASE
+bench_metrics <- function(x, rf = 0) {
+  x <- x[is.finite(x)]
+  if (!length(x)) return(NULL)
+  cum <- cumsum(x); peak <- cummax(cum)
+  dn  <- sqrt(mean(pmin(x - rf, 0)^2))
+  list(n = length(x), mean = mean(x),
+       q05 = as.numeric(stats::quantile(x, .05)),
+       sharpe  = if (stats::sd(x) > 0) (mean(x) - rf) / stats::sd(x) else NA_real_,
+       sortino = if (dn > 0) (mean(x) - rf) / dn else NA_real_,
+       mdd = if (length(cum)) min(cum - peak) else NA_real_,
+       win = mean(x > 0), total = sum(x))
+}
+
+## 与基线并排：strategy 与 baselines 均为同长度的逐期净增益向量
+bench_vs <- function(strategy, baselines, labels = names(baselines)) {
+  fmt <- function(m, nm) tibble::tibble(
+    方案 = nm, 期数 = m$n,
+    累计净增益 = round(m$total, 0), 均值 = round(m$mean, 0),
+    `5%分位` = round(m$q05, 0),
+    夏普率 = round(m$sharpe, 3), 索提诺率 = round(m$sortino, 3),
+    最大回撤 = round(m$mdd, 0), 胜期占比 = scales::percent(m$win, accuracy = 0.1))
+  rows <- list(fmt(bench_metrics(strategy), "★ 本方案策略"))
+  for (i in seq_along(baselines))
+    rows[[i + 1L]] <- fmt(bench_metrics(baselines[[i]]), labels[i])
+  out <- dplyr::bind_rows(rows)
+  base_mae <- mean(abs(baselines[[1]]), na.rm = TRUE)
+  out$MASE <- c(round(mean(abs(strategy - baselines[[1]]), na.rm = TRUE) /
+                        pmax(base_mae, 1e-9), 3),
+                rep(NA_real_, length(baselines)))
+  out$相对提升 <- scales::percent(
+    out$累计净增益 / pmax(abs(out$累计净增益[2]), 1e-9) - 1, accuracy = 0.1)
+  out
+}
+```
+
+```{r}
+#| label: bench-run
+COLS_BT2 <- c("member_id","bet_date","stake","game_pnl","net_pnl")
+if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
+  p <- prep_bt(D$bt_panel); folds <- purged_folds(p$bet_date)
+  res <- cached("bt_folds", version = "v1",
+    inputs = list(p), params = list(q_thr = 0.99, recover = 0.60, churn = 0.15,
+                                    train = 60, embargo = 7, test = 14, step = 14),
+    expr = map_dfr_pg(folds, function(f) bt_fold(p, f), label = "策略回测逐折"))
+  if (!nrow(res)) {
+    tibble::tibble(状态 = "无有效折") |> aurora_kb(caption = "基准对照")
+  } else {
+    ## 三条朴素基线，全部用同一批折、同一套经济口径
+    b_none  <- rep(0, nrow(res))                      # ① 什么都不做
+    b_mean  <- cached("bt_folds_mean", version = "v1",
+      inputs = list(p), params = list(rule = "mean+3sd"),
+      expr = map_dfr_pg(folds, function(f) {
+        tr <- p[p$bet_date >= f$tr[1] & p$bet_date <= f$tr[2], , drop = FALSE]
+        if (!nrow(tr)) return(NULL)
+        sc <- fit_risk(tr); if (is.null(sc)) return(NULL)
+        s0 <- sc(tr)
+        bt_fold(p, f, fixed_thr = mean(s0, na.rm = TRUE) + 3 * stats::sd(s0, na.rm = TRUE))
+      }, label = "基线·均值+3σ"))
+    b_frozen <- cached("bt_folds_naive", version = "v1",
+      inputs = list(p), params = list(fixed_thr = res$阈值[1], recover = 0.60, churn = 0.15),
+      expr = map_dfr_pg(folds, function(f) bt_fold(p, f, fixed_thr = res$阈值[1]),
+                        label = "基线·阈值冻结"))
+    pad <- function(d) { v <- if (is.null(d) || !nrow(d)) numeric(0) else d$净增益
+                         c(v, rep(0, max(0, nrow(res) - length(v))))[seq_len(nrow(res))] }
+    bench_vs(res$净增益,
+             list(`基线① 阈值冻结（不重估）` = pad(b_frozen),
+                  `基线② 均值+3σ（教科书做法）` = pad(b_mean),
+                  `基线③ 什么都不做` = b_none)) |>
+      aurora_kb(caption = paste0(
+        "本方案 vs 三条朴素基线（同折、同经济口径；MASE 以基线① 为分母，<1 才算真优）"))
+  }
+}, "策略回测") else ph_out("策略回测")
+```
+
+```{r}
+#| label: bench-chart
+#| fig-height: 4.6
+if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
+  p <- prep_bt(D$bt_panel); folds <- purged_folds(p$bet_date)
+  res <- cached("bt_folds", version = "v1",
+    inputs = list(p), params = list(q_thr = 0.99, recover = 0.60, churn = 0.15,
+                                    train = 60, embargo = 7, test = 14, step = 14),
+    expr = map_dfr_pg(folds, function(f) bt_fold(p, f), label = "策略回测逐折"))
+  if (!nrow(res)) {
+    tibble::tibble(状态 = "无有效折") |> aurora_kb(caption = "走势图")
+  } else {
+    b_frozen <- cached("bt_folds_naive", version = "v1",
+      inputs = list(p), params = list(fixed_thr = res$阈值[1], recover = 0.60, churn = 0.15),
+      expr = map_dfr_pg(folds, function(f) bt_fold(p, f, fixed_thr = res$阈值[1]),
+                        label = "基线·阈值冻结"))
+    dd <- dplyr::bind_rows(
+      tibble::tibble(折 = res$折, 方案 = "★ 本方案", 净增益 = res$净增益,
+                     测试窗 = res$测试窗, 误伤率 = res$误伤率, 阈值 = res$阈值),
+      if (nrow(b_frozen)) tibble::tibble(折 = b_frozen$折, 方案 = "基线·阈值冻结",
+                     净增益 = b_frozen$净增益, 测试窗 = b_frozen$测试窗,
+                     误伤率 = b_frozen$误伤率, 阈值 = b_frozen$阈值) else NULL,
+      tibble::tibble(折 = res$折, 方案 = "基线·什么都不做", 净增益 = 0,
+                     测试窗 = res$测试窗, 误伤率 = 0, 阈值 = NA_real_)) |>
+      dplyr::group_by(方案) |> dplyr::arrange(折, .by_group = TRUE) |>
+      dplyr::mutate(累计净增益 = cumsum(净增益),
+                    回撤 = 累计净增益 - cummax(累计净增益)) |> dplyr::ungroup()
+    g <- ggplot2::ggplot(dd, ggplot2::aes(折, 累计净增益, colour = 方案,
+           group = 方案,
+           text = paste0("折 ", 折, "　", 方案,
+                         "<br>测试窗：", 测试窗,
+                         "<br>本折净增益：", format(round(净增益, 0), big.mark = ","),
+                         "<br>累计：", format(round(累计净增益, 0), big.mark = ","),
+                         "<br>回撤：", format(round(回撤, 0), big.mark = ","),
+                         "<br>误伤率：", scales::percent(误伤率, accuracy = .1),
+                         "<br>本折阈值：", round(阈值, 3)))) +
+      ggplot2::geom_hline(yintercept = 0, colour = PAL$warn, linetype = 2) +
+      ggplot2::geom_line(linewidth = 1) + ggplot2::geom_point(size = 2) +
+      ggplot2::scale_colour_manual(values = c(PAL$good, PAL$acc, PAL$warn)) +
+      ggplot2::labs(title = "累计净增益走势：本方案 vs 两条基线",
+                    subtitle = "悬停任一点可见该折的测试窗、净增益、回撤、误伤率与当折阈值",
+                    x = "折序", y = "累计净增益")
+    if (HAS[["plotly"]]) plotly::ggplotly(g, tooltip = "text") else g
+  }
+}, "策略回测") else ph_out("策略回测")
+```
+
+::: {.callout-important}
+## 误判概率与损失：把两类错误分开算钱
+
+风控的错有两种，代价完全不同：
+
+| | 含义 | 代价 | 本方案怎么控 |
+|---|---|---|---|
+| **误伤（假阳性）** | 好客人被当成风险 | 赔掉**终身价值** $\text{NC}_i\times H_i$，且可能引发客诉与口碑损失 | 四闸之③：误伤率中位 ≤ 20%；处置一律先走结算侧不动账户 |
+| **漏放（假阴性）** | 套利团伙没抓到 | 赔掉**当期漏损**（退水 + 占成 − 该群 GGR） | 三闸漏斗保召回；T4 扩样排队复核 |
+
+回测里的**净增益**已经把两者一起算进去了：
+
+$$\text{净增益}=\underbrace{\max(\textstyle\sum\text{命中者净赢},0)\times\text{回收率}}_{\text{抓到的钱}}
+-\underbrace{\textstyle\sum\max(-\text{净赢},0)\times\text{流失系数}}_{\text{误伤赔的钱}}$$
+
+**这就是为什么净增益可正可负**——只有它能为负，索提诺与最大回撤才有意义。
+只报「抓到多少」不报「误伤赔多少」的方案，本报告一律判为不可上线。
+:::
+
+---
+
+# 子分类：会员 · 荷官 · 代理 · 玩法 {#sec-subclass}
+
+> 需求：各种分类还需子分类，例如 23 种玩法也要列出数据并比较，评估回测与商业方案的可行性与业绩幅度。
+
+## 一、玩法子分类：23 种，三层结构
+
+DX-01 全量普查（139 天，1.2565 亿注单）已确认玩法编码为英文名。按**风控意义**分三层：
+
+```{r}
+#| label: subclass-bet09
+#| echo: false
+BET09 <- tibble::tribble(
+  ~层级, ~玩法, ~注单数, ~会员数, ~理论庄家优势, ~风控意义,
+  "主线","Banker",       46821669L, 571169L, "≈1.06%","对押判别的正方向；Z-score 基准约 45.86%",
+  "主线","Player",       44221416L, 599892L, "≈1.24%","对押判别的反方向",
+  "和局","Tie",           9642278L, 151782L, "≈14.4%","**正常胜率仅约 9.5%**，与庄闲绝不可同用一条胜率线",
+  "边注","BPair",         5908562L,  99453L, "≈10.4%","高波动边注，打水者极少碰",
+  "边注","PPair",         5764213L, 100949L, "≈10.4%","同上",
+  "边注","Super6",        4644632L,  80436L, "≈8~13%","免佣桌配套玩法，佣金模式判读要点",
+  "边注","Lucky7",        4378252L,  81502L, "—","高赔率边注",
+  "边注","SuperLucky7",   3152739L,  83985L, "—","同上",
+  "边注","PerfectPair",    355779L,   1779L, "≈17.1%","参与人数极少，个体行为易识别",
+  "边注","BankerDragonBonus",206966L, 4104L, "≈9.4%","★ 名字含 Banker，`LIKE '%BANK%'` 会误纳",
+  "边注","PlayerDragonBonus",176725L, 4042L, "≈2.7%","★ 同上，`LIKE '%PLAY%'` 会误纳",
+  "边注","AnyPair",        154075L,   1574L, "≈6.2%","",
+  "边注","Big",             80722L,   1408L, "≈4.3%","**正常胜率约 62.38%**，与 70% 单一门槛冲突最严重",
+  "边注","BankerNatural",   62174L,   2038L, "—","★ 同样会被 LIKE 误纳",
+  "边注","PlayerNatural",   54938L,   2012L, "—","★ 同上",
+  "边注","Small",           22986L,    729L, "≈5.3%","",
+  "噪声","Lucky7TwoCard / SuperTie4,5,8,9 / SmallTiger / Bear8（7 种）",
+                                7L,      7L, "—","各仅 1 笔且全在 2026-07-20，判为上线试跑残留，一切统计中剔除"
+) |> dplyr::mutate(
+  占比 = scales::percent(注单数 / sum(注单数), accuracy = 0.01),
+  人均注单 = round(注单数 / pmax(会员数, 1), 1))
+BET09 |> dplyr::select(层级, 玩法, 注单数, 占比, 会员数, 人均注单, 理论庄家优势, 风控意义) |>
+  aurora_dt(caption = "玩法子分类 · 23 种全量分布（DX-01 实测，139 天 1.2565 亿注单）", len = 17)
+```
+
+::: {.callout-important}
+## 这张表直接推翻两条常见做法
+
+1. **「胜率 > 70%」不能跨玩法用。** Tie 正常胜率 ≈9.5%、Big ≈62.38%、Banker ≈45.86%。
+   同一条 70% 的线，会让押 Tie 的**永久免检**、押 Big 的**动辄误伤**。
+   R-03 的 `side_base` CTE 按玩法逐项算基准，不是精细化，是**必须**。
+2. **`LIKE '%BANK%'` 会误纳四种边注**（DragonBonus / Natural 两对，合计 50 万笔）。
+   它们与主线庄闲**不构成对冲关系**，混进去会产出一个「看起来合理但偏高」的对押率——
+   比零命中更难发现。判别必须等值匹配。
+
+**边注合计占注单量 19.87%**，不是可以忽略的零头。打水者偏好低波动主线，
+技术型偏好高赔率边注——**玩法结构本身就是一个判别维度**（见 K-01 的 `side_entropy`）。
+:::
+
+### 23 种玩法逐类的漏损口径、措施与商业方案 {#sec-bet09-action}
+
+> @sec-r03 采纳「废除统一 70% 胜率」时只掌握三个基准数。这里把 23 种全部摊开：
+> **每一类的漏损从哪来、该采取什么措施、对业绩的影响量级**。
+
+```{r}
+#| label: bet09-action
+#| echo: false
+tibble::tribble(
+  ~层级, ~玩法, ~漏损从哪来, ~判别要点, ~措施, ~业绩影响与量级,
+  "主线","Banker / Player","**对押打水**：同局同额押两边，游戏输赢锁在零，钱从退水与占成出",
+    "等值匹配 + 同局 `round_key` 折叠；对押率 ≥ P90 且游戏输赢比 ≤ P10",
+    "**结算侧**：退水档位下调 δ*（上限由 @sec-econ 算出）+ 佣金缓发",
+    "占注单 72.46%，是漏损主战场。退水净漏损 = 返水 − 该群 GGR，可**立刻止血**",
+  "和局","Tie","**基准误用**：正常胜率仅 9.48%，统一 70% 门槛让押和玩家永久免检",
+    "Z-score 必须用 Tie 自己的基准；有效局数 ≥ 30",
+    "R-03 的 `side_base` CTE 按玩法逐项算基准（已实现）",
+    "占注单 7.67%。庄家优势高达 14.4%，**正常情况下平台是赚的**——漏损只可能来自异常，一旦有即为强信号",
+  "边注","BPair / PPair / PerfectPair / AnyPair","**高波动掩护**：方差大，短期大赢容易被误判为技术型",
+    "必须用 Wilson 区间而非点估计；局数 < 30 一律不判",
+    "只画像不处置；纳入玩法偏好熵作为辅助维度",
+    "四类合计占 12.1%。庄家优势 6.2%~17.1%，**平台侧最赚的一块**，误伤代价最高",
+  "边注","Super6","**免佣桌符号翻转**：佣金模式不同，金额口径与一般桌不可直接相加",
+    "按 `commission` 标记分桌型统计，切勿混算",
+    "对账时分开看；桌台表补齐后按 `免佣标记` 建独立基准",
+    "占 3.7%。混算会让 hold% 失真，是**对账错误**而非漏损",
+  "边注","Lucky7 / SuperLucky7","**结构性偏好**：技术型玩家偏好高赔率边注，靠尾段信息优势",
+    "注额斜率 + 靴位偏度联合判定（R-01 三闸）",
+    "**产品参数**：靴末段边注限红、提前封盘",
+    "合计占 6.0%。产品侧调参对全体生效、可 A/B、可回滚，误伤成本远低于封号",
+  "边注","BankerDragonBonus / PlayerDragonBonus / BankerNatural / PlayerNatural",
+    "**判别误纳**：名称含 Banker/Player，`LIKE` 匹配会把它们算成主线",
+    "★ 一律等值匹配。这四类合计 50.1 万笔，误纳会产出「看起来合理但偏高」的对押率",
+    "判别改等值匹配（已落实）；C-06 复跑验证",
+    "占 0.4%。量小但**污染面大**——一个偏高的对押率会让整条 T3 判据失准",
+  "边注","Big / Small","**门槛贴脸**：Big 正常胜率 62.38%，距 70% 仅 7.6 个百分点",
+    "统一门槛对它几乎必然误伤；必须用 Big 自己的基准算 Z",
+    "同 Tie，走玩法专属基准",
+    "合计占 0.08%。量极小，但它与 Tie 是证明「门槛必须分玩法」的两个端点",
+  "噪声","Lucky7TwoCard / SuperTie4,5,8,9 / SmallTiger / Bear8",
+    "无漏损。各仅 1 笔且全在 2026-07-20",
+    "判为上线试跑残留",
+    "**一切统计中剔除**；若后续量级上升，说明新玩法已正式放量，须重跑基准",
+    "占比 ≈0%。不剔除会在玩法熵与基准胜率里制造噪声"
+) |> aurora_dt(caption = "23 种玩法逐类：漏损口径 · 判别要点 · 措施 · 业绩影响", len = 8)
+```
+
+::: {.callout-important}
+## 从这张表能读出的两条商业结论
+
+1. **止血的钱在主线，误伤的风险在边注。** 主线（72.46%）是打水套利的战场，
+   处置手段是**结算侧**的退水与佣金；边注（19.87%）是平台侧最赚的一块，
+   庄家优势 6.2%~17.1%，**在那里误伤一个好客人，赔的是本来最赚钱的那批人**。
+2. **判别口径的错误比阈值的错误更贵。** `LIKE` 误纳四类边注只占 0.4% 的量，
+   却足以让整条对押率判据失准——**量小不等于影响小**。
+   这也是本报告坚持「判别一律等值匹配、基准一律按玩法分设」的原因。
+:::
+
+## 二、四类实体的子分类框架
+
+```{r}
+#| label: subclass-frame
+#| echo: false
+tibble::tribble(
+  ~实体, ~一级分类, ~子分类维度, ~所需导出, ~用途,
+  "**会员**","T1/T2/T3/T4 风险型","× 退水档位 × 洗码量四分位 × 活跃度（日数）× 玩法偏好熵 × 生命周期阶段",
+    "E02_segment_econ + K01","赏罚幅度按子群各算各的 δ*/γ*；@sec-econ 已按「退水档位 × 流水四分位」分群",
+  "**荷官**","异常关联数分层","× 当值时长分层（防小样本）× 桌台 × 班次 × 关联玩家集中度",
+    "S02_dealer_score + R03","贝叶斯层级收缩必须按「当值时长」分层，否则榜首永远是上班天数少的人",
+  "**代理**","LV1~LV5 层级","× 线下规模 × 对打渗透率 × 单链密度 × 占成率档位 × 退水消耗比",
+    "S03_agent_score + **A-02（待补）**","占成率档位是净贡献率的直接构成，必须单列",
+  "**玩法**","主线 / 和局 / 边注 / 噪声","× 理论庄家优势 × 波动率 × 打水适用性 × 参与人数量级",
+    "DX-01 + **DX-04（待补）**","Z-score 基准、对押判别、玩法偏好熵三处都依赖它",
+  "**风控员**","标注产量分层","× 命中率 × 复核时效 × 误标率 × 覆盖风险型分布",
+    "S04_analyst_score","误伤率的分母来自这里；命中率低的复核队列要重排"
+) |> aurora_kb(caption = "四类实体 × 子分类维度 × 所需导出（粗体为尚未产出的导出件）")
+```
+
+---
+
+# 时间一致性：不得出现 2026-08-07 之后的信息 {#sec-timeguard}
+
+> 需求：定日在 2026 年 8 月 7 日，则会员注册、荷官注册、IP、设备添加等信息一律须一致，
+> 确保不出现该日之后的信息，控制数据源误差与失误率。
+
+::: {.callout-important}
+## 为什么这条比看起来重要
+
+未来日期在风控数据里会造成两类静默错误：
+
+1. **穿越（look-ahead）**：会员注册时间若晚于其注单时间，说明维度表被后写覆盖。
+   用它算「注册至今天数」会得到负数，一切生命周期特征全错，而且**不报错**。
+2. **口径漂移**：注单事实表窗口截到 08-07，而维度表（会员/员工/IP/设备）是**最新快照**。
+   两者时点不一致时，「该 IP 关联多少会员」算的是今天的关联，不是窗口内的关联。
+
+**本报告的立场**：事实表按窗口截断，维度表**必须显式声明快照时点**；
+凡维度表含晚于 2026-08-07 的记录，一律先剔除并在体检表中记数。
+:::
+
+```{r}
+#| label: timeguard
+#| echo: false
+CUTOFF <- as.Date("2026-08-07")
+tibble::tribble(
+  ~表, ~时间字段, ~应有约束, ~检出后的处置, ~SQL,
+  "`ods_a168_bet02`","`dt` / `bet08` 下注时间","`dt < 2026-08-07`","已在所有查询中字面量化，无需额外处理","全包已含",
+  "`ods_a168_member`","注册时间","注册时间 ≤ 会员首笔注单时间","晚于首注单 → 该会员生命周期特征置 NA，不参与 H 估计","**TG-01（待补）**",
+  "`ods_a168_employee`","入职/建档时间","≤ 该荷官首次当值时间","同上；荷官评分按当值时长分层时排除","**TG-02（待补）**",
+  "`ods_a168_alert_ip_setting`","`addtime`","≤ 2026-08-07","晚于截止日的 IP 从 L0 金标准中剔除并记数","**TG-03（待补）**",
+  "设备/登录表","设备添加时间、登录时间","≤ 2026-08-07","晚于截止日的设备绑定不计入设备聚集判据","**TG-04（待补，表尚未提供）**",
+  "`ods_a168_member_dtl`","无时间字段（最新快照）","显式声明快照时点","退水配置用**实测退水率**替代配置值，规避快照漂移（已在 §E02 落实）","已落实"
+) |> aurora_kb(caption = glue::glue("时间一致性检查清单（截止日 {CUTOFF}）"))
+```
+
+```{r}
+#| label: timeguard-run
+if (need_data(D$anchor, "时间一致性", character(0))) guard({
+  a <- D$anchor
+  tcols <- names(a)[vapply(a, function(x)
+    inherits(x, c("Date","POSIXct")) ||
+      (is.character(x) && any(grepl("^\\d{4}-\\d{2}-\\d{2}", utils::head(x, 200)))),
+    logical(1))]
+  if (!length(tcols)) {
+    tibble::tibble(状态 = "该导出件无可识别的时间列",
+                   说明 = "锚点表若含 addtime/regtime，请在 SQL 中一并导出后重渲染") |>
+      aurora_kb(caption = "时间一致性实测")
+  } else {
+    purrr::map_dfr(tcols, function(cl) {
+      v <- suppressWarnings(as.Date(substr(as.character(a[[cl]]), 1, 10)))
+      tibble::tibble(时间列 = cl, 有效值数 = sum(!is.na(v)),
+        最早 = as.character(suppressWarnings(min(v, na.rm = TRUE))),
+        最晚 = as.character(suppressWarnings(max(v, na.rm = TRUE))),
+        `超出截止日的记录数` = sum(v > CUTOFF, na.rm = TRUE),
+        判定 = if (sum(v > CUTOFF, na.rm = TRUE) > 0)
+                 "🔴 存在未来日期 → 剔除后重算，并核对该表是否为最新快照而非窗口切片"
+               else "🟢 未超出截止日")
+    }) |> aurora_kb(caption = glue::glue("时间一致性实测（截止日 {CUTOFF}）"))
+  }
+}, "时间一致性") else ph_out("时间一致性")
+```
+
 # 赏罚经济学：百分比与上限一律算出来 {#sec-econ}
 
 > 需求原话：**「所有赏罚分明，一律得通过计数尤物来计算阈值，
@@ -4001,10 +5520,15 @@ if (need_data(D$seg_econ, "赏罚经济", COLS_SEG)) guard({
                         "n_member","tenure_months")),
         ~suppressWarnings(as.numeric(.x))))
   if (!"tenure_months" %in% names(s)) s$tenure_months <- 6   # 缺生存估计时的保守默认
-  res <- purrr::pmap_dfr(
-    list(s$segment, s$validbet, s$ggr, s$rebate, s$commission,
-         s$n_member, s$tenure_months),
-    function(seg, V, G, R, K, N, H) {
+  res <- cached("policy_cap", version = "v1",
+    inputs = list(s),
+    params = list(n_sim = 4000, q = 0.05, eta = c(.30,1.20), beta = c(.20,1.00),
+                  lam = c(.05,.35), seed = 20260807),
+    expr = map_dfr_pg(seq_len(nrow(s)), function(.i) {
+      seg <- s$segment[.i];    V <- s$validbet[.i];  G <- s$ggr[.i]
+      R   <- s$rebate[.i];     K <- s$commission[.i]
+      N   <- s$n_member[.i];   H <- s$tenure_months[.i]
+      (function(seg, V, G, R, K, N, H) {
       m <- G / pmax(V, 1e-9); rho <- R / pmax(V, 1e-9); kap <- K / pmax(V, 1e-9)
       o <- policy_cap(m = m, rho = rho, kappa = kap, V = V, H = pmax(H, 1))
       tibble::tibble(
@@ -4019,10 +5543,11 @@ if (need_data(D$seg_econ, "赏罚经济", COLS_SEG)) guard({
         `赏·退水上浮上限 γ*` = scales::percent(o$gamma_star, accuracy = 0.01),
         `期望月度增益`       = round(pmax(o$gain_pun, o$gain_rew), 0),
         `5%分位增益`         = round(pmax(o$q05_pun, o$q05_rew), 0))
-    })
+      })(seg, V, G, R, K, N, H)
+    }, label = "赏罚蒙特卡洛"))
   res |> aurora_dt(caption = paste0(
     "赏罚幅度与上限 · 全部由蒙特卡洛算出（4,000 次抽样，判据=5%分位增益>0）"), len = 15)
-}, "赏罚经济")
+}, "赏罚经济") else ph_out("赏罚经济")
 ```
 
 ```{r}
@@ -4057,7 +5582,7 @@ if (need_data(D$seg_econ, "赏罚经济", c("segment","validbet","ggr","rebate")
     ggplot2::labs(title = "罚项收益曲线：实线=期望增益，虚线=5%分位",
                   subtitle = "上限 δ* 取在虚线跌破 0 之前的最后一点——不是实线",
                   x = "退水下调幅度（占现行退水比例）", y = "预期净增益")
-}, "赏罚经济")
+}, "赏罚经济") else ph_out("赏罚经济")
 ```
 
 ## 五、三条不可放宽的执行纪律
@@ -4114,7 +5639,7 @@ if (need_data(D$seg_econ, "赏罚经济", c("segment","validbet","ggr","rebate")
 -- ═══════════════════════════════════════════════════════════════════
 WITH mth AS (
   SELECT bet05 AS member_id,
-         DATE_FORMAT(dt, '%Y-%m') AS ym,
+         DATE_FORMAT(CAST(dt AS DATE), '%Y-%m') AS ym,
          SUM(CAST(NULLIF(TRIM(validbet),'') AS DECIMAL(20,4))
              / NULLIF(CAST(NULLIF(TRIM(bet11),'') AS DECIMAL(20,8)),0)) AS validbet,
          SUM(CAST(NULLIF(TRIM(bet16),'') AS DECIMAL(20,4))
@@ -4126,7 +5651,7 @@ WITH mth AS (
   FROM ods_mariadb_2b.ods_a168_bet02          -- ★ 表名开关
   WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
     AND bet02 = '101' AND category = '1' AND UPPER(TRIM(bet38)) = 'N'
-  GROUP BY bet05, DATE_FORMAT(dt, '%Y-%m')
+  GROUP BY bet05, DATE_FORMAT(CAST(dt AS DATE), '%Y-%m')
 )
 SELECT m.member_id, m.ym, m.validbet, m.rebate, m.game_pnl, m.active_days,
        m.rebate / NULLIF(m.validbet,0) AS rebate_rate_realized,
@@ -4166,6 +5691,7 @@ tibble::tribble(
   "测试窗","14 日","一个结算周期，与业务复核节奏对齐",
   "滚动步长","14 日","不重叠推进，共约 5 折",
   "阈值来源","**只用训练窗数据的分位数**","阈值本身也是被拟合的参数，用全样本定阈值就是泄漏",
+  "风险分来源","**经验分位函数只在训练窗拟合**，再原样套到测试窗","B-01 导出刻意不含 risk_score——在 SQL 里用全量算好分数是最隐蔽的一种泄漏",
   "基线 Naive","不做任何处置，维持现状","MASE 的分母；跑不赢它就没有上线的理由"
 ) |> aurora_kb(caption="策略滚动回测协议（Purged Walk-Forward，López de Prado 口径）")
 ```
@@ -4206,6 +5732,31 @@ purged_folds <- function(dates, train = 60, embargo = 7, test = 14, step = 14) {
   out
 }
 
+## 风险分现算器：★ 经验分位函数**只在训练窗上拟合**，再原样套到测试窗。
+##   B-01 导出**刻意不含 risk_score**——分数是被拟合的量，在 SQL 里用全量
+##   算好再回测，等于用未来数据定分数，是最隐蔽的一种泄漏。
+RISK_FEATS <- c(late_share_d = 1, hedge_rate_d = 1, n_ip = 1,
+                stake_cv_d = -1, roi_game_d = 1)   # +1 越大越可疑，-1 反之
+fit_risk <- function(tr, feats = RISK_FEATS) {
+  use <- intersect(names(feats), names(tr))
+  if (!length(use)) return(NULL)
+  fns <- lapply(use, function(cl) {
+    v <- suppressWarnings(as.numeric(tr[[cl]])); v <- v[is.finite(v)]
+    if (!length(v)) NULL else stats::ecdf(v) })
+  names(fns) <- use
+  fns <- fns[!vapply(fns, is.null, logical(1))]
+  if (!length(fns)) return(NULL)
+  w <- feats[names(fns)]
+  function(d) {
+    z <- vapply(names(fns), function(cl) {
+      v <- suppressWarnings(as.numeric(d[[cl]]))
+      p <- fns[[cl]](ifelse(is.finite(v), v, stats::median(v, na.rm = TRUE)))
+      ifelse(is.finite(p), p, 0.5) * sign(w[[cl]]) }, numeric(nrow(d)))
+    if (is.null(dim(z))) z <- matrix(z, nrow = nrow(d))
+    100 * (rowMeans(z, na.rm = TRUE) + 1) / 2      # 映射到 0–100
+  }
+}
+
 ## 单折评估：阈值只由训练窗给出，测试窗只执行不调参
 ##   fixed_thr 非 NULL 时表示「朴素基线」——沿用固定阈值，不随折重估，
 ##   用来回答「重新估阈值这件事本身有没有价值」。
@@ -4214,6 +5765,12 @@ bt_fold <- function(panel, fold, q_thr = 0.99, action_recover = 0.60,
   tr <- panel[panel$bet_date >= fold$tr[1] & panel$bet_date <= fold$tr[2], , drop = FALSE]
   te <- panel[panel$bet_date >= fold$te[1] & panel$bet_date <= fold$te[2], , drop = FALSE]
   if (nrow(tr) < 100 || nrow(te) < 50) return(NULL)
+  ## ⓪ 风险分：面板自带就用自带的；不带则用训练窗现拟合（B-01 走这条）
+  if (!"risk_score" %in% names(panel)) {
+    scorer <- fit_risk(tr)
+    if (is.null(scorer)) return(NULL)
+    tr$risk_score <- scorer(tr); te$risk_score <- scorer(te)
+  }
   ## ① 训练窗定阈值（风险分的 q 分位）——★ 阈值也是被拟合的参数，绝不用全样本
   thr <- if (is.null(fixed_thr)) stats::quantile(tr$risk_score, q_thr, na.rm = TRUE)
          else fixed_thr
@@ -4249,20 +5806,30 @@ bt_fold <- function(panel, fold, q_thr = 0.99, action_recover = 0.60,
 
 ```{r}
 #| label: bt-run
-COLS_BT <- c("member_id","bet_date","risk_score","stake","game_pnl","net_pnl")
-if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
-  p <- D$bt_panel |> dplyr::mutate(
-    bet_date  = as.Date(bet_date),
-    dplyr::across(dplyr::any_of(c("risk_score","stake","game_pnl","net_pnl")),
+COLS_BT <- c("member_id","bet_date","stake","game_pnl","net_pnl")
+prep_bt <- function(df) {
+  x <- df |> dplyr::mutate(
+    bet_date = as.Date(bet_date),
+    dplyr::across(dplyr::any_of(c("risk_score","stake","game_pnl","net_pnl",
+                                  "rebate","validbet","n_rounds","n_tables","n_ip",
+                                  "late_share_d","hedge_rate_d","stake_cv_d")),
                   ~suppressWarnings(as.numeric(.x)))) |>
-    dplyr::filter(!is.na(bet_date), is.finite(risk_score))
+    dplyr::filter(!is.na(bet_date), is.finite(stake), stake > 0)
+  x$roi_game_d <- x$game_pnl / pmax(x$stake, 1e-9)   # 日 ROI，风险分的一维
+  x
+}
+if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
+  p <- prep_bt(D$bt_panel)
   folds <- purged_folds(p$bet_date)
   if (!length(folds)) {
     tibble::tibble(状态 = "时间跨度不足",
       说明 = "至少需要 60+7+14 = 81 个营业日才能切出一折") |>
       aurora_kb(caption = "策略滚动回测")
   } else {
-    res <- purrr::map_dfr(folds, function(f) bt_fold(p, f))
+    res <- cached("bt_folds", version = "v1",
+      inputs = list(p), params = list(q_thr = 0.99, recover = 0.60, churn = 0.15,
+                                      train = 60, embargo = 7, test = 14, step = 14),
+      expr = map_dfr_pg(folds, function(f) bt_fold(p, f), label = "策略回测逐折"))
     if (!nrow(res)) {
       tibble::tibble(状态 = "各折样本不足") |> aurora_kb(caption = "策略滚动回测")
     } else {
@@ -4278,26 +5845,29 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
         aurora_kb(caption = "策略滚动回测 · 逐折明细（阈值由各折训练窗独立给出；净增益 = 毛回收 − 误伤成本）")
     }
   }
-}, "策略回测")
+}, "策略回测") else ph_out("策略回测")
 ```
 
 ```{r}
 #| label: bt-verdict
 if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
-  p <- D$bt_panel |> dplyr::mutate(
-    bet_date = as.Date(bet_date),
-    dplyr::across(dplyr::any_of(c("risk_score","stake","game_pnl","net_pnl")),
-                  ~suppressWarnings(as.numeric(.x)))) |>
-    dplyr::filter(!is.na(bet_date), is.finite(risk_score))
+  p <- prep_bt(D$bt_panel)
   folds <- purged_folds(p$bet_date)
-  res <- purrr::map_dfr(folds, function(f) bt_fold(p, f))
+  ## 与上一块同 key 同参数 → 必然命中缓存，同一份逐折结果不会算两遍
+  res <- cached("bt_folds", version = "v1",
+    inputs = list(p), params = list(q_thr = 0.99, recover = 0.60, churn = 0.15,
+                                    train = 60, embargo = 7, test = 14, step = 14),
+    expr = map_dfr_pg(folds, function(f) bt_fold(p, f), label = "策略回测逐折"))
   if (!nrow(res)) {
     tibble::tibble(状态 = "无有效折") |> aurora_kb(caption = "上线裁定")
   } else {
     ## ★ 朴素基线：阈值冻结在第一折，之后不再重估。
     ##   「重新估阈值」这件事本身有没有价值，只能靠它回答。
     thr0  <- res$阈值[1]
-    naive <- purrr::map_dfr(folds, function(f) bt_fold(p, f, fixed_thr = thr0))
+    naive <- cached("bt_folds_naive", version = "v1",
+      inputs = list(p), params = list(fixed_thr = thr0, recover = 0.60, churn = 0.15),
+      expr = map_dfr_pg(folds, function(f) bt_fold(p, f, fixed_thr = thr0),
+                        label = "朴素基线逐折"))
     set.seed(20260807)
     bs <- replicate(2000, mean(sample(res$净增益, nrow(res), replace = TRUE)))
     ci <- stats::quantile(bs, c(.05, .5, .95), na.rm = TRUE)
@@ -4336,7 +5906,7 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
                verdict)) |>
       aurora_kb(caption = "上线裁定 · 四闸判据（2,000 次自助重抽；任一未过即不上线）")
   }
-}, "策略回测")
+}, "策略回测") else ph_out("策略回测")
 ```
 
 ::: {.callout-important}
@@ -4400,10 +5970,11 @@ tibble::tribble(
 
 ```{python}
 #| label: arsenal-extra
+#| error: true
 #| echo: true
 # ── 竞技场扩编：把「已备接口」变成真正跑起来的模型 ────────────────────
 #    只在面板就位且依赖装齐时执行；任何一项缺失只跳过该项，不中断渲染
-import os, warnings
+import os, warnings, hashlib, pickle, json
 warnings.filterwarnings("ignore")
 ARSENAL_TBL = []
 try:
@@ -4412,126 +5983,342 @@ try:
 except ImportError as e:
     print(f"⛔ Python 环境缺件（{e}）——军械库扩编跳过"); _AR_ENV = False
 
+# ── ★ 指纹缓存（与 R 侧同一目录、同一套语义）────────────────────
+#    指纹 = 输入文件内容哈希 + 参数 + 算法版本号。三者任一变化即重算。
+#    只看 mtime 是不够的：同步工具可能保留 mtime 却改内容。
+_CACHE_DIR = getattr(r, "CACHE_DIR_PY", None) or f"{r.DATA_DIR}/_cache"
+os.makedirs(_CACHE_DIR, exist_ok=True)
+_FORCE = str(os.environ.get("A168_FORCE_RECOMPUTE", "")).upper() in ("1", "TRUE", "YES")
+CACHE_LOG_PY, TIMING_PY, HEALTH_PY = [], [], []
+import sys, time
+
+def _pg(msg):                      # 进度写 stderr：控制台可见，不灌进正文
+    sys.stderr.write(msg); sys.stderr.flush()
+
+def py_timed(label, fn, threshold=3.0):
+    t0 = time.time(); _pg(f"⏳ [{label}] 开始 …\n")
+    val = fn(); el = time.time() - t0
+    _pg(f"{'✅' if el >= threshold else '·'} [{label}] 完成，用时 {el:.1f}s\n")
+    TIMING_PY.append({"任务": label, "耗时秒": round(el, 2),
+                      "量级": "秒内" if el < 1 else "数秒" if el < threshold
+                              else "分钟内" if el < 60 else "★ 分钟级"})
+    return val
+
+def py_contract(path, need_cols, sql_id):
+    """读入前后做存在性 / 表头 / 指纹三重核验，并给出该采取的措施。"""
+    if not os.path.exists(path):
+        HEALTH_PY.append({"文件": os.path.basename(path), "来源SQL": sql_id,
+                          "状态": "⬜ 未就位", "行数": "—", "指纹": "—",
+                          "应采取措施": f"按 @sec-runbook 跑 SQL {sql_id} 导出"})
+        return None
+    fp = _fp_file(path)
+    df = _rd(path) if "_rd" in globals() else _read_any(path)
+    df.columns = [str(c).strip().replace("\ufeff", "") for c in df.columns]
+    miss = [c for c in need_cols if c not in df.columns]
+    st = "🔴 表头不符" if miss else "🟢 已核验"
+    act = (f"缺必需列 {miss}；核对 SQL {sql_id} 的列别名"
+           if miss else "存在性/表头/指纹三项均通过")
+    HEALTH_PY.append({"文件": os.path.basename(path), "来源SQL": sql_id, "状态": st,
+                      "行数": f"{len(df):,}", "指纹": fp["h"][:12], "应采取措施": act})
+    return df
+
+def _fp_file(path, big_mb=200):
+    if not os.path.exists(path):
+        return {"kind": "missing", "n": 0, "h": "none"}
+    sz = os.path.getsize(path)
+    if sz > big_mb * 1024**2:                      # 超大文件降级为 元信息+抽样
+        h = hashlib.blake2b(digest_size=8)
+        with open(path, "rb") as fh:
+            h.update(fh.read(4 << 20)); fh.seek(max(0, sz - (4 << 20))); h.update(fh.read())
+        return {"kind": "file-sampled(大文件降级)", "n": sz, "h": h.hexdigest()}
+    h = hashlib.blake2b(digest_size=8)
+    with open(path, "rb") as fh:
+        for blk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(blk)
+    return {"kind": "file-content", "n": sz, "h": h.hexdigest()}
+
+def _fp_key(key, inputs, params, version):
+    fps = [_fp_file(p) for p in inputs]
+    fp = hashlib.blake2b(
+        json.dumps([fps, params or {}, version], sort_keys=True, default=str).encode(),
+        digest_size=8).hexdigest()
+    return fp, fps, os.path.join(_CACHE_DIR, f"{key}__{fp}.pkl")
+
+def py_cache_get(key, inputs=(), params=None, version="v1"):
+    """★ 必须在**开跑之前**调用：命中即整段跳过，才谈得上省时间。
+       旧版把 py_cached 放在训练之后，缓存的是结果、省不了训练——那是假缓存。"""
+    fp, fps, path = _fp_key(key, inputs, params, version)
+    if not _FORCE and os.path.exists(path):
+        try:
+            with open(path, "rb") as fh:
+                val = pickle.load(fh)
+            CACHE_LOG_PY.append({"缓存键": key, "版本": version, "状态": "🟢 命中缓存（跳过全部计算）",
+                                 "输入": " + ".join(f"{z['kind']}:{z['n']}" for z in fps),
+                                 "指纹": fp[:12], "说明": f"读 {os.path.basename(path)}"})
+            return val
+        except Exception as e:
+            CACHE_LOG_PY.append({"缓存键": key, "版本": version, "状态": f"🔴 缓存损坏：{e}",
+                                 "输入": "—", "指纹": fp[:12], "说明": "已忽略，改为重算"})
+    return None
+
+def py_cache_put(key, val, inputs=(), params=None, version="v1", note="首次计算"):
+    fp, fps, path = _fp_key(key, inputs, params, version)
+    stale = [f for f in os.listdir(_CACHE_DIR)
+             if f.startswith(key + "__") and f.endswith(".pkl") and f != os.path.basename(path)]
+    try:
+        with open(path, "wb") as fh:
+            pickle.dump(val, fh, protocol=4)
+        for f in stale:
+            os.remove(os.path.join(_CACHE_DIR, f))
+        st = "🟡 重算并落盘"
+    except Exception as e:
+        st = f"🔴 落盘失败：{e}"
+    CACHE_LOG_PY.append({"缓存键": key, "版本": version, "状态": st,
+                         "输入": " + ".join(f"{z['kind']}:{z['n']}" for z in fps),
+                         "指纹": fp[:12], "说明": note if not stale else "指纹变了（数据/参数/版本已改）"})
+    return val
+
+def py_cached(key, fn, inputs=(), params=None, version="v1"):
+    """兼容旧调用：先 get 再 put。新代码请直接用 get/put 以便整段跳过。"""
+    hit = py_cache_get(key, inputs, params, version)
+    if hit is not None:
+        return hit
+    return py_cache_put(key, fn(), inputs, params, version)
+
 _PANEL = f"{r.DATA_DIR}/S05_member_month_panel.csv"
 
-if _AR_ENV and os.path.exists(_PANEL):
-    def _rd(p):
-        for enc in ("utf-8-sig","utf-8","gb18030","gbk","big5","latin1"):
-            try: return pd.read_csv(p, encoding=enc)
-            except (UnicodeDecodeError, LookupError): continue
-        raise RuntimeError(f"{p} 所有候选编码均失败")
-    dfp = _rd(_PANEL)
-    dfp.columns = [str(c).strip().replace("\ufeff","") for c in dfp.columns]
-    ycol = "risk_label" if "risk_label" in dfp.columns else None
-    feats = [c for c in dfp.columns
-             if c not in ("member_id","bet_date","round_key",ycol)
-             and pd.api.types.is_numeric_dtype(dfp[c])]
+## ③ 最外层兜底：这一项再怎么失败也不该拖垮整份报告的渲染。
+##    注意 try/except 只挡得住 Python 异常；进程级崩溃（OOM/原生库 abort）
+##    挡不住——那要靠上面的下采样与小批量从源头避免。
+try:
+    if _AR_ENV and os.path.exists(_PANEL):
+        def _rd(p):
+            for enc in ("utf-8-sig","utf-8","gb18030","gbk","big5","latin1"):
+                try: return pd.read_csv(p, encoding=enc)
+                except (UnicodeDecodeError, LookupError): continue
+            raise RuntimeError(f"{p} 所有候选编码均失败")
+        dfp = py_contract(_PANEL, ["member_id"], "S-05")
+        if dfp is None:
+            dfp = pd.DataFrame()          # 契约不过 → 空表走后续「特征不足」分支
+        ycol = "risk_label" if "risk_label" in dfp.columns else None
+        feats = [c for c in dfp.columns
+                 if c not in ("member_id","bet_date","round_key",ycol)
+                 and pd.api.types.is_numeric_dtype(dfp[c])]
 
-    if ycol is None or dfp[ycol].nunique() < 2 or len(feats) < 3:
-        print("ℹ️ 面板缺标签列或特征不足——军械库扩编跳过")
-    else:
-        X = dfp[feats].replace([np.inf,-np.inf], np.nan).fillna(0).values.astype("float32")
-        y = dfp[ycol].astype(int).values
-        from sklearn.model_selection import StratifiedKFold
-        from sklearn.metrics import roc_auc_score, average_precision_score
-        from sklearn.preprocessing import StandardScaler
-        Xs = StandardScaler().fit_transform(X)
-        skf = StratifiedKFold(n_splits=3, shuffle=True, random_state=20260807)
+        ## ★ 2026-08-07 斧正：缓存必须在**开跑之前**查。
+        ##   旧版把 py_cached 放在全部训练之后，缓存的只是结果——
+        ##   GRU/Transformer 各 150 轮、HMM 300 轮照跑不误，等于没缓存。
+        ## ★ 2026-08-07 斧正：arsenal-extra 在 77% 处直接把渲染进程带走且不留错误信息，
+        ##   这是**进程级崩溃**（内存耗尽 / 原生库 abort），不是 Python 异常——
+        ##   异常会打印，崩溃不会。S05 面板动辄数十万行，
+        ##   而旧代码把整张表塞成一个张量、全批量跑 150 轮，OOM 是必然。
+        ##   三道闸：① 建模前分层下采样封顶 ② 改小批量 ③ 最外层 try/except 兜底。
+        _AR_PARAMS = {"folds": 3, "epochs": 60, "hmm_iter": 300, "batch": 512,
+                      "max_n": 20000, "kr_cap": 4000, "min_pos": 20, "seed": 20260807}
+        _AR_HIT = py_cache_get("arsenal", inputs=[_PANEL], params=_AR_PARAMS, version="v3")
+        if _AR_HIT is not None:
+            ARSENAL_TBL = _AR_HIT
+            print("🟢 军械库命中缓存，跳过全部训练（改参数或换数据即自动失效）")
+        elif ycol is None or dfp[ycol].nunique() < 2 or len(feats) < 3:
+            print("ℹ️ 面板缺标签列或特征不足——军械库扩编跳过")
+        else:
+            X = dfp[feats].replace([np.inf,-np.inf], np.nan).fillna(0).values.astype("float32")
+            y = dfp[ycol].astype(int).values
+            # ① 分层下采样：正样本全留，只降采样负样本（极不平衡下唯一正确的方向）
+            _MAXN = _AR_PARAMS["max_n"]
+            if len(y) > _MAXN:
+                _rng = np.random.default_rng(_AR_PARAMS["seed"])
+                _pos = np.flatnonzero(y == 1); _neg = np.flatnonzero(y == 0)
+                _kneg = max(1, min(len(_neg), _MAXN - len(_pos)))
+                _idx = np.sort(np.concatenate([_pos, _rng.choice(_neg, _kneg, replace=False)]))
+                print(f"ℹ️ 面板 {len(y):,} 行 → 分层下采样至 {len(_idx):,} 行"
+                      f"（正样本 {len(_pos):,} 全留），防止 OOM")
+                X, y = X[_idx], y[_idx]
+            from sklearn.model_selection import StratifiedKFold
+            from sklearn.metrics import roc_auc_score, average_precision_score
+            from sklearn.preprocessing import StandardScaler
+            Xs = StandardScaler().fit_transform(X)
+            skf = StratifiedKFold(n_splits=3, shuffle=True, random_state=20260807)
 
-        def _bench(name, fit_pred, note=""):
-            au, ap = [], []
-            for tr_i, te_i in skf.split(Xs, y):
-                try:
-                    s = fit_pred(Xs[tr_i], y[tr_i], Xs[te_i])
-                    au.append(roc_auc_score(y[te_i], s))
-                    ap.append(average_precision_score(y[te_i], s))
-                except Exception as e:
-                    print(f"⛔ [{name}] {e}"); return
-            ARSENAL_TBL.append({"模型": name,
-                                "AUC": round(float(np.mean(au)), 4),
-                                "PR-AUC": round(float(np.mean(ap)), 4),
-                                "折数": len(au), "备注": note})
+            def _bench(name, fit_pred, note=""):
+                au, ap, t0 = [], [], time.time()
+                folds_ = list(skf.split(Xs, y)); nf = len(folds_)
+                for k, (tr_i, te_i) in enumerate(folds_, 1):
+                    try:
+                        s = fit_pred(Xs[tr_i], y[tr_i], Xs[te_i])
+                        au.append(roc_auc_score(y[te_i], s))
+                        ap.append(average_precision_score(y[te_i], s))
+                        el = time.time() - t0
+                        _pg(f"\r  {name} {'█'*int(20*k/nf)}{'░'*(20-int(20*k/nf))} "
+                            f"{k}/{nf}  已用 {el:5.1f}s  剩余 ~{el/k*(nf-k):5.1f}s")
+                    except Exception as e:
+                        _pg("\n"); print(f"⛔ [{name}] {e}"); return
+                _pg("\n")
+                TIMING_PY.append({"任务": f"军械库·{name}",
+                                  "耗时秒": round(time.time() - t0, 2),
+                                  "量级": "见上"})
+                ARSENAL_TBL.append({"模型": name,
+                                    "AUC": round(float(np.mean(au)), 4),
+                                    "PR-AUC": round(float(np.mean(ap)), 4),
+                                    "折数": len(au), "备注": note})
 
-        # ① Isolation Forest（无监督罕见度，作监督对照）
-        try:
-            from sklearn.ensemble import IsolationForest
-            _bench("Isolation Forest",
-                   lambda a,b,c: -IsolationForest(n_estimators=300, random_state=1,
-                                                  n_jobs=-1).fit(a).score_samples(c),
-                   "无监督：不看标签也能排多远")
-        except ImportError: pass
+            # ① Isolation Forest（无监督罕见度，作监督对照）
+            try:
+                from sklearn.ensemble import IsolationForest
+                _bench("Isolation Forest",
+                       lambda a,b,c: -IsolationForest(n_estimators=300, random_state=1,
+                                                      n_jobs=-1).fit(a).score_samples(c),
+                       "无监督：不看标签也能排多远")
+            except ImportError: pass
 
-        # ② GRU 序列头（把每位会员的特征当作单步序列，接 GRU 编码）
-        try:
-            import torch, torch.nn as nn
-            class GRUHead(nn.Module):
-                def __init__(s, d, h=32):
-                    super().__init__(); s.g = nn.GRU(d, h, batch_first=True)
-                    s.o = nn.Sequential(nn.Linear(h, 16), nn.ReLU(), nn.Linear(16, 1))
-                def forward(s, x):
-                    z, _ = s.g(x); return s.o(z[:, -1, :]).squeeze(-1)
-            def _gru(a, b, c):
-                xt = torch.tensor(a).unsqueeze(1); yt = torch.tensor(b, dtype=torch.float32)
-                m = GRUHead(xt.shape[-1]); opt = torch.optim.Adam(m.parameters(), 1e-3)
-                lf = nn.BCEWithLogitsLoss(
-                    pos_weight=torch.tensor(max((b==0).sum()/max((b==1).sum(),1), 1.0),
-                                            dtype=torch.float32))
-                for _ in range(150):
-                    opt.zero_grad(); loss = lf(m(xt), yt); loss.backward(); opt.step()
-                with torch.no_grad():
-                    return torch.sigmoid(m(torch.tensor(c).unsqueeze(1))).numpy()
-            _bench("GRU 序列头", _gru, "单步序列；面板补足月序后升级为多步")
+            # ② GRU 序列头（把每位会员的特征当作单步序列，接 GRU 编码）
+            try:
+                import torch, torch.nn as nn
+                class GRUHead(nn.Module):
+                    def __init__(s, d, h=32):
+                        super().__init__(); s.g = nn.GRU(d, h, batch_first=True)
+                        s.o = nn.Sequential(nn.Linear(h, 16), nn.ReLU(), nn.Linear(16, 1))
+                    def forward(s, x):
+                        z, _ = s.g(x); return s.o(z[:, -1, :]).squeeze(-1)
+                def _fit_torch(model, a, b, c, pos_weight=None):
+                    """② 小批量训练 + 分块推断：全批量张量在数十万行上必然 OOM。"""
+                    EP, BS = _AR_PARAMS["epochs"], _AR_PARAMS["batch"]
+                    xt = torch.tensor(a).unsqueeze(1); yt = torch.tensor(b, dtype=torch.float32)
+                    opt = torch.optim.Adam(model.parameters(), 1e-3)
+                    lf = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+                    n = xt.shape[0]
+                    for _ in range(EP):
+                        perm = torch.randperm(n)
+                        for k in range(0, n, BS):
+                            sel = perm[k:k+BS]
+                            opt.zero_grad(); loss = lf(model(xt[sel]), yt[sel])
+                            loss.backward(); opt.step()
+                    model.eval(); outs = []
+                    ct = torch.tensor(c).unsqueeze(1)
+                    with torch.no_grad():
+                        for k in range(0, ct.shape[0], 4096):
+                            outs.append(torch.sigmoid(model(ct[k:k+4096])).numpy())
+                    return np.concatenate(outs) if outs else np.zeros(0)
 
-            # ③ Transformer 编码器头（注意力可解释）
-            class TrfHead(nn.Module):
-                def __init__(s, d, h=32, nh=4):
-                    super().__init__()
-                    s.p = nn.Linear(d, h)
-                    s.e = nn.TransformerEncoderLayer(d_model=h, nhead=nh,
-                            dim_feedforward=64, batch_first=True, dropout=0.1)
-                    s.o = nn.Linear(h, 1)
-                def forward(s, x):
-                    return s.o(s.e(s.p(x))[:, -1, :]).squeeze(-1)
-            def _trf(a, b, c):
-                xt = torch.tensor(a).unsqueeze(1); yt = torch.tensor(b, dtype=torch.float32)
-                m = TrfHead(xt.shape[-1]); opt = torch.optim.Adam(m.parameters(), 1e-3)
-                lf = nn.BCEWithLogitsLoss()
-                for _ in range(150):
-                    opt.zero_grad(); loss = lf(m(xt), yt); loss.backward(); opt.step()
-                with torch.no_grad():
-                    return torch.sigmoid(m(torch.tensor(c).unsqueeze(1))).numpy()
-            _bench("Transformer 编码器头", _trf, "注意力权重可导出为「哪几天最关键」")
-        except ImportError:
-            print("ℹ️ torch 未装——GRU / Transformer 跳过")
+                def _gru(a, b, c):
+                    pw = torch.tensor(max((b==0).sum()/max((b==1).sum(),1), 1.0),
+                                      dtype=torch.float32)
+                    return _fit_torch(GRUHead(a.shape[-1]), a, b, c, pos_weight=pw)
+                _bench("GRU 序列头", _gru, "单步序列；面板补足月序后升级为多步")
 
-        # ④ Regime Kernel：HMM 解码行为状态 → 分状态核回归阈值
-        try:
-            from hmmlearn.hmm import GaussianHMM
-            from sklearn.kernel_ridge import KernelRidge
-            hm = GaussianHMM(n_components=3, covariance_type="diag",
-                             n_iter=50, random_state=1).fit(Xs[:, :min(5, Xs.shape[1])])
-            st = hm.predict(Xs[:, :min(5, Xs.shape[1])])
-            per_state = []
-            for s_i in np.unique(st):
-                idx = st == s_i
-                if idx.sum() < 50 or len(np.unique(y[idx])) < 2:
-                    continue
-                kr = KernelRidge(alpha=1.0, kernel="rbf").fit(Xs[idx], y[idx])
-                per_state.append((int(s_i), int(idx.sum()),
-                                  float(roc_auc_score(y[idx], kr.predict(Xs[idx])))))
-            if per_state:
-                ARSENAL_TBL.append({
-                    "模型": "Regime Kernel (HMM×核岭)",
-                    "AUC": round(float(np.mean([p[2] for p in per_state])), 4),
-                    "PR-AUC": np.nan, "折数": len(per_state),
-                    "备注": "三态解码：" + " / ".join(f"状态{p[0]}:{p[1]}人" for p in per_state)})
-        except ImportError:
-            print("ℹ️ hmmlearn 未装——Regime Kernel 跳过")
+                # ③ Transformer 编码器头（注意力可解释）
+                class TrfHead(nn.Module):
+                    def __init__(s, d, h=32, nh=4):
+                        super().__init__()
+                        s.p = nn.Linear(d, h)
+                        s.e = nn.TransformerEncoderLayer(d_model=h, nhead=nh,
+                                dim_feedforward=64, batch_first=True, dropout=0.1)
+                        s.o = nn.Linear(h, 1)
+                    def forward(s, x):
+                        return s.o(s.e(s.p(x))[:, -1, :]).squeeze(-1)
+                def _trf(a, b, c):
+                    return _fit_torch(TrfHead(a.shape[-1]), a, b, c)
+                _bench("Transformer 编码器头", _trf, "注意力权重可导出为「哪几天最关键」")
+            except ImportError:
+                print("ℹ️ torch 未装——GRU / Transformer 跳过")
 
-        if ARSENAL_TBL:
-            print(pd.DataFrame(ARSENAL_TBL).to_string(index=False))
-elif _AR_ENV:
-    print("ℹ️ S05 面板未就位——军械库扩编待数据")
+            # ④ Regime Kernel：HMM 解码行为状态 → 分状态核回归
+            #    ★ 2026-08-07 双修（实跑暴露）：
+            #      修一 · MemoryError —— KernelRidge 要解 n×n 核矩阵，n=10 万时
+            #             光矩阵就 80GB。改为每状态**分层抽样封顶 KR_CAP 条**，
+            #             并优先走 Nystroem 近似核 + 线性 Ridge（内存 O(n·m)）。
+            #      修二 · 样本内评估 —— 原来 fit 与 roc_auc_score 用的是同一批 idx，
+            #             AUC 是拟合优度不是泛化能力，属自评自夸。改为训练/留出切分。
+            KR_CAP   = _AR_PARAMS["kr_cap"]   # 每状态参与建模的样本上限（改它即令缓存失效）
+            MIN_POS  = _AR_PARAMS["min_pos"]  # 该状态至少要有这么多正样本才值得建模
+            MIN_TEST_POS = 6  # 留出集里至少要有这么多正样本，AUC 才有意义
+            rk_note = []
+            try:
+                from hmmlearn.hmm import GaussianHMM
+                from sklearn.kernel_approximation import Nystroem
+                from sklearn.linear_model import Ridge
+                from sklearn.model_selection import train_test_split
+                Xh = Xs[:, :min(5, Xs.shape[1])]
+                hm = GaussianHMM(n_components=3, covariance_type="diag",
+                                 n_iter=300, tol=1e-3, random_state=1).fit(Xh)
+                converged = bool(getattr(getattr(hm, "monitor_", None), "converged", False))
+                st = hm.predict(Xh)
+                per_state, rng = [], np.random.default_rng(20260807)
+                for s_i in np.unique(st):
+                    idx = np.flatnonzero(st == s_i)
+                    pos, neg = idx[y[idx] == 1], idx[y[idx] == 0]
+                    # ★ 修三（2026-08-07 二次实跑暴露）：极端不平衡下的两个连锁问题
+                    #   ① 原按比例抽样 k_pos = KR_CAP*占比 → 正样本仅剩 1 个，
+                    #      train_test_split(stratify=) 直接抛
+                    #      "least populated class has only 1 member"。
+                    #   ② 就算侥幸切开，正样本个位数时的 AUC 是噪声，不是能力。
+                    #   正确做法：**正样本一个不抽掉，只对负样本降采样**，
+                    #   并设正样本下限，不够就明说跳过，不产出假数字。
+                    if len(pos) < MIN_POS or len(neg) < MIN_POS:
+                        rk_note.append(f"状态{int(s_i)}(正{len(pos)}/负{len(neg)}) 正样本不足，跳过")
+                        continue
+                    k_neg = min(len(neg), max(MIN_POS, KR_CAP - len(pos)))
+                    idx = np.concatenate([pos, rng.choice(neg, k_neg, replace=False)])
+                    yy = y[idx]
+                    try:
+                        tr_i, te_i = train_test_split(np.arange(idx.size), test_size=.3,
+                                                      stratify=yy, random_state=1)
+                    except ValueError as e:      # 分层仍不可行 → 明说，不硬切
+                        rk_note.append(f"状态{int(s_i)} 分层切分失败：{e}")
+                        continue
+                    if int(yy[te_i].sum()) < MIN_TEST_POS:
+                        rk_note.append(
+                            f"状态{int(s_i)} 留出集正样本仅 {int(yy[te_i].sum())} 个"
+                            f"（<{MIN_TEST_POS}），AUC 无意义，跳过")
+                        continue
+                    ny = Nystroem(kernel="rbf",
+                                  n_components=min(300, len(tr_i)), random_state=1)
+                    Ztr = ny.fit_transform(Xs[idx][tr_i]); Zte = ny.transform(Xs[idx][te_i])
+                    mdl = Ridge(alpha=1.0).fit(Ztr, yy[tr_i])
+                    per_state.append((int(s_i), int(idx.size), int(len(pos)),
+                                      float(roc_auc_score(yy[te_i], mdl.predict(Zte)))))
+                if per_state:
+                    ARSENAL_TBL.append({
+                        "模型": "Regime Kernel (HMM×Nyström核岭)",
+                        "AUC": round(float(np.mean([p[3] for p in per_state])), 4),
+                        "PR-AUC": np.nan, "折数": len(per_state),
+                        "备注": ("三态解码" + ("(已收敛)" if converged else "(★未收敛，仅供参考)")
+                                 + "：" + " / ".join(f"状态{p[0]}:{p[1]}条/正{p[2]}"
+                                                    for p in per_state)
+                                 + f"；负样本封顶 {KR_CAP}，正样本全留，30% 留出评估"
+                                 + ("；" + "；".join(rk_note) if rk_note else ""))})
+                else:
+                    print("ℹ️ Regime Kernel 未产出——" + ("；".join(rk_note) if rk_note
+                          else "各状态样本或标签不足"))
+                    ARSENAL_TBL.append({
+                        "模型": "Regime Kernel (HMM×Nyström核岭)",
+                        "AUC": np.nan, "PR-AUC": np.nan, "折数": 0,
+                        "备注": "⬜ 未产出：" + ("；".join(rk_note) if rk_note
+                                else "各状态正样本不足") + "　←　这是结论，不是失败"})
+            except ImportError as e:
+                print(f"ℹ️ hmmlearn / sklearn 组件未装（{e}）——Regime Kernel 跳过")
+            except MemoryError:
+                print(f"⛔ Regime Kernel 内存不足——当前 KR_CAP={KR_CAP}，减半后重试")
+            except Exception as e:
+                # ★ 兜底：这一项再怎么失败也不能拖垮整个军械库
+                print(f"⛔ Regime Kernel 异常（{type(e).__name__}: {e}）——已跳过，不影响其余模型")
+
+            # 军械库整表落缓存：下次渲染若 S05 面板与参数未变，直接读回，
+            # 省掉 GRU/Transformer 各 150 轮训练与 HMM 300 轮迭代
+            ARSENAL_TBL = py_cached(
+                "arsenal", lambda: ARSENAL_TBL, inputs=[_PANEL], version="v2",
+                params={"folds": 3, "epochs": 150, "hmm_iter": 300,
+                        # ★ 必须引用变量而非写死数字：写死会让 KR_CAP 改动无法使缓存失效，
+                        #   下次渲染会拿旧参数的结果冒充新参数的结果——缓存说谎。
+                        "kr_cap": KR_CAP, "min_pos": MIN_POS, "seed": 20260807})
+            if ARSENAL_TBL:
+                print(pd.DataFrame(ARSENAL_TBL).to_string(index=False))
+    elif _AR_ENV:
+        print("ℹ️ S05 面板未就位——军械库扩编待数据")
+except MemoryError:
+    print("⛔ 军械库内存不足——把 _AR_PARAMS['max_n'] 或 ['batch'] 减半后重跑")
+except Exception as _e:
+    print(f"⛔ 军械库异常（{type(_e).__name__}: {_e}）——已跳过，不影响其余章节")
 ```
 
 ```{r}
@@ -5198,11 +6985,263 @@ tibble::tribble(
 监控四项日更看板：**覆盖率、G3+G4 日均量、误伤率（申诉推翻比）、
 命中人群 hold% 与对照差**。任一连续 3 日越界即触发人工介入。
 :::
+# 缓存层：算过的不再算，但绝不拿旧结果糊弄 {#sec-cache}
+
+> 需求：**「先核实、校对现存文件（内容、参数设置与数据信息务必一致）是否存在，
+> 存在就读取，不存在就运算并储存。」**
+>
+> 关键在「务必一致」四个字。缓存最大的风险不是慢，是**悄悄用旧结果回答新问题**——
+> 那比不缓存危险得多，因为它不报错。
+
+## 指纹怎么算：三样东西一起哈希
+
+$$\text{fingerprint}=H\big(\underbrace{\text{输入内容}}_{①}\;\|\;\underbrace{\text{全部参数}}_{②}\;\|\;\underbrace{\text{算法版本}}_{③}\big)$$
+
+| 项 | 取什么 | 为什么不能省 |
+|---|---|---|
+| ① 输入 | **文件内容的哈希**，不是 mtime | 改回同样内容 mtime 会变（假失效）；同步工具可能保留 mtime 却改内容（**假命中**，致命） |
+| ② 参数 | 阈值、随机种子、折长、先验区间…全部 | 漏列一个参数，缓存就会在参数改了之后继续吐旧结果 |
+| ③ 版本 | 手写的版本号字符串 | 公式改了但数据参数没变时，只有版本号能让缓存失效 |
+
+三者任一变化即重算并覆盖；一致才读。R 侧 `cached()`、Python 侧 `py_cached()`
+共用 `数据库/_cache/` 目录与同一套语义。
+
+::: {.callout-important}
+## 什么该缓存、什么不该 —— 三条判据
+
+1. **只缓存「纯函数」结果**：给定输入与参数，输出唯一确定。
+   带随机性的必须把 `seed` 列进 `params`，否则缓存住的是某一次的运气。
+2. **只缓存「重」的**：本报告接入缓存的是三处——
+   策略回测逐折（含朴素基线折）、赏罚经济 4,000 次蒙特卡洛、军械库
+   （GRU/Transformer 各 150 轮 + HMM 300 轮）。读盘、聚合、画图一律不缓存，
+   缓存自身的哈希开销会超过收益。
+3. **绝不缓存「判定」**：阈值裁定、上线四闸这类结论必须每次由当期数据重算。
+   缓存的是**中间量**，不是**结论**。
+:::
+
+## 数据体检：每份导出件的存在性、表头、指纹
+
+```{r}
+#| label: data-health
+#| echo: false
+if (length(HEALTH$rows)) {
+  dplyr::bind_rows(HEALTH$rows) |>
+    dplyr::arrange(factor(substr(状态, 1, 1), levels = c("🔴","🟠","⬜","🆕","🟢")), 文件) |>
+    aurora_dt(caption = paste0(
+      "数据契约体检（本次渲染实况）· 🔴表头不符 / 🟠内容已变更 / ⬜未就位 / 🆕首次登记 / 🟢内容一致"),
+      len = 20)
+} else {
+  tibble::tibble(状态 = "未触发", 说明 = "本次渲染未尝试读取任何导出件") |>
+    aurora_kb(caption = "数据契约体检")
+}
+```
+
+::: {.callout-important}
+## 五种状态各自该做什么
+
+| 状态 | 含义 | 应采取的措施 |
+|---|---|---|
+| **🟢 内容一致** | 指纹与上次渲染完全相同 | 无需动作。依赖它的缓存会全部命中，重活一次都不跑 |
+| **🆕 首次登记** | 本次首次见到这份文件 | 无需动作。指纹已记入 `_cache/_data_manifest.rds`，下次自动比对 |
+| **🟠 内容已变更** | 指纹变了 | 相关缓存**已自动失效并重算**。若非预期，核对该 CSV 的导出时间与窗口是否仍为 2026-03-21~08-07 |
+| **🔴 表头不符** | 缺必需列 | 表里会列出**具体缺哪几列**。核对来源 SQL 的列别名；走 ADS 层时常见 `bet13→stake`、`bet14→payout` |
+| **⬜ 未就位** | 文件不存在 | 表里给出**该跑哪条 SQL**（编号直指 SQL 包），跑完放进 `数据库/` 重渲染即可 |
+
+**为什么表头核验要放在读入之后、计算之前**：旧版是运行到半途才抛
+`object 'xxx' not found`，那时已经白跑几分钟且看不出是哪份文件的问题。
+现在在契约层一次性说清「哪个文件、缺哪几列、去改哪条 SQL 的哪个别名」。
+:::
+
+## 内存水位：哪几份表在吃内存
+
+> `t4-cluster` 曾报「无法分配 750 KiB」——**这么小的分配都失败，说明进程内存早已见底**。
+> 元凶不是 T4，是 R 侧长期持有的几份大表。reticulate 与 R **同进程**，
+> Python 只能在 R 用剩的缝里挤。本表把水位摆出来，便于判断该先瘦哪一份。
+
+```{r}
+#| label: mem-watch
+#| echo: false
+rows <- purrr::imap(D, function(x, nm) {
+  if (is.null(x)) return(NULL)
+  tibble::tibble(对象 = nm, 行数 = nrow(x), 列数 = ncol(x),
+    占用MB = round(as.numeric(utils::object.size(x)) / 1024^2, 1),
+    字符列数 = sum(vapply(x, is.character, logical(1))))
+}) |> purrr::compact() |> dplyr::bind_rows()
+if (!nrow(rows)) {
+  tibble::tibble(状态 = "未读入任何导出件") |> aurora_kb(caption = "内存水位")
+} else {
+  gcinfo <- gc(FALSE)
+  rows |> dplyr::arrange(dplyr::desc(占用MB)) |>
+    dplyr::mutate(占比 = scales::percent(占用MB / sum(占用MB), accuracy = 0.1),
+                  建议 = dplyr::case_when(
+                    占用MB > 500 ~ "🔴 优先瘦身：导出时只取本报告用到的列",
+                    字符列数 > 3 & 占用MB > 100 ~ "🟠 字符列偏多：ID 列改数值可省一半以上",
+                    TRUE ~ "🟢 可接受")) |>
+    aurora_kb(caption = glue::glue(
+      "R 侧数据对象内存占用（合计 {round(sum(rows$占用MB))} MB；",
+      "R 进程已用 {round(sum(gcinfo[, 2]))} MB）　|　",
+      "Python 与 R 同进程共享这块内存"))
+}
+```
+
+::: {.callout-tip}
+## 内存吃紧时的三个抓手（按性价比排序）
+
+1. **导出时就少取列。** `B01_bt_panel.csv` 有 270MB，但回测只用到十来列——
+   在 SQL 里 `SELECT` 少几列，比在 R 里读进来再删有效得多。
+2. **ID 列一律数值化。** R 的字符向量每个元素都是独立 CHARSXP，几百万行的
+   `member_id` 存成字符比存成数值贵数倍。`fetch()` 已对 >20MB 的文件自动做这件事。
+3. **模型侧一律单线程 + 下采样。** `n_jobs=-1` 会让 joblib 在进程间复制数据，
+   内存吃紧时是灾难；`_T4_MAXN` / `_AR_PARAMS["max_n"]` 控制建模样本量，
+   两者都进了缓存指纹，改了会自动重算。
+:::
+
+## 渲染自检：`.knit.md` 的 Div 配平
+
+> Pandoc 若报 `Div ... unclosed ... closing implicitly`，说明中间产物 `.knit.md` 里
+> 有 `:::` 没闭合。本块直接读上一次渲染留下的 `.knit.md` 自查——**不必另开脚本**。
+> 注意它查的是**上一次**的产物（本次的 `.knit.md` 此刻尚未写完），
+> 所以连跑两次即可拿到最新结果。
+
+```{r}
+#| label: knitmd-divcheck
+#| echo: false
+kn <- list.files(pattern = "\\.knit\\.md$")
+if (!length(kn)) {
+  tibble::tibble(状态 = "⬜ 未找到 .knit.md",
+    说明 = "首次渲染时它还不存在；渲染一次后再跑本报告即可自查",
+    提示 = "若您用 quarto render 而非 preview，需加 --no-clean 才会保留中间产物") |>
+    aurora_kb(caption = "渲染自检 · Div 配平")
+} else {
+  x <- readLines(kn[1], encoding = "UTF-8", warn = FALSE)
+  inf <- FALSE; dep <- 0L; opens <- integer(0); extra <- integer(0)
+  for (i in seq_along(x)) {
+    if (grepl("^`{3,}", x[i])) { inf <- !inf; next }
+    if (inf) next
+    ln <- trimws(x[i])
+    if (grepl("^:{3,}\\s*\\{", ln)) { dep <- dep + 1L; opens <- c(opens, i) }
+    else if (grepl("^:{3,}\\s*$", ln)) {
+      ## ★ Pandoc 语义：深度为 0 时的裸 ::: 不是闭合，而是**新开一个匿名 div**
+      if (dep == 0L) { dep <- dep + 1L; opens <- c(opens, i); extra <- c(extra, i) }
+      else { dep <- dep - 1L; opens <- opens[-length(opens)] }
+    }
+  }
+  if (dep == 0L && !length(extra)) {
+    tibble::tibble(状态 = "🟢 配平", 文件 = kn[1], 总行数 = length(x),
+      结论 = "上一次渲染的 .knit.md 中 ::: 全部成对，无隐式闭合") |>
+      aurora_kb(caption = "渲染自检 · Div 配平")
+  } else {
+    ctx <- function(i) paste0("第", i, " 行：", substr(x[i], 1, 90))
+    tibble::tibble(
+      问题 = c(rep("未闭合的 div 起点", length(opens)),
+               rep("深度为0时的裸 :::（Pandoc 会当成新开）", length(extra))),
+      位置与内容 = c(vapply(opens, ctx, ""), vapply(extra, ctx, "")),
+      应采取措施 = paste0("把该行对应的源头补上闭合 `:::`；若它由某个 chunk 输出产生，",
+                          "改用 ", strrep("`", 3L), "{=html} 显式围栏")) |>
+      utils::head(20) |>
+      aurora_kb(caption = glue::glue(
+        "渲染自检 · Div 配平：{kn[1]} 收尾深度 {dep}，检出 {length(opens)} 处未闭合"))
+  }
+}
+```
+
+## 计时清单：哪些任务是重活
+
+```{r}
+#| label: timing-log
+#| echo: false
+if (length(TIMING$rows)) {
+  tl <- dplyr::bind_rows(TIMING$rows) |> dplyr::arrange(dplyr::desc(耗时秒))
+  tl |> dplyr::mutate(占比 = scales::percent(耗时秒 / sum(耗时秒), accuracy = 0.1)) |>
+    aurora_kb(caption = glue::glue(
+      "R 侧任务计时（本次渲染合计 {round(sum(tl$耗时秒),1)} 秒；超过 {SLOW_SEC} 秒的会实时报进度与 ETA）"))
+} else {
+  tibble::tibble(状态 = "本次渲染无重活", 说明 = "输入数据未就位，计时器没有触发") |>
+    aurora_kb(caption = "R 侧任务计时")
+}
+```
+
+```{r}
+#| label: timing-log-py
+#| echo: false
+tp <- tryCatch(reticulate::py$TIMING_PY, error = function(e) NULL)
+hp <- tryCatch(reticulate::py$HEALTH_PY, error = function(e) NULL)
+out <- list()
+if (length(hp)) out$h <- dplyr::bind_rows(lapply(hp, function(x)
+  tibble::as_tibble(lapply(x, as.character))))
+if (length(tp)) out$t <- dplyr::bind_rows(lapply(tp, function(x)
+  tibble::as_tibble(lapply(x, as.character))))
+## 两张表：用 tagList 合并为一个返回值，避免多次 print
+htmltools::tagList(
+  if (length(out$h)) htmltools::HTML(as.character(
+    aurora_kb(out$h, caption = "Python 侧数据契约体检"))),
+  if (length(out$t)) htmltools::HTML(as.character(
+    aurora_kb(out$t, caption = "Python 侧任务计时"))))
+if (!length(out)) {
+  tibble::tibble(状态 = "Python 侧本次未执行重活",
+                 说明 = "S05 面板与 K01 特征矩阵均未就位") |>
+    aurora_kb(caption = "Python 侧体检与计时")
+}
+```
+
+::: {.callout-tip}
+## 进度条为什么写在控制台而不在正文里
+
+进度信息写的是 **stderr**，`knitr` 不捕获 stderr——所以渲染时能在 Positron
+控制台实时看到 `策略回测逐折 ████████░░░░ 3/5 60% 已用 42.1s 剩余 ~28.1s`，
+而最终 HTML 里不会出现几百行进度垃圾。渲染完的**汇总**才进正文，就是上面两张表。
+:::
+
+```{r}
+#| label: cache-manifest
+#| echo: false
+if (length(CACHE_LOG$rows)) {
+  dplyr::bind_rows(CACHE_LOG$rows) |>
+    aurora_kb(caption = "R 侧缓存清单（本次渲染实况：命中即省算，未命中会写明原因）")
+} else {
+  tibble::tibble(
+    状态 = "本次渲染未触发任何缓存",
+    原因 = "对应章节的输入数据尚未就位，重活根本没开始跑",
+    目录 = file.path(DATA_DIR, "_cache"),
+    强制重算 = "设环境变量 A168_FORCE_RECOMPUTE=TRUE，或直接删掉 _cache 目录") |>
+    aurora_kb(caption = "R 侧缓存清单")
+}
+```
+
+```{r}
+#| label: cache-manifest-py
+#| echo: false
+cl <- tryCatch(reticulate::py$CACHE_LOG_PY, error = function(e) NULL)
+if (length(cl)) {
+  dplyr::bind_rows(lapply(cl, function(x) tibble::as_tibble(lapply(x, as.character)))) |>
+    aurora_kb(caption = "Python 侧缓存清单")
+} else {
+  tibble::tibble(状态 = "本次渲染 Python 侧未触发缓存",
+                 说明 = "S05 面板未就位，军械库未开跑") |>
+    aurora_kb(caption = "Python 侧缓存清单")
+}
+```
+
+::: {.callout-warning}
+## 缓存目录要不要进 Git？——不要
+
+`数据库/_cache/` 应写进 `.gitignore`。它是**可重建的派生物**，
+体积大、随数据变动频繁，进版本库只会把仓库撑爆且制造无意义的 diff。
+真正该进 Git 的是**能重建它的东西**：`.qmd`、SQL 包、以及 `params` 的取值。
+
+反过来，**缓存不能替代导出 CSV**。CSV 是可审计的原始证据，
+缓存是内部加速产物——审计、复核、交接时给的永远是 CSV。
+:::
+
 # 运行手册：Superset 跑什么、存哪里、叫什么名 {#sec-runbook}
 
-> 给执行同事的一页纸。**照着表从上往下跑**，每条查询在
-> `a168_核验与取数_SQL包.sql` 里可用编号搜到，整段复制粘贴即可运行
+> 给执行同事的一页纸。**照着表从上往下跑**，整段复制粘贴即可运行
 > （已全部字面量化，无需改任何参数）。
+>
+> | 编号前缀 | 在哪份 SQL 文件里 |
+> |---|---|
+> | `A-` `B-` `C-` `D-` `E1-` `I-` `P-` `S-` `T-` `V-` `X-` | `a168_核验与取数_SQL包.sql`（原包） |
+> | **`R-01` `R-02` `R-03` `T-02` `T-03` `E-02` `B-01` `K-01`** | **`a168_取数SQL包_v3增补.sql`（本轮新增，八条）** |
 
 ::: {.callout-important}
 ## 三条硬规矩
@@ -5305,7 +7344,8 @@ tibble::tribble(
   "6e","T-03","**T03_arbitrage.csv**","@sec-t3","打水型：游戏输赢比 / 对押率 / 返水依赖",
   "6f","E-02","**E02_segment_econ.csv**","@sec-econ","分群单位经济学（m / ρ / κ / V / H）",
   "6g","B-01","**B01_bt_panel.csv**","@sec-strategy-bt","会员×日回测面板（风险分 + 投注 + 盈亏）",
-  "6h","K-01","**K01_risk_feature_matrix.csv**","@sec-t4","T4 扩样特征矩阵（含 is_seed 种子列）"
+  "6h","K-01","**K01_risk_feature_matrix.csv**","@sec-t4","T4 扩样**纯特征**矩阵（is_seed 恒 0，种子在报告侧合并）",
+  "6i","K-01b","**K01b_seed_manual.csv**（可选）","@sec-t4","人工風險單 + 金标准IP 两路种子；★需先跑 §00b 核对列名"
 ) |> aurora_kb(caption="第二批之二：v3 新增八份底料（这一批决定商业方案能不能算出钱）")
 ```
 
@@ -5372,7 +7412,7 @@ need <- c("S01_player_score","S02_dealer_score","S03_agent_score",
           ## ── v3 新增八份（三线风控 / 四类风险用户 / 赏罚经济 / 策略回测）──
           "R01_late_shoe","R02_same_table","R03_player_dealer",
           "T02_daily_roi","T03_arbitrage","E02_segment_econ",
-          "B01_bt_panel","K01_risk_feature_matrix")
+          "B01_bt_panel","K01_risk_feature_matrix","K01b_seed_manual")
 chk <- tibble::tibble(
   文件 = paste0(need, ".csv"),
   状态 = ifelse(file.exists(file.path(DATA_DIR, paste0(need, ".csv"))),
@@ -5394,6 +7434,92 @@ aurora_kb(chk, caption="导出清单自检（渲染时自动核对 数据库/ �
 :::
 
 ---
+
+---
+
+# 还需要哪些数据表：一次列全 {#sec-needtables}
+
+> 需求：**还有哪些数据表需要提供，请一一列出。**
+>
+> 按「缺了它哪一章跑不动」排序。**前六张是硬阻塞**——没有它们，
+> 赏罚经济学、生存模型、设备聚集、时间一致性这四块只能停在结构就绪。
+
+```{r}
+#| label: need-tables
+#| echo: false
+tibble::tribble(
+  ~优先级, ~表, ~关键字段, ~没有它会怎样, ~解锁哪一章,
+  "🔴 P0","**会员主表**（`ods_a168_member` 或等价）",
+    "会员号 · **注册时间** · 状态 · 层级 · 币别 · 注册IP · 注册设备",
+    "① 生命周期 H 只能用「活跃月数」粗代，Cox/RSF 无法上；② 时间一致性无法核验注册是否晚于首注单",
+    "@sec-econ 的 H · @sec-timeguard TG-01",
+  "🔴 P0","**代理合同/占成表**",
+    "代理号 · LV层级 · **占成比例** · 退水比例 · 结算周期 · 生效起止",
+    "κ 只能从 dailyreport 的 LV1~5 占成列反推，且量纲未定；净贡献率仍带系统性偏差",
+    "@sec-econ 的 κ · 代理评分",
+  "🔴 P0","**员工表**（`ods_a168_employee`）",
+    "荷官工号（对 `bet02.eid`）· type=3 荷官 · **入职时间** · 在职状态",
+    "荷官评分无法按当值时长分层 → 贝叶斯收缩失效 → **榜首永远是上班天数少的人**",
+    "@sec-radar 荷官雷达 · @sec-r03",
+  "🔴 P0","**登录日志**",
+    "会员号 · 登录时间 · IP · **设备指纹** · UA · 地理",
+    "同 IP 判据只能用下注时 IP；登录态的聚集（同设备多号）完全看不见",
+    "@sec-t1 · 设备聚集判据",
+  "🔴 P0","**设备表 / 设备绑定**",
+    "设备ID · 会员号 · **绑定时间** · 机型 · 是否模拟器",
+    "批量注册与工作室的最强判据缺位；模拟器识别无从谈起",
+    "@sec-t4 特征 · @sec-timeguard TG-04",
+  "🔴 P0","**出入款流水**",
+    "会员号 · 时间 · 金额 · 通道 · 收款方 · 状态",
+    "资金侧闭环缺失：只看得到牌桌输赢，看不到钱从哪来往哪去；**洗钱与代付无法识别**",
+    "财务风险维度（18 指标框架的第六维）",
+  "🟠 P1","**`wallet_dtl` ↔ `bet05` 映射**",
+    "钱包流水号 · 会员号 · 业务单号",
+    "已知缺口：钱包流水与注单对不上，返水与调整无法逐笔追溯",
+    "退水追回的举证链",
+  "🟠 P1","**`game_result`（修复后）**",
+    "靴号 · 局序 · 桌号 · **开牌结果** · 荷官工号",
+    "无法独立验证「玩家赢」是否与开牌一致；荷官作弊只能从统计异常推断，拿不到实物证据",
+    "@sec-r03 的实证闭环",
+  "🟠 P1","**桌台/房间表**",
+    "桌号 · 房间 · 台面类型 · 限红档位 · **免佣标记**",
+    "限红分层这一处置动作没有落点；免佣桌的符号翻转只能靠 `commission` 标记推断",
+    "@sec-r01 处置落点",
+  "🟠 P1","**排班表**",
+    "荷官工号 · 桌号 · 班次起止",
+    "「玩家是否集中在某荷官值桌时段下注」这条检查做不了（阈值报告明列的必补项）",
+    "@sec-r03 必补检查③",
+  "🟡 P2","**优惠/活动表**",
+    "活动ID · 会员号 · 类型 · 金额 · 时间 · 流水要求",
+    "赏项只能用退水一种工具；礼金、返现的成本无法计入净贡献",
+    "@sec-econ 赏项工具箱",
+  "🟡 P2","**客诉/申诉记录**",
+    "会员号 · 时间 · 类别 · 处置结果",
+    "误伤率只能用「命中里净贡献为正的比例」估算，拿不到**申诉推翻率**这个金标准",
+    "@sec-serving 四项日更看板",
+  "🟡 P2","**历史汇率表**",
+    "币别 · 日期 · 汇率",
+    "`bet11` 是单笔汇率，够用；但跨期对账与追溯需要独立汇率基准",
+    "对账复核",
+  "🟡 P2","**黑名单 / 关联账户表**",
+    "会员号 · 关联类型 · 登记时间 · 登记人",
+    "L0 金标准只有 17 个 IP，标签极稀缺；有它可大幅扩充种子",
+    "@sec-t4 种子来源"
+) |> aurora_dt(caption = "尚需提供的数据表 · 14 张（P0 六张为硬阻塞）", len = 14)
+```
+
+::: {.callout-important}
+## 若只能先要三张，要这三张
+
+1. **代理合同/占成表** —— 直接决定 `κ`，而 `κ` 决定净贡献率的正负。
+   净贡献率算错方向，δ\* 与 γ\* 全部失真，**赏罚会赏错人罚错人**。
+2. **员工表** —— 荷官评分不做当值时长分层就是在冤枉新人。这是**人事风险**，
+   不是统计瑕疵。
+3. **登录日志 + 设备表** —— 同 IP 判据目前 90% 是运营商共享出口的噪音；
+   设备指纹是把它从「电信基础设施」里剥离出来的唯一手段。
+
+其余可以边跑边补。**没有这三张，本方案的处置建议一律只能停在「观察」层，不进「处置」层。**
+:::
 
 # 待补数据与验证 {#sec-next}
 
@@ -5570,7 +7696,7 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
 3. `quarto render a168风控与客户分层评分体系_商业方案.qmd`
 4. `cache: false`；任何步骤失败由 `guard()` 捕获，不中断渲染
 
-## SQL 可运行性三条纪律（2026-08-06 实测 9 连报错后固化）
+## SQL 可运行性四条纪律（2026-08-06 九连报错 + 2026-08-07 K-01 报错后固化）
 1. **零占位符**——Superset 不绑定 `:param`，全文 SQL 已一律字面量化
    （窗口 `'2026-03-21'/'2026-08-07'`、进度阈值 `0.90`、最小订单 `30`）；
    改参数 = 改字面量后整条重贴。
@@ -5580,4 +7706,16 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
    均为**片段**，须把 @sec-contract 的 E0 主查询
    （`WITH test_agents ... valid AS (...)`）整段前置为 CTE 链再运行；
    单独粘贴片段必报 `Unknown table` 或语法错。
+4. **★ 源码任何一行都不得在行首之外出现连续三个反引号。**
+   Pandoc 认 R 的引号，编辑器的围栏分词器**不认**——行内出现即从此错位，
+   该行之后的所有 chunk 都拿不到 Run Cell / Run Chunk 代码透镜。
+   需要在运行时输出围栏时，用 `strrep("`", 3L)` 拼装（本文件已如此处理两处）。
+5. **★ 辅助表列名先 `DESC`，再写 join。**
+   主表 `bet02` 用 `betNN` 代号，辅助表（`dailyreport_member`、`alert_ip_setting`、
+   `member_dtl`、`employee`）各有各的命名，**没有一张叫 `member_id`**。
+   K-01 首版就是没核对就 join，实跑报 `Column 'member_id' cannot be resolved.`
+   **固化做法**：把「只碰主表、保证跑通」的部分与「需要辅助表」的部分**彻底拆成两条 SQL**，
+   后者的未知列名一律写成 `★★列名★★` 占位并配 `DESC` 前置检查
+   （SQL 包 §00b / §K01b / §E02b）。
+   这样任何一张辅助表的 schema 不确定，都不会让整章卡死。
 :::

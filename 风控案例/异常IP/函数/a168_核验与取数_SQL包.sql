@@ -438,6 +438,13 @@ ORDER BY member_per_chain DESC;
    ▸ 导出：**数据库/C06_hedge_pairs.csv**
    ▸ 用途：对打对名单，IP-S6/IP-S8 与荷官/代理罚项来源
    ═══════════════════════════════════════════════════════════════════════ */
+-- C-06 校准版 · 由您 2026-08-07 上传的原文自动改写而成
+-- 唯一改动：side CTE 的玩法判别（庄 2 处、闲 2 处）
+--   bet_side IN ('1','B','庄','莊')  ->  TRIM(bet_side) = 'Banker'
+--   bet_side IN ('2','P','闲','閒')  ->  TRIM(bet_side) = 'Player'
+-- 依据：DX-01 全量普查，bet09 存英文玩法名 Banker 4682万 / Player 4422万
+-- 其余一字未动。头部块注释已删除（避免 §DX-02 的注释塌缩问题）
+
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   SELECT DISTINCT age001 AS aid
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
@@ -484,13 +491,13 @@ bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/
 ),
 side AS (   -- 每人每把在该IP的净方向（庄=+ 闲=−，按本金）
   SELECT bet_ip, round_key, member_id,
-         SUM(CASE WHEN bet_side IN ('1','B','庄','莊') THEN stake
-                  WHEN bet_side IN ('2','P','闲','閒') THEN -stake
+         SUM(CASE WHEN TRIM(bet_side) = 'Banker' THEN stake
+                  WHEN TRIM(bet_side) = 'Player' THEN -stake
                   ELSE 0 END) AS dir_stake
   FROM bs WHERE NULLIF(TRIM(bet_ip),'') IS NOT NULL
   GROUP BY bet_ip, round_key, member_id
-  HAVING ABS(SUM(CASE WHEN bet_side IN ('1','B','庄','莊') THEN stake
-                      WHEN bet_side IN ('2','P','闲','閒') THEN -stake
+  HAVING ABS(SUM(CASE WHEN TRIM(bet_side) = 'Banker' THEN stake
+                      WHEN TRIM(bet_side) = 'Player' THEN -stake
                       ELSE 0 END)) > 0
 ),
 pairs AS (
@@ -512,7 +519,6 @@ SELECT bet_ip, m_a, m_b, n_same_round, n_opposite_round,
        n_hedged*1.0/NULLIF(n_opposite_round,0) AS hedge_coverage
 FROM pairs
 ORDER BY opposite_rate DESC, n_opposite_round DESC;
-
 
 /* ═══════════════════════════════════════════════════════════════════════
    C-08 · /24 网段聚集 · 原版（按会员数降序；实测榜首为 CGNAT 饱和段）

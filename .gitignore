@@ -1,69 +1,183 @@
-.Rproj.user
+# ═══════════════════════════════════════════════════════════════════════════
+# basic-data-analytical-lab · .gitignore
+# 世博量化® Scibrokes Trading® · 整理并补充于 2026-08-07
+# ---------------------------------------------------------------------------
+# 本次相对上一版做了三件事：
+#   ① 去重 —— .Rproj.user 重复 27 次、.posit/assistant 重复 26 次，已各留一条
+#   ② 统一行尾为 LF（原文件 CRLF 44 行 / LF 46 行混排，会让 git diff 全文标红）
+#   ③ 补齐 Quarto / renv / 缓存 / 密钥 / Office 锁文件 五类缺口
+#
+# ⚠️ 关于那批 "!*.csv" 否定规则，请务必读一遍文末的《两点说明》。
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+# ── R ──────────────────────────────────────────────────────────────────────
+.Rproj.user/
 .Rhistory
+.Rapp.history
 .RData
 .Ruserdata
-.DS_Store
+.Renviron
+.Rprofile.user
+*.Rcheck/
+.httr-oauth
 
-# === Python 绝对不上 - 核心 ===
+# renv：锁文件必须进库（那是可复现的凭据），库本体绝不进
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/staging/
+renv/sandbox/
+# 反向保留（这几条紧跟在上面的 renv/ 规则之后才生效）
+!renv.lock
+!renv/activate.R
+!renv/settings.json
+
+
+# ── Quarto / bookdown / knitr 渲染产物 ─────────────────────────────────────
+/.quarto/
+.jupyter_cache/
+*_cache/
+*_files/
+/_site/
+/_book/
+/_freeze/
+*.knit.md
+*.utf8.md
+*.tex
+*.aux
+*.log
+*.out
+*.toc
+
+
+# ── ★ 指纹缓存目录（@sec-cache 的落盘位置）─────────────────────────────
+# 可重建的派生物：体积大、随数据频繁变动，进版本库只会撑爆仓库并制造无意义 diff。
+# 该进 Git 的是「能重建它的东西」：.qmd、SQL 包、以及 params 的取值。
+_cache/
+**/_cache/
+数据库/_cache/
+
+
+# ── Python ─────────────────────────────────────────────────────────────────
 .venv/
 venv/
 ENV/
 env/
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
 *.pyd
 *.egg-info/
 *.egg
 .eggs/
 *.whl
 .mypy_cache/
+.ruff_cache/
 .pytest_cache/
+.tox/
 jupyter_runtime/
-.ipynb_checkpoints
-
-# npm 也会套在 .venv 里
+.ipynb_checkpoints/
+# npm 有时会套在 .venv 里
 **/node_modules/
 
-# === 下面这些数据，强制要上载，所以前面不能有 *.csv / *.rds ===
+
+# ── 密钥与凭据（这一组一条都不能少）────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+credentials.json
+client_secret*.json
+service-account*.json
+*_rsa
+*_rsa.pub
+.aws/
+.ssh/
+# 数据库连接串常被随手存成这些名字
+odbc.ini
+connections.yml
+dbconfig.*
+
+
+# ── 编辑器 / IDE ───────────────────────────────────────────────────────────
+.vscode/
+.positron/
+.posit/assistant/
+.idea/
+*.swp
+*.swo
+*~
+
+
+# ── 操作系统 ───────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+
+# ── Office / WPS 锁文件 ★ 必须在下面的 !*.xlsx 之前 ─────────────────────
+# 打开 xlsx 时会生成 ~$xxx.xlsx 这类隐藏锁文件。若不在此拦下，
+# 后面的 !*.xlsx 会把它一并强制纳入版本库——这是最容易漏的一处。
+~$*
+.~lock.*#
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 强制纳入的数据文件
+# ---------------------------------------------------------------------------
+# ⚠️ 说明一（技术）：git 的 "!" 只能**撤销前面某条规则造成的忽略**。
+#    本文件从头到尾没有 *.csv / *.rds 之类的忽略规则，
+#    所以下面这些 "!" 目前全是空转——不写它们，CSV 照样会被提交。
+#    保留它们只有一个作用：万一将来有人加了 "*.csv"，这里能兜住。
+#    但注意 git 的铁律——**父目录被忽略时，"!" 无法救回其中的文件**。
+#    所以 _cache/ 里的 .rds 不会因为下面的 !*.rds 而被提交，这是对的。
+# ═══════════════════════════════════════════════════════════════════════════
 !*.csv
 !*.rds
+!*.RDS
 !*.RData
 !*.rda
-!*.RDS
 !*.xlsx
 !*.xls
 !*.zip
-!*.rds
-!*.RData
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
+!*.qmd
+!*.sql
+!*.md
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⚠️ 说明二（数据保护）：请在提交前确认这两件事
+# ---------------------------------------------------------------------------
+# 1)【隐私】数据库/ 目录下的导出件含**真人博彩平台的生产数据**：
+#      member_id、bet_ip、荷官工号、逐日投注与盈亏、代理链路……
+#    I_ip_player.csv / R02_same_table.csv / K01_risk_feature_matrix.csv
+#    等文件即便没有姓名，member_id + IP + 时序行为已足以重识别个人。
+#    github.com/englianhu 与 github.com/scibrokes 若为**公开仓库**，
+#    这批文件一旦推上去即等同公开发布，且 git 历史无法靠一次 rm 清除
+#    （需 filter-repo 重写历史 + force push，且第三方可能已克隆）。
+#    → 建议三选一：① 改用私有仓库；② 只提交聚合层（分群/分布，不含个体行）；
+#                  ③ 个体级文件本地保存，仓库里只放能重建它的 SQL。
+#    这是您的决定，我只负责把风险摆在提交之前。
+#
+# 2)【体积】GitHub 单文件硬上限 100 MB，仓库软上限 1 GB。
+#    T02_daily_roi.csv（会员×日，139 天）与 B01_bt_panel.csv 极可能超线。
+#    → 超 50 MB 的走 Git LFS：
+#         git lfs install
+#         git lfs track "数据库/*.csv"
+#         git add .gitattributes
+#    注意 LFS 免费额度为 1 GB 存储 / 1 GB 月流量，超出需付费。
+# ═══════════════════════════════════════════════════════════════════════════
 .Rproj.user
 .posit/assistant
 .Rproj.user
