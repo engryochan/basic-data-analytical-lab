@@ -127,6 +127,46 @@ execute:
 ##    ② 包体积大（torch 约 2GB），**一律不进 Git**——本块自动写 .gitignore；
 ##    ③ 装过就跳过，二次渲染秒过；装不上不中断渲染（该模型自动跳过）。
 ## ═══════════════════════════════════════════════════════════════════════
+## ══ ★ 线程锁：必须是本文件的第一件事 ══════════════════════════════════
+##   实测在 2/243 [setup-python] 就报
+##     OpenBLAS error: Memory allocation still failed after 10 retries
+##   OpenBLAS / MKL 会**按线程数各开一份工作区**，八核即八份。
+##   关键在时机：这些环境变量只在 BLAS **第一次初始化时**被读取，
+##   而 BLAS 在 `import numpy` 的瞬间就初始化完了。
+##   上一版把它写在 py-arena（第 134 个 chunk），那时 numpy 早已由
+##   radar-scores 导入过——**锁得太晚，等于没锁**。
+##   因此必须放在整份文件的最前面，早于 reticulate 触碰 Python。
+Sys.setenv(OMP_NUM_THREADS = "1", OPENBLAS_NUM_THREADS = "1",
+           MKL_NUM_THREADS = "1", NUMEXPR_NUM_THREADS = "1",
+           VECLIB_MAXIMUM_THREADS = "1", MKL_DYNAMIC = "FALSE",
+           OMP_DYNAMIC = "FALSE")
+## R 自身若链接 OpenBLAS，同样按线程复制工作区，一并锁死
+try(RhpcBLASctl::blas_set_num_threads(1), silent = TRUE)
+try(RhpcBLASctl::omp_set_num_threads(1),  silent = TRUE)
+
+## ── 起跑前的内存体检：不够就先说清楚，别跑到一半才崩 ──────────────
+MEM_FREE_MB <- suppressWarnings(tryCatch({
+  if (.Platform$OS.type == "windows") {
+    ## wmic 在新版 Windows 已弃用，失败则退回 PowerShell
+    v <- suppressWarnings(tryCatch({
+      x <- system("wmic OS get FreePhysicalMemory /Value", intern = TRUE, ignore.stderr = TRUE)
+      as.numeric(sub(".*=", "", grep("FreePhysicalMemory", x, value = TRUE)[1])) / 1024
+    }, error = function(e) NA_real_))
+    if (!is.finite(v)) v <- suppressWarnings(tryCatch(
+      as.numeric(system(paste("powershell -NoProfile -Command",
+        "\"(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory\""),
+        intern = TRUE, ignore.stderr = TRUE)[1]) / 1024,
+      error = function(e) NA_real_))
+    v
+  } else NA_real_
+}, error = function(e) NA_real_))
+if (is.finite(MEM_FREE_MB)) {
+  message(sprintf("ℹ️ 起跑时可用物理内存约 %d MB", round(MEM_FREE_MB)))
+  if (MEM_FREE_MB < 4096)
+    message("⚠️ 可用内存不足 4 GB：本报告需同时驻留 R 与 Python（同进程）。\n",
+            "   建议先关闭浏览器多余标签页与其它 R/Python 会话，再重新渲染。")
+}
+
 if (!requireNamespace("reticulate", quietly = TRUE)) install.packages("reticulate")
 
 PYENV <- ".venv-a168"          # 项目内虚拟环境目录名（已列入 .gitignore）
@@ -342,6 +382,7 @@ AUR <- PAL  # 别名，供 plotly / DT 调用
 ##   于是单元格里的 **粗体**、`代码`、以及 sec- 开头的交叉引用全部以字面量示人
 ##   （变更清单那一列满屏反引号就是这么来的）。这里在进表前自行转换。
 md_inline <- function(x) {
+  if (is.null(x)) return(NULL)
   if (!is.character(x)) return(x)
   x <- gsub("`([^`]+)`", "<code>\\1</code>", x)              # 先码后粗，避免码内 ** 被吃
   x <- gsub("\\*\\*([^*]+)\\*\\*", "<strong>\\1</strong>", x)
@@ -351,7 +392,7 @@ md_inline <- function(x) {
 md_cols <- function(df) { df[] <- lapply(df, md_inline); df }
 
 aurora_dt <- function(df, caption=NULL, len=12)  # 互动式极光桌表
-  DT::datatable(md_cols(df), rownames=FALSE, caption=caption, escape=FALSE,
+  DT::datatable(md_cols(df), rownames=FALSE, caption=md_inline(caption), escape=FALSE,
     extensions="Buttons", width="100%",
     options=list(pageLength=len, dom="Bfrtip", buttons=c("copy","csv"),
                  ## ★ 横向拖拉后右侧露黑底 = 表宽 < 容器宽。
@@ -365,7 +406,8 @@ aurora_dt <- function(df, caption=NULL, len=12)  # 互动式极光桌表
 
 ## 静态表统一走 aurora_kb：极光渐变底 + 高对比字，杜绝灰底看不清
 aurora_kb <- function(df, caption=NULL, ...)
-  knitr::kable(md_cols(df), caption=caption, format="html", escape=FALSE, ...) |>
+  ## caption 同样不经 Pandoc，必须一起转换，否则标题里的 ** 与反引号原样示人
+  knitr::kable(md_cols(df), caption=md_inline(caption), format="html", escape=FALSE, ...) |>
   kableExtra::kable_styling(
     bootstrap_options=c("hover","condensed","responsive"),
     full_width=TRUE, font_size=13) |>
@@ -379,6 +421,9 @@ theme_set(theme_minimal(base_size=12) + theme(
   text=element_text(colour=PAL$fg), axis.text=element_text(colour=PAL$fg),
   panel.grid=element_line(colour="#1E3247")))
 set.seed(20260806)
+## ★ 绘图设备调小：bitmap 分配失败时，设备尺寸/分辨率是最直接的一档降压
+knitr::opts_chunk$set(dev = "png", dpi = 96, fig.width = 9, fig.height = 4.6,
+                      fig.retina = 1, out.width = "100%")
 
 ## ★ E1 全局窗口（139 营业日），禁用任何局部窗口；改窗须同步改 SQL 包字面量
 CFG <- list(db="ods_mariadb_2b", game_cat="101",
@@ -583,6 +628,14 @@ fetch <- function(n) {
   mb <- round(file.info(f)$size / 1024^2, 2)
   x  <- guard(if (mb > 50) timed(glue::glue("读取 {n}.csv ({mb}MB)"), read_any(f)) else read_any(f), n)
   if (is.null(x)) { add("🔴 读取失败", "文件存在但无法解析：检查是否为 HTML 报错页或半截下载"); return(NULL) }
+  ## ★ 列名规范化：Superset / Excel 导出的表头常带 BOM、前后空格或不换行空格，
+  ##   肉眼看不出，但 setdiff() 一比就判「缺列」→ 明明有文件却一路吐占位。
+  ##   这是「我有 S_player_tail.csv 为何还是待数据」最常见的一种成因。
+  nm0 <- names(x)
+  names(x) <- trimws(gsub("\u00a0", " ", gsub("^\ufeff", "", nm0)))
+  if (!identical(nm0, names(x)))
+    message(glue::glue("ℹ️ [{n}] 列名已规范化（去 BOM/空格）：",
+                       "{sum(nm0 != names(x))} 列受影响"))
 
   ## ★ 2026-08-07 斧正：t4-cluster 报「无法分配 750 KiB」——这么小的分配都失败，
   ##   说明进程内存早已见底。元凶不是 T4 本身，是 R 侧长期持有的几份大表：
@@ -652,6 +705,25 @@ fetch <- function(n) {
   }
   x
 }
+## ★ 2026-08-07 斧正：渲染到 174/221 时 R 连绘图设备的 bitmap 都分配不出来
+##   （「无法分配bitmap / 无法启动png()装置」）。这不是绘图的问题，是**内存耗尽**：
+##   D 里的大表从头持有到尾，而 reticulate 的 Python（torch/sklearn）与 R 同进程。
+##   对策：**用完即释放**。每份大表在最后一次被引用之后立刻置 NULL 并 gc，
+##   释放量记入 @sec-cache 的内存水位表，可审计。
+RELEASED <- new.env(parent = emptyenv()); RELEASED$rows <- list()
+release <- function(...) {
+  keys <- c(...)
+  for (k in keys) {
+    if (!is.null(D[[k]])) {
+      mb <- round(as.numeric(utils::object.size(D[[k]])) / 1024^2, 1)
+      RELEASED$rows[[length(RELEASED$rows) + 1L]] <<- tibble::tibble(
+        对象 = k, 释放MB = mb, 时点 = format(Sys.time(), "%H:%M:%S"))
+      D[[k]] <<- NULL
+    }
+  }
+  invisible(gc(full = TRUE))
+}
+
 D <- list(recon=fetch("V_recon"), ipmatch=fetch("V_ipmatch"),
           table_span=fetch("T_table_span"), sec_dist=fetch("S_second_dist"),
           player_tail=fetch("S_player_tail"), ip_player=fetch("I_ip_player"),
@@ -673,6 +745,28 @@ AVAIL <- lapply(D, Negate(is.null))
 ---
 
 # 第〇章 · 用哪些表、什么维度、如何正名 {#sec-tables}
+
+::: {.callout-important}
+## 口径正名：`bet02` 是**产品**，`bet09` 是产品**内部**的投注选项
+
+这两个词一直被混用，必须先分清，否则「只分析百家乐，为什么冒出 23 种玩法」
+和「4.2.2 极端值来自边注」这类疑问永远解释不清。
+
+| 层级 | 字段 | 含义 | 本报告取值 |
+|---|---|---|---|
+| **产品** | `bet02` | 百家乐 / 龙虎 / 轮盘 / 骰宝… | **只取 `101` 百家乐** |
+| **投注选项** | `bet09` | 同一局百家乐里可以押的 23 种标的 | **全取**：Banker / Player / Tie + 20 种边注 |
+
+**所以：23 种「玩法」全部属于百家乐，一个都不是别的产品。**
+`BPair`、`Super6`、`Lucky7`、`DragonBonus` 都是百家乐台面上的**边注**，
+与 Banker/Player 在同一局、同一副牌、同一位荷官下结算。
+@sec-evidence-tier 的「极端值全部来自小样本边注」讲的也是百家乐边注，
+**没有越出百家乐口径半步**。
+
+**本报告此前把 `bet09` 称作「玩法」，与业界常把「玩法」用于产品层的习惯相冲。**
+为免歧义，本节起统一为：**产品（`bet02`）／投注选项（`bet09`）**；
+正文旧称保留但含义以本表为准。
+:::
 
 ::: {.callout-important}
 ## 口径声明一：本报告目前**只分析百家乐**（`bet02 = '101'`）
@@ -970,6 +1064,20 @@ tibble::tribble(
   77,"**评分维度扩编**：对标行业实践逐实体给出可扩编维度与所需表，并如实说明风控员雷达为何仍是结构演示（依赖的处置日志表本平台尚无）","新增","@sec-dim-expand · SQL包 §S04p",
   79,"★ `py-arena` 实测报 `OpenBLAS: Memory allocation still failed after 10 retries`：BLAS/OpenMP 线程锁为 1（须在 `import numpy` 前设）+ 分层下采样 3 万行 + float32 + 外层兜底","斧正","@sec-py-arena",
   80,"全文残余 `n_jobs=-1` 三处（随机森林 500 树、Isolation Forest）一并改为 `n_jobs=1` 并降树数；内存三抓手补入「BLAS 线程锁 1」一条","斧正","@sec-py-arena · @sec-t4 · @sec-cache",
+  95,"★★ 线程锁写在 `py-arena`（第 134 个 chunk）**太晚**——BLAS 只在 `import numpy` 那一瞬读环境变量，而 numpy 早已被 `radar-scores` 导入：锁前移到 `setup-python` 最前，早于 reticulate 触碰 Python；并对 R 自身的 BLAS 一并锁死","斧正","setup-python",
+  96,"新增**起跑内存体检**：渲染开始即报可用物理内存，低于 4 GB 明确提示先关掉占内存的程序（wmic 已弃用，配 PowerShell 后备）","新增","setup-python · @sec-cache",
+  93,"★ 渲染至 174/221 报 `无法分配bitmap / 无法启动png()装置` = 内存耗尽到开不出绘图设备：新增 `release()`，逐个定位 `D$xxx` 的最后引用 chunk 并在其后插入释放块（共 10 处），释放量记入内存水位可审计","斧正","setup · 全文十处释放点",
+  94,"绘图设备全局降压：`dpi 96` + `fig.width 9` + `fig.retina 1`；Python 侧训练完即删大对象并 gc","升级","setup · @sec-arsenal",
+  83,"★★ **全文走势图一张都不显示的根因**：`purged_folds`/`fit_risk`/`bt_fold`/`prep_bt` 定义在 @sec-strategy-bt（约 5900 行），而 @sec-benchmark（约 5200 行）在其**之前**就调用 —— R 顺序执行，调用时函数尚不存在，`guard()` 捕获后一律吐占位。四个引擎统一前移为 `engine-core`","斧正","@sec-benchmark · @sec-strategy-bt",
+  84,"`caption` 不经 `md_inline` → 表标题里的 `**` 与反引号字面示人：`aurora_kb`/`aurora_dt` 的 caption 一并转换","斧正","全文表格",
+  85,"`fetch()` 新增**列名规范化**（去 BOM / 前后空格 / 不换行空格）：Superset 导出的表头常带隐形字符，`setdiff()` 一比即判缺列 —— 这是「明明有 CSV 却一路吐待数据」最常见的成因","斧正","setup · fetch()",
+  86,"雷达图改按**实体名**去重（div id 每次重跑都变，名字不会变），并为每张图加实体小标题","斧正","@sec-radar",
+  87,"四实体维度改为**候选登记制**：导出件补列即自动纳入雷达，玩家 7→13、荷官 5→10、代理 5→10、风控员 4→8 个候选维度","升级","@sec-radar · @sec-dim-expand",
+  88,"删除「渲染自检 · Div 配平」整节（含 `knitmd-divcheck` chunk）","升级","@sec-cache",
+  89,"**口径正名**：`bet02` 是产品、`bet09` 是产品**内部**的投注选项 —— 23 种全部属于百家乐，边注亦然，未越出百家乐口径半步","校对","@sec-tables",
+  90,"4.2.6 经济量级表补口径说明（金额为**平台侧盈亏折算额**而非投注额）与商业方案：不追这 405 万，改测量、转哨兵、力气投向 T3","新增","@sec-evidence-tier",
+  91,"三版本盈利口径 A/B/C 补跨节对照表与链接；术语补入 尾段 / 分母 / naive one-step 基准 / 哨兵 / A/B 检验 / 簇 / 抓人 / 止血 八条","新增","@sec-ip-agg · @sec-glossary",
+  92,"所有站外链接（DOI、官网）自动加 `target=_blank` 与 `rel=noopener`","升级","@sec-glossary",
   82,"★ 整数化循环用 `is.double()` 判数值列，但 `Date` 底层就是 double → `Math.Date: floor 对 Date 没有定义`：判据加 `is.null(attr(v,\"class\"))`，只认裸数值向量；并固化为可运行性纪律第 4 条","斧正","setup · fetch()",
   81,"`fetch()` 再压一层：计数类 double 列整数化（不动任何金额/比率列），内存约再省一成","升级","setup",
   78,"术语补入 purged WF / CPCV 验证判别力 / 尾秒 / CGNAT 四条；学术引用（Hyndman & Koehler 2006、López de Prado）加 DOI 链接","新增","@sec-glossary",
@@ -988,7 +1096,7 @@ tibble::tribble(
   48,"`fmt_n()` 在顶层把 `else` 单独放到下一行 → R parse 报「意外的 else」：函数体改用大括号包住并显式 `return()`","斧正","@sec-tables",
   49,"术语注入改用 Quarto 规范的 raw-html 围栏：裸 raw HTML 块在 Pandoc 里遇空行即终止、边界由启发式决定，显式围栏边界确定","升级","@sec-glossary",
   50,"补丁自身踩坑：替换目标字符串同时出现在正文与代码中，`replace(count=1)` 命中了正文那一处并改坏文件 —— 新 lint 规则（奇数引号/跨行字符串）当场抓出；此后一律用**行首精确匹配**定位代码","斧正","补丁流程"
-) |> aurora_dt(caption="v3 变更清单：41 处斧正 · 25 处新增 · 12 处升级 · 4 处校对（共 82 项）", len = 82)
+) |> aurora_dt(caption="v3 变更清单：47 处斧正 · 28 处新增 · 16 处升级 · 5 处校对（共 96 项）", len = 96)
 ```
 
 ::: {.callout-warning}
@@ -1252,6 +1360,22 @@ GLOSSARY <- tibble::tribble(
     "每个维度独立打分再合成，避免单一信号主导；多维重叠是最高置信层。",
   "抗极端值","统计性质","估计量不被少数极端观测拖走的性质（如中位数、分位数、Winsorize）。",
     "博彩流水极端右偏，前 1% 会员可占三成流水。评分一律走**分位归一**而非原值，就是为此。",
+  "尾段","本方案用语","一局之内靠后下的那批注（按局内下注顺序分位 ≥0.80，或距封盘的时间比例）。",
+    "需求 §5 的核心对象。实测裁定：尾段**没有信息优势**——两个都合理的操作化定义给出方向相反的结论，这本身就是无稳健优势的证据。",
+  "分母","统计口径","比率的下半部分；换分母就换问题。",
+    "本方案反复强调的口径纪律：同桌率用「局数较少者」还是「并集」、hold% 用投注额还是洗码量、误伤率用命中数还是会员数——分母不写死，两方各算各的必然吵架。",
+  "naive one-step 基准","模型评估","用「上一期的值」作为本期预测的最朴素做法，是 MASE 的分母。",
+    "全局评估纪律的基准线。跑不赢它的模型，不如什么都不做。",
+  "哨兵","本方案用语","一条不参与判定、只用来报警的监控指标。",
+    "上线后的日更看板（覆盖率、G3+G4 量、误伤率、命中组 hold 差）都是哨兵：越界即人工介入，但本身不触发任何自动处置。",
+  "A/B 检验","实验设计","把对象随机分成受影响组与对照组，比较结果差异。",
+    "产品参数类措施（限红、封盘、退水档位）的验证方式。**产品侧可以 A/B，账户处罚不可以**——这是本方案偏好产品侧措施的原因之一。",
+  "簇","聚类分析","特征空间里彼此靠近、形成一团的样本集合。",
+    "T4 扩样的输出单位。**簇不是团伙**——同一簇只说明行为相似，构成团伙还需要 R-02 的同局证据。",
+  "抓人","本方案用语","以账户为对象的处置（封号、冻结账户）。",
+    "本方案的**最后手段**。误伤一个好客人赔的是终身价值，且团伙会换号重来——问题没解决，只是看不见了。",
+  "止血","本方案用语","不追究个体、直接改配置参数来停止漏损。",
+    "T3 打水型是唯一可以只靠「改一个数字」（退水档位）止血的一类，不需要抓任何人。",
   "purged WF（净化前推）","验证方法","按时间前推切折，并把跨切点的整块样本剔除（净化）、切点后留禁运期。",
     "本报告回测的标准协议：训练 60 日 / 禁运 7 日 / 测试 14 日 / 步长 14 日。同一物理局横跨切点会把测试期信息带进训练期。",
   "CPCV 验证判别力","验证方法","用组合式净化交叉验证得到的多路径绩效分布，判断策略的区分能力是真本事还是运气。",
@@ -1470,6 +1594,14 @@ JS_B <- ';
       const t = ev.target;
       if(t && t.classList && t.classList.contains("gl-tip")) place(t);
     }, true);
+    /* ★ 所有站外链接（参考文献、DOI、官网）一律新标签打开，
+       并补 rel 防止被打开页反向操控本页。 */
+    document.querySelectorAll("a[href^=\"http\"]").forEach(function(a){
+      if(a.host !== window.location.host){
+        a.setAttribute("target", "_blank");
+        a.setAttribute("rel", "noopener noreferrer");
+      }
+    });
     document.body.addEventListener("mouseout", function(ev){
       const t = ev.target;
       if(t && t.classList && t.classList.contains("gl-tip")) pop.style.display = "none";
@@ -1708,6 +1840,8 @@ tibble::tribble(
 | 平台毛收（按 1.6%） | ≈ 1.581 亿 |
 | **占 GGR 比重** | **2.56%** |
 
+: 表中金额一律为**平台侧盈亏折算额**（不是投注额）——由「尾段 `roi_diff` × 该层尾段有效投注」得出，正数表示若尾段效应为真、平台**多赚**的部分。最后两行才是投注额与毛收的绝对量级，用作分母。
+
 ::: {.callout-warning}
 **2.56% 看似不小，但它建立在四个不成立的前提上：**
 
@@ -1718,6 +1852,23 @@ tibble::tribble(
 
 **任何一条不成立，2.56% 即归零。**
 而四条同时成立的概率，在当前证据下不足以支撑任何执行动作。
+:::
+
+::: {.callout-tip}
+## 那么这 405 万该不该去追？——商业方案是「不追、改测量」
+
+405 万折合 GGR 的 2.56%，听起来值得动手。但它是**四个假设连乘**的产物，
+其中「符号可信」这一条的 p 值是 0.585——**方向本身就是随机的**。
+去追一个方向随机的量，期望收益为零而误伤成本为正。
+
+**因此本方案给出的动作是三条，全部不涉及处置：**
+
+1. **改测量不改处置**：把 `roi_diff` 拆成按桌台分层（桌内 SD≈5s、桌间 SD≈18.2s，
+   全局统一阈值在方法上不成立），先让这个量变得可信，再谈要不要追。
+2. **把尾段转为哨兵**：不作判定，只做监控。若某桌尾段 `roi_diff` 连续偏离，
+   那是**该桌**的问题（设备/荷官/网络），走 R-03 而不是走玩家处置。
+3. **把力气放到 T3**：打水型的返水净漏损是**确定的、方向明确的、可以只改一个数字止血的**。
+   同样的风控产能，投在那里的期望回报远高于追这 405 万。
 :::
 
 ### 辛普森悖论警告
@@ -1846,6 +1997,13 @@ if (need_data(D$d03s, "五重检验", c("roi_diff", "vb_tail"))) guard({
         "尾段 roi_diff 五重显著性检验（{nrow(d)} 个营业日；五者不一致即按预注册规则裁定「未能证实」）"))
   }
 }, "五重检验") else ph_out("五重检验")
+```
+
+```{r}
+#| label: release-d03s
+#| include: false
+## 用完即释放：D$d03s 最后一次引用就在上一个代码块
+release("d03s")
 ```
 
 ::: {.callout-note}
@@ -3000,6 +3158,17 @@ GROUP BY b.bet_ip, b.member_id;
 
 ## IP 汇总与三版本盈利口径（需求 §4.2 + D5） {#sec-ip-agg}
 
+> **三个版本的定义在何处、被谁引用**（跨节对照，避免来回翻）：
+>
+> | 版本 | 口径 | 定义处 | 被引用处 |
+> |---|---|---|---|
+> | **A** | 全平台净盈利 `net_pnl_all > 0` | 本节 | @sec-ip-grid 阈值网格 |
+> | **B** | 该 IP 内净盈利 `net_pnl_ip > 0`（**含返水**） | 本节 | @sec-t3 打水型判别的反面教材 |
+> | **C** | 该 IP 内游戏盈利 `game_pnl_ip > 0`（**剔返水，主口径**） | 本节 | @sec-ip-grid · @sec-t1 · @sec-econ |
+>
+> **为什么主口径是 C**：B 把返水算进盈利，会把「靠退水回本」的打水者误判成「赢庄家」。
+> 两者之差（表中「B独有」列）就是**返水制造的伪盈利**，正是 @sec-t3 要抓的那批人。
+
 ```sql
 -- ⚠️ 片段：须前置 @sec-contract E0 主查询（WITH test_agents ... valid ...）为 CTE 链后运行
 SELECT window_id, bet_ip,
@@ -3094,6 +3263,13 @@ if (need_data(D$ip_agg, "关联数定位", c("n_member_eff"))) guard({
 }, "关联数定位") else ph_out("关联数定位")
 ```
 
+```{r}
+#| label: release-ip_agg
+#| include: false
+## 用完即释放：D$ip_agg 最后一次引用就在上一个代码块
+release("ip_agg")
+```
+
 ## 候选阈值组合（需求 §4.4） {#sec-ip-grid}
 
 需求指定四参数：最小关联玩家数 `5/10/20/30/50`、该IP最小订单数 `10/30/50/100`、
@@ -3135,6 +3311,13 @@ if (need_data(D$ip_player, "IP网格",
     DT::datatable(options=list(pageLength=20),
       caption="§4.4 阶段一 · 单因素影响（版本C口径）")
 }, "IP网格") else ph_out("IP网格")
+```
+
+```{r}
+#| label: release-ip_player
+#| include: false
+## 用完即释放：D$ip_player 最后一次引用就在上一个代码块
+release("ip_player")
 ```
 
 ::: {.callout-important}
@@ -3451,6 +3634,13 @@ if (need_data(D$player_tail, "能力值",
     EFF=cap_score(tail_roi),   PER=cap_score(n_rounds_tail)) |>
     utils::head(10) |> aurora_kb(caption="能力值示例（完整八维需 join 各章产出）")
 }, "能力值") else ph_out("能力值")
+```
+
+```{r}
+#| label: release-player_tail
+#| include: false
+## 用完即释放：D$player_tail 最后一次引用就在上一个代码块
+release("player_tail")
 ```
 
 ::: {.callout-note}
@@ -4079,6 +4269,13 @@ if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","profit_amount","st
 }, "荷官关联") else ph_out("荷官关联")
 ```
 
+```{r}
+#| label: release-r03
+#| include: false
+## 用完即释放：D$r03 最后一次引用就在上一个代码块
+release("r03")
+```
+
 ### 双轨阈值的时序回测对照 {#sec-r03-bt}
 
 ```{r}
@@ -4121,6 +4318,13 @@ if (need_data(D$r03b, "荷官双轨回测", COLS_R03B)) guard({
                   x = NULL, y = NULL)
   if (HAS[["plotly"]]) plotly::ggplotly(g, tooltip = "text") else g
 }, "荷官双轨回测") else ph_out("荷官双轨回测")
+```
+
+```{r}
+#| label: release-r03b
+#| include: false
+## 用完即释放：D$r03b 最后一次引用就在上一个代码块
+release("r03b")
 ```
 
 ::: {.callout-important}
@@ -4265,6 +4469,13 @@ if (need_data(D$daily_roi, "技术型", COLS_T2)) guard({
 }, "技术型") else ph_out("技术型")
 ```
 
+```{r}
+#| label: release-daily_roi
+#| include: false
+## 用完即释放：D$daily_roi 最后一次引用就在上一个代码块
+release("daily_roi")
+```
+
 **T2 闸门（三闸全过才算）**：
 
 | 闸 | 条件 | 拦掉什么 |
@@ -4334,6 +4545,13 @@ if (need_data(D$t3, "打水型", COLS_T3)) guard({
       format(round(stats::median(hit$rebate_dep, na.rm = TRUE), 3), nsmall = 3))) |>
     aurora_kb(caption = "T3 打水型：返水净漏损核算（这一行就是可以立刻省下来的钱）")
 }, "打水型") else ph_out("打水型")
+```
+
+```{r}
+#| label: release-t3
+#| include: false
+## 用完即释放：D$t3 最后一次引用就在上一个代码块
+release("t3")
 ```
 
 ::: {.callout-important}
@@ -4720,19 +4938,31 @@ AUR = dict(bg="#050d1a", fg="#dff7ee", g="#00e5a0", c="#22d3ee",
            v="#8b5cf6", p="#f0abfc", bad="#ff6b8b", warn="#ffd64d")
 DATA_DIR = r.DATA_DIR          # ★ 目录名统一由 R 侧 setup 提供，勿在此写死
 RADAR_HTML = []                # 雷达图 HTML 片段容器（交由 R 块内嵌）
+RADAR_NAME = []                # ★ 与 RADAR_HTML 一一对应的实体名，供 R 侧按名去重
 SCORE_TBL  = []                # 综合分汇总（交由 R 块出表）
 DEMO_USED  = []                # 哪些实体用了结构演示数据（必须如实上报）
 
 ENT = {  # 实体: (文件, 维度列->赏罚方向 +1赏 / -1罚)
+ ## ★ 维度按「候选」登记：CSV 里有这一列就画，没有就自动跳过。
+ ## 这样导出件加列即可扩编雷达，不必改本文件（对应 @sec-dim-expand 的扩编建议）。
  "玩家": (f"{DATA_DIR}/S01_player_score.csv",
    {"流水贡献":1,"游戏输赢贡献":1,"活跃稳定":1,
-    "对打指数":-1,"批量注册嫌疑":-1,"IP结构风险":-1,"人工标记史":-1}),
+    "对打指数":-1,"批量注册嫌疑":-1,"IP结构风险":-1,"人工标记史":-1,
+    # ── 扩编候选（导出件补列即生效）──
+    "玩法结构熵":1,"索提诺稳定性":1,"生命周期阶段":1,
+    "设备聚集度":-1,"资金进出比异常":-1,"优惠依赖度":-1}),
  "荷官": (f"{DATA_DIR}/S02_dealer_score.csv",
-   {"在桌洗码量":1,"客群广度":1,"对打局占比":-1,"异常对关联":-1,"風險單密度":-1}),
+   {"在桌洗码量":1,"客群广度":1,"对打局占比":-1,"异常对关联":-1,"風險單密度":-1,
+    "当值时长":1,"节奏稳定度":1,
+    "特定玩家复现率":-1,"换桌频次异常":-1,"赔付偏差后验":-1}),
  "代理": (f"{DATA_DIR}/S03_agent_score.csv",
-   {"线下规模":1,"真实流水":1,"对打渗透率":-1,"单链密度":-1,"退水消耗比":-1}),
+   {"线下规模":1,"真实流水":1,"对打渗透率":-1,"单链密度":-1,"退水消耗比":-1,
+    "下线留存":1,"新增会员质量":1,
+    "占成率档位":-1,"结算异常率":-1,"跨链交叉嫌疑":-1}),
  "风控员":(f"{DATA_DIR}/S04_analyst_score.csv",
-   {"标注产量":1,"命中率":1,"复核时效":1,"误标率":-1})}
+   {"标注产量":1,"命中率":1,"复核时效":1,"误标率":-1,
+    "覆盖风险型广度":1,"复核一致性":1,
+    "申诉推翻率":-1,"单案处理时长":-1})}
 
 N_DEMO = {"玩家": 3000, "荷官": 180, "代理": 400, "风控员": 24}
 
@@ -4834,6 +5064,7 @@ for ent, (path, dims) in (ENT.items() if ENV_OK else []):
 
     ## ★ 不用 fig.show()：reticulate 块的 show() 在 quarto render 时常丢失。
     ##   改为产出 HTML 片段，由下一个 R 块以 asis 内嵌，保证图落在文档里。
+    RADAR_NAME.append(ent)
     RADAR_HTML.append(fig.to_html(full_html=False,
                       include_plotlyjs=("cdn" if not RADAR_HTML else False),
                       default_height="470px"))
@@ -4862,16 +5093,18 @@ for ent, (path, dims) in (ENT.items() if ENV_OK else []):
 ##   （源码里不写连续三反引号，用 strrep 拼，见写作纪律第 4 条）
 FENCE <- strrep("`", 3L)
 h <- tryCatch(reticulate::py$RADAR_HTML, error = function(e) NULL)
-## ★ 去重：同一实体若因重跑而重复入列（截图中「风控专员」出现两次），
-##   按 plotly 的 div id 唯一化，只保留首次出现的那一份。
+## ★ 按**实体名**去重（比按 div id 可靠：重跑会生成新 id，名字不会变）。
+##   截图中「风控专员」出现两次即此类重复。
+nm <- tryCatch(reticulate::py$RADAR_NAME, error = function(e) NULL)
+if (length(h) && length(nm) == length(h)) {
+  keep <- !duplicated(unlist(nm))
+  h <- h[keep]; nm <- unlist(nm)[keep]
+} else nm <- rep("", length(h))
 if (length(h)) {
-  ids <- vapply(h, function(x) {
-    m <- regmatches(x, regexpr('id="[0-9a-f-]{8,}"', x)); if (length(m)) m else NA_character_
-  }, character(1))
-  h <- h[!duplicated(ifelse(is.na(ids), seq_along(ids), ids))]
-}
-if (length(h)) {
-  for (x in h) cat("\n", FENCE, "{=html}\n", x, "\n", FENCE, "\n\n", sep = "")
+  for (i in seq_along(h)) {
+    if (nzchar(nm[i])) cat("\n#### ", nm[i], " · 维度画像雷达\n\n", sep = "")
+    cat("\n", FENCE, "{=html}\n", h[[i]], "\n", FENCE, "\n\n", sep = "")
+  }
 } else {
   cat("::: {.callout-note}\n",
       "四实体雷达图待 `S01`–`S04` 四份评分底料导出后自动出图",
@@ -5001,7 +5234,10 @@ class PurgedWalkForward:
 ##   after 10 retries" —— 这是**线性代数底层申请不到内存**，
 ##   与 arsenal / T4 是同一个池子被 R 侧四份大表占满。三道闸同样上：
 ##   ① 建模前分层下采样 ② BLAS/OpenMP 一律单线程（多线程会按线程数复制工作区）
-##   ③ 最外层兜底。线程数必须在 numpy 之前设，否则不生效。
+##   ③ 最外层兜底。
+## ★ 线程锁的**真正生效点在 setup-python**（本文件第一个 chunk）：
+##   BLAS 只在 import numpy 的瞬间读一次环境变量，写在这里已经太晚。
+##   下面这几行只作双保险，用于单独粘贴本块调试的场景。
 for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
            "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
     os.environ.setdefault(_v, "1")
@@ -5192,6 +5428,116 @@ tibble::tribble(
 ```
 
 ## 二、基准对照引擎
+
+```{r}
+#| label: engine-core
+#| echo: true
+## ★ 2026-08-07 斧正：引擎函数原本定义在 @sec-strategy-bt（第 5900 行附近），
+##   而 @sec-benchmark（第 5200 行附近）在它**之前**就调用了 purged_folds /
+##   fit_risk / bt_fold / prep_bt —— R 是顺序执行，调用时函数还不存在，
+##   guard() 捕获后一律吐「待数据」占位。**这就是全文走势图一张都不显示的根因。**
+##   现把四个引擎函数统一提到最前，两章共用同一份定义。
+## ═══════════════════════════════════════════════════════════════════
+## 策略级净化滚动回测：训练窗定阈值 → 禁运 → 测试窗量业绩
+## 指标：ΔGGR、hold% 差、误伤率、MASE(vs naive)、索提诺、命中留存
+## ═══════════════════════════════════════════════════════════════════
+purged_folds <- function(dates, train = 60, embargo = 7, test = 14, step = 14) {
+  d <- sort(unique(as.Date(dates)))
+  out <- list(); i <- 1L
+  while (TRUE) {
+    tr_end <- d[1] + (train - 1) + (i - 1L) * step
+    te_beg <- tr_end + embargo + 1
+    te_end <- te_beg + test - 1
+    if (te_end > max(d)) break
+    out[[length(out) + 1L]] <- list(
+      fold = length(out) + 1L, tr = c(d[1], tr_end), te = c(te_beg, te_end))
+    i <- i + 1L
+  }
+  out
+}
+
+## 风险分现算器：★ 经验分位函数**只在训练窗上拟合**，再原样套到测试窗。
+##   B-01 导出**刻意不含 risk_score**——分数是被拟合的量，在 SQL 里用全量
+##   算好再回测，等于用未来数据定分数，是最隐蔽的一种泄漏。
+RISK_FEATS <- c(late_share_d = 1, hedge_rate_d = 1, n_ip = 1,
+                stake_cv_d = -1, roi_game_d = 1)   # +1 越大越可疑，-1 反之
+fit_risk <- function(tr, feats = RISK_FEATS) {
+  use <- intersect(names(feats), names(tr))
+  if (!length(use)) return(NULL)
+  fns <- lapply(use, function(cl) {
+    v <- suppressWarnings(as.numeric(tr[[cl]])); v <- v[is.finite(v)]
+    if (!length(v)) NULL else stats::ecdf(v) })
+  names(fns) <- use
+  fns <- fns[!vapply(fns, is.null, logical(1))]
+  if (!length(fns)) return(NULL)
+  w <- feats[names(fns)]
+  function(d) {
+    z <- vapply(names(fns), function(cl) {
+      v <- suppressWarnings(as.numeric(d[[cl]]))
+      p <- fns[[cl]](ifelse(is.finite(v), v, stats::median(v, na.rm = TRUE)))
+      ifelse(is.finite(p), p, 0.5) * sign(w[[cl]]) }, numeric(nrow(d)))
+    if (is.null(dim(z))) z <- matrix(z, nrow = nrow(d))
+    100 * (rowMeans(z, na.rm = TRUE) + 1) / 2      # 映射到 0–100
+  }
+}
+
+## 单折评估：阈值只由训练窗给出，测试窗只执行不调参
+##   fixed_thr 非 NULL 时表示「朴素基线」——沿用固定阈值，不随折重估，
+##   用来回答「重新估阈值这件事本身有没有价值」。
+bt_fold <- function(panel, fold, q_thr = 0.99, action_recover = 0.60,
+                    churn_cost = 0.15, fixed_thr = NULL) {
+  tr <- panel[panel$bet_date >= fold$tr[1] & panel$bet_date <= fold$tr[2], , drop = FALSE]
+  te <- panel[panel$bet_date >= fold$te[1] & panel$bet_date <= fold$te[2], , drop = FALSE]
+  if (nrow(tr) < 100 || nrow(te) < 50) return(NULL)
+  ## ⓪ 风险分：面板自带就用自带的；不带则用训练窗现拟合（B-01 走这条）
+  if (!"risk_score" %in% names(panel)) {
+    scorer <- fit_risk(tr)
+    if (is.null(scorer)) return(NULL)
+    tr$risk_score <- scorer(tr); te$risk_score <- scorer(te)
+  }
+  ## ① 训练窗定阈值（风险分的 q 分位）——★ 阈值也是被拟合的参数，绝不用全样本
+  thr <- if (is.null(fixed_thr)) stats::quantile(tr$risk_score, q_thr, na.rm = TRUE)
+         else fixed_thr
+  ## ② 测试窗执行：命中者被处置
+  te$hit <- te$risk_score >= thr
+  hit <- te[te$hit, , drop = FALSE]; nor <- te[!te$hit, , drop = FALSE]
+  if (!nrow(hit)) return(NULL)
+  hold <- function(d) -sum(d$game_pnl, na.rm = TRUE) / pmax(sum(d$stake, na.rm = TRUE), 1e-9)
+  ## ③ 收益侧：命中人群赢走的钱，按处置回收率折算（不假设 100% 回收）
+  ##    net_pnl 为玩家口径：>0 玩家赢=平台漏，<0 玩家输=平台赚
+  gross_recover <- pmax(sum(hit$net_pnl, na.rm = TRUE), 0) * action_recover
+  ## ④ 成本侧：误伤——命中人群里本来在给平台赚钱的那些人，按流失系数折算损失
+  good_hit  <- sum(hit$net_pnl < 0, na.rm = TRUE)
+  misfire   <- sum(pmax(-hit$net_pnl, 0), na.rm = TRUE) * churn_cost
+  net_gain  <- gross_recover - misfire            # ★ 可正可负，Sortino 才有意义
+  tibble::tibble(
+    折 = fold$fold,
+    训练窗 = paste(fold$tr, collapse = " ~ "),
+    测试窗 = paste(fold$te, collapse = " ~ "),
+    阈值 = round(as.numeric(thr), 4),
+    命中会员数 = nrow(hit),
+    命中占比 = nrow(hit) / pmax(nrow(te), 1),
+    命中组hold = hold(hit),
+    对照组hold = hold(nor),
+    hold差 = hold(hit) - hold(nor),
+    毛回收 = gross_recover,
+    误伤成本 = misfire,
+    净增益 = net_gain,
+    误伤数 = good_hit,
+    误伤率 = good_hit / pmax(nrow(hit), 1))
+}
+prep_bt <- function(df) {
+  x <- df |> dplyr::mutate(
+    bet_date = as.Date(bet_date),
+    dplyr::across(dplyr::any_of(c("risk_score","stake","game_pnl","net_pnl",
+                                  "rebate","validbet","n_rounds","n_tables","n_ip",
+                                  "late_share_d","hedge_rate_d","stake_cv_d")),
+                  ~suppressWarnings(as.numeric(.x)))) |>
+    dplyr::filter(!is.na(bet_date), is.finite(stake), stake > 0)
+  x$roi_game_d <- x$game_pnl / pmax(x$stake, 1e-9)   # 日 ROI，风险分的一维
+  x
+}
+```
 
 ```{r}
 #| label: bench-engine
@@ -5771,6 +6117,13 @@ if (need_data(D$seg_econ, "赏罚经济", c("segment","validbet","ggr","rebate")
 }, "赏罚经济") else ph_out("赏罚经济")
 ```
 
+```{r}
+#| label: release-seg_econ
+#| include: false
+## 用完即释放：D$seg_econ 最后一次引用就在上一个代码块
+release("seg_econ")
+```
+
 ## 五、三条不可放宽的执行纪律
 
 ::: {.callout-important}
@@ -5896,114 +6249,20 @@ tibble::tribble(
 
 ## 二、回测引擎
 
-```{r}
-#| label: bt-engine
-#| echo: true
-## ═══════════════════════════════════════════════════════════════════
-## 策略级净化滚动回测：训练窗定阈值 → 禁运 → 测试窗量业绩
-## 指标：ΔGGR、hold% 差、误伤率、MASE(vs naive)、索提诺、命中留存
-## ═══════════════════════════════════════════════════════════════════
-purged_folds <- function(dates, train = 60, embargo = 7, test = 14, step = 14) {
-  d <- sort(unique(as.Date(dates)))
-  out <- list(); i <- 1L
-  while (TRUE) {
-    tr_end <- d[1] + (train - 1) + (i - 1L) * step
-    te_beg <- tr_end + embargo + 1
-    te_end <- te_beg + test - 1
-    if (te_end > max(d)) break
-    out[[length(out) + 1L]] <- list(
-      fold = length(out) + 1L, tr = c(d[1], tr_end), te = c(te_beg, te_end))
-    i <- i + 1L
-  }
-  out
-}
+::: {.callout-note}
+## 回测引擎的定义已前移
 
-## 风险分现算器：★ 经验分位函数**只在训练窗上拟合**，再原样套到测试窗。
-##   B-01 导出**刻意不含 risk_score**——分数是被拟合的量，在 SQL 里用全量
-##   算好再回测，等于用未来数据定分数，是最隐蔽的一种泄漏。
-RISK_FEATS <- c(late_share_d = 1, hedge_rate_d = 1, n_ip = 1,
-                stake_cv_d = -1, roi_game_d = 1)   # +1 越大越可疑，-1 反之
-fit_risk <- function(tr, feats = RISK_FEATS) {
-  use <- intersect(names(feats), names(tr))
-  if (!length(use)) return(NULL)
-  fns <- lapply(use, function(cl) {
-    v <- suppressWarnings(as.numeric(tr[[cl]])); v <- v[is.finite(v)]
-    if (!length(v)) NULL else stats::ecdf(v) })
-  names(fns) <- use
-  fns <- fns[!vapply(fns, is.null, logical(1))]
-  if (!length(fns)) return(NULL)
-  w <- feats[names(fns)]
-  function(d) {
-    z <- vapply(names(fns), function(cl) {
-      v <- suppressWarnings(as.numeric(d[[cl]]))
-      p <- fns[[cl]](ifelse(is.finite(v), v, stats::median(v, na.rm = TRUE)))
-      ifelse(is.finite(p), p, 0.5) * sign(w[[cl]]) }, numeric(nrow(d)))
-    if (is.null(dim(z))) z <- matrix(z, nrow = nrow(d))
-    100 * (rowMeans(z, na.rm = TRUE) + 1) / 2      # 映射到 0–100
-  }
-}
+`purged_folds()` / `fit_risk()` / `bt_fold()` / `prep_bt()` 四个函数的完整定义
+见 @sec-benchmark 的 `engine-core` 代码块。
 
-## 单折评估：阈值只由训练窗给出，测试窗只执行不调参
-##   fixed_thr 非 NULL 时表示「朴素基线」——沿用固定阈值，不随折重估，
-##   用来回答「重新估阈值这件事本身有没有价值」。
-bt_fold <- function(panel, fold, q_thr = 0.99, action_recover = 0.60,
-                    churn_cost = 0.15, fixed_thr = NULL) {
-  tr <- panel[panel$bet_date >= fold$tr[1] & panel$bet_date <= fold$tr[2], , drop = FALSE]
-  te <- panel[panel$bet_date >= fold$te[1] & panel$bet_date <= fold$te[2], , drop = FALSE]
-  if (nrow(tr) < 100 || nrow(te) < 50) return(NULL)
-  ## ⓪ 风险分：面板自带就用自带的；不带则用训练窗现拟合（B-01 走这条）
-  if (!"risk_score" %in% names(panel)) {
-    scorer <- fit_risk(tr)
-    if (is.null(scorer)) return(NULL)
-    tr$risk_score <- scorer(tr); te$risk_score <- scorer(te)
-  }
-  ## ① 训练窗定阈值（风险分的 q 分位）——★ 阈值也是被拟合的参数，绝不用全样本
-  thr <- if (is.null(fixed_thr)) stats::quantile(tr$risk_score, q_thr, na.rm = TRUE)
-         else fixed_thr
-  ## ② 测试窗执行：命中者被处置
-  te$hit <- te$risk_score >= thr
-  hit <- te[te$hit, , drop = FALSE]; nor <- te[!te$hit, , drop = FALSE]
-  if (!nrow(hit)) return(NULL)
-  hold <- function(d) -sum(d$game_pnl, na.rm = TRUE) / pmax(sum(d$stake, na.rm = TRUE), 1e-9)
-  ## ③ 收益侧：命中人群赢走的钱，按处置回收率折算（不假设 100% 回收）
-  ##    net_pnl 为玩家口径：>0 玩家赢=平台漏，<0 玩家输=平台赚
-  gross_recover <- pmax(sum(hit$net_pnl, na.rm = TRUE), 0) * action_recover
-  ## ④ 成本侧：误伤——命中人群里本来在给平台赚钱的那些人，按流失系数折算损失
-  good_hit  <- sum(hit$net_pnl < 0, na.rm = TRUE)
-  misfire   <- sum(pmax(-hit$net_pnl, 0), na.rm = TRUE) * churn_cost
-  net_gain  <- gross_recover - misfire            # ★ 可正可负，Sortino 才有意义
-  tibble::tibble(
-    折 = fold$fold,
-    训练窗 = paste(fold$tr, collapse = " ~ "),
-    测试窗 = paste(fold$te, collapse = " ~ "),
-    阈值 = round(as.numeric(thr), 4),
-    命中会员数 = nrow(hit),
-    命中占比 = nrow(hit) / pmax(nrow(te), 1),
-    命中组hold = hold(hit),
-    对照组hold = hold(nor),
-    hold差 = hold(hit) - hold(nor),
-    毛回收 = gross_recover,
-    误伤成本 = misfire,
-    净增益 = net_gain,
-    误伤数 = good_hit,
-    误伤率 = good_hit / pmax(nrow(hit), 1))
-}
-```
+**为什么前移**：R 按顺序执行，而 @sec-benchmark 排在本章之前却要调用它们。
+定义放在本章等于「用了才定义」，调用时函数还不存在——
+`guard()` 捕获后一律吐「待数据」占位，**全文走势图因此一张都出不来**。
+:::
 
 ```{r}
 #| label: bt-run
 COLS_BT <- c("member_id","bet_date","stake","game_pnl","net_pnl")
-prep_bt <- function(df) {
-  x <- df |> dplyr::mutate(
-    bet_date = as.Date(bet_date),
-    dplyr::across(dplyr::any_of(c("risk_score","stake","game_pnl","net_pnl",
-                                  "rebate","validbet","n_rounds","n_tables","n_ip",
-                                  "late_share_d","hedge_rate_d","stake_cv_d")),
-                  ~suppressWarnings(as.numeric(.x)))) |>
-    dplyr::filter(!is.na(bet_date), is.finite(stake), stake > 0)
-  x$roi_game_d <- x$game_pnl / pmax(x$stake, 1e-9)   # 日 ROI，风险分的一维
-  x
-}
 if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
   p <- prep_bt(D$bt_panel)
   folds <- purged_folds(p$bet_date)
@@ -6093,6 +6352,13 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
       aurora_kb(caption = "上线裁定 · 四闸判据（2,000 次自助重抽；任一未过即不上线）")
   }
 }, "策略回测") else ph_out("策略回测")
+```
+
+```{r}
+#| label: release-bt_panel
+#| include: false
+## 用完即释放：D$bt_panel 最后一次引用就在上一个代码块
+release("bt_panel")
 ```
 
 ::: {.callout-important}
@@ -7300,76 +7566,61 @@ if (!nrow(rows)) {
                     字符列数 > 3 & 占用MB > 100 ~ "🟠 字符列偏多：ID 列改数值可省一半以上",
                     TRUE ~ "🟢 可接受")) |>
     aurora_kb(caption = glue::glue(
-      "R 侧数据对象内存占用（合计 {round(sum(rows$占用MB))} MB；",
-      "R 进程已用 {round(sum(gcinfo[, 2]))} MB）　|　",
+      "R 侧仍持有的数据对象（合计 {round(sum(rows$占用MB))} MB；",
+      "R 进程已用 {round(sum(gcinfo[, 2]))} MB；",
+      "起跑时系统可用 {if (is.finite(MEM_FREE_MB)) round(MEM_FREE_MB) else '未知'} MB）　|　",
       "Python 与 R 同进程共享这块内存"))
 }
 ```
 
+```{r}
+#| label: mem-released
+#| echo: false
+if (length(RELEASED$rows)) {
+  rl <- dplyr::bind_rows(RELEASED$rows)
+  rl |> dplyr::arrange(dplyr::desc(释放MB)) |>
+    dplyr::mutate(占比 = scales::percent(释放MB / sum(释放MB), accuracy = 0.1)) |>
+    aurora_kb(caption = glue::glue(
+      "本次渲染已主动释放的大表（合计 {round(sum(rl$释放MB))} MB）　|　",
+      "每份在最后一次被引用后立刻置 NULL 并 gc，可审计"))
+} else {
+  tibble::tibble(状态 = "本次未触发释放",
+                 说明 = "对应导出件未就位，或渲染尚未走到释放点") |>
+    aurora_kb(caption = "已释放的大表")
+}
+```
+
+::: {.callout-important}
+## 为什么要「用完即释放」
+
+渲染到 174/221 时曾报 **`无法分配bitmap` / `无法启动png()装置`**——
+这不是绘图的问题，是**内存已经耗尽到连一个绘图设备都开不出来**。
+
+根因：`D` 里的大表从第一个 chunk 持有到最后一个，而 reticulate 的 Python
+（torch / sklearn / xgboost）与 R **同进程**，两边抢同一块内存。
+`B01_bt_panel` 一份就 270MB CSV，在 R 里展开后更大。
+
+现在每份大表在**最后一次被引用之后**立刻释放（共 10 处释放点），
+上表就是本次实际释放量。**释放点的位置是查出来的不是猜的**——
+逐个 `D$xxx` 的最后引用行定位到具体 chunk，在其后插入释放块。
+:::
+
 ::: {.callout-tip}
-## 内存吃紧时的三个抓手（按性价比排序）
+## 内存吃紧时的四个抓手（按性价比排序）
 
 1. **导出时就少取列。** `B01_bt_panel.csv` 有 270MB，但回测只用到十来列——
    在 SQL 里 `SELECT` 少几列，比在 R 里读进来再删有效得多。
 2. **ID 列一律数值化。** R 的字符向量每个元素都是独立 CHARSXP，几百万行的
    `member_id` 存成字符比存成数值贵数倍。`fetch()` 已对 >20MB 的文件自动做这件事。
-3. **BLAS 线程锁成 1。** OpenBLAS/MKL 会按线程数各开一份工作区，
+3. **用完即释放。** 见上表——大表在最后一次引用后立刻置 NULL 并 gc。
+4. **BLAS 线程锁成 1。** OpenBLAS/MKL 会按线程数各开一份工作区，
    八核就是八份。`py-arena` 实测报的
    `OpenBLAS: Memory allocation still failed after 10 retries` 正是这么来的。
    环境变量必须在 `import numpy` **之前**设，否则不生效（已在竞技场块开头设好）。
-4. **模型侧一律单线程 + 下采样。** `n_jobs=-1` 会让 joblib 在进程间复制数据，
+5. **模型侧一律单线程 + 下采样。** `n_jobs=-1` 会让 joblib 在进程间复制数据，
    内存吃紧时是灾难；`_T4_MAXN` / `_AR_PARAMS["max_n"]` 控制建模样本量，
    两者都进了缓存指纹，改了会自动重算。
 :::
-
-## 渲染自检：`.knit.md` 的 Div 配平
-
-> Pandoc 若报 `Div ... unclosed ... closing implicitly`，说明中间产物 `.knit.md` 里
-> 有 `:::` 没闭合。本块直接读上一次渲染留下的 `.knit.md` 自查——**不必另开脚本**。
-> 注意它查的是**上一次**的产物（本次的 `.knit.md` 此刻尚未写完），
-> 所以连跑两次即可拿到最新结果。
-
-```{r}
-#| label: knitmd-divcheck
-#| echo: false
-kn <- list.files(pattern = "\\.knit\\.md$")
-if (!length(kn)) {
-  tibble::tibble(状态 = "⬜ 未找到 .knit.md",
-    说明 = "首次渲染时它还不存在；渲染一次后再跑本报告即可自查",
-    提示 = "若您用 quarto render 而非 preview，需加 --no-clean 才会保留中间产物") |>
-    aurora_kb(caption = "渲染自检 · Div 配平")
-} else {
-  x <- readLines(kn[1], encoding = "UTF-8", warn = FALSE)
-  inf <- FALSE; dep <- 0L; opens <- integer(0); extra <- integer(0)
-  for (i in seq_along(x)) {
-    if (grepl("^`{3,}", x[i])) { inf <- !inf; next }
-    if (inf) next
-    ln <- trimws(x[i])
-    if (grepl("^:{3,}\\s*\\{", ln)) { dep <- dep + 1L; opens <- c(opens, i) }
-    else if (grepl("^:{3,}\\s*$", ln)) {
-      ## ★ Pandoc 语义：深度为 0 时的裸 ::: 不是闭合，而是**新开一个匿名 div**
-      if (dep == 0L) { dep <- dep + 1L; opens <- c(opens, i); extra <- c(extra, i) }
-      else { dep <- dep - 1L; opens <- opens[-length(opens)] }
-    }
-  }
-  if (dep == 0L && !length(extra)) {
-    tibble::tibble(状态 = "🟢 配平", 文件 = kn[1], 总行数 = length(x),
-      结论 = "上一次渲染的 .knit.md 中 ::: 全部成对，无隐式闭合") |>
-      aurora_kb(caption = "渲染自检 · Div 配平")
-  } else {
-    ctx <- function(i) paste0("第", i, " 行：", substr(x[i], 1, 90))
-    tibble::tibble(
-      问题 = c(rep("未闭合的 div 起点", length(opens)),
-               rep("深度为0时的裸 :::（Pandoc 会当成新开）", length(extra))),
-      位置与内容 = c(vapply(opens, ctx, ""), vapply(extra, ctx, "")),
-      应采取措施 = paste0("把该行对应的源头补上闭合 `:::`；若它由某个 chunk 输出产生，",
-                          "改用 ", strrep("`", 3L), "{=html} 显式围栏")) |>
-      utils::head(20) |>
-      aurora_kb(caption = glue::glue(
-        "渲染自检 · Div 配平：{kn[1]} 收尾深度 {dep}，检出 {length(opens)} 处未闭合"))
-  }
-}
-```
 
 ## 计时清单：哪些任务是重活
 

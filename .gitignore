@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════
 # basic-data-analytical-lab · .gitignore
-# 世博量化® Scibrokes Trading® · 整理并补充于 2026-08-07
+# Ryo（雷欧） · 整理并补充于 2026-08-07
 # ---------------------------------------------------------------------------
 # 本次相对上一版做了三件事：
 #   ① 去重 —— .Rproj.user 重复 27 次、.posit/assistant 重复 26 次，已各留一条
@@ -178,15 +178,3 @@ desktop.ini
 #         git add .gitattributes
 #    注意 LFS 免费额度为 1 GB 存储 / 1 GB 月流量，超出需付费。
 # ═══════════════════════════════════════════════════════════════════════════
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
-.Rproj.user
-.posit/assistant
