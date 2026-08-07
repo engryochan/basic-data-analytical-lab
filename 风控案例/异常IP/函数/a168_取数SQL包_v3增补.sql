@@ -605,7 +605,7 @@ ranked AS (
   SELECT b.*, ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b            -- ★ 表名开关
+  FROM ods_mariadb_2b.ods_a168_bet02 b
   WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
     AND b.bet02 = '101'
 ),
@@ -631,7 +631,7 @@ ord AS (
     AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
     AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL
 ),
-side_mix AS (      -- 玩法熵：只押单一玩法（熵≈0）是打水/技术型的共同结构特征
+side_mix AS (
   SELECT member_id, bet_side, COUNT(*) AS n_side
   FROM ord GROUP BY member_id, bet_side
 ),
@@ -659,45 +659,31 @@ rk AS (
 ),
 feat AS (
   SELECT member_id,
-         COUNT(*)                        AS n_rounds,
-         COUNT(DISTINCT bet_date)        AS n_days,
-         COUNT(DISTINCT table_id)        AS n_tables,
-         COUNT(DISTINCT bet_ip)          AS n_ip,
-         COUNT(DISTINCT dealer_id)       AS n_dealer,
-         STDDEV_SAMP(stake)/NULLIF(AVG(stake),0)              AS stake_cv,
+         COUNT(*)                  AS n_rounds,
+         COUNT(DISTINCT bet_date)  AS n_days,
+         COUNT(DISTINCT table_id)  AS n_tables,
+         COUNT(DISTINCT bet_ip)    AS n_ip,
+         COUNT(DISTINCT dealer_id) AS n_dealer,
+         STDDEV_SAMP(stake)/NULLIF(AVG(stake),0)    AS stake_cv,
          PERCENTILE_APPROX(stake,0.9)
-           / NULLIF(PERCENTILE_APPROX(stake,0.5),0)           AS stake_p90_p50,
-         SUM(is_self_hedge)*1.0/COUNT(*)                      AS hedge_rate,
-         SUM(rebate)/NULLIF(ABS(SUM(net_pnl)),0)              AS rebate_dep,
+           / NULLIF(PERCENTILE_APPROX(stake,0.5),0) AS stake_p90_p50,
+         SUM(is_self_hedge)*1.0/COUNT(*)            AS hedge_rate,
+         SUM(rebate)/NULLIF(ABS(SUM(net_pnl)),0)    AS rebate_dep,
          SUM(CASE WHEN bet_hour BETWEEN 0 AND 6 THEN 1 ELSE 0 END)*1.0/COUNT(*) AS night_share,
-         SUM(game_pnl)/NULLIF(SUM(stake),0)                   AS roi_game,
-         SUM(validbet)                                        AS validbet
+         SUM(game_pnl)/NULLIF(SUM(stake),0)         AS roi_game,
+         SUM(validbet)                              AS validbet
   FROM rk GROUP BY member_id
-),
-seed_manual AS (   -- 种子来源①：人工風險單 / 劃單（L1a，唯一时间窗重叠的人工标签）
-  SELECT DISTINCT member_id
-  FROM ods_mariadb_2b.ods_a168_dailyreport_member
-  WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
-    AND (COALESCE(risk,0) > 0 OR COALESCE(orders,0) > 0)
-),
-seed_alert AS (    -- 种子来源②：L0 金标准 17 个关注 IP 下的会员
-  SELECT DISTINCT o.member_id
-  FROM ord o
-  JOIN ods_mariadb_2b.ods_a168_alert_ip_setting a ON TRIM(a.ip) = TRIM(o.bet_ip)
 )
 SELECT f.member_id,
-       CASE WHEN sm.member_id IS NOT NULL OR sa.member_id IS NOT NULL
-            THEN 1 ELSE 0 END AS is_seed,
+       CAST(0 AS INT) AS is_seed,
        f.n_rounds, f.n_days, f.n_tables, f.n_ip, f.n_dealer,
        COALESCE(se.side_entropy, 0) AS side_entropy,
        f.stake_cv, f.stake_p90_p50, f.hedge_rate, f.rebate_dep,
        f.night_share, f.roi_game, f.validbet
 FROM feat f
-LEFT JOIN side_ent   se ON se.member_id = f.member_id
-LEFT JOIN seed_manual sm ON sm.member_id = f.member_id
-LEFT JOIN seed_alert  sa ON sa.member_id = f.member_id
+LEFT JOIN side_ent se ON se.member_id = f.member_id
 WHERE f.n_rounds >= 50
-ORDER BY is_seed DESC, f.validbet DESC;
+ORDER BY f.validbet DESC;
 /* ★ 种子来源③④⑤（R-01 闸三 / R-02 Lift≥3 / R-03 Z≥4）在 R 侧并入：
    读 R01/R02/R03 三份 CSV，把命中会员的 is_seed 置 1 后再喂给 T4。
    本 SQL 只给出单表可得的两路种子（人工標記 + 金标准 IP），
