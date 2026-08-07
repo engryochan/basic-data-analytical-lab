@@ -600,16 +600,6 @@ fetch <- function(n) {
     }
     for (cl in intersect(c("bet_date","dt","first_day","last_day"), names(x)))
       if (is.character(x[[cl]])) x[[cl]] <- as.Date(substr(x[[cl]], 1, 10))
-    ## ★ 整数化：计数类列以 double 存放白白多占一倍。
-    ##   仅当整列都是整数且在 int 范围内才转，不动任何金额/比率列。
-    for (cl in names(x)) {
-      v <- x[[cl]]
-      if (is.double(v) && !all(is.na(v))) {
-        fv <- v[is.finite(v)]
-        if (length(fv) && all(fv == floor(fv)) && max(abs(fv)) < 2^31 - 1)
-          x[[cl]] <- as.integer(v)
-      }
-    }
     invisible(gc(FALSE))
   }
   fp <- .fp_input(f)$h
@@ -960,9 +950,6 @@ tibble::tribble(
   75,"★ 军械库遇 S05 无 `risk_label` 就整段跳过 → `S05_member_month_panel.csv` 明明在却没被分析：改为由五路规则命中（T4/R01/R02/R03）**现造标签**，造不出才跳过并说明差什么","斧正","@sec-arsenal",
   76,"回测走势图补第三条基线「均值+3σ」，凑齐**不推行赏罚 / 本方案 / 一般均值分析**三方对照；悬停增列命中会员数与净增益构成式","升级","@sec-benchmark",
   77,"**评分维度扩编**：对标行业实践逐实体给出可扩编维度与所需表，并如实说明风控员雷达为何仍是结构演示（依赖的处置日志表本平台尚无）","新增","@sec-dim-expand · SQL包 §S04p",
-  79,"★ `py-arena` 实测报 `OpenBLAS: Memory allocation still failed after 10 retries`：BLAS/OpenMP 线程锁为 1（须在 `import numpy` 前设）+ 分层下采样 3 万行 + float32 + 外层兜底","斧正","@sec-py-arena",
-  80,"全文残余 `n_jobs=-1` 三处（随机森林 500 树、Isolation Forest）一并改为 `n_jobs=1` 并降树数；内存三抓手补入「BLAS 线程锁 1」一条","斧正","@sec-py-arena · @sec-t4 · @sec-cache",
-  81,"`fetch()` 再压一层：计数类 double 列整数化（不动任何金额/比率列），内存约再省一成","升级","setup",
   78,"术语补入 purged WF / CPCV 验证判别力 / 尾秒 / CGNAT 四条；学术引用（Hyndman & Koehler 2006、López de Prado）加 DOI 链接","新增","@sec-glossary",
   62,"★ `radar-embed` 的 plotly 片段**自带缩进**，裸 asis 会被 Pandoc 当成缩进代码块 → 页面出现一格格滚动条里的 `<div class=\"plotly-graph-div\">` 源码：改用显式 raw-html 围栏包每一段","斧正","@sec-radar",
   63,"左侧目录被容器高度截断（只显示到 19.2）：CSS 设 `max-height:100vh` + `overflow-y:auto` + `position:sticky`，并加 `toc-expand: 3`","斧正","YAML + 内联 CSS",
@@ -979,7 +966,7 @@ tibble::tribble(
   48,"`fmt_n()` 在顶层把 `else` 单独放到下一行 → R parse 报「意外的 else」：函数体改用大括号包住并显式 `return()`","斧正","@sec-tables",
   49,"术语注入改用 Quarto 规范的 raw-html 围栏：裸 raw HTML 块在 Pandoc 里遇空行即终止、边界由启发式决定，显式围栏边界确定","升级","@sec-glossary",
   50,"补丁自身踩坑：替换目标字符串同时出现在正文与代码中，`replace(count=1)` 命中了正文那一处并改坏文件 —— 新 lint 规则（奇数引号/跨行字符串）当场抓出；此后一律用**行首精确匹配**定位代码","斧正","补丁流程"
-) |> aurora_dt(caption="v3 变更清单：40 处斧正 · 25 处新增 · 12 处升级 · 4 处校对（共 81 项）", len = 81)
+) |> aurora_dt(caption="v3 变更清单：38 处斧正 · 25 处新增 · 11 处升级 · 4 处校对（共 78 项）", len = 78)
 ```
 
 ::: {.callout-warning}
@@ -4959,7 +4946,6 @@ tibble::tribble(
 
 ```{python}
 #| label: py-arena
-#| error: true
 #| echo: true
 # ── 统一竞技场：净化滚动回测器 + 模型注册表（缺库/缺数自动跳过不炸渲染）──
 # 环境由第一个 chunk（setup-python）自举
@@ -4988,135 +4974,106 @@ class PurgedWalkForward:
             yield tr, te
             cur += pd.Timedelta(days=self.te)
 
-## ★ 2026-08-07 斧正：本块实测报 OpenBLAS "Memory allocation still failed
-##   after 10 retries" —— 这是**线性代数底层申请不到内存**，
-##   与 arsenal / T4 是同一个池子被 R 侧四份大表占满。三道闸同样上：
-##   ① 建模前分层下采样 ② BLAS/OpenMP 一律单线程（多线程会按线程数复制工作区）
-##   ③ 最外层兜底。线程数必须在 numpy 之前设，否则不生效。
-for _v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
-           "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
-    os.environ.setdefault(_v, "1")
-_ARENA_MAXN = 30000            # 建模样本上限（内存正相关，可调）
-
 ARENA_TBL = []                 # 模型天梯容器（交由 R 块出表）
 PANEL = f"{r.DATA_DIR}/S05_member_month_panel.csv"     # SQL包 §06 S-05：会员×月评分面板
-## 最外层兜底：竞技场失败不该拖垮整份报告。
-try:
-    if not ENV_OK:
-        pass
-    elif not os.path.exists(PANEL):
-        print("ℹ️ 面板未就位——跑 S-05 导出后本竞技场自动全跑")
+if not ENV_OK:
+    pass
+elif not os.path.exists(PANEL):
+    print("ℹ️ 面板未就位——跑 S-05 导出后本竞技场自动全跑")
+else:
+    def read_any(path):                # 编码自适应（同上，块内独立可用）
+        for enc in ("utf-8-sig","utf-8","gb18030","gbk","big5","latin1"):
+            try: return pd.read_csv(path, encoding=enc)
+            except (UnicodeDecodeError, LookupError): continue
+        raise RuntimeError(f"{path} 所有候选编码均失败")
+    df = read_any(PANEL)
+    ycol, feats = "risk_label", [c for c in df.columns
+                   if c not in ("member_id","bet_date","round_key","risk_label")]
+    X, y = df[feats].fillna(0), df[ycol]
+    cv = PurgedWalkForward(df["bet_date"], 60, 14, 7)
+    board = []
+    def run(name, fit_predict):
+        aucs=[]
+        for tr, te in cv.split(df):
+            if te[ycol].nunique()<2 or len(tr)<500: continue
+            try:
+                p = fit_predict(df.loc[tr.index,feats].fillna(0), tr[ycol],
+                                df.loc[te.index,feats].fillna(0))
+                from sklearn.metrics import roc_auc_score
+                aucs.append(roc_auc_score(te[ycol], p))
+            except Exception as e: print(f"⛔ [{name}] {e}"); return
+        if aucs: board.append((name, np.mean(aucs), np.std(aucs), len(aucs)))
+
+    # —— 分类系 ——
+    try:
+        from xgboost import XGBClassifier
+        run("XGBoost", lambda a,b,c: XGBClassifier(
+            n_estimators=400, max_depth=5, learning_rate=.05,
+            scale_pos_weight=(b==0).sum()/max((b==1).sum(),1),
+            eval_metric="auc").fit(a,b).predict_proba(c)[:,1])
+    except ImportError: print("ℹ️ xgboost 未装")
+    try:
+        from sklearn.ensemble import RandomForestClassifier
+        run("随机森林", lambda a,b,c: RandomForestClassifier(
+            n_estimators=500, class_weight="balanced", n_jobs=-1
+            ).fit(a,b).predict_proba(c)[:,1])
+    except ImportError: pass
+    # —— 生存系（把「被标風險單」当事件，活跃天数当时长）——
+    try:
+        from lifelines import CoxPHFitter
+        def cox(a,b,c):
+            tr = a.copy(); tr["T"]=a.get("活跃稳定",1)+1; tr["E"]=b.values
+            m = CoxPHFitter(penalizer=.1).fit(tr, "T", "E")
+            return -m.predict_partial_hazard(c.assign(T=1)).values.ravel()*-1
+        run("CoxPH(lifelines)", cox)
+    except ImportError: print("ℹ️ lifelines 未装")
+    try:
+        from sksurv.ensemble import RandomSurvivalForest      # RSF
+        print("ℹ️ RSF/DeepHit/SurvTRACE：接口已备（sksurv/pycox），面板含删失列后启用")
+    except ImportError: pass
+    # —— 表征/序列系 ——
+    try:
+        from sklearn.decomposition import PCA
+        from sklearn.cluster import KMeans
+        Z = PCA(n_components=min(5,len(feats))).fit_transform(X)
+        km = KMeans(6, n_init=10).fit(Z)
+        print("聚类画像：6 客群规模 =", np.bincount(km.labels_))
+    except Exception as e: print("⛔ PCA/KMeans", e)
+    try:
+        import torch, torch.nn as nn                          # Autoencoder 异常度
+        class AE(nn.Module):
+            def __init__(s,d): super().__init__(); s.e=nn.Sequential(
+                nn.Linear(d,16),nn.ReLU(),nn.Linear(16,4)); s.d=nn.Sequential(
+                nn.Linear(4,16),nn.ReLU(),nn.Linear(16,d))
+            def forward(s,x): return s.d(s.e(x))
+        def ae(a,b,c):
+            xt=torch.tensor(((a-a.mean())/(a.std()+1e-9)).values,dtype=torch.float32)
+            m=AE(xt.shape[1]); opt=torch.optim.Adam(m.parameters(),1e-3)
+            for _ in range(200):
+                opt.zero_grad(); loss=((m(xt)-xt)**2).mean(); loss.backward(); opt.step()
+            xc=torch.tensor(((c-a.mean())/(a.std()+1e-9)).values,dtype=torch.float32)
+            return ((m(xc)-xc)**2).mean(1).detach().numpy()   # 重构误差=异常度
+        run("Autoencoder异常度", ae)
+        # Transformer 打分头（评分序列→注意力；生存版 SurvTRACE/DeepHit 同框架接 pycox）
+        print("ℹ️ Transformer/TransformerSurvival：torch 就绪，月序列≥6期后启用注意力头")
+    except ImportError: print("ℹ️ torch 未装")
+    try:
+        from hmmlearn.hmm import GaussianHMM                  # 隐马尔可夫：行为状态切换
+        print("ℹ️ HMM 就绪：会员逐日流水序列 →『常规/冲刷/收割』三态解码")
+    except ImportError: print("ℹ️ hmmlearn 未装")
+    try:
+        import pymc as pm                                     # 贝叶斯层级：代理链随机效应
+        print("ℹ️ PyMC 就绪：logit(風險) ~ 评分 + (1|LV3代理链) 层级模型待面板")
+    except ImportError: print("ℹ️ pymc 未装")
+
+    if board:
+        lb = pd.DataFrame(board, columns=["模型","AUC均值","AUC波动","折数"]
+             ).sort_values("AUC均值", ascending=False)
+        lb["AUC均值"] = lb["AUC均值"].round(4); lb["AUC波动"] = lb["AUC波动"].round(4)
+        ARENA_TBL = lb.to_dict("records")        # ★ 交给 R 块出极光表
+        print(lb.to_string(index=False))
     else:
-        def read_any(path):                # 编码自适应（同上，块内独立可用）
-            for enc in ("utf-8-sig","utf-8","gb18030","gbk","big5","latin1"):
-                try: return pd.read_csv(path, encoding=enc)
-                except (UnicodeDecodeError, LookupError): continue
-            raise RuntimeError(f"{path} 所有候选编码均失败")
-        df = read_any(PANEL)
-        ycol, feats = "risk_label", [c for c in df.columns
-                       if c not in ("member_id","bet_date","round_key","risk_label")]
-        ## 分层下采样：正样本全留、只降采样负样本（极不平衡下唯一正确的方向）。
-        ## 注意保持时间分布——按日期分组后各日等比抽，避免把整段时间抽没了。
-        if ycol in df.columns and len(df) > _ARENA_MAXN:
-            _rng = np.random.default_rng(20260807)
-            _pos = df.index[df[ycol] == 1]; _neg = df.index[df[ycol] == 0]
-            _kn = max(1, min(len(_neg), _ARENA_MAXN - len(_pos)))
-            _keep = np.sort(np.concatenate([np.asarray(_pos),
-                                            _rng.choice(np.asarray(_neg), _kn, replace=False)]))
-            print(f"ℹ️ 面板 {len(df):,} 行 → 分层下采样至 {len(_keep):,} 行"
-                  f"（正样本 {len(_pos):,} 全留），防 OpenBLAS 申请不到内存")
-            df = df.loc[_keep].reset_index(drop=True)
-        for _c in feats:                       # float64 → float32，内存直接减半
-            if pd.api.types.is_float_dtype(df[_c]): df[_c] = df[_c].astype("float32")
-        X, y = df[feats].fillna(0), df[ycol]
-        cv = PurgedWalkForward(df["bet_date"], 60, 14, 7)
-        board = []
-        def run(name, fit_predict):
-            aucs=[]
-            for tr, te in cv.split(df):
-                if te[ycol].nunique()<2 or len(tr)<500: continue
-                try:
-                    p = fit_predict(df.loc[tr.index,feats].fillna(0), tr[ycol],
-                                    df.loc[te.index,feats].fillna(0))
-                    from sklearn.metrics import roc_auc_score
-                    aucs.append(roc_auc_score(te[ycol], p))
-                except Exception as e: print(f"⛔ [{name}] {e}"); return
-            if aucs: board.append((name, np.mean(aucs), np.std(aucs), len(aucs)))
-
-        # —— 分类系 ——
-        try:
-            from xgboost import XGBClassifier
-            run("XGBoost", lambda a,b,c: XGBClassifier(
-                n_estimators=300, max_depth=5, learning_rate=.05, n_jobs=1,
-                scale_pos_weight=(b==0).sum()/max((b==1).sum(),1),
-                eval_metric="auc").fit(a,b).predict_proba(c)[:,1])
-        except ImportError: print("ℹ️ xgboost 未装")
-        try:
-            from sklearn.ensemble import RandomForestClassifier
-            run("随机森林", lambda a,b,c: RandomForestClassifier(
-                n_estimators=300, class_weight="balanced", n_jobs=1, max_depth=12
-                ).fit(a,b).predict_proba(c)[:,1])
-        except ImportError: pass
-        # —— 生存系（把「被标風險單」当事件，活跃天数当时长）——
-        try:
-            from lifelines import CoxPHFitter
-            def cox(a,b,c):
-                tr = a.copy(); tr["T"]=a.get("活跃稳定",1)+1; tr["E"]=b.values
-                m = CoxPHFitter(penalizer=.1).fit(tr, "T", "E")
-                return -m.predict_partial_hazard(c.assign(T=1)).values.ravel()*-1
-            run("CoxPH(lifelines)", cox)
-        except ImportError: print("ℹ️ lifelines 未装")
-        try:
-            from sksurv.ensemble import RandomSurvivalForest      # RSF
-            print("ℹ️ RSF/DeepHit/SurvTRACE：接口已备（sksurv/pycox），面板含删失列后启用")
-        except ImportError: pass
-        # —— 表征/序列系 ——
-        try:
-            from sklearn.decomposition import PCA
-            from sklearn.cluster import KMeans
-            Z = PCA(n_components=min(5,len(feats))).fit_transform(X)
-            km = KMeans(6, n_init=10).fit(Z)
-            print("聚类画像：6 客群规模 =", np.bincount(km.labels_))
-        except Exception as e: print("⛔ PCA/KMeans", e)
-        try:
-            import torch, torch.nn as nn                          # Autoencoder 异常度
-            class AE(nn.Module):
-                def __init__(s,d): super().__init__(); s.e=nn.Sequential(
-                    nn.Linear(d,16),nn.ReLU(),nn.Linear(16,4)); s.d=nn.Sequential(
-                    nn.Linear(4,16),nn.ReLU(),nn.Linear(16,d))
-                def forward(s,x): return s.d(s.e(x))
-            def ae(a,b,c):
-                xt=torch.tensor(((a-a.mean())/(a.std()+1e-9)).values,dtype=torch.float32)
-                m=AE(xt.shape[1]); opt=torch.optim.Adam(m.parameters(),1e-3)
-                for _ in range(200):
-                    opt.zero_grad(); loss=((m(xt)-xt)**2).mean(); loss.backward(); opt.step()
-                xc=torch.tensor(((c-a.mean())/(a.std()+1e-9)).values,dtype=torch.float32)
-                return ((m(xc)-xc)**2).mean(1).detach().numpy()   # 重构误差=异常度
-            run("Autoencoder异常度", ae)
-            # Transformer 打分头（评分序列→注意力；生存版 SurvTRACE/DeepHit 同框架接 pycox）
-            print("ℹ️ Transformer/TransformerSurvival：torch 就绪，月序列≥6期后启用注意力头")
-        except ImportError: print("ℹ️ torch 未装")
-        try:
-            from hmmlearn.hmm import GaussianHMM                  # 隐马尔可夫：行为状态切换
-            print("ℹ️ HMM 就绪：会员逐日流水序列 →『常规/冲刷/收割』三态解码")
-        except ImportError: print("ℹ️ hmmlearn 未装")
-        try:
-            import pymc as pm                                     # 贝叶斯层级：代理链随机效应
-            print("ℹ️ PyMC 就绪：logit(風險) ~ 评分 + (1|LV3代理链) 层级模型待面板")
-        except ImportError: print("ℹ️ pymc 未装")
-
-        if board:
-            lb = pd.DataFrame(board, columns=["模型","AUC均值","AUC波动","折数"]
-                 ).sort_values("AUC均值", ascending=False)
-            lb["AUC均值"] = lb["AUC均值"].round(4); lb["AUC波动"] = lb["AUC波动"].round(4)
-            ARENA_TBL = lb.to_dict("records")        # ★ 交给 R 块出极光表
-            print(lb.to_string(index=False))
-        else:
-            ARENA_TBL = []
-except MemoryError:
-    print("⛔ 竞技场内存不足——把 _ARENA_MAXN 减半后重跑")
-except Exception as _e:
-    print(f"⛔ 竞技场异常（{type(_e).__name__}: {_e}）——已跳过，不影响其余章节")
+        ARENA_TBL = []
 ```
 
 ```{r}
@@ -6380,7 +6337,7 @@ try:
                 from sklearn.ensemble import IsolationForest
                 _bench("Isolation Forest",
                        lambda a,b,c: -IsolationForest(n_estimators=300, random_state=1,
-                                                      n_jobs=1).fit(a).score_samples(c),
+                                                      n_jobs=-1).fit(a).score_samples(c),
                        "无监督：不看标签也能排多远")
             except ImportError: pass
 
@@ -7304,11 +7261,7 @@ if (!nrow(rows)) {
    在 SQL 里 `SELECT` 少几列，比在 R 里读进来再删有效得多。
 2. **ID 列一律数值化。** R 的字符向量每个元素都是独立 CHARSXP，几百万行的
    `member_id` 存成字符比存成数值贵数倍。`fetch()` 已对 >20MB 的文件自动做这件事。
-3. **BLAS 线程锁成 1。** OpenBLAS/MKL 会按线程数各开一份工作区，
-   八核就是八份。`py-arena` 实测报的
-   `OpenBLAS: Memory allocation still failed after 10 retries` 正是这么来的。
-   环境变量必须在 `import numpy` **之前**设，否则不生效（已在竞技场块开头设好）。
-4. **模型侧一律单线程 + 下采样。** `n_jobs=-1` 会让 joblib 在进程间复制数据，
+3. **模型侧一律单线程 + 下采样。** `n_jobs=-1` 会让 joblib 在进程间复制数据，
    内存吃紧时是灾难；`_T4_MAXN` / `_AR_PARAMS["max_n"]` 控制建模样本量，
    两者都进了缓存指纹，改了会自动重算。
 :::
@@ -7936,3 +7889,4 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
    （SQL 包 §00b / §K01b / §E02b）。
    这样任何一张辅助表的 schema 不确定，都不会让整章卡死。
 :::
+
