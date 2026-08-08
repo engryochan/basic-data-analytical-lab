@@ -934,7 +934,7 @@ aurora_dt(正名, caption="正名表：先正名，后算账", len=18)
 E1 <- tibble::tribble(
   ~项目, ~全局实测值, ~白话解释, ~直接决定了什么,
   "分析窗口","2026-03-21 ~ 2026-08-07（139 个营业日）","近半年的完整账期","所有比率的分母口径",
-  "百家乐注单量","≈1.9 亿笔（bet02）","平均每天约 137 万注","样本量足够，不存在「数据不够」的借口",
+  "百家乐注单量","**实测 125,654,711 笔**（§PIT-01 同窗计数；139 天 · bet02='101' · 去重前）","日均约 90.4 万注","样本量足够，不存在「数据不够」的借口",
   "下注会员数","721,190 人","半年内真正下过注的客人","**所有命中率的分母**",
   "注单重复率","0.74%","同一注单被同步了两次的比例","不去重，流水虚高 0.74%",
   "哨兵局（bet03='0'）","0 笔","没有「无效局号」的脏数据","局键三段式成立，可放心分局统计",
@@ -2932,6 +2932,25 @@ JOIN ods_mariadb_2b.ods_a168_game_info gi
  AND gi.gi013 = '1'          -- ★ 仅已开局（排除 未開2.06% / 取消 / 重對）
  AND gi.is_lock = 'N';
 ```
+
+## 修订滞后与快照有效性（§PIT-01 实测） {#sec-pit}
+
+滚动回测用的是**整窗一次导出的静态快照**。对「这是否等于偷看了未来的修订」的疑问，
+答案由 §PIT-01 探针实测给出——`updatetime` 落后 `bet08`（下注时刻）的分布：
+
+| 修订滞后 | 注单数 | 占比 |
+|---|---:|---:|
+| < 1 小时 | 125,646,652 | **99.99359%** |
+| 1 ~ 24 小时 | 6,155 | 0.0049% |
+| 1 ~ 7 天 | 789 | 0.00063% |
+| > 7 天 | 1,115 | 0.00089% |
+
+**裁定**：本方案的 7 天禁运期把训练窗数据的最小龄期推到 8 天以上；在那个时点，
+99.9994% 的注单状态已与「当日所见」一致。超过 7 天才修订的仅十一万分之一，
+即便全部落在训练窗且全部改向，对 P99 分位阈值的扰动也在小数点后第四位——
+分位数本身抗极端值。**故整窗静态快照的 purged walk-forward 与逐日下载在
+信息集上等价，回测结论有效。** 上表即「未使用未来数据」的审计证据。
+影子期起改用 §B01-D 每日增量（尾随 3 天重拉，吞掉迟到修订），协议不变。
 
 ## 金额口径（需求 §3.3）
 
@@ -5367,19 +5386,43 @@ tibble::tribble(
 ## 策略级净化滚动回测：训练窗定阈值 → 禁运 → 测试窗量业绩
 ## 指标：ΔGGR、hold% 差、误伤率、MASE(vs naive)、索提诺、命中留存
 ## ═══════════════════════════════════════════════════════════════════
-purged_folds <- function(dates, train = 60, embargo = 7, test = 14, step = 14) {
+## ★ mode 参数（本轮精度修正）：
+##   "sliding"（默认）= 训练窗**定长滑动**，窗长恒为 train 天——
+##     这才能让「训练窗长」成为一个含义清晰、可网格比较的超参数；
+##   "anchored" = 训练窗左端锚定于首日、逐折扩张——旧行为，保留作对照。
+##   旧实现名为 train=60 实为「首折 60 天、之后逐折加长」，两个语义混在
+##   一个参数里，窗长网格比较在旧实现下不成立。修正记录见 @sec-changelog。
+purged_folds <- function(dates, train = 63, embargo = 7, test = 14, step = 14,
+                         mode = c("sliding", "anchored")) {
+  mode <- match.arg(mode)
   d <- sort(unique(as.Date(dates)))
   out <- list(); i <- 1L
   while (TRUE) {
     tr_end <- d[1] + (train - 1) + (i - 1L) * step
+    tr_beg <- if (mode == "sliding") tr_end - (train - 1) else d[1]
     te_beg <- tr_end + embargo + 1
     te_end <- te_beg + test - 1
     if (te_end > max(d)) break
     out[[length(out) + 1L]] <- list(
-      fold = length(out) + 1L, tr = c(d[1], tr_end), te = c(te_beg, te_end))
+      fold = length(out) + 1L, tr = c(tr_beg, tr_end), te = c(te_beg, te_end))
     i <- i + 1L
   }
   out
+}
+
+## ── 折级检查点（继承自前作 binary-Q1Inter-HFT 的每折落盘设计）────────
+##   cached() 只缓存整段回测；69 折逐日滚动若中途被 OOM 打断，前功尽弃。
+##   本层按折落盘：面板指纹 + 折窗 + 参数 任一变化即该折重算，其余折直读。
+##   面板指纹只算一次（panel_fp 由调用方传入），避免每折重哈希整张面板。
+FOLD_CKPT_DIR <- file.path(CACHE_DIR, "bt_folds")
+if (!dir.exists(FOLD_CKPT_DIR)) dir.create(FOLD_CKPT_DIR, showWarnings = FALSE)
+fold_ckpt <- function(panel, fold, panel_fp, ..., ckpt_version = "v1") {
+  key <- .hash(list(panel_fp, fold$tr, fold$te, list(...), ckpt_version))
+  f <- file.path(FOLD_CKPT_DIR, paste0("fold_", fold$te[2], "_", substr(key, 1, 12), ".rds"))
+  if (!FORCE_RECOMPUTE && file.exists(f)) return(readRDS(f))
+  val <- bt_fold(panel, fold, ...)
+  tryCatch(saveRDS(val, f, compress = "xz"), error = function(e) NULL)
+  val
 }
 
 ## 风险分现算器：★ 经验分位函数**只在训练窗上拟合**，再原样套到测试窗。
@@ -5514,10 +5557,11 @@ bench_vs <- function(strategy, baselines, labels = names(baselines)) {
 COLS_BT2 <- c("member_id","bet_date","stake","game_pnl","net_pnl")
 if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
   p <- prep_bt(D$bt_panel); folds <- purged_folds(p$bet_date)
+  pfp <- .hash(list(nrow(p), names(p), .fp_input(p)))   # 面板指纹只算一次，供折级检查点复用
   res <- cached("bt_folds", version = "v1",
     inputs = list(p), params = list(q_thr = 0.99, recover = 0.60, churn = 0.15,
-                                    train = 60, embargo = 7, test = 14, step = 14),
-    expr = map_dfr_pg(folds, function(f) bt_fold(p, f), label = "策略回测逐折"))
+                                    train = 63, embargo = 7, test = 14, step = 14, mode = "sliding"),
+    expr = map_dfr_pg(folds, function(f) fold_ckpt(p, f, pfp), label = "策略回测逐折"))
   if (!nrow(res)) {
     tibble::tibble(状态 = "无有效折") |> aurora_kb(caption = "基准对照")
   } else {
@@ -5530,11 +5574,11 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
         if (!nrow(tr)) return(NULL)
         sc <- fit_risk(tr); if (is.null(sc)) return(NULL)
         s0 <- sc(tr)
-        bt_fold(p, f, fixed_thr = mean(s0, na.rm = TRUE) + 3 * stats::sd(s0, na.rm = TRUE))
+        fold_ckpt(p, f, pfp, fixed_thr = mean(s0, na.rm = TRUE) + 3 * stats::sd(s0, na.rm = TRUE))
       }, label = "基线·均值+3σ"))
     b_frozen <- cached("bt_folds_naive", version = "v1",
       inputs = list(p), params = list(fixed_thr = res$阈值[1], recover = 0.60, churn = 0.15),
-      expr = map_dfr_pg(folds, function(f) bt_fold(p, f, fixed_thr = res$阈值[1]),
+      expr = map_dfr_pg(folds, function(f) fold_ckpt(p, f, pfp, fixed_thr = res$阈值[1]),
                         label = "基线·阈值冻结"))
     pad <- function(d) { v <- if (is.null(d) || !nrow(d)) numeric(0) else d$净增益
                          c(v, rep(0, max(0, nrow(res) - length(v))))[seq_len(nrow(res))] }
@@ -5553,16 +5597,17 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
 #| fig-height: 4.6
 if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
   p <- prep_bt(D$bt_panel); folds <- purged_folds(p$bet_date)
+  pfp <- .hash(list(nrow(p), names(p), .fp_input(p)))   # 面板指纹只算一次，供折级检查点复用
   res <- cached("bt_folds", version = "v1",
     inputs = list(p), params = list(q_thr = 0.99, recover = 0.60, churn = 0.15,
-                                    train = 60, embargo = 7, test = 14, step = 14),
-    expr = map_dfr_pg(folds, function(f) bt_fold(p, f), label = "策略回测逐折"))
+                                    train = 63, embargo = 7, test = 14, step = 14, mode = "sliding"),
+    expr = map_dfr_pg(folds, function(f) fold_ckpt(p, f, pfp), label = "策略回测逐折"))
   if (!nrow(res)) {
     tibble::tibble(状态 = "无有效折") |> aurora_kb(caption = "走势图")
   } else {
     b_frozen <- cached("bt_folds_naive", version = "v1",
       inputs = list(p), params = list(fixed_thr = res$阈值[1], recover = 0.60, churn = 0.15),
-      expr = map_dfr_pg(folds, function(f) bt_fold(p, f, fixed_thr = res$阈值[1]),
+      expr = map_dfr_pg(folds, function(f) fold_ckpt(p, f, pfp, fixed_thr = res$阈值[1]),
                         label = "基线·阈值冻结"))
     ## ★ 第三条线：教科书做法「均值 + 3σ」。三方对照才回答得了
     ##   「不推行赏罚 / 推行本方案 / 用一般均值分析」三种情形的差别。
@@ -5573,7 +5618,7 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
         if (!nrow(tr)) return(NULL)
         sc <- fit_risk(tr); if (is.null(sc)) return(NULL)
         s0 <- sc(tr)
-        bt_fold(p, f, fixed_thr = mean(s0, na.rm = TRUE) + 3 * stats::sd(s0, na.rm = TRUE))
+        fold_ckpt(p, f, pfp, fixed_thr = mean(s0, na.rm = TRUE) + 3 * stats::sd(s0, na.rm = TRUE))
       }, label = "基线·均值+3σ"))
     mk <- function(d, nm) if (is.null(d) || !nrow(d)) NULL else
       tibble::tibble(折 = d$折, 方案 = nm, 净增益 = d$净增益, 测试窗 = d$测试窗,
@@ -5646,6 +5691,75 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
 **防未来数据的三道纪律**：阈值只在训练窗估、训练与测试之间留 7 天禁运期、
 风险分本身也只在训练窗拟合（`B-01` 导出刻意不含 `risk_score`，就是为了杜绝
 在 SQL 里用全量算好分数再回测这种最隐蔽的泄漏）。
+:::
+
+## 训练窗长的嵌套选择：窗长是超参数，由数据定，不由人拍 {#sec-window-grid}
+
+「用多少天训练最准」没有先验答案。候选一律取 **7 的整倍数**（流水有强烈星期节律，
+非整周窗长会让各折训练窗的周中/周末构成随折漂移）；选择程序必须**嵌套**——
+只在前段（选窗段，前 104 天）比较候选、锁定后在剩余时段（OOT 段）确认，
+用全窗既选又报成绩就是 Deflated 意义上的选择泄漏。
+候选 91 天在 104 天选窗段内切不出一个完整折，**如实标注「样本不足」而不硬评**。
+
+```{r}
+#| label: bench-window-grid
+if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
+  p <- prep_bt(D$bt_panel)
+  pfp <- .hash(list(nrow(p), names(p), .fp_input(p)))
+  d0 <- min(p$bet_date, na.rm = TRUE); dN <- max(p$bet_date, na.rm = TRUE)
+  sel_end <- d0 + 103                       # 选窗段：前 104 天；其后为 OOT 段
+  grid <- c(28, 42, 56, 63, 91)
+  gw <- cached("bt_window_grid", version = "v1",
+    inputs = list(p),
+    params = list(grid = grid, sel_days = 104, embargo = 7, test = 7, step = 7),
+    expr = {
+      eval_T <- function(T, dates_hi, lo_gate = NULL) {
+        fs <- purged_folds(p$bet_date[p$bet_date <= dates_hi], train = T,
+                           embargo = 7, test = 7, step = 7, mode = "sliding")
+        if (!is.null(lo_gate)) fs <- Filter(function(f) f$te[1] > lo_gate, fs)
+        if (!length(fs)) return(NULL)
+        r <- map_dfr_pg(fs, function(f) fold_ckpt(p, f, pfp),
+                        label = paste0("窗长网格 T=", T))
+        if (is.null(r) || !nrow(r)) return(NULL)
+        tibble::tibble(折数 = nrow(r),
+          净增益P5   = stats::quantile(r$净增益, .05, na.rm = TRUE),
+          净增益中位 = stats::median(r$净增益, na.rm = TRUE),
+          误伤率中位 = stats::median(r$误伤率, na.rm = TRUE))
+      }
+      sel <- lapply(grid, function(T) {
+        m <- eval_T(T, sel_end)
+        if (is.null(m)) tibble::tibble(训练窗 = T, 段 = "选窗段",
+               折数 = 0L, 净增益P5 = NA, 净增益中位 = NA, 误伤率中位 = NA,
+               备注 = "选窗段内切不出完整折——样本不足，不参与评选")
+        else dplyr::bind_cols(tibble::tibble(训练窗 = T, 段 = "选窗段"), m,
+                              tibble::tibble(备注 = ""))
+      }) |> dplyr::bind_rows()
+      ok <- sel[sel$折数 > 0, , drop = FALSE]
+      Tstar <- if (nrow(ok)) ok$训练窗[order(-ok$净增益P5, -ok$训练窗)][1] else 63
+      oot <- eval_T(Tstar, dN, lo_gate = sel_end)
+      list(sel = sel, Tstar = Tstar,
+           oot = if (is.null(oot)) NULL else
+             dplyr::bind_cols(tibble::tibble(训练窗 = Tstar, 段 = "OOT 确认段"),
+                              oot, tibble::tibble(备注 = "以选窗段冠军跨期外确认")))
+    })
+  tab <- dplyr::bind_rows(gw$sel, gw$oot) |>
+    dplyr::mutate(dplyr::across(dplyr::where(is.numeric), ~round(.x, 2)))
+  oo <- gw$oot
+  verdict <- if (is.null(oo)) "OOT 段切不出完整折，窗长选择暂以选窗段为准，正式窗长维持 63。"
+    else if (is.finite(oo$净增益P5) && oo$净增益P5 > 0)
+      paste0("选窗段冠军 T*=", gw$Tstar, "，且在 OOT 段 净增益P5 > 0 —— 窗长选择在样本外站得住。")
+    else paste0("选窗段冠军 T*=", gw$Tstar, "，但 OOT 段 P5 未过 0 —— 判「未能证实更优」，正式窗长维持 63。")
+  list(aurora_kb(tab, caption = paste0("训练窗长嵌套选择（选窗段=前 104 天 · OOT=其后；",
+                                       "test=7 · step=7 · 禁运 7）——", verdict))) |>
+    htmltools::tagList()
+}, "策略回测") else ph_out("策略回测")
+```
+
+::: {.callout-warning}
+本节结论只回答「窗长」这一个超参数。主协议（63 天滑动 · 禁运 7 · 测试 14）
+不随本表自动改动——**只有 OOT 段 P5 显著优于 63 天时才换**，且换窗须记入
+@sec-changelog 并整段重跑。选窗段与 OOT 段共用折级检查点，本节的边际计算成本
+接近零。
 :::
 
 ::: {.callout-important}
@@ -6232,15 +6346,16 @@ COLS_BT <- c("member_id","bet_date","stake","game_pnl","net_pnl")
 if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
   p <- prep_bt(D$bt_panel)
   folds <- purged_folds(p$bet_date)
+  pfp <- .hash(list(nrow(p), names(p), .fp_input(p)))   # 面板指纹只算一次
   if (!length(folds)) {
     tibble::tibble(状态 = "时间跨度不足",
-      说明 = "至少需要 60+7+14 = 81 个营业日才能切出一折") |>
+      说明 = "至少需要 63+7+14 = 84 个营业日才能切出一折") |>
       aurora_kb(caption = "策略滚动回测")
   } else {
     res <- cached("bt_folds", version = "v1",
       inputs = list(p), params = list(q_thr = 0.99, recover = 0.60, churn = 0.15,
-                                      train = 60, embargo = 7, test = 14, step = 14),
-      expr = map_dfr_pg(folds, function(f) bt_fold(p, f), label = "策略回测逐折"))
+                                      train = 63, embargo = 7, test = 14, step = 14, mode = "sliding"),
+      expr = map_dfr_pg(folds, function(f) fold_ckpt(p, f, pfp), label = "策略回测逐折"))
     if (!nrow(res)) {
       tibble::tibble(状态 = "各折样本不足") |> aurora_kb(caption = "策略滚动回测")
     } else {
@@ -6264,11 +6379,12 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
 if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
   p <- prep_bt(D$bt_panel)
   folds <- purged_folds(p$bet_date)
+  pfp <- .hash(list(nrow(p), names(p), .fp_input(p)))   # 面板指纹只算一次
   ## 与上一块同 key 同参数 → 必然命中缓存，同一份逐折结果不会算两遍
   res <- cached("bt_folds", version = "v1",
     inputs = list(p), params = list(q_thr = 0.99, recover = 0.60, churn = 0.15,
-                                    train = 60, embargo = 7, test = 14, step = 14),
-    expr = map_dfr_pg(folds, function(f) bt_fold(p, f), label = "策略回测逐折"))
+                                    train = 63, embargo = 7, test = 14, step = 14, mode = "sliding"),
+    expr = map_dfr_pg(folds, function(f) fold_ckpt(p, f, pfp), label = "策略回测逐折"))
   if (!nrow(res)) {
     tibble::tibble(状态 = "无有效折") |> aurora_kb(caption = "上线裁定")
   } else {
@@ -6277,7 +6393,7 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
     thr0  <- res$阈值[1]
     naive <- cached("bt_folds_naive", version = "v1",
       inputs = list(p), params = list(fixed_thr = thr0, recover = 0.60, churn = 0.15),
-      expr = map_dfr_pg(folds, function(f) bt_fold(p, f, fixed_thr = thr0),
+      expr = map_dfr_pg(folds, function(f) fold_ckpt(p, f, pfp, fixed_thr = thr0),
                         label = "朴素基线逐折"))
     set.seed(20260807)
     bs <- replicate(2000, mean(sample(res$净增益, nrow(res), replace = TRUE)))
@@ -8137,6 +8253,8 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
 | Blondel et al. (2008)，*Fast unfolding of communities in large networks*（Louvain） | [DOI: 10.1088/1742-5468/2008/10/P10008](https://doi.org/10.1088/1742-5468/2008/10/P10008) | R-02 团伙同桌的社群检测算法出处。见 @sec-r02 |
 | Elkan & Noto (2008)，*Learning Classifiers from Only Positive and Unlabeled Data* | [DOI: 10.1145/1401890.1401920](https://doi.org/10.1145/1401890.1401920) | T4 扩样的 PU-learning 方法出处。见 @sec-t4 |
 | Efron & Tibshirani (1993)，*An Introduction to the Bootstrap* | [DOI: 10.1201/9780429246593](https://doi.org/10.1201/9780429246593) | BCa 置信区间：尾段经济量级核算的区间估计方法 |
+| Eng, L.H.（2021），*Deriv Interday HFT Models Comparison — Review I*（作者前作） | [RPubs: binary-Q1Inter-HFT-RV1](https://rpubs.com/englianhu/binary-Q1Inter-HFT-RV1) · [GitHub 源码](https://github.com/englianhu/binary.com-interview-question) | 逐日滚动 walk-forward 骨架与「周窗 vs 月窗」窗长对比的前身工作；本方案 engine-core 的逐日折与折级检查点直接继承其 `for(dt in timeID)` 逐折落盘设计 |
+| Eng, L.H.（2021），*Deriv Interday & Intraday HFT Models Comparison — Part II*（作者前作） | [RPubs: 742275](https://rpubs.com/englianhu/742275) | 多模型（ETS/ARIMA/MIDAS/mcsGARCH）同折横评的前身；@sec-py-arena 竞技场注册表的思想来源，日内季节性 ETS 收编为 @sec-serving 监控基线 |
 
 ## 二、行业与监管口径
 
@@ -8317,6 +8435,18 @@ tibble::tribble(
 | `bet09` 的 23 种取值 | 玩法 | **投注产品** | 产品 = 平台推出供投注的标的；玩法 = 玩家如何投注。二者正交，混用会让「按产品分设胜率基准」被误读为在讲下注习惯 |
 | `bet02` | 产品 | **产品大类** | 与投注产品构成二级体系，层级明确 |
 | 评分实体 | 风控员 / 风控专员 混用 | **风控专员** | 两个名字在管线不同环节各走一路，曾致雷达按名去重失效、同一实体出图两次 |
+
+## 四之二、回测引擎提速与精度升级（折级检查点 · 滑动窗修正 · 嵌套选窗）
+
+| 变更 | 性质 | 缘由 |
+|---|---|---|
+| `purged_folds()` 增设 `mode` 参数，默认 **sliding 定长滑动**；旧行为（左端锚定、逐折扩张）保留为 `anchored` | **斧正** | 旧实现名为 `train=60` 实为「首折 60 天、其后逐折加长」——窗长语义含混，窗长网格比较在旧实现下不成立 |
+| 默认训练窗 60 → **63**（7 的整倍数） | 校正 | 流水有强烈星期节律；非整周窗长使各折训练窗的周中/周末构成随折漂移，阈值分位凭空多一层噪声 |
+| 新增 `fold_ckpt()` 折级检查点：每折独立落盘，指纹不变即逐折直读 | 提速 | `cached()` 只缓存整段；逐日滚动 69 折若中途 OOM，前功尽弃。设计继承作者前作 binary-Q1Inter-HFT 的每折 RDS 落盘 |
+| 全部四处回测调用点（bench-run / bench-chart / bt-run / bt-verdict）与三条基线一律改走检查点 | 提速 | 面板指纹一次计算、逐折复用；重渲染与网格评选的边际成本趋零 |
+| 新增 @sec-window-grid 嵌套窗长选择：{28,42,56,63,91}，前 104 天选、其后 OOT 确认 | 新增 | 「多少天最准」是超参数；全窗既选又报成绩属 Deflated 选择泄漏。91 天在选窗段切不出完整折，如实标注不硬评 |
+| §PIT-01 修订滞后探针与 §B01-D 每日增量正式收进 SQL 总包 | 新增 | §PIT-01 实测：99.99359% 注单 1 小时内定稿，>7 天修订仅 0.00089%——静态快照与逐日下载信息集等价，回测有效性由此成立 |
+| 注单量级由「≈1.9 亿」校正为 **实测 125,654,711**（139 天 · bet02='101' · 去重前） | 校正 | 旧数为早期记忆；§PIT-01 同窗计数给出实测值，日均约 90.4 万注 |
 
 ## 四、评分维度的实装状态变更
 

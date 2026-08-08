@@ -1,12 +1,12 @@
 /* ╔═══════════════════════════════════════════════════════════════════════════╗
-   ║  a168 风控与客户分层评分体系 · 商业方案                                    ║
-   ║  取数与核验 SQL 总包（一册两卷 · 合并定稿）                                 ║
+   ║  a168 风控与客户分层评分体系 · 商业方案                                      ║
+   ║  取数与核验 SQL 总包（一册两卷 · 合并定稿）                                  ║
    ╠═══════════════════════════════════════════════════════════════════════════╣
-   ║  作者：®γσ ξηg（Ryo Eng）· 世博量化® Scibrokes Trading®                    ║
+   ║  作者：Ryo（雷欧）                                                         ║
    ║  平台：a168 真人厅 · 数据源 StarRocks ods_mariadb_2b · 前端 Superset SQL Lab║
-   ║  配套报告：a168风控与客户分层评分体系_商业方案_v3.qmd                       ║
-   ║  本文件由「a168_核验与取数_SQL包.sql」与「a168_取数SQL包_v3增补.sql」        ║
-   ║  合并而成，取代该二者；此后维护只认本文件一份。                             ║
+   ║  配套报告：a168风控与客户分层评分体系_商业方案_v3.qmd                         ║
+   ║  本文件由「a168_核验与取数_SQL包.sql」与「a168_取数SQL包_v3增补.sql」         ║
+   ║  合并而成，取代该二者；此后维护只认本文件一份。                               ║
    ╚═══════════════════════════════════════════════════════════════════════════╝
 
    ═══ 分析窗口（正名版，务必按此措辞对外）═══════════════════════════════════
@@ -27,7 +27,7 @@
      ⑦ 导出编码选 CSV(UTF-8)，全部存入报告同级「数据库/」目录，
         文件名一字不可错 —— 错名不报错，只让图表静默空白，是最坑的失败方式；
      ⑧ 每个 Superset 会话开跑前先逐条执行：
-          SET SESSION query_timeout = 72000;
+          SET SESSION query_timeout = 259200;   -- 与卷首先生设定一致（3 天）
           SET SESSION cbo_cte_reuse = true;   -- 报「变量不存在」则跳过
         第二条让被多次引用的 CTE 只计算一遍——本包 S-01（bs×4）、S-03（bs×3）、
         §R02 / §K01 等条依赖它；老版本无此开关时，列瘦身仍保证可接受耗时；
@@ -68,7 +68,7 @@
      §TZ-01 会话与全局时区          §TZ-02 库时钟 vs UTC 偏移
      §TZ-03 注单表实际覆盖端点      §TZ-04 末三日逐小时量（截断检测）
      §TZ-04b 全窗逐小时分布（反推落库时区 —— 决定「日」的切点）
-     §TZ-05 日结报表切日点核对
+     §TZ-05 日结报表切日点核对      §PIT-01 修订滞后（快照有效性）
 
    【第一批 · 地基体检】卷一，只看屏幕，不导出
      00-0 通用取列工具    00-1 哨兵局断言（预期 0）    00-2 注单去重率（0.74%）
@@ -85,6 +85,7 @@
      §S04p → 数据库/S04_analyst_score.csv        风控员评分（⛔ 勿用 S-04a）
      S-05 → 数据库/S05_member_month_panel.csv    净化滚动回测面板
      §B01 → 数据库/B01_bt_panel.csv              会员×日回测面板
+     §B01-D → 数据库/B01_bt_panel_delta.csv      每日增量（影子期起）
 
    【第三批 · 异常 IP 与对打主线】
      A-01 → 数据库/A_anchor.csv                  L0 金标准 17 IP 锚点
@@ -116,11 +117,34 @@
      E1-11 → 数据库/R_rebate_dist.csv  X-01  → 数据库/X_combo.csv
      P-01  → 数据库/P_player_month.csv B-01  → 数据库/B_online_base.csv
 
+   ═══ 导出声明纪律（先生 2026-08-08 立 · 全包 75 条语句无一例外）═══════════
+     每一条语句的 SQL 正文之前，都有一行以「▸ 导出：」开头的声明，二选一：
+       · 「▸ 导出：需要 —— 存为「数据库/xxx.csv」」  → 交付件，报告会读取它
+       · 「▸ 导出：不需要 —— …」                    → 屏幕/诊断/守卫/模板类
+     配套三条：
+       ① 一份文件名**只允许一条活跃语句**产出。已停用的查询必须**撤除**其导出
+          声明——否则照头运行即覆盖正版输出（S-04a 覆盖 §S04p 的旧事即此）。
+       ② 标注「不需要」的查询，注释内不得出现任何导出文件名；需指代某份交付件
+          时只写查询编号。读者只会看见文件名与查询相邻，不会读完整段上下文。
+       ③ 全包现状：需导出 40 条 · 无需导出 35 条 · 文件名写盘冲突 0。
+   ═══════════════════════════════════════════════════════════════════════════
+
    【第六批 · 时间一致性与切分工具】
      §TG-01 注册时间穿越检测   §TG-03 关注 IP 登记时间越界   §TG-05 事实表越界自检
      §99 大表切分导出模板      COUNT-01/02/08a/08b/09 计数与分批
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* 顺便提醒一句：max_execution_time 在 MariaDB 和 MySQL 5.7+ 中生效，但它只针对 
+   SELECT 语句生效，对 INSERT/UPDATE/DELETE 等写操作无效。如果你的后续 CTE 查询超过 
+   15 分钟，这个设置会主动杀掉该查询，防止拖垮数据库。  */
+-- ▸ 导出：不需要 —— 会话参数设置，无结果集。每个 Superset 会话开跑前先执行一次。
+SET SESSION query_timeout = 259200;
+-- SET max_execution_time = 259200000;   -- 259200秒 = 259200000毫秒
+
+-- ★ 决定性的一条：允许大聚合/大连接溢写磁盘，而不是撞上限即崩。
+--   StarRocks 3.x 支持；若报变量不存在则跳过，主改写本身已大幅降内存。
+SET enable_spill = true;
+SET spill_mode = 'auto';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    §TZ · 时区与营业日守卫（第〇批 · 新增）
@@ -135,16 +159,19 @@
 /* ── §TZ-01 · 会话与全局时区 ────────────────────────────────────────────────
    注意：不要用 SHOW VARIABLES —— Superset 会给查询自动追加 LIMIT，
    而 SHOW 语句不接受 LIMIT，会报「Unexpected input 'LIMIT'」。改用下式。 */
+-- ▸ 导出：不需要 —— §TZ-01 屏幕核对（会话/全局时区）。
 SELECT @@time_zone AS session_tz, @@global.time_zone AS global_tz;
 
 /* ── §TZ-02 · 库时钟 vs UTC，实测偏移（分钟）──────────────────────────────
    判读：offset_min = 0 → 会话时区为 UTC；= 480 → UTC+8。
    实测（2026-08-07）：offset_min = 0，库时钟即 UTC。 */
+-- ▸ 导出：不需要 —— §TZ-02 屏幕核对（库时钟 vs UTC 偏移分钟）。
 SELECT NOW() AS db_now, UTC_TIMESTAMP() AS utc_now,
        TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW()) AS offset_min;
 
 /* ── §TZ-03 · 注单表实际覆盖端点 ─────────────────────────────────────────
    bet08 为下注时间，库中以字符串存放，须 CAST 后比较。 */
+-- ▸ 导出：不需要 —— §TZ-03 屏幕核对（注单表实际覆盖端点）。
 SELECT MIN(dt) AS dt_min, MAX(dt) AS dt_max,
        MIN(CAST(NULLIF(TRIM(bet08),'') AS DATETIME)) AS t_bet_min,
        MAX(CAST(NULLIF(TRIM(bet08),'') AS DATETIME)) AS t_bet_max,
@@ -157,6 +184,7 @@ WHERE bet02 = '101';
    若末日只出现前若干小时或尾部量级断崖，即为截断日，须排除出窗口。
    本包窗口右端点已为开区间 < '2026-08-07'，08-07 本就不在窗内；
    本条用于换窗时复核新右端点。 */
+-- ▸ 导出：不需要 —— §TZ-04 屏幕核对（末三日逐小时量·截断检测）。
 SELECT DATE(CAST(NULLIF(TRIM(bet08),'') AS DATETIME)) AS d,
        HOUR(CAST(NULLIF(TRIM(bet08),'') AS DATETIME)) AS h,
        COUNT(*) AS n_orders
@@ -173,6 +201,7 @@ ORDER BY d, h;
        → 落库为 UTC+8 墙钟，报告的「日」应按 UTC+8 自然日理解；
      · 若峰值落在 UTC 21:00~01:00 → 落库确为 UTC。
    结论须写入报告的数据说明章（属业务口径，非日志）。 */
+-- ▸ 导出：不需要 —— §TZ-04b 屏幕核对（全窗逐小时分布·反推落库时区）。
 SELECT HOUR(CAST(NULLIF(TRIM(bet08),'') AS DATETIME)) AS h_of_day,
        COUNT(*) AS n_orders,
        COUNT(DISTINCT bet05) AS n_member,
@@ -187,11 +216,32 @@ ORDER BY h_of_day;
    辅助表不用通用列名，日期列为分区列 dt（与 §00b 记录的教训同源）。
    判读：本条的日行数分布若与 §TZ-04 的自然日分布对不上，
    即说明日结按营业日切分，全案「日」粒度须统一改用营业日。 */
+-- ▸ 导出：不需要 —— §TZ-05 屏幕核对（日结报表切日点）。
 SELECT dt AS 日期, COUNT(*) AS 行数, COUNT(DISTINCT bet05) AS 会员数
 FROM ods_mariadb_2b.ods_a168_dailyreport_member
 WHERE dt >= '2026-08-01' AND dt < '2026-08-07'
 GROUP BY dt
 ORDER BY dt;
+
+
+/* ── §PIT-01 · 修订滞后分布（快照有效性守卫，第〇批）─────────────────────
+   ▸ 导出：不需要 —— 屏幕看结果即可（4 行）
+   ▸ 用途：回答「整窗静态快照的回测是否等于偷看未来修订」。
+     updatetime 落后 bet08 的分布若 >7 天档占比可忽略，
+     则 7 天禁运的 purged WF 用静态快照与逐日下载**信息集等价**。
+   ▸ 实测（2026-08-08）：<1h 99.99359% · 1~24h 0.0049% ·
+     1~7天 0.00063% · >7天 1,115 笔 0.00089% —— 裁定成立，
+     已写入报告 @sec-pit 作回测有效性依据；总行数实测 125,654,711。 */
+SELECT CASE
+         WHEN lag_h <  1  THEN '<1h'   WHEN lag_h < 24 THEN '1~24h'
+         WHEN lag_h < 168 THEN '1~7天' ELSE '>7天（唯一需要担心的一档）' END AS 修订滞后,
+       COUNT(*) AS n, COUNT(*)*1.0/SUM(COUNT(*)) OVER() AS pct
+FROM (SELECT TIMESTAMPDIFF(HOUR,
+               CAST(NULLIF(TRIM(bet08),'') AS DATETIME),
+               CAST(NULLIF(TRIM(updatetime),'') AS DATETIME)) AS lag_h
+      FROM ods_mariadb_2b.ods_a168_bet02
+      WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02='101') t
+GROUP BY 1 ORDER BY MIN(lag_h);
 
 
 /* ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -363,12 +413,9 @@ GROUP BY risk, orders ORDER BY n_rows DESC;
    ▸ 导出：「数据库/R_rebate_dist.csv」
    ▸ 用途：退水档位人群分布，洗码经济学输入
    ═══════════════════════════════════════════════════════════════════════ */
-/* ⚠️ mem003 列名源自 E2 局部样本判读，未经 E1 实测确认。
-   若报 Column cannot be resolved，先跑下面这条取列定义： */
--- SELECT ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT
--- FROM information_schema.columns
--- WHERE TABLE_SCHEMA='ods_mariadb_2b' AND TABLE_NAME='ods_a168_member_dtl'
--- ORDER BY ORDINAL_POSITION;
+/* ✅ mem003 已经 §DX-03 实测确认（2026-08-08）：COLUMN_COMMENT = 「退水」，
+   源类型 decimal(16,2) —— 本条可直接运行，导出即为正版 R_rebate_dist.csv。
+   同批确认的备用能力：mem016=電投退水、mem002=類別、mem012/mem014=可贏/可輸限額。 */
 
 SELECT mem003 AS rebate_rate, COUNT(*) AS n_member,
        COUNT(*)*1.0/SUM(COUNT(*)) OVER() AS pct
@@ -1533,6 +1580,7 @@ ORDER BY addtime;
 
 /* ── S-04b · 标注人产量汇总（可选，看一眼即可，无需导出）───────────
    实测结果：mao 6 / wmdn08 4 / Annie 3 / livegame 2 / wmdn10 1 / wmdn01 1 */
+-- ▸ 导出：不需要 —— S-04b 屏幕汇总（标注人产量），看一眼即可。
 SELECT creator AS 标注人, COUNT(*) AS 标注产量,
        SUM(CASE WHEN NULLIF(TRIM(remarks),'') IS NULL THEN 1 ELSE 0 END) AS 理由空白数,
        MIN(addtime) AS 首次标注, MAX(addtime) AS 末次标注
@@ -2112,6 +2160,7 @@ SELECT COUNT(*) AS n_rows FROM (
    ▸ 用途：先看会员号怎么分布，再按号段切，每段约 10 万人
    ▸ 优点：每批条件互斥且完备，绝不会重复也不会漏
    ═══════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— COUNT-08a 屏幕结果（会员号切点），切点抄下来填回被分批的那条查询。
 WITH ta AS (
   SELECT DISTINCT age001 AS aid
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
@@ -2175,6 +2224,7 @@ FROM (SELECT member_id FROM bs GROUP BY member_id
 -- 第 1 批：把 0 保持不变
 -- 第 2 批：把 0 换成第 1 批结果里最后一行的 member_id
 -- 依此类推，直到某批返回不足 100,000 行 = 全部取完
+-- ▸ 导出：不需要 —— COUNT-08b 游标翻页模板本身不产出交付件；分批产物一律沿用被分批查询的文件名。
 WITH ta AS (
   SELECT DISTINCT age001 AS aid
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
@@ -2264,6 +2314,7 @@ LIMIT 100000;
    §00 · COUNT 预检　一次出 5 个数字，决定要不要切分导出
    用途：任何一份导出前先看它多大。超过 10 万行就按 bet05 区间切分。
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：不需要 —— COUNT-09 屏幕自检（分批合并后的行数与去重核对）。
 SELECT
   COUNT(*)                                   AS n_rows_raw,
   COUNT(DISTINCT bet01)                      AS n_bet_id,
@@ -2288,16 +2339,20 @@ WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
      · §K01b / §E02c —— 需要辅助表；★ 2026-08-07 列名已实测填实，可直接跑
    下面四条 DESC 各返回十几行，看一眼把真实列名抄下来即可。
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：不需要 —— §00b 列名核对（dailyreport_member），屏幕看结果。
 DESC ods_mariadb_2b.ods_a168_dailyreport_member;
 -- 找：会员标识列（可能叫 mem001 / memberid / username / uid）
 --     風險單列（risk）、劃單列（orders）、日期列（dt / report_date）
 
+-- ▸ 导出：不需要 —— §00b 列名核对（alert_ip_setting），屏幕看结果。
 DESC ods_mariadb_2b.ods_a168_alert_ip_setting;
 -- 找：IP 列（可能叫 ip / alert_ip / ipaddress）、备注列（风控员判定原话）
 
+-- ▸ 导出：不需要 —— §00b 列名核对（member_dtl），屏幕看结果。
 DESC ods_mariadb_2b.ods_a168_member_dtl;
 -- 找：会员标识列（doc 记为 mem001）、退水配置列（doc 记为 mem003）
 
+-- ▸ 导出：不需要 —— §00b 列名核对（employee），屏幕看结果。
 DESC ods_mariadb_2b.ods_a168_employee;
 -- 找：工号列（与 bet02.eid 对应）、type 列（type=3 为荷官）
 
@@ -2326,6 +2381,7 @@ DESC ods_mariadb_2b.ods_a168_employee;
      与 BankerNatural(6.2万笔) 算成庄——那是边注，与主线庄闲不构成对冲。
      本包三处判别已全部改为 **等值匹配 'Banker' / 'Player'**。
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：不需要 —— §DX-01 诊断（bet09 实际取值普查），屏幕看结果。
 SELECT bet09 AS bet_side_raw,
        COUNT(*)                                            AS n_orders,
        COUNT(DISTINCT bet05)                               AS n_member,
@@ -2365,6 +2421,12 @@ ORDER BY n_orders DESC;
    本包已把所有 (星号星号)数据库/xxx.csv(星号星号) 统一改写为 「数据库/xxx.csv」。
    ═══════════════════════════════════════════════════════════════════════════
    §DX-03 · 取列定义的通用写法（比 DESC 好用：带列注释与顺序，一条顶三条）
+   ▸ 导出：**不需要** —— 屏幕看结果、把列名填回 §E02b / §K01c 即可。
+     若要留档，存为「数据库/V_columns_dict.csv」；
+     ⛔ 绝不可存为 R_rebate_dist.csv —— 那是 E1-11（退水分布）的专属文件名，
+     §DX-02 提到它只因**旧报错信息里的 token 恰是这个词**，与本条输出无关。
+     错名不报错，只让报告的退水分布图拿到一张列定义表而静默失真。
+   ▸ 实测（2026-08-08）：本条已跑通，68 列定义到手，关键确认已回填全包。
    ─────────────────────────────────────────────────────────────────────────── */
 SELECT TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT
 FROM information_schema.columns
@@ -2386,6 +2448,7 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
            stake_late, game_pnl_late, stake_all, game_pnl_all
    预期行数：数千 ~ 数万（HAVING 已收敛）
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/R01_late_shoe.csv」（§R01 靴末段下注）。
 WITH test_agents AS (
   SELECT age001 AS agent_id
   FROM ods_mariadb_2b.ods_a168_agent
@@ -2475,6 +2538,7 @@ ORDER BY late_share DESC, n_orders_late DESC;
            same_rate, jaccard, lift, exp_same, n_tables, first_day, last_day
    ★ 绝不可对 bet02 原表直接自连接：1.9 亿 × 1.9 亿 必然打爆集群。
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/R02_same_table.csv」（§R02 同桌对 Jaccard / Lift）。
 WITH mr AS (                          -- 阶段一：会员 × 物理局，去重后每人每局一行
   SELECT DISTINCT
          b.bet05 AS member_id,
@@ -2553,6 +2617,7 @@ ORDER BY lift DESC, same_rate DESC;
            n_related_orders, n_rounds_eff, p_base_mix, z_score,
            net_pnl_all, game_pnl_all, stake_all, win_rate_all, win_rate_other
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/R03_player_dealer.csv」（§R03 玩家×荷官·全窗聚合）。
 WITH ranked AS (
   SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
          b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,
@@ -2656,6 +2721,7 @@ ORDER BY z_score DESC, profit_amount DESC;
    输出列：member_id, bet_date, stake, game_pnl, n_rounds
    预期行数：大。**必须切分导出**（见文末切分模板），或先加活跃度门槛。
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/T02_daily_roi.csv」（§T02 会员×日 ROI）。
 WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
@@ -2713,6 +2779,7 @@ ORDER BY o.member_id, o.bet_date;
      庄侧与闲侧的局数占比），是单表可算的打水指纹。
      **跨会员对押**（一庄一闲两个号）不在本查询范围，由 §R02 / C-06 并入。
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/T03_arbitrage.csv」（§T03 打水型画像）。
 WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
@@ -2798,6 +2865,10 @@ ORDER BY hedge_rate DESC, validbet DESC;
      tenure_months = 该群平均活跃月数（H 的经验代理，正式版应由 Cox/RSF 给出）
    分群：退水档位 × 洗码量四分位（均由数据算出，不写死档位）
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：不需要 —— 本条是**备用回退版**（占成恒置 0），正版请跑 §E02c。
+--   §DX-03 已实测确认 bet23~27 = LV1~5 占成，§E02c 可直接运行，故常态下不必跑本条。
+--   仅当 dailyreport 不可用、§E02c 跑不通时，才改存为「数据库/E02_segment_econ.csv」，
+--   并须在报告中显式标注「占成恒 0，净贡献率系统性偏乐观、γ* 偏大」。
 WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
@@ -2880,6 +2951,8 @@ ORDER BY validbet DESC;
      compose_risk_score() 在各折训练窗内算出。SQL 只给原始特征，
      在 SQL 里预先算好风险分再回测 = 用全样本定分数 = 信息泄漏。
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/B01_bt_panel.csv」（§B01 会员×日回测面板）。
+-- ⚠️ Superset 单次导出上限，必按 §99 模板分批，否则静默截断丢会员。
 WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
@@ -2949,6 +3022,86 @@ GROUP BY member_id, bet_date
 ORDER BY bet_date, member_id;
 
 
+/* ═══════════════════════════════════════════════════════════════════════
+   §B01-D · B01 面板每日增量（第六批 · 影子期起每日用；历史回测不需要）
+   ▸ 导出：「数据库/B01_bt_panel_delta.csv」→ R 侧按 (member_id, bet_date)
+     覆盖合并进本地面板（同键新行覆盖旧行，即完成迟到修订同步）
+   ▸ 与 §B01 逐字同构，仅两处不同：窗口谓词（尾随 3 天）与行序（按合并键）
+   ▸ 每天只改标注 ★★ 的一行：左端 = 今天减 3，右端 = 今天
+   ▸ 实测（2026-08-07 当天跑三天增量）：3.183 秒；七项口径体检全过
+     （net_pnl≡game_pnl+rebate 违例 0；stake_cv_d 空值⇔n_rounds=1 零例外）
+   ▸ ⚠️ Superset 单次导出上限 1,000 行——体检够用，正式合并须按
+     member_id 分批（§99 模板），否则**静默丢弃**后段会员
+   ▸ §PIT-01 实测 >7 天修订仅 0.00089%，尾随 3 天足以吞掉迟到修订 */
+WITH test_agents AS (
+  SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+ranked AS (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,
+         b.bet13, b.bet14, b.bet16, b.bet17, b.bet18,
+         b.bet19, b.bet20, b.bet21, b.bet22, b.bet38,
+         b.bet39, b.category, b.ip, b.validbet,
+         ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-08-04' AND b.dt < '2026-08-07'   -- ★★ 每日唯一要改的一行 ★★
+    AND b.bet02 = '101'
+),
+ord AS (
+  SELECT r.bet05 AS member_id, r.dt AS bet_date, r.bet39 AS table_id, r.ip AS bet_ip,
+         r.bet09 AS bet_side,
+         CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,
+         CAST(NULLIF(TRIM(r.bet04),'') AS INT)           AS round_no,
+         CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS fx,
+         CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)) AS stake_raw,
+         CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4)) AS payout_raw,
+         CAST(NULLIF(TRIM(r.bet16),'') AS DECIMAL(20,4)) AS rebate_raw,
+         CAST(NULLIF(TRIM(r.bet17),'') AS DECIMAL(20,4)) AS net_raw,
+         CAST(NULLIF(TRIM(r.validbet),'') AS DECIMAL(20,4)) AS vb_raw
+  FROM ranked r
+  LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18
+  LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19
+  LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20
+  LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21
+  LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL
+),
+rk AS (
+  SELECT member_id, bet_date, round_key, MAX(table_id) AS table_id,
+         MAX(bet_ip) AS bet_ip, MAX(round_no) AS round_no,
+         SUM(stake_raw/fx)                     AS stake,
+         SUM(COALESCE(vb_raw,stake_raw)/fx)    AS validbet,
+         SUM((payout_raw-stake_raw)/fx)        AS game_pnl,
+         SUM(rebate_raw/fx)                    AS rebate,
+         SUM(net_raw/fx)                       AS net_pnl,
+         /* DX-01 实测校准：等值匹配主线庄闲，不用 LIKE（会误纳龙宝/天牌边注） */
+         CASE WHEN MAX(CASE WHEN TRIM(bet_side)='Banker' THEN 1 ELSE 0 END)=1
+               AND MAX(CASE WHEN TRIM(bet_side)='Player' THEN 1 ELSE 0 END)=1
+              THEN 1 ELSE 0 END                AS is_self_hedge
+  FROM ord GROUP BY member_id, bet_date, round_key
+)
+SELECT member_id, bet_date,
+       SUM(stake)                                     AS stake,
+       SUM(game_pnl)                                  AS game_pnl,
+       SUM(net_pnl)                                   AS net_pnl,
+       SUM(rebate)                                    AS rebate,
+       SUM(validbet)                                  AS validbet,
+       COUNT(*)                                       AS n_rounds,
+       COUNT(DISTINCT table_id)                       AS n_tables,
+       COUNT(DISTINCT bet_ip)                         AS n_ip,
+       SUM(CASE WHEN round_no >= 50 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS late_share_d,
+       SUM(is_self_hedge) * 1.0 / COUNT(*)            AS hedge_rate_d,
+       STDDEV_SAMP(stake) / NULLIF(AVG(stake),0)      AS stake_cv_d
+FROM rk
+GROUP BY member_id, bet_date
+ORDER BY member_id, bet_date;
+
+
 /* ───────────────────────────────────────────────────────────────────────────
    §K01 · K01_risk_feature_matrix.csv
    T4 扩样特征矩阵（@sec-t4）：会员级特征 + is_seed 种子标记
@@ -2960,6 +3113,7 @@ ORDER BY bet_date, member_id;
            side_entropy, stake_cv, stake_p90_p50, hedge_rate, rebate_dep,
            night_share, roi_game, validbet
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/K01_risk_feature_matrix.csv」（§K01 扩样特征矩阵）。
 WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
@@ -3078,6 +3232,7 @@ ORDER BY f.validbet DESC;
    导出：「数据库/K01b_seed_manual.csv」（两条各跑一次，纵向合并成一份）
    ═══════════════════════════════════════════════════════════════════════════ */
 -- ① 人工風險單 / 劃單（L1a 人工标签）
+-- ▸ 导出：需要 —— 存为「数据库/K01b_seed_manual.csv」（§K01b 种子来源①·人工風險單/劃單）。
 SELECT DISTINCT bet05 AS member_id, 'manual_risk' AS seed_src
 FROM ods_mariadb_2b.ods_a168_dailyreport_member
 WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
@@ -3090,11 +3245,13 @@ ORDER BY member_id;
 --       写成 risk > 0 会做字符串比较，'0' > 0 的语义在不同引擎下不一致。
 
 -- ② L0 金标准关注 IP 下的会员（先单跑 alert 名单看它是否仍活跃）
+-- ▸ 导出：不需要 —— §K01b 中间确认步骤（先看关注 IP 名单是否仍活跃），屏幕看结果。
 SELECT id, ip, creator, addtime, remarks
 FROM ods_mariadb_2b.ods_a168_alert_ip_setting
 ORDER BY addtime DESC;
 
 -- ②b 关注 IP 命中的会员（上一条确认 IP 仍在本窗口出现后再跑）
+-- ▸ 导出：需要 —— 存为「数据库/K01b_seed_goldip.csv」（§K01b 种子来源②b·金标准 IP 命中会员）。
 SELECT DISTINCT b.bet05 AS member_id, 'gold_ip' AS seed_src
 FROM ods_mariadb_2b.ods_a168_bet02 b
 JOIN ods_mariadb_2b.ods_a168_alert_ip_setting a ON TRIM(a.ip) = TRIM(b.ip)
@@ -3117,10 +3274,14 @@ ORDER BY member_id;
    ---------------------------------------------------------------------------
    ⚠️ 量纲未定：bet23~bet32 是「金额」还是「比率」，列注释没写。
       先跑 §E02c-0 看量级——若与 bet41 同数量级则为金额，若恒在 0~1 则为比率。
+      §DX-03 实测（2026-08-08）已确认**列义**：bet23~27 = LV1~5 占成、
+      bet28~32 = LV1~5 退水、bet15 = 會員退水%數、bet41 = 有效投注，
+      均 decimal(16,4)。列义已定，**量纲（比率还是金额）仍须本探针判定**。
       量纲判错会让 κ 差几个数量级，δ* 与 γ* 全盘失真。**这一步不可跳过。**
    导出：「数据库/E02_segment_econ.csv」
    ═══════════════════════════════════════════════════════════════════════════ */
 -- §E02c-0 · 量纲探针（先跑这条，30 秒，决定下面怎么算）
+-- ▸ 导出：不需要 —— §E02c-0 量纲探针（判 bet23~27 是比率还是金额），屏幕看结果。
 SELECT
   COUNT(*)                                                            AS n_rows,
   AVG(CAST(NULLIF(TRIM(bet41),'') AS DECIMAL(20,4)))                  AS avg_validbet,
@@ -3139,6 +3300,8 @@ WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
 --         SUM((bet23+..+bet27) * bet41 / bet11)
 
 -- §E02c · 分群单位经济学（占成已补齐）
+-- ▸ 导出：需要 —— 存为「数据库/E02_segment_econ.csv」（§E02c 分群单位经济学·含占成 κ）。
+-- ★ 本条为 §E02 的升级版，同名覆盖；两条都跑时以本条为最终版本。
 WITH d AS (
   SELECT bet05 AS member_id, dt,
          CAST(NULLIF(TRIM(bet11),'') AS DECIMAL(20,8)) AS fx,
@@ -3205,6 +3368,7 @@ ORDER BY validbet DESC;
    注释一律用行注释，不用块注释（见 §DX-02 写法禁令）。
    导出：「数据库/C06_hedge_pairs.csv」
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/C06_hedge_pairs.csv」（§C06fix 同 IP 对打对·正版）。
 WITH ta AS (
   SELECT DISTINCT age001 AS aid
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
@@ -3296,6 +3460,7 @@ ORDER BY opposite_rate DESC, n_opposite_round DESC;
 -- 导出 10 份后在 R 侧 rbind 即可；因为切分键是会员号，各份之间天然不重叠。
 
 -- 切分前先确认每份大小：
+-- ▸ 导出：不需要 —— §99 切分前的分桶体量确认，屏幕看结果。
 SELECT CAST(NULLIF(TRIM(bet05),'') AS BIGINT) % 10 AS bucket,
        COUNT(*) AS n_rows, COUNT(DISTINCT bet05) AS n_member
 FROM ods_mariadb_2b.ods_a168_bet02
@@ -3315,7 +3480,9 @@ ORDER BY bucket;
    ─────────────────────────────────────────────────────────────────────────── */
 
 -- §TG-01 · 会员注册时间 vs 首笔注单时间（穿越检测）
--- ★★ 会员主表尚未提供，先跑 §DX-03 拿到列名后把 ★★ 替换掉
+-- ★★ 会员主表尚未提供。§DX-03 实测（2026-08-08）已证实：member_dtl 的
+--    22 列中**没有注册时间列**（mem001~mem016 为退水/限额/代理链配置），
+--    不可拿它顶替本占位——注册邻近度须等真正的会员主表（含注册时间）到位
 -- SELECT m.★★会员列★★ AS member_id,
 --        m.★★注册时间列★★ AS reg_time,
 --        f.first_bet,
@@ -3332,6 +3499,7 @@ ORDER BY bucket;
 -- ORDER BY verdict, member_id;
 
 -- §TG-03 · 关注 IP 名单的登记时间是否越过截止日（可直接跑，列名已实测）
+-- ▸ 导出：不需要 —— §TG-03 屏幕守卫（关注 IP 登记时间越界检测）。
 SELECT id, ip, creator, addtime, remarks,
        CASE WHEN CAST(SUBSTR(addtime,1,10) AS DATE) > DATE '2026-08-07'
             THEN '🔴 未来日期，应从 L0 金标准剔除' ELSE '🟢 OK' END AS verdict
@@ -3339,6 +3507,7 @@ FROM ods_mariadb_2b.ods_a168_alert_ip_setting
 ORDER BY addtime DESC;
 
 -- §TG-05 · 事实表自身的越界自检（应返回 0 行；非 0 即窗口过滤有漏）
+-- ▸ 导出：不需要 —— §TG-05 屏幕守卫（事实表越界自检，应返回 0 行）。
 SELECT COUNT(*) AS n_future_rows,
        MIN(dt) AS min_dt, MAX(dt) AS max_dt
 FROM ods_mariadb_2b.ods_a168_bet02
@@ -3351,6 +3520,7 @@ WHERE dt >= DATE '2026-08-07';
    用途：验证各玩法的实测庄家优势与理论值是否一致；偏离大的玩法优先查
    导出：「数据库/DX04_bet09_profile.csv」
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/DX04_bet09_profile.csv」（§DX-04 投注产品×会员子分类底料）。
 WITH ranked AS (
   SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
          b.bet05, b.bet09, b.bet11, b.bet13, b.bet14,
@@ -3399,6 +3569,7 @@ ORDER BY n_orders DESC;
    本查询给出各产品的注单量、投注额、玩家盈亏、庄家 hold%，一次看清占比。
    导出：「数据库/DX05_product_panorama.csv」
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/DX05_product_panorama.csv」（§DX-05 产品全景覆盖度）。
 WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
@@ -3470,6 +3641,7 @@ ORDER BY n_orders DESC;
    注：information_schema.tables 的 TABLE_ROWS 在 StarRocks 上是估算值，
        所以这里用 COUNT(*) 精确统计。表多时耗时以分钟计，属正常。
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/V_table_counts.csv」（§00c 表行数复核；报告据此把点货单标为「实测」）。
 SELECT 'ods_a168_bet02'              AS 表名, COUNT(*) AS 行数 FROM ods_mariadb_2b.ods_a168_bet02
 UNION ALL SELECT 'ods_a168_bet01',              COUNT(*) FROM ods_mariadb_2b.ods_a168_bet01
 UNION ALL SELECT 'ods_a168_game_info',          COUNT(*) FROM ods_mariadb_2b.ods_a168_game_info
@@ -3495,6 +3667,7 @@ ORDER BY 行数 DESC;
    输出：bet_date, uid, dealer_id, stake_amount, profit_amount, win_rate,
          n_related_orders, n_rounds_eff, p_base_mix, z_score
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/R03b_player_dealer_daily.csv」（§R03b 玩家×荷官·日粒度）。
 WITH ranked AS (
   SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
          b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,
@@ -3573,6 +3746,7 @@ ORDER BY p.bet_date, z_score DESC;
    并把缺口摆明。四个维度里它只能填「标注产量」一项，其余仍为待补。
    导出：「数据库/S04_analyst_score.csv」
    ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/S04_analyst_score.csv」（§S04p 风控专员最小画像·正版）。
 SELECT
   COALESCE(NULLIF(TRIM(creator), ''), '未署名')      AS entity_id,
   -- ★ 下面三个列名与报告的风控专员雷达字典严格对应，一字不可改
