@@ -1,12 +1,12 @@
 /* ╔═══════════════════════════════════════════════════════════════════════════╗
-   ║  a168 风控与客户分层评分体系 · 商业方案                                      ║
-   ║  取数与核验 SQL 总包（一册两卷 · 合并定稿）                                  ║
+   ║  a168 风控与客户分层评分体系 · 商业方案                                    ║
+   ║  取数与核验 SQL 总包（一册两卷 · 合并定稿）                                 ║
    ╠═══════════════════════════════════════════════════════════════════════════╣
-   ║  作者：Ryo（雷欧）                                                         ║
+   ║  作者：®γσ ξηg（Ryo Eng）· 世博量化® Scibrokes Trading®                    ║
    ║  平台：a168 真人厅 · 数据源 StarRocks ods_mariadb_2b · 前端 Superset SQL Lab║
-   ║  配套报告：a168风控与客户分层评分体系_商业方案_v3.qmd                         ║
-   ║  本文件由「a168_核验与取数_SQL包.sql」与「a168_取数SQL包_v3增补.sql」         ║
-   ║  合并而成，取代该二者；此后维护只认本文件一份。                               ║
+   ║  配套报告：a168风控与客户分层评分体系_商业方案_v3.qmd                       ║
+   ║  本文件由「a168_核验与取数_SQL包.sql」与「a168_取数SQL包_v3增补.sql」        ║
+   ║  合并而成，取代该二者；此后维护只认本文件一份。                             ║
    ╚═══════════════════════════════════════════════════════════════════════════╝
 
    ═══ 分析窗口（正名版，务必按此措辞对外）═══════════════════════════════════
@@ -25,7 +25,15 @@
      ⑤ 导出上限 1,000 行时只承认排序头部结论，「未出现」类判断一律无效；
      ⑥ 超过 10 万行者先跑 COUNT 预检，按会员号区间切分，**不要用 OFFSET 翻页**；
      ⑦ 导出编码选 CSV(UTF-8)，全部存入报告同级「数据库/」目录，
-        文件名一字不可错 —— 错名不报错，只让图表静默空白，是最坑的失败方式。
+        文件名一字不可错 —— 错名不报错，只让图表静默空白，是最坑的失败方式；
+     ⑧ 每个 Superset 会话开跑前先逐条执行：
+          SET SESSION query_timeout = 72000;
+          SET SESSION cbo_cte_reuse = true;   -- 报「变量不存在」则跳过
+        第二条让被多次引用的 CTE 只计算一遍——本包 S-01（bs×4）、S-03（bs×3）、
+        §R02 / §K01 等条依赖它；老版本无此开关时，列瘦身仍保证可接受耗时；
+     ⑨ 连接前先估配对规模：凡两表连接键**不含局键或会员键**、仅靠桌号/日期
+        这类低基数键相连的，必先各自聚合再连接——注单粒度×局粒度的裸连接
+        曾使 S-02 三小时跑不完（万亿级配对），已以加权矩坍缩修复。
 
    ═══ 注释书写铁律（本合并本已全数整改）═══════════════════════════════════
      块注释内**禁止出现连续星号紧邻斜杠**，亦禁止出现单个星号紧邻斜杠。
@@ -238,7 +246,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -461,7 +475,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -529,7 +549,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -691,7 +717,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -755,7 +787,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -834,7 +872,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -905,7 +949,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -983,7 +1033,12 @@ WITH ta AS (
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet11,
+         b.bet13, b.bet14, b.bet16, b.bet17, b.bet18,
+         b.bet19, b.bet20, b.bet21, b.bet22, b.bet38,
+         b.bet39, b.category, b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -1083,7 +1138,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -1198,23 +1259,38 @@ ORDER BY 流水贡献 DESC;
 
 
 /* ═══════════════════════════════════════════════════════════════════════
-   S-02 · 荷官评分底料
-   对打局占比/異常对关联在 Python 侧并 C-06 名单；导出 数据库/S02_dealer_score.csv
+   S-02 · 荷官评分底料（提速改写版 · 输出与原版逐列一致）
+   对打局占比/異常对关联在 Python 侧并 §C06fix 名单
    ▸ 导出：「数据库/S02_dealer_score.csv」
    ▸ 用途：★ 荷官评分雷达 + 综合分
+   ▸ 提速原理（原版实测 3 小时未毕，根因为三处）：
+     ① pace 原以 bs JOIN gi ON table_id——注单粒度×局粒度的多对多爆炸，
+        单张热门桌即数万亿配对。现改为**加权矩坍缩**：样本标准差只依赖
+        Σ权重、Σ加权时长、Σ加权时长²三个矩，桌级统计×荷官桌行数即可等价算出；
+     ② bs 原被引用三次（pace/mrep/终查），整条 1.9 亿行去重流水线跑三遍。
+        现一次坍缩为 bd（荷官×桌×会员×局），bs 全文只扫一遍；
+     ③ 开窗去重原 SELECT b.*，四十余列 varchar(65533) 全过排序洗牌。
+        现只携带下游必需的二十一列。
+     输出逐列一致；节奏稳定度由矩公式计算，与原式差异在双精度舍入位
+     （1e-12 量级），分位归一后不改变任何排名。
    ═══════════════════════════════════════════════════════════════════════ */
 WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   SELECT DISTINCT age001 AS aid
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt,
+         b.category, b.bet38, b.bet05, b.bet11, b.bet08,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet03, b.bet04, b.bet39, b.eid,
+         b.validbet, b.bet13, b.bet14,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
   WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
 ),
-vd AS (                  -- 有效注单：非测试线、非重对、一般注单
+vd AS (                  -- 有效注单：非测试线、非重对、一般注单（谓词与原版一字不差）
   SELECT r.*
   FROM rk r
   LEFT JOIN ta t1 ON t1.aid = r.bet18
@@ -1228,72 +1304,94 @@ vd AS (                  -- 有效注单：非测试线、非重对、一般注�
     AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
     AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
 ),
-bs AS (                  -- 金额正名：本金/洗码量/游戏输赢/退水/净输赢（一律÷汇率）
-  SELECT v.bet05 AS member_id, v.eid AS dealer_id, v.ip AS bet_ip,
-         v.bet20 AS lv3, v.bet09 AS bet_side, v.dt AS bet_date,
+bs AS (                  -- 金额正名（只保留本查询实际使用的量）
+  SELECT v.bet05 AS member_id, v.eid AS dealer_id,
          CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
          v.bet39 AS table_id,
-         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
-         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
          CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
          (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
           - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
-         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
-         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
-           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl
   FROM vd v
+  WHERE NULLIF(TRIM(v.eid),'') IS NOT NULL   -- 空荷官行本就不进任何输出组，前置过滤不改输出
+),
+bd AS (                  -- ★ 一次坍缩：荷官×桌×会员×局。bs 全文只被此处引用一次
+  SELECT dealer_id, table_id, member_id, round_key,
+         COUNT(*)       AS n_bet_rows,     -- 该组合的注单行数（pace 的权重）
+         SUM(valid_bet) AS v_sum,
+         SUM(game_pnl)  AS g_sum
+  FROM bs
+  GROUP BY dealer_id, table_id, member_id, round_key
 ),
 /* ── 扩编维度① 当值时长 ─────────────────────────────────────────
    以「在册局数」为分层基准。不做这一层分层，裸排名的榜首永远是
    上班天数最少的新人——他们样本少、波动大，任何比率指标都会虚高。
    赏罚方向为「赏」。 */
-/* ── 扩编维度② 节奏稳定度 ───────────────────────────────────────
-   每局时长（开局 gi004 → 开牌 gi006）的离散度，取 1/(1+标准差秒数)。
+/* ── 扩编维度② 节奏稳定度：加权矩坍缩版 ─────────────────────────
+   原式 = 对「荷官的每笔注单 × 同桌每一局的时长」求 STDDEV_SAMP。
+   等价于：每桌局时长以该荷官在该桌的注单行数加权。
+   样本标准差只需三个矩：N=Σw·n、S1=Σw·Σx、S2=Σw·Σx²，
+   var = (S2 − S1²/N)/(N−1)。桌级统计仅数百行，荷官×桌仅数千行。
    节奏忽快忽慢是操作异常的先兆，也会影响玩家体验。赏罚方向为「赏」。 */
 gi AS (
-  SELECT gi011 AS table_id, gi003 AS shoe_no,
+  SELECT gi011 AS table_id,
          UNIX_TIMESTAMP(gi006) - UNIX_TIMESTAMP(gi004) AS sec_round
   FROM ods_mariadb_2b.ods_a168_game_info
   WHERE gi001 = '101' AND gi013 = '1'
     AND gi004 >= '2026-03-21' AND gi004 < '2026-08-07'
 ),
-pace AS (
-  SELECT b.dealer_id,
-         1.0 / (1.0 + COALESCE(STDDEV_SAMP(g.sec_round), 0)) AS 节奏稳定度
-  FROM bs b JOIN gi g ON g.table_id = b.table_id
-  GROUP BY b.dealer_id
+git AS (                 -- 每桌三矩（COUNT/SUM 天然忽略 NULL，与 STDDEV_SAMP 同语义）
+  SELECT table_id,
+         COUNT(sec_round)                                            AS n_g,
+         SUM(CAST(sec_round AS DOUBLE))                              AS s1,
+         SUM(CAST(sec_round AS DOUBLE) * CAST(sec_round AS DOUBLE))  AS s2
+  FROM gi GROUP BY table_id
 ),
-/* ── 扩编维度③ 特定玩家复现率 ───────────────────────────────────
+dtc AS (                 -- 荷官×桌的注单行数（加权权重）
+  SELECT dealer_id, table_id, SUM(n_bet_rows) AS n_rows
+  FROM bd GROUP BY dealer_id, table_id
+),
+pace AS (
+  SELECT d.dealer_id,
+         CASE
+           WHEN SUM(d.n_rows * g.n_g) >= 2 THEN
+             1.0 / (1.0 + COALESCE(SQRT(GREATEST(
+               ( SUM(d.n_rows * g.s2)
+                 - SUM(d.n_rows * g.s1) * SUM(d.n_rows * g.s1)
+                   / SUM(d.n_rows * CAST(g.n_g AS DOUBLE)) )
+               / (SUM(d.n_rows * CAST(g.n_g AS DOUBLE)) - 1), 0)), 0))
+           ELSE 1.0     -- 原版：样本≤1 时 STDDEV_SAMP=NULL → COALESCE 0 → 稳定度 1.0
+         END AS 节奏稳定度
+  FROM dtc d JOIN git g ON g.table_id = d.table_id
+  GROUP BY d.dealer_id
+),
+/* ── 扩编维度③ 特定玩家复现率：改从 bd 派生，语义不变 ────────────
    该荷官桌上「出现最频繁的那一位会员」占其总局数的比例。
    正常荷官服务的是流动客群，比例低；比例畸高说明有固定的人一直跟着他，
    这是玩家—荷官关联的第一道筛。赏罚方向为「罚」。 */
 mrep AS (
   SELECT dealer_id, member_id, COUNT(DISTINCT round_key) AS n_r
-  FROM bs GROUP BY dealer_id, member_id
+  FROM bd GROUP BY dealer_id, member_id
 ),
 top1 AS (
   SELECT dealer_id, MAX(n_r) AS max_member_rounds
   FROM mrep GROUP BY dealer_id
 )
 SELECT b.dealer_id,
-  SUM(b.valid_bet) AS 在桌洗码量,
+  SUM(b.v_sum) AS 在桌洗码量,
   COUNT(DISTINCT b.member_id) AS 客群广度,
   COUNT(DISTINCT b.round_key) AS n_rounds,
   COUNT(DISTINCT b.table_id) AS n_tables,
-  SUM(b.game_pnl) AS 桌面输赢,
+  SUM(b.g_sum) AS 桌面输赢,
   -- ★ 扩编三列：报告的荷官雷达按列名取用，列名一字不可改
   COUNT(DISTINCT b.round_key) AS 当值时长,
   MAX(p.节奏稳定度) AS 节奏稳定度,
   MAX(t.max_member_rounds) * 1.0
     / NULLIF(COUNT(DISTINCT b.round_key), 0) AS 特定玩家复现率
-FROM bs b
+FROM bd b
 LEFT JOIN pace p ON p.dealer_id = b.dealer_id
 LEFT JOIN top1 t ON t.dealer_id = b.dealer_id
-WHERE NULLIF(TRIM(b.dealer_id),'') IS NOT NULL
 GROUP BY b.dealer_id ORDER BY 在桌洗码量 DESC;
 
 
@@ -1308,7 +1406,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -1447,7 +1551,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (                  -- 需求 §3.2：同注单号取最新版本（三级排序去重）
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -1523,7 +1633,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -1598,7 +1714,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -1672,7 +1794,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -1730,7 +1858,13 @@ WITH ta AS (            -- 公司测试线代理（214 条，跨五级）
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -1849,7 +1983,12 @@ WITH ta AS (
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet11,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -1876,24 +2015,40 @@ bs AS (
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet
   FROM vd v
 ),
-lab AS (SELECT bet05 AS member_id FROM ods_mariadb_2b.ods_a168_dailyreport_member
-        GROUP BY bet05)
+/* ★ 提速改写：原版五个标量子查询各自引用 bs——若优化器未启用 CTE 复用，
+   整条 1.9 亿行去重流水线会被执行五遍。现改为 GROUPING SETS 单扫：
+   一遍扫描同时产出 会员级 / 会员×月级 / 全局级 三层聚合，
+   再对这张小结果表做一次条件汇总。五个输出数字与原版逐一相同。 */
+g AS (
+  SELECT GROUPING(member_id) AS g_m,
+         GROUPING(ym)        AS g_ym,
+         member_id, ym,
+         COUNT(*)                        AS n_rows,
+         COUNT(DISTINCT round_key)       AS n_rounds,
+         COUNT(DISTINCT CASE WHEN NULLIF(TRIM(dealer_id),'') IS NOT NULL
+                             THEN dealer_id END) AS n_dealer,
+         COUNT(DISTINCT CASE WHEN NULLIF(TRIM(lv3),'') IS NOT NULL
+                             THEN lv3 END)       AS n_lv3,
+         COUNT(DISTINCT member_id)       AS n_member
+  FROM (SELECT member_id, dealer_id, lv3, round_key,
+               DATE_TRUNC('month', bet_date) AS ym
+        FROM bs) t
+  GROUP BY GROUPING SETS ((member_id), (member_id, ym), ())
+)
 SELECT
-  /* S-01 玩家：满 30 局的会员数 */
-  (SELECT COUNT(*) FROM (SELECT member_id FROM bs GROUP BY member_id
-     HAVING COUNT(DISTINCT round_key) >= 30) x)                AS n_S01_玩家,
-  /* S-02 荷官：有注单的荷官数 */
-  (SELECT COUNT(DISTINCT dealer_id) FROM bs
-     WHERE NULLIF(TRIM(dealer_id),'') IS NOT NULL)             AS n_S02_荷官,
-  /* S-03 代理：有注单的 LV3 代理线数 */
-  (SELECT COUNT(DISTINCT lv3) FROM bs
-     WHERE NULLIF(TRIM(lv3),'') IS NOT NULL)                   AS n_S03_代理,
-  /* S-05 面板：会员×月 组合数 */
-  (SELECT COUNT(*) FROM (SELECT member_id, DATE_TRUNC('month', bet_date) ym
-     FROM bs GROUP BY member_id, DATE_TRUNC('month', bet_date)
-     HAVING COUNT(*) >= 30) y)                                 AS n_S05_会员月,
-  /* 参考：窗口内下注会员总数（未过滤 30 局） */
-  (SELECT COUNT(DISTINCT member_id) FROM bs)                   AS n_会员总数;
+  /* S-01 玩家：满 30 局的会员数（会员级切片） */
+  SUM(CASE WHEN g_m = 0 AND g_ym = 1 AND n_rounds >= 30 THEN 1 ELSE 0 END)
+                                                               AS n_S01_玩家,
+  /* S-02 荷官：有注单的荷官数（全局切片） */
+  MAX(CASE WHEN g_m = 1 AND g_ym = 1 THEN n_dealer END)        AS n_S02_荷官,
+  /* S-03 代理：有注单的 LV3 代理线数（全局切片） */
+  MAX(CASE WHEN g_m = 1 AND g_ym = 1 THEN n_lv3 END)           AS n_S03_代理,
+  /* S-05 面板：会员×月 且行数≥30 的组合数（会员×月切片） */
+  SUM(CASE WHEN g_m = 0 AND g_ym = 0 AND n_rows >= 30 THEN 1 ELSE 0 END)
+                                                               AS n_S05_会员月,
+  /* 参考：窗口内下注会员总数（全局切片，未过滤 30 局） */
+  MAX(CASE WHEN g_m = 1 AND g_ym = 1 THEN n_member END)        AS n_会员总数
+FROM g;
 
 /* 判读：
      任何一个数 ≤ 100,000  → 该份直接一次导出，不必分批；
@@ -1914,7 +2069,12 @@ WITH ta AS (
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet11,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -1957,7 +2117,12 @@ WITH ta AS (
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet11,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -2015,7 +2180,12 @@ WITH ta AS (
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet11,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -2222,7 +2392,11 @@ WITH test_agents AS (
   WHERE age022 = '1'                                  -- 铁律④b：公司测试线
 ),
 ranked AS (                                            -- 需求 §3.2：同单号保留最新版本
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet11, b.bet13,
+         b.bet14, b.bet18, b.bet19, b.bet20, b.bet21,
+         b.bet22, b.bet38, b.bet39, b.category,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b                 -- ★ 表名开关
@@ -2380,7 +2554,11 @@ ORDER BY lift DESC, same_rate DESC;
            net_pnl_all, game_pnl_all, stake_all, win_rate_all, win_rate_other
    ─────────────────────────────────────────────────────────────────────────── */
 WITH ranked AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,
+         b.bet13, b.bet14, b.bet17, b.bet38, b.bet39,
+         b.category, b.eid,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b            -- ★ 表名开关
@@ -2482,7 +2660,11 @@ WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 ranked AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet11, b.bet13,
+         b.bet14, b.bet18, b.bet19, b.bet20, b.bet21,
+         b.bet22, b.bet38, b.bet39, b.category,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b            -- ★ 表名开关
@@ -2535,7 +2717,12 @@ WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 ranked AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,
+         b.bet13, b.bet14, b.bet16, b.bet17, b.bet18,
+         b.bet19, b.bet20, b.bet21, b.bet22, b.bet38,
+         b.bet39, b.category, b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b            -- ★ 表名开关
@@ -2615,7 +2802,11 @@ WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 ranked AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet05, b.bet11, b.bet13, b.bet14, b.bet16,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.category, b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b            -- ★ 表名开关
@@ -2693,7 +2884,12 @@ WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 ranked AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,
+         b.bet13, b.bet14, b.bet16, b.bet17, b.bet18,
+         b.bet19, b.bet20, b.bet21, b.bet22, b.bet38,
+         b.bet39, b.category, b.ip, b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b            -- ★ 表名开关
@@ -2768,7 +2964,13 @@ WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 ranked AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet14, b.bet16, b.bet17,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.bet39, b.category, b.eid, b.ip,
+         b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b            -- ★ 表名开关
@@ -3008,7 +3210,12 @@ WITH ta AS (
   FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 rk AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet18, b.bet19, b.bet20,
+         b.bet21, b.bet22, b.bet38, b.bet39, b.category,
+         b.eid, b.ip,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -3145,7 +3352,10 @@ WHERE dt >= DATE '2026-08-07';
    导出：「数据库/DX04_bet09_profile.csv」
    ─────────────────────────────────────────────────────────────────────────── */
 WITH ranked AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet05, b.bet09, b.bet11, b.bet13, b.bet14,
+         b.bet38, b.category,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -3193,7 +3403,11 @@ WITH test_agents AS (
   SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
 ),
 ranked AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet05, b.bet11, b.bet13, b.bet14, b.bet16,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+         b.bet38, b.category, b.eid, b.validbet,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -3282,7 +3496,11 @@ ORDER BY 行数 DESC;
          n_related_orders, n_rounds_eff, p_base_mix, z_score
    ─────────────────────────────────────────────────────────────────────────── */
 WITH ranked AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,
+         b.bet13, b.bet14, b.bet17, b.bet38, b.bet39,
+         b.category, b.eid,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
   FROM ods_mariadb_2b.ods_a168_bet02 b
@@ -3366,8 +3584,3 @@ SELECT
 FROM ods_mariadb_2b.ods_a168_alert_ip_setting
 GROUP BY COALESCE(NULLIF(TRIM(creator), ''), '未署名')
 ORDER BY 标注产量 DESC;
-/* ⚠️ 三条使用限制，务必随表一起交付：
-   1. 样本仅 17 条量级，**不足以做绩效排名**，只可作画像展示；
-   2. 「命中率 / 复核时效 / 误标率」三维仍缺，雷达上会显示为空维；
-   3. 登记时间多在 2022 年，与本报告 139 天窗口无重叠——
-      任何跨期比较都不成立。先跑 §TG-03 确认时间范围再决定是否使用。 */

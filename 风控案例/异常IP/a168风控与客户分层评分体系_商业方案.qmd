@@ -1,7 +1,7 @@
 ---
 title: "a168 风控与客户分层评分体系 · 商业方案"
 subtitle: "三线风控落地 · 四实体赏罚评分 · 滚动回测验证 · 评分服务上线"
-author: "®γσ ξηg（Ryo Eng）· 世博量化® Scibrokes Trading®"
+author: "Ryo（雷欧）"
 date: today
 lang: zh-CN
 engine: knitr   # R+Python 混排：python 块经 reticulate 执行
