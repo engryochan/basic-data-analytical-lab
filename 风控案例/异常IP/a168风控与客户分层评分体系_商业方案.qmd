@@ -4843,6 +4843,7 @@ PU 模型学到的其实是那条规则，扩样只是把规则重跑一遍。
   "风控专员","标注产量","赏","关注名单条数（alert_ip_setting）","§S04p","✅ 已实装",
   "风控专员","覆盖IP广度","赏","其标注覆盖的独立 IP 数","§S04p","🆕 本轮补列",
   "风控专员","判定详尽度","赏","备注字数——判定理由是否可复核","§S04p","🆕 本轮补列",
+  "风控专员","登记跨度","赏","首末登记的时间跨度——持续在岗贡献，而非一次性突击标注","§S04p 导出件派生（首次/最近登记）","✅ 已实装",
   "风控专员","命中率","赏","其标注被后续数据证实的比例","风控处置日志","⏳ 待表",
   "风控专员","复核时效","赏","标注到处置的间隔","风控处置日志","⏳ 待表",
   "风控专员","误标率","罚","被推翻的标注比例","风控处置日志","⏳ 待表",
@@ -4895,7 +4896,8 @@ ENT = {  # 实体: (文件, 维度 -> 赏罚方向 +1 赏 / -1 罚)
    {"线下规模":1,"真实流水":1,"下线留存":1,"新增会员质量":1,
     "对打渗透率":-1,"单链密度":-1,"退水消耗比":-1}),
  "风控专员":(f"{DATA_DIR}/S04_analyst_score.csv",
-   {"标注产量":1,"覆盖IP广度":1,"判定详尽度":1})}
+   {"标注产量":1,"覆盖IP广度":1,"判定详尽度":1,
+    "登记跨度":1})}   # ★ 第 4 实测维：由导出件的 首次/最近登记 两列就地派生
 
 N_DEMO = {"玩家": 3000, "荷官": 180, "代理": 400, "风控专员": 24}
 
@@ -4942,6 +4944,40 @@ for ent, (path, dims) in (ENT.items() if ENV_OK else []):
     if os.path.exists(path):
         df = read_any(path)
         df.columns = [str(c).strip().replace("\ufeff", "") for c in df.columns]
+        ## ── 派生维：能由已导出的其他交付件直接算出的维度，就地并入 ─────────
+        ##    玩家·对打指数 / 批量注册嫌疑 ← C06_hedge_pairs.csv（§C06fix 正版）
+        ##    风控专员·登记跨度 ← 本文件的 首次登记/最近登记 两列
+        if ent == "玩家":
+            c06p = f"{DATA_DIR}/C06_hedge_pairs.csv"
+            if os.path.exists(c06p) and ("对打指数" not in df.columns):
+                c6 = read_any(c06p)
+                c6.columns = [str(c).strip().replace("\ufeff", "") for c in c6.columns]
+                if {"m_a","m_b","opposite_rate"} <= set(c6.columns):
+                    lg = pd.concat([
+                        c6[["m_a","m_b","opposite_rate"]].rename(columns={"m_a":"mid","m_b":"peer"}),
+                        c6[["m_b","m_a","opposite_rate"]].rename(columns={"m_b":"mid","m_a":"peer"})],
+                        ignore_index=True)
+                    lg["mid"]  = pd.to_numeric(lg["mid"],  errors="coerce")
+                    lg["peer"] = pd.to_numeric(lg["peer"], errors="coerce")
+                    lg["gap"]  = (lg["mid"] - lg["peer"]).abs()
+                    agg = lg.groupby("mid").agg(
+                        对打指数=("opposite_rate","max"),
+                        _min_gap=("gap","min")).reset_index()
+                    ## 邻近度 → 嫌疑分：搭档号越近嫌疑越大（IP-S8 口径），1/(1+gap)
+                    agg["批量注册嫌疑"] = 1.0 / (1.0 + agg["_min_gap"])
+                    key = pd.to_numeric(df["member_id"], errors="coerce")
+                    df = df.assign(_k=key).merge(
+                        agg[["mid","对打指数","批量注册嫌疑"]],
+                        left_on="_k", right_on="mid", how="left").drop(columns=["_k","mid"])
+                    df["对打指数"]     = df["对打指数"].fillna(0.0)
+                    df["批量注册嫌疑"] = df["批量注册嫌疑"].fillna(0.0)
+                    print(f"ℹ️ [玩家] 已由 C06_hedge_pairs 并入 对打指数/批量注册嫌疑（对打名单 {len(agg)} 人，其余记 0）")
+        if ent == "风控专员" and {"首次登记","最近登记"} <= set(df.columns) \
+           and "登记跨度" not in df.columns:
+            t0 = pd.to_datetime(df["首次登记"], errors="coerce")
+            t1 = pd.to_datetime(df["最近登记"], errors="coerce")
+            df["登记跨度"] = (t1 - t0).dt.days.clip(lower=0).fillna(0)
+            print("ℹ️ [风控专员] 已由 首次/最近登记 派生 登记跨度（天）")
         have = {d: s for d, s in dims.items() if d in df.columns}
         miss = [d for d in dims if d not in df.columns]
         if miss:
@@ -5007,6 +5043,36 @@ for ent, (path, dims) in (ENT.items() if ENV_OK else []):
         print(f"ℹ️ [{ent}] 已出图，跳过重复追加")
         continue
     RADAR_NAME.append(ent)
+    ## ── 风控专员补一张「设计蓝图」雷达（八维 · 全合成演示）────────────────
+    ##    实测图只有四维（受限于库内可用表），几何上偏薄；蓝图图展示处置日志与
+    ##    申诉记录两表到位后的完整八维形态。轴名逐一后缀标注来源，图题写明
+    ##    「结构演示」，与实测图并列呈现、绝不混同——演示数据不入综合分表。
+    if ent == "风控专员":
+        BLUE = {"标注产量(实测)":1,"覆盖IP广度(实测)":1,"判定详尽度(实测)":1,
+                "登记跨度(实测)":1,"命中率(待表)":1,"复核时效(待表)":1,
+                "复核一致性(待表)":1,"误标率(待表)":-1}
+        bdf = demo_frame("风控专员蓝图", BLUE, N_DEMO[ent])
+        bN  = bdf[list(BLUE)].apply(pct_norm)
+        bdf["综合分"] = bN[[d for d,v in BLUE.items() if v>0]].mean(axis=1) \
+                      - bN[[d for d,v in BLUE.items() if v<0]].mean(axis=1)
+        bgrp = {"优质组(赏·≥P95)": bdf[bdf.综合分 >= bdf.综合分.quantile(.95)],
+                "全体均值":        bdf,
+                "高危组(罚·≤P5)":  bdf[bdf.综合分 <= bdf.综合分.quantile(.05)]}
+        bfig = go.Figure()
+        for gname, gd in bgrp.items():
+            vals = bN.loc[gd.index].mean().tolist()
+            bfig.add_trace(go.Scatterpolar(
+                r=vals + vals[:1], theta=list(BLUE) + [list(BLUE)[0]],
+                fill="toself", name=gname))
+        bfig.update_layout(
+            title=("风控专员 · 设计蓝图（八维 · 结构演示——待处置日志与申诉记录两表）"),
+            polar=dict(radialaxis=dict(range=[0,100], showticklabels=False)),
+            height=460, margin=dict(l=60, r=60, t=70, b=40),
+            paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#dfe7ff"))
+        RADAR_NAME.append("风控专员·蓝图演示")
+        RADAR_HTML.append(bfig.to_html(full_html=False, include_plotlyjs=False,
+                                       config={"displayModeBar": False}))
+        print("ℹ️ [风控专员] 蓝图雷达（八维·演示）已追加；演示数据不入综合分表")
     RADAR_HTML.append(fig.to_html(full_html=False,
                       include_plotlyjs=("cdn" if not RADAR_HTML else False),
                       default_height="470px"))
@@ -5111,8 +5177,13 @@ tibble::tribble(
 | 覆盖IP广度 | `COUNT(DISTINCT ip)` | 其标注覆盖多少个独立 IP，衡量广度而非重复劳动 |
 | 判定详尽度 | `remarks` 字符长度 | 判定理由是否写得可复核——空白备注等于不可审计 |
 
-`§S04p` 已实现这三维，导出即为 `S04_analyst_score.csv`。三维雷达在几何上偏薄，
-但它是**实测的**，胜过八维合成图。
+`§S04p` 已实现前三维，导出即为 `S04_analyst_score.csv`；第四维**登记跨度**由
+导出件自带的首次/最近登记两列就地派生（首末登记时间差，量「持续在岗贡献」而非
+一次性突击标注）。四维雷达在几何上仍偏薄，但它是**实测的**。
+
+为回答「完整形态长什么样」，实测图之后**并列**一张八维设计蓝图雷达（结构演示）：
+四条实测轴后缀「(实测)」、四条待表轴后缀「(待表)」，图题写明「结构演示」，
+演示数据不入综合分表——实测与演示并列而绝不混同。
 
 **两条使用限制须随表一起交付**：其一，样本仅 17 条量级，**只可作画像展示，
 不足以做绩效排名**；其二，登记时间多在 2022 年，与本方案 139 天窗口无重叠，
@@ -5192,6 +5263,16 @@ _ARENA_MAXN = 30000            # 建模样本上限（内存正相关，可调�
 
 ARENA_TBL = []                 # 模型天梯容器（交由 R 块出表）
 PANEL = f"{r.DATA_DIR}/S05_member_month_panel.csv"     # SQL包 §06 S-05：会员×月评分面板
+## ★ S05 表头中文列名经 GBK 导出链路可能损坏（本轮实测为乱码）。
+##   兜底：读入后若发现替换符/乱码，按位置恢复契约列名（10 列，次序与 S-05 一致）。
+S05_COLS = ["member_id","bet_date","流水贡献","游戏输赢贡献","活跃稳定",
+            "退水支出","n_ip","n_chain","round_key","risk_label"]
+def _fix_s05_cols(df):
+    bad = sum(("\ufffd" in str(c)) or ("�" in str(c)) for c in df.columns)
+    if bad >= 2 and len(df.columns) == len(S05_COLS):
+        df.columns = S05_COLS
+        print("ℹ️ [S05] 表头乱码已按位置恢复为契约列名（治本须 S-05 改英文列名重导）")
+    return df
 ## 最外层兜底：竞技场失败不该拖垮整份报告。
 try:
     if not ENV_OK:
@@ -5204,7 +5285,7 @@ try:
                 try: return pd.read_csv(path, encoding=enc)
                 except (UnicodeDecodeError, LookupError): continue
             raise RuntimeError(f"{path} 所有候选编码均失败")
-        df = read_any(PANEL)
+        df = _fix_s05_cols(read_any(PANEL))
         ycol, feats = "risk_label", [c for c in df.columns
                        if c not in ("member_id","bet_date","round_key","risk_label")]
         ## 分层下采样：正样本全留、只降采样负样本（极不平衡下唯一正确的方向）。
@@ -6632,6 +6713,11 @@ try:
                 except (UnicodeDecodeError, LookupError): continue
             raise RuntimeError(f"{p} 所有候选编码均失败")
         dfp = py_contract(_PANEL, ["member_id"], "S-05")
+        if dfp is not None and sum(("\ufffd" in str(c)) or ("�" in str(c))
+                                   for c in dfp.columns) >= 2 and len(dfp.columns) == 10:
+            dfp.columns = ["member_id","bet_date","流水贡献","游戏输赢贡献","活跃稳定",
+                           "退水支出","n_ip","n_chain","round_key","risk_label"]
+            print("ℹ️ [S05] 表头乱码已按位置恢复（军械库侧兜底；治本须 S-05 改英文列名重导）")
         if dfp is None:
             dfp = pd.DataFrame()          # 契约不过 → 空表走后续「特征不足」分支
         ## S05 面板不含 risk_label，
@@ -8096,6 +8182,24 @@ tibble::tribble(
 
 # 待补数据与验证 {#sec-next}
 
+## 待办清单（源自四分卷全量体检 · 2026-08-08） {#sec-audit-todo}
+
+本轮以数据库为标准对 42 份交付 CSV 与渲染成品做了全量体检。核心资产全部落地：
+四实体评分件列齐（含扩编维）、`B01` 回测面板 284 MB 到位、`R02` 46 MB 列齐、
+`V_recon` 复核 MASE ≈ 0.000587 与既往一致。以下为**查出的缺陷与缺口**，按急缓排序：
+
+| # | 发现 | 定性 | 处置 |
+|---|------|------|------|
+| ① | `R_rebate_dist.csv` 失真：`n_member` 首档达 7.83 亿，远超会员总数——E1-11 对 `member_dtl`（8.18 亿行快照表）**未按会员去重**，算的是快照行数不是会员数 | ⛔ 数据缺陷 | 重跑 E1-11 去重版（按会员取最新快照再分布），文件覆盖 |
+| ② | `T02_daily_roi.csv` 内容错位：表头为 `uid, dealer_id, z_score…`（玩家×荷官结构），非契约的 `member_id, bet_date…`——疑似导出时存错文件名 | ⛔ 数据缺陷 | 重跑 §T02 正版覆盖；18.2.1 与试运行阈值的「待数据」即由此来 |
+| ③ | `S05_member_month_panel.csv` 表头中文列名 GBK 损坏（乱码）——SQL 用中文列名经导出链路编码受损 | ⛔ 数据缺陷 | 治本：S-05 改英文列名重导；治标：R 侧按位置兜底重命名（竞技场章「待数据」的根因） |
+| ④ | `E02_segment_econ.csv` 的 `commission`（13.8 亿）**大于 GGR**（6.78 亿）——证实 `bet23~27` 量纲疑云：若为占成率被当金额累加，κ 与净贡献率全部失真 | ⛔ 结论冻结 | §E02c-0 量纲探针**必须先跑**；在此之前 @sec-econ 的 κ 相关数字一律视为未定 |
+| ⑤ | `X_combo.csv` 仅 2 行且 `flag_tail_p90` 全 0——尾段旗标疑似全程未触发 | 🟡 待查 | 复核 X-01 的尾段判据与 `S_player_tail` 的分位联动 |
+| ⑥ | `L_label_dist` 首日为 2026-03-24，与窗口起点 03-21 差 3 天——`dailyreport` 起始晚于注单表 | 🟡 注记 | 涉 dailyreport 的口径须注明起始日差异 |
+| ⑦ | `DX05` 全景实测：产品 101 会员数 723,442——与既往分母 721,190 有小差 | 🟡 注记 | 统一分母出处（DX-05 为准）并在文中标注口径 |
+| ⑧ | `K01b_seed_goldip.csv` **作废**：17 个关注 IP 经四层排查在 `bet02` 全表零命中（HEX 检验排除编码嫌疑；登记时间 16 条在 2022、1 条在 2025-07）——名单三年无人维护且从未对账，**这是风控流程缺口的实证** | ✅ 已定案 | 种子仅剩①人工風險單（125 人，已导出）；本结论写入 @sec-gold 与 @sec-radar |
+| ⑨ | 赏罚两份备忘待落笔：罚侧措辞收紧（走势图改称「罚侧净增益」）为零风险先行项；TnG 即时返水赏机制入未来升级 | 🟠 升级项 | 依既定优先级：措辞① → δ* 接入② → 赏侧敏感带③ |
+
 ## 待办清单（源自 C 系核验）
 
 ```sql
@@ -8435,6 +8539,16 @@ tibble::tribble(
 | `bet09` 的 23 种取值 | 玩法 | **投注产品** | 产品 = 平台推出供投注的标的；玩法 = 玩家如何投注。二者正交，混用会让「按产品分设胜率基准」被误读为在讲下注习惯 |
 | `bet02` | 产品 | **产品大类** | 与投注产品构成二级体系，层级明确 |
 | 评分实体 | 风控员 / 风控专员 混用 | **风控专员** | 两个名字在管线不同环节各走一路，曾致雷达按名去重失效、同一实体出图两次 |
+
+## 四之一之二、四分卷全量体检与雷达派生维（2026-08-08）
+
+| 变更 | 性质 | 缘由 |
+|---|---|---|
+| 玩家雷达就地并入 `对打指数`/`批量注册嫌疑` 两维（源 `C06_hedge_pairs.csv`，对打名单外记 0） | 补列 | 两维早已登记在 ENT 字典，但装载侧无派生代码——渲染实测玩家仅七维，缺的正是 §C06fix 系维度 |
+| 风控专员雷达补第 4 实测维 `登记跨度`（由导出件 首次/最近登记 派生），并新增八维**设计蓝图雷达**（结构演示、轴名标注 实测/待表、不入综合分表） | 升级 | 遵先生令：能力值补回多维形态；实测与演示并列而绝不混同 |
+| 评分设计表增 `登记跨度` 行（✅ 已实装） | 同步 | 设计表是 42+1 维唯一权威，先表后图 |
+| `S05` 表头 GBK 乱码兜底：两处读取点按位置恢复契约列名 | 治标 | 治本须 S-05 改英文列名重导；竞技场「待数据」根因即此 |
+| 待办章新增「四分卷体检审计发现」九条（E1-11 未去重、T02 内容错位、E02 量纲证伪冻结、X_combo 待查、K01b goldip 作废定案等） | 记录 | 全部缺陷显式列账,不静默 |
 
 ## 四之二、回测引擎提速与精度升级（折级检查点 · 滑动窗修正 · 嵌套选窗）
 

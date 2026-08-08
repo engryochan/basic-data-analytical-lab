@@ -178,3 +178,11 @@ desktop.ini
 #         git add .gitattributes
 #    注意 LFS 免费额度为 1 GB 存储 / 1 GB 月流量，超出需付费。
 # ═══════════════════════════════════════════════════════════════════════════
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
