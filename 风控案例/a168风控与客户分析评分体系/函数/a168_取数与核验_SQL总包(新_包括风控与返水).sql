@@ -2456,7 +2456,61 @@ ORDER BY late_share DESC, n_orders_late DESC;
    输出列：uid1, uid2, n_same_orders, rounds_1, rounds_2,
            same_rate, jaccard, lift, exp_same, n_tables, first_day, last_day
    ★ 绝不可对 bet02 原表直接自连接：1.9 亿 × 1.9 亿 必然打爆集群。
+
+   ★★ 2026-08-09 降内存斧正（实测触发：BE 单节点用量 107 GB 撞上限而崩）
+   ─────────────────────────────────────────────────────────────────────────
+   根因不在数据量，在**两处配对的约束强弱悬殊**：
+     · pair  的配对约束是 **同一物理局**（round_key），一局数十人，量级尚可控；
+     · expct 的配对约束却是 **同一桌 × 同一日**（table_id + bet_date）——
+       同桌同日的候选会员可达数千，配对数按其平方增长。
+       全窗 27 桌 × 139 日 ≈ 3,753 个桌日，若每桌日 5,000 名候选会员，
+       配对数即约 469 亿——比 pair 高出一个数量级，且**其中绝大多数对
+       根本不会出现在 pair 里**（同桌同日不等于同局同坐），算了也是白算。
+
+   斧正一（决定性）：**expct 只为 pair 中实际存在的对计算期望**。
+     原式先算全组合再 LEFT JOIN 取用，今改为先得 pair、再以其为驱动表
+     去 join td/tot。语义逐字不变（E[same] 的定义式未动），
+     但配对数由「全组合」降为「pair 对数 × 其共同桌日数」，降幅达数量级。
+
+   斧正二：pair 的 shuffle 倾斜防护。
+     热门桌的热门局参与人数远高于均值，按 round_key shuffle 会把巨量配对
+     压到单个 BE——本次 107 GB 正是这一形状。故新增 §R02-0 诊断先看分布；
+     若确有超热局，按 §R02-1 的桌台分批跑（分批不改语义，只改执行批次）。
+
+   斧正三：act 门槛由 100 提到 300。
+     原注释已备此路。候选池是配对数的平方项底数，门槛提三倍，
+     配对数约降一个数量级；而 §R02 的判据本就要求同桌 ≥100 笔，
+     总局数不足 300 者几无可能构成稳定团伙对。
+     ★ 若先生要保留 100 的口径，把下方 act 的 300 改回 100，
+       并务必改走 §R02-1 分批模板。
    ─────────────────────────────────────────────────────────────────────────── */
+
+-- ▸ 导出：不需要 —— §R02-0 倾斜诊断（先看每局参与人数分布），屏幕看结果。
+--   ★ 跑 §R02 之前必做：若 p999 或 max 远高于中位数，即存在超热局，
+--     须改走 §R02-1 分批模板，否则单 BE 必被压垮。
+WITH mr0 AS (
+  SELECT DISTINCT b.bet05 AS member_id,
+         CONCAT_WS('|', b.bet03, b.bet04, b.bet39) AS round_key
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-08-04' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101' AND b.category = '1'
+    AND UPPER(TRIM(b.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+),
+per_round AS (
+  SELECT round_key, COUNT(*) AS n_member FROM mr0 GROUP BY round_key
+)
+SELECT COUNT(*)                                    AS n_rounds,
+       AVG(n_member)                               AS avg_member_per_round,
+       PERCENTILE_APPROX(n_member, 0.50)           AS p50,
+       PERCENTILE_APPROX(n_member, 0.90)           AS p90,
+       PERCENTILE_APPROX(n_member, 0.999)          AS p999,
+       MAX(n_member)                               AS max_member,
+       SUM(n_member * (n_member - 1) / 2)          AS pair_ops_3d
+FROM per_round;
+-- 读法：pair_ops_3d 是三日窗内 pair 阶段的配对次数；乘以 46 即全窗量级。
+--       若该值逾百亿，即须分批；max_member 若为 p50 的十倍以上，即存在超热局。
+
 -- ▸ 导出：需要 —— 存为「数据库/R02_same_table.csv」（§R02 同桌对 Jaccard / Lift）。
 WITH mr AS (                          -- 阶段一：会员 × 物理局，去重后每人每局一行
   SELECT DISTINCT
@@ -2471,8 +2525,12 @@ WITH mr AS (                          -- 阶段一：会员 × 物理局，去�
     AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
 ),
 act AS (                              -- 候选池：局数不够就不可能凑到 100 局同桌
+  --   ★ 门槛由 100 提至 300（降内存斧正三）：候选池是配对数的平方项底数，
+  --     门槛提三倍，配对数约降一个数量级。判据本要求同桌 ≥100 笔，
+  --     总局数不足 300 者几无可能构成稳定团伙对。要复原口径改回 100 即可，
+  --     但须改走 §R02-1 分批模板。
   SELECT member_id, COUNT(*) AS n_rounds
-  FROM mr GROUP BY member_id HAVING COUNT(*) >= 100
+  FROM mr GROUP BY member_id HAVING COUNT(*) >= 300
 ),
 mr2 AS (
   SELECT m.* FROM mr m JOIN act a ON a.member_id = m.member_id
@@ -2497,13 +2555,20 @@ tot AS (                              -- Lift 零假设的分母件：每桌每�
   FROM mr2 GROUP BY table_id, bet_date
 ),
 expct AS (                            -- E[same] = Σ n_a(t,d)·n_b(t,d) / N(t,d)
-  SELECT a.member_id AS uid1, b.member_id AS uid2,
+  --   ★ 降内存斧正一（决定性）：改以 pair 为**驱动表**，只为实际存在的对算期望。
+  --     原式先算「同桌同日」的全组合再 LEFT JOIN 取用——同桌同日的候选会员
+  --     可达数千，配对数按其平方增长，且绝大多数对根本不在 pair 里，算了白算。
+  --     今由 pair 驱动，配对数降为「pair 对数 × 其共同桌日数」。
+  --     期望值的定义式一字未动，输出逐值一致。
+  SELECT p.uid1, p.uid2,
          SUM(a.n_md * b.n_md * 1.0 / NULLIF(t.n_td,0)) AS exp_same
-  FROM td a
-  JOIN td b  ON a.table_id = b.table_id AND a.bet_date = b.bet_date
-            AND a.member_id < b.member_id
-  JOIN tot t ON t.table_id = a.table_id AND t.bet_date = a.bet_date
-  GROUP BY a.member_id, b.member_id
+  FROM pair p
+  JOIN td a  ON a.member_id = p.uid1
+  JOIN td b  ON b.member_id = p.uid2
+            AND b.table_id  = a.table_id
+            AND b.bet_date  = a.bet_date
+  JOIN tot t ON t.table_id  = a.table_id AND t.bet_date = a.bet_date
+  GROUP BY p.uid1, p.uid2
 )
 SELECT p.uid1, p.uid2,
        p.same_rounds                                          AS n_same_orders,
@@ -2522,8 +2587,36 @@ LEFT JOIN expct e ON e.uid1 = p.uid1 AND e.uid2 = p.uid2
 ORDER BY lift DESC, same_rate DESC;
 /* ⚠️ 同上：**故意不加** same_rate >= 0.30 的 WHERE。阈值网格（@sec-r02 的 r02-grid）
    要扫 30%/40%/50%/70% × Lift 1/2/3/5 十六格，只导 30% 以上就扫不出下沿。
-   若行数仍过大，把 act 的门槛从 100 提到 300，而不是加 same_rate 条件。
-   跑不动时按桌台切分：在 mr 的 WHERE 加 AND b.bet39 IN ('T01','T02',...) 分批跑。 */
+   若行数仍过大，把 act 的门槛再往上提，而不是加 same_rate 条件。 */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §R02-1 · 分批模板（兜底之路 —— 三处斧正后仍撞内存上限时才用）
+   ---------------------------------------------------------------------------
+   分批不改语义，只改执行批次：**同桌配对本就不跨桌**，故按 table_id 切批，
+   每批的结果彼此独立、无重叠、无遗漏，纵向合并即得全量。
+   ★ 这是本条唯一安全的切分维度——**切勿按日期或会员号切**：
+     按日切会把跨日的同桌对拆散、same_rounds 被人为分割；
+     按会员号切会漏掉「一个在批内、一个在批外」的对。
+
+   用法三步：
+     ① 先跑下面的 §R02-1a 取桌台清单与各桌体量；
+     ② 按体量把 27 张桌分成 3~5 批，每批总局数尽量相当；
+     ③ 把 §R02 的 mr 里加一行 `AND b.bet39 IN ('桌1','桌2',...)`，逐批跑，
+        每批另存为 R02_same_table_b1.csv / _b2.csv …，R 侧纵向合并。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §R02-1a 桌台体量清单（分批切点），屏幕看结果。
+SELECT b.bet39 AS table_id,
+       COUNT(DISTINCT CONCAT_WS('|', b.bet03, b.bet04, b.bet39)) AS n_rounds,
+       COUNT(DISTINCT b.bet05)                                   AS n_member
+FROM ods_mariadb_2b.ods_a168_bet02 b
+WHERE b.dt >= '2026-08-04' AND b.dt < '2026-08-07'
+  AND b.bet02 = '101' AND b.category = '1'
+  AND UPPER(TRIM(b.bet38)) = 'N'
+  AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+GROUP BY b.bet39
+ORDER BY n_rounds DESC;
+-- 读法：按 n_rounds 降序，用「贪心装箱」分批——最大的桌单独一批，
+--       其余按体量凑成总量相当的几批。n_member 特别大的桌宜单独成批。
 
 
 /* ───────────────────────────────────────────────────────────────────────────
