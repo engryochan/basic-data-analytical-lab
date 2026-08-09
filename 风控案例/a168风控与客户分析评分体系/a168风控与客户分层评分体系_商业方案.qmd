@@ -7622,40 +7622,125 @@ tibble::tibble(
 
 ## 五个分项
 
-| 来源 | 代码 | 机制 | 量化 | 可验证性 |
+| 来源 | 代码 | 机制 | 量化 | 性质与可验证性 |
 |---|---|---|---|---|
-| 拦截套利敞口 | G1 | 识别 R0/R1/R2 后限制 | Σ(命中者 T+1 期 `game_pnl>0` 部分) × 拦截率 | ★★★ 反事实可算 |
-| 返水成本优化 | G2 | 识别 R3 后调整档位 | Σ(R3 会员返水) × 调降幅度 | ★★★ 直接可算 |
-| 高价值客留存 | G3 | V1/V2 精准运营 | Δ留存率 × CLV | ★☆ 需 A/B |
-| 误杀损失 | L1 | V1/V2 被误判流失 | 误判数 × 中位净贡献 × 流失概率 | ★★ 需影子期 |
+| 拦截套利敞口 | G1 | 识别 R0/R1/R2 后限制 | Σ(命中者 T+1 期 `game_pnl>0` 部分) × **拦截率（情景参数）** | ⚠ **情景会计**，非严格反事实——须处置执行后以历史单重估 |
+| 返水成本优化 | G2 | 识别 R3 后调整档位 | **省下的返水 − 因降档流失的流水 × 毛利率** | ★★ 直接可算，但**须扣流水流失**方为净额 |
+| 高价值客留存 | G3 | V1/V2 精准运营 | Δ留存率 × CLV | ★☆ 需 A/B；**下界记 0** |
+| 误杀损失 | L1 | V1/V2 被误判流失 | 误判数 × 中位净贡献 × **流失系数（情景参数）** | ★★ 需影子期 |
 | 复核人力 | L2 | 人工成本 | 命中数 × 工时 × 时薪 | ★★★ 直接可算 |
 
 $$\Delta \text{GGR} = G_1 + G_2 + G_3 - L_1 - L_2$$
+
+::: {.callout-warning}
+## G1 是**情景会计**，不是严格的反事实
+
+`G1 = Σ(命中者赢走额) × 拦截率` 这一式，隐含了「命中即能按该比例止损或追回」的假设。
+现实中命中者可能：限红后继续投注、转换产品、流失他往、提出申诉，
+或本就只是随机赢钱而非套利。故 **`拦截率` 与 `流失系数` 均属情景参数
+（Scenario Parameters），非模型估计值（Expected Economic Effect）**。
+
+本方案自此不再以单点参数报告 ΔGGR，一律改以**情景网格**呈现：
+拦截率／回收率 ∈ {0.25, 0.40, 0.60, 0.75}，流失系数 ∈ {0.05, 0.10, 0.15, 0.25}，
+逐格给出 ΔGGR、分块自助法区间与 **P(ΔGGR > 0)**（见下方「情景敏感性曲面」）。
+真实参数值须由历史处置单重估，并经灰度对照实验确认。
+:::
 
 ## 反事实回测
 
 ```{r}
 #| label: counterfactual
 #| echo: false
-counterfactual_backtest <- function(panel, splits, rule_fn, intercept_rate=0.5){
+## ★ 反事实回测（2026-08-09 斧正）：三处修正
+##   ① `intercept_rate` 与 `churn_rate` 正名为**情景参数**，默认值只是网格中心点，
+##      不得当作模型估计；折级明细同时留下 W（命中者赢走额）与 L（命中者输掉额）
+##      两个**原值**，供下游在参数网格上重算，无须重跑回测。
+##   ② G2 由「省下的返水」改为**净额 = 省下的返水 − 因降档流失的流水 × 毛利率**；
+##      流水弹性 `handle_elasticity` 亦为情景参数，未实测前默认 0（即退回旧口径），
+##      但一律在输出中显式列出 LostGGR 一列，使高估无从隐藏。
+##   ③ 折级输出增列 `W_hit` / `L_hit` / `mis_rate`，使敏感性曲面可由本表直接派生。
+counterfactual_backtest <- function(panel, splits, rule_fn,
+                                    intercept_rate = 0.5,   # 情景参数：拦截／回收率
+                                    churn_rate     = 1.0,   # 情景参数：误伤流失系数
+                                    rebate_cut     = 1.0,   # 情景参数：返水调降幅度
+                                    handle_elasticity = 0,  # 情景参数：降档→流水流失弹性
+                                    margin_rate    = NA_real_){ # 毛利率 m，未给则由面板算
   purrr::map_dfr(splits, function(s){
     tr <- panel[s$train,]; te <- panel[s$test,]
     thr <- rule_fn$calibrate(tr)          # ★ 阈值仅用训练期标定 → 无前视
     hit <- rule_fn$apply(te, thr)         #   应用到测试期
-    G1 <- sum(pmax(te$game_pnl[hit],0), na.rm=TRUE) * intercept_rate
-    G2 <- sum(te$rebate[hit & te$is_rebate_arb], na.rm=TRUE)
-    L1 <- sum(pmax(-te$net_pnl[hit & te$is_high_value],0), na.rm=TRUE)
+    ## ── 原值（不含任何情景参数），供敏感性曲面重算 ──
+    W_hit <- sum(pmax(te$game_pnl[hit], 0), na.rm = TRUE)   # 命中者赢走额
+    L_hit <- sum(pmax(-te$net_pnl[hit & te$is_high_value], 0), na.rm = TRUE)
+    R_hit <- sum(te$rebate[hit & te$is_rebate_arb], na.rm = TRUE)
+    m_hat <- if (is.finite(margin_rate)) margin_rate else {
+      vb <- sum(te$valid_bet, na.rm = TRUE)
+      if (isTRUE(vb > 0)) -sum(te$net_pnl, na.rm = TRUE) / vb else NA_real_ }
+    ## ── 情景值 ──
+    G1 <- W_hit * intercept_rate
+    saved_rebate <- R_hit * rebate_cut
+    lost_ggr <- if (is.finite(m_hat))
+      saved_rebate * handle_elasticity * m_hat else 0    # 降档导致的流水流失×毛利
+    G2 <- saved_rebate - lost_ggr                        # ★ 净额，不再只记省下的返水
+    L1 <- L_hit * churn_rate
     L2 <- sum(hit) * rule_fn$review_cost
-    tibble::tibble(fold=s$fold, n_hit=sum(hit), G1=G1, G2=G2, L1=L1, L2=L2,
-                   delta_ggr=G1+G2-L1-L2, purge_rate=s$purge_rate)})
+    tibble::tibble(fold = s$fold, n_hit = sum(hit),
+                   W_hit = W_hit, L_hit = L_hit, R_hit = R_hit, m_hat = m_hat,
+                   G1 = G1, G2 = G2, SavedRebate = saved_rebate, LostGGR = lost_ggr,
+                   L1 = L1, L2 = L2,
+                   delta_ggr = G1 + G2 - L1 - L2, purge_rate = s$purge_rate)})
 }
 
-uplift_ci <- function(bt, R=2000, conf=.95){
-  if (!HAS[["boot"]]) return(NULL)
-  b <- boot::boot(bt$delta_ggr, function(d,i) mean(d[i]), R=R)
-  ci <- boot::boot.ci(b, conf=conf, type="bca")
-  tibble::tibble(点估计=mean(bt$delta_ggr), CI下界=ci$bca[4], CI上界=ci$bca[5],
-    结论=ifelse(ci$bca[4]>0, "✅ 证实业绩提升", "⛔ **未能证实**"))
+## ★ 区间估计（2026-08-09 斧正）：iid 自助法 → **moving-block 自助法**
+##   折级序列存在自相关与季节性（同一客群跨折延续、活动季集中），
+##   普通 iid 重抽样低估方差、令区间偏窄（Künsch 1989）。
+##   改按相邻折成块重抽样，块长取 ⌈√折数⌉；折数过少时退化为整体均值。
+blk_boot <- function(v, R = 2000, seed = 7){
+  v <- v[is.finite(v)]; n <- length(v)
+  if (n < 2) return(rep(mean(v), R))
+  l <- max(1, ceiling(sqrt(n))); k <- ceiling(n / l)
+  set.seed(seed)
+  replicate(R, {
+    st <- sample.int(n - l + 1, k, replace = TRUE)
+    mean(unlist(lapply(st, function(i) v[i:(i + l - 1)]))[seq_len(n)])
+  })
+}
+uplift_ci <- function(bt, R = 2000, conf = .95){
+  b  <- blk_boot(bt$delta_ggr, R = R)
+  a  <- (1 - conf) / 2
+  ci <- stats::quantile(b, c(a, 1 - a), na.rm = TRUE)
+  tibble::tibble(点估计 = mean(bt$delta_ggr),
+    CI下界 = ci[[1]], CI上界 = ci[[2]],
+    区间口径 = sprintf("moving-block 自助法（块长 %d，R=%d）",
+                    max(1, ceiling(sqrt(sum(is.finite(bt$delta_ggr))))), R),
+    结论 = ifelse(ci[[1]] > 0, "✅ 证实业绩提升", "⛔ **未能证实**"))
+}
+
+## ★ 情景敏感性曲面（2026-08-09 新增）：拦截／回收率 × 流失系数 4×4 网格。
+##   直接由回测折级的**原值**（W_hit / L_hit / R_hit）重算，无须重跑回测。
+##   每格给出 ΔGGR、moving-block 90% 区间与 P(ΔGGR>0)。
+##   ★ 判定纪律不变：区间跨 0 即该情景下「未能证实」，不得软化表述。
+profit_sensitivity <- function(bt,
+    recovery = c(.25, .40, .60, .75),
+    churn    = c(.05, .10, .15, .25),
+    rebate_cut = 1.0, handle_elasticity = 0, R = 1000){
+  stopifnot(all(c("W_hit","L_hit") %in% names(bt)))
+  R_hit <- if ("R_hit" %in% names(bt)) bt$R_hit else 0
+  m_hat <- if ("m_hat" %in% names(bt)) bt$m_hat else NA_real_
+  saved <- R_hit * rebate_cut
+  lost  <- ifelse(is.finite(m_hat), saved * handle_elasticity * m_hat, 0)
+  L2    <- if ("L2" %in% names(bt)) bt$L2 else 0
+  purrr::map_dfr(recovery, function(rr)
+    purrr::map_dfr(churn, function(cc){
+      g <- rr * bt$W_hit + (saved - lost) - cc * bt$L_hit - L2
+      b <- blk_boot(g, R = R, seed = 17)
+      tibble::tibble(`回收率` = rr, `流失系数` = cc,
+        `ΔGGR` = mean(g),
+        `下界` = stats::quantile(b, .05, na.rm = TRUE)[[1]],
+        `上界` = stats::quantile(b, .95, na.rm = TRUE)[[1]],
+        `P(ΔGGR>0)` = mean(b > 0),
+        `判定` = ifelse(stats::quantile(b, .05, na.rm = TRUE)[[1]] > 0,
+                      "✅ 该情景下证实", "⛔ 未能证实"))}))
 }
 ```
 
@@ -7670,6 +7755,41 @@ uplift_ci <- function(bt, R=2000, conf=.95){
 **且必须做安慰剂检验**：随机命中同等数量会员跑同一流程，
 若安慰剂 ΔGGR 也显著为正，说明增益来自「命中大客」而非「命中风险客」，
 整套结论作废。
+
+**新增两条（2026-08-09）**：
+
+**其一，不得以单点参数报告业绩。** 一切 ΔGGR 须以情景曲面呈现
+（`profit_sensitivity()`），并同时给出 `P(ΔGGR>0)`。**若曲面中存在业务认可参数区间内
+符号翻转的格位，即不得对外宣称增利**——须在结论中明列翻转的分界线。
+
+**其二，区间一律用 moving-block 自助法。** 折级序列自相关下，iid 重抽样的区间偏窄，
+据此宣称「CI 下界 > 0」不成立。折数少于两位数时，`P(ΔGGR>0)` 只作方向参考，
+不得作为统计确定性对外表述。
+:::
+
+## 情景敏感性曲面
+
+```{r}
+#| label: sensitivity-surface
+#| echo: false
+#| eval: false
+## 用法（回测跑完后执行）：
+##   surf <- profit_sensitivity(bt)                 # 4×4 网格
+##   knitr::kable(surf, digits = 3)
+## 读法：只看自己认可的那一格，并看区间是否跨 0；跨 0 即该情景下未能证实增利。
+## 真实参数须由历史处置单重估：
+##   回收率 = 实际追回额 ÷ 标记不当得利额（按月滚动）
+##   流失系数 = 误伤复核后该客流水衰减 × 毛利率
+##   流水弹性 = 返水降档后该客流水变动率（须有档位变更史）
+```
+
+::: {.callout-note}
+## 参数正名：Scenario Parameters，非 Expected Economic Effect
+
+`拦截率／回收率 0.50~0.60`、`流失系数 0.15`、`返水调降幅度`、`流水弹性`
+四者一律为**情景参数**。它们不是本方案估计所得，亦不构成对业绩的预期。
+在以历史处置单重估之前，任何据此外推的年化金额，只能表述为
+「在该组假设下的潜在增利区间」，不得表述为「预计增加」。
 :::
 
 ## 多重检验修正
@@ -9899,6 +10019,36 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
 正文任何一章都不得出现「本轮新增」「上一版把」「已前移」这类过程记述——
 每一轮都适用，不是某一轮的临时安排。
 :::
+
+## 2026-08-09 · 经济验证层斧正（外部审计四项）
+
+本轮只动 @sec-uplift 一章的四处，其余各章一字未改。
+
+**其一，G1 正名为情景会计，不再自称严格反事实。**
+`G1 = Σ(命中者赢走额) × 拦截率` 隐含「命中即能按该比例止损或追回」之假设；
+现实中命中者可能限红后继续投注、转换产品、流失他往、提出申诉，或本就属随机赢钱。
+故新增专章说明，并将 `拦截率` 与 `流失系数` 一律正名为**情景参数（Scenario Parameters）**，
+非模型估计值（Expected Economic Effect）。
+
+**其二，G2 补扣流水流失。**
+原式 `G2 = Σ(R3 会员返水)` 只记省下的返水，未计降档导致的流水流失。
+今改为 **净额 = 省下的返水 − 流失流水 × 毛利率**，并在折级输出中显式列出
+`SavedRebate` 与 `LostGGR` 两列，使高估无从隐藏。流水弹性同为情景参数，
+未实测前默认为零（即退回旧口径），但列位保留。
+
+**其三，区间估计由 iid 自助法改为 moving-block 自助法。**
+折级序列存在自相关与季节性，`boot::boot` 的 iid 重抽样低估方差、令区间偏窄
+（Künsch 1989）。今改按相邻折成块重抽样，块长取 ⌈√折数⌉，并在输出中标注区间口径。
+
+**其四，新增情景敏感性曲面 `profit_sensitivity()`。**
+回测折级输出增列 `W_hit`／`L_hit`／`R_hit`／`m_hat` 四个**原值**，
+使拦截／回收率 ∈ {0.25, 0.40, 0.60, 0.75} × 流失系数 ∈ {0.05, 0.10, 0.15, 0.25}
+的 4×4 网格可由该表直接派生，无须重跑回测；每格给出 ΔGGR、分块自助法 90% 区间与
+**P(ΔGGR>0)**。判定纪律相应新增两条：不得以单点参数报告业绩；
+曲面中若存在业务认可参数区间内符号翻转的格位，即不得对外宣称增利，
+须在结论中明列翻转的分界线。
+
+以上四项与《a168风控评分_精要商业报告》第八轮的口径完全一致，两份文件自此同源。
 
 ## 一、逐项变更清单
 
