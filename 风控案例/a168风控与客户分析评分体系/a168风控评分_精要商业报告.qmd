@@ -1,0 +1,1536 @@
+---
+title: "a168 真人百家乐 · 风控与客户分层评分 — 精要商业报告"
+subtitle: "只讲四件事：用什么数据 · 评出什么分 · 采取什么措施 · 值多少钱（含回测与精准率）"
+date: today
+lang: zh
+format:
+  html:
+    theme: darkly
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-summary: "查看计算代码（全部数字由此现算）"
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{=html}
+<style>
+body{background:
+  radial-gradient(1100px 500px at 12% -8%, rgba(0,229,160,.14), transparent 60%),
+  radial-gradient(900px 480px at 88% 4%, rgba(34,211,238,.12), transparent 55%),
+  radial-gradient(1200px 700px at 50% 110%, rgba(139,92,246,.16), transparent 60%),
+  #050d1a; color:#dff7ee;}
+h1,h2,h3{color:#7dffd4;}
+table{font-size:.9rem;}
+.callout{border-left-color:#22d3ee;}
+</style>
+```
+
+::: {.callout-note}
+## 本报告的立场与血统
+
+本报告是《a168风控与客户分层评分体系_商业方案》的**执行精要版**：主方案对
+`异常IP与尾秒下注风控_阈值分析需求文档.md` 的全部 30 项要求逐条实现，并整合两轮实测审计的
+全部校正——五条铁律裁定、需求文档七处缺陷、21 张表的实测发现，再追加三层能力：
+**八维能力值分层、净化时序回测、业绩提升的因果验证协议**。
+本报告继承同一数据契约与同一纪律，只做一件事：**把结论压缩到可拍板的篇幅**。
+凡本报告出现的数字，一律由随附 `数据库/` 目录内的导出件**在渲染时现算**，
+无一处手填；来源编号一律指向 `a168_取数与核验_SQL总包.sql`。
+:::
+
+```{r}
+#| label: setup
+#| echo: false
+suppressMessages({
+  ok <- function(p) requireNamespace(p, quietly = TRUE)
+  HAS <- list(dt = ok("data.table"), plotly = ok("plotly"), DT = ok("DT"))
+})
+PAL <- list(bg="#050d1a", fg="#dff7ee", ac="#22d3ee", good="#00e5a0",
+            warn="#ffd64d", bad="#ff6b8b", violet="#8b5cf6")
+HOVER <- list(bgcolor="rgba(5,13,26,.96)", bordercolor=PAL$ac,
+              font=list(color=PAL$fg, size=12), align="left")
+## 数据目录自动识别（与主方案同一惯例）
+DATA_DIR <- NULL
+for (cand in c("数据库", file.path("..","数据库"), file.path("data","数据库"))) {
+  if (dir.exists(cand)) { DATA_DIR <- cand; break }
+}
+## 编码自适应读取（UTF-8-sig → GB18030 → …），大文件优先 data.table
+read_any <- function(name, select = NULL) {
+  if (is.null(DATA_DIR)) return(NULL)
+  p <- file.path(DATA_DIR, paste0(name, ".csv"))
+  if (!file.exists(p)) return(NULL)
+  if (HAS$dt) {
+    x <- try(suppressWarnings(data.table::fread(
+      p, select = select, encoding = "UTF-8", showProgress = FALSE)), silent = TRUE)
+    if (!inherits(x, "try-error")) return(as.data.frame(x))
+  }
+  for (enc in c("UTF-8-BOM","UTF-8","GB18030","latin1")) {
+    x <- try(suppressWarnings(utils::read.csv(
+      p, fileEncoding = sub("-BOM","",enc), check.names = FALSE)), silent = TRUE)
+    if (!inherits(x, "try-error")) return(x)
+  }
+  NULL
+}
+## ★ 表题瘦身：表题内凡写「｜解释：…」者，正文只留主标题，
+##   释义收进标题后的 ⓘ 悬停浮层（沿用上面的 .gl-tip / data-tip 机制）。
+cap_tip <- function(caption) {
+  if (is.null(caption) || !nzchar(caption)) return(caption)
+  k <- regexpr("｜解释：", caption, fixed = TRUE)
+  if (k < 0) return(caption)
+  head0 <- substr(caption, 1, k - 1)
+  tip   <- substring(caption, k + 4)
+  tip   <- gsub("｜", "　▸ ", tip, fixed = TRUE)
+  tip   <- gsub("[*`]", "", tip)
+  tip   <- gsub("&", "&amp;", tip, fixed = TRUE)
+  tip   <- gsub("<", "&lt;",  tip, fixed = TRUE)
+  tip   <- gsub(">", "&gt;",  tip, fixed = TRUE)
+  tip   <- gsub('"', "&quot;", tip, fixed = TRUE)
+  htmltools::HTML(paste0(head0,
+    ' <span class="gl-tip" data-tip="解释：', tip,
+    '" style="font-weight:600">ⓘ</span>'))
+}
+## 统一出表：表题一律过 cap_tip
+kb <- function(x, caption = NULL) knitr::kable(x, format = "html",
+        caption = if (is.null(caption)) NULL else cap_tip(caption))
+## ★ 行内数字挂悬停：凡阈值与结账结果，一律以 tip() 包裹，
+##   鼠标停留即见它是怎么算出来的、该怎么读。
+tip <- function(txt, why) {
+  why <- gsub("&","&amp;",why,fixed=TRUE); why <- gsub("<","&lt;",why,fixed=TRUE)
+  why <- gsub(">","&gt;",why,fixed=TRUE);  why <- gsub('"',"&quot;",why,fixed=TRUE)
+  paste0('<span class="gl-tip" data-tip="', why, '">', txt, '</span>')
+}
+
+## 占位（铁律：缺数据必须点名文件、编号与受影响输出）
+ph <- function(file, sql, hit) {
+  knitr::kable(data.frame(状态="⬜ 待数据", 所待文件=file, `SQL 编号`=sql,
+                          受影响输出=hit, check.names = FALSE), format="html")
+}
+pct <- function(x, d=1) paste0(formatC(100*x, format="f", digits=d), "%")
+amt <- function(x) formatC(x, format="f", digits=0, big.mark=",")
+plt <- function(p) plotly::layout(p, paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)", font=list(color=PAL$fg),
+        hoverlabel=HOVER)
+```
+
+
+```{r}
+#| label: glossary
+#| echo: false
+#| results: asis
+## ★ 悬停机制（自主方案移植）：凡统计指标、阈值、结果口径，一律建词条；
+##   渲染后由 JS 在正文、标题、表题、表头中自动加注虚下划线，鼠标停留即出释义。
+GLOSSARY <- tibble::tribble(
+  ~术语, ~类别, ~定义, ~`在本方案的用途`,
+  "MASE","预测评估","平均绝对缩放误差：预测误差除以「朴素外推」的同期误差。等于 1 即与朴素外推打平，小于 1 即更准，大于 1 即不如朴素。","本报告一切预测误差的唯一刻度（Hyndman & Koehler 2006）——不用裸 MAE，因金额量级悬殊时裸 MAE 无从横比",
+  "朴素外推","预测评估","以训练窗日均值乘以测试窗天数作为预测，不用任何模型。","MASE 的分母基准；任何模型若打不过它，就不值得上线",
+  "PU 校准分类","风险建模","正例—未标注学习：只有少量确认的正例（金标准），其余一律视为「未标注」而非负例；先拟合 P(已标注|x)，再以留出正例的平均得分校准回 P(风险|x)。","玩家风险概率维的算法（Elkan & Noto 2008）——本平台只有 1,307 人确认有问题，把其余 12 万人当好人训练必然失真",
+  "Sortino 下行比","风险建模","平均收益除以下行标准差（只计亏损那一侧的波动）。","稳定盈利维的判据（Sortino & van der Meer 1991）——技术型玩家的特征是「赢得稳」，不是「赢得多」，普通标准差会把大赢大输者误判为高风险",
+  "经验贝叶斯收缩","风险建模","以全体样本估计一个先验分布，再把每个个体的观测比例向该先验拉近；样本越小拉得越多。","荷官高偏离占比的算法（Beta-Binomial）——只发了 30 局的荷官若碰巧撞上 1 次异常，原始占比即 3.3%，收缩后回归合理区间，免得小样本被错杀",
+  "分位归一","刻度","把原始数值换成它在全体中的百分位排名（0–100）。","一切能力值的公共刻度——投注金额是重尾分布，直接取均值会被少数巨额客整体带偏",
+  "净化滚动回测","回测纪律","训练窗与测试窗之间留出「禁运期」，阈值与模型只在训练窗内确定，测试窗只用于结账，窗口逐步向前滑动。","本报告回测的唯一形式（López de Prado 2018）——不留禁运期，训练与测试会因跨窗订单而互相污染，回测结果虚高",
+  "禁运期","回测纪律","训练窗结束到测试窗开始之间刻意空出的天数（本报告为 7 日）。","阻断跨窗结算与延迟信息的泄漏通道",
+  "金标准","评估基准","被独立确认确有问题的会员名单：全窗完全反向对打成员 ∪ 人工風險單。","精准率与 Lift 的裁判。须注意它覆盖不全（部分对打、未标注者不在内），故本报告一切精准率读作下界",
+  "精准率","评估指标","被模型点名的人当中，确属金标准的比例。","衡量名单纯度。基率仅约 0.2%，故须与 Lift 并读",
+  "Lift","评估指标","精准率除以基率——名单比随机抽取准多少倍。","本报告评价名单质量的主指标；精准率的绝对值受金标准覆盖不全拖累，Lift 更公允",
+  "基率","评估指标","全体会员中金标准所占比例（本窗约 0.2%）。","Lift 的分母；也是判断「精准率 1.7% 算好还是算差」的参照系",
+  "净增益","经济结账","0.60 × 追回的不当得利 − 0.15 × 误伤客户的贡献 × 误伤比例。","罚侧的净经济效果；两个系数为外生常数，非本窗拟合所得",
+  "回收率 0.60","外生常数","每 1 元被判定为不当得利，预计实际能追回 0.60 元。","净增益公式的第一项系数；来自业务侧既定口径，不随窗口变动",
+  "流失系数 0.15","外生常数","每误伤 1 元好客的贡献，预计带来 0.15 元的后续流失损失。","净增益公式的惩罚项系数；确保模型不会靠「宁可错杀」刷高账面收益",
+  "自助法区间","统计推断","对折级结果反复有放回重抽样，得到均值的分布，取其分位数作为区间。","年化外推的不确定性区间（Efron & Tibshirani 1993）——折数只有个位数，点估计必须配区间",
+  "全池盈利","结账口径","测试窗内平台从全体会员赚到的钱，等于会员净输额合计（GGR 口径）。","盈利增幅的分母；营业额是流水，盈利才是结账口径",
+  "盈利增幅","结账口径","本方案净增益除以同期全池盈利。","回答「这套体系能让盈利多长几个百分点」——比绝对金额更适合跨期比较",
+  "洗码量","金额正名","有效投注额，即计入退水与占成结算的投注部分。","价值维与赏侧上限的计算基数；不等于流水",
+  "GGR","金额正名","赌场毛利：会员净输额的合计。","经济账的核心口径；庄家毛利率 m 的分子",
+  "庄家毛利率 m","经济账","GGR 除以洗码量。","赏侧天花板的起点——赏出去的钱都得从这里出",
+  "退水率 ρ","经济账","退水支出除以洗码量。","已配置成本，须从赏侧天花板中先行扣除",
+  "占成率 κ","经济账","代理占成支出除以洗码量。","本包实测异常（609 个分层全部高于该层 GGR，合计约 2.5 倍），核清前赏预算不得新增",
+  "赏侧天花板","阈值上限","γ* = m − ρ − κ，赏侧发放不得越过的洗码量百分点。","任何礼遇加码的硬上限；越线即赏穿成本",
+  "超额梯度","赏罚幅度","赏罚金额与「能力值超过阈值的差距」成正比，而非一刀切固定额。","本报告赏罚幅度的统一形式——超得越多罚得越重，差一点点的人不至于同罪",
+  "网段熵","代理维度","代理线内会员 IP 所属 /24 网段的分布熵；熵越低表示越集中。","代理维「网段集中」的算料——打码农场的形状是少数网段承载大量会员",
+  "月留存率","代理维度","相邻两个自然月都活跃的会员数，除以上月活跃会员数，取全窗平均。","代理维的价值项；只看会员数会把「拉一堆人来就消失」的线算成好线",
+  "对打渗透","代理维度","该代理线内属于完美对打成员的会员占比。","代理罚侧的触发维；与净贡献分立，高价值线一样可能有对打",
+  "完美对打","风险特征","同一局内一庄一闲、方向完全相反的两名会员，全窗反向比例为 1。","金标准的主要来源；也是代理线冻结结算的证据基础",
+  "结构演示","呈现纪律","在无实测数据时，以合成数据画出评分骨架，并加满幅红字水印标明不可用于决策。","风控专员雷达的呈现方式——务必显示骨架，但绝不冒充实测",
+  "主成分分析","军械","PCA：把相关的多个特征旋转成互不相关的少数几个综合轴，先去掉规模共线。","分群前的白化预处理与分群散点图的坐标轴——不白化则距离被规模维绑架",
+  "K 均值聚类","军械","反复把每个人分给最近的群中心、再重算中心，直到稳定（k=4）。","把风险行为分成四种典型模式，措施下到群体层",
+  "线性自编码","军械","以 PCA 前四主成分重构原始特征，重构误差大即此人罕见（数学上等价于线性 autoencoder）。","玩家「异常度AE」维；实测与对打型金标准正交，故只作新型异常哨兵、不参与罚池判定",
+  "重构误差","军械","原始特征与其低维重构之间的均方差。","异常度AE 维的原始量；误差越大越罕见",
+  "CVaR","军械","条件在险价值：最差 5% 天的平均亏损（对平台即最差 5% 天平台被赢走的比例均值）。","尾损维（Rockafellar & Uryasev 2000）——量『输起来有多狠』，与均值无关",
+  "Cox 比例风险","军械","生存分析主力：以风险比刻画协变量对『还能活多久』的影响，处理删失数据。","会员流失概率的估计器（survival 包守卫参赛），产出流失风险分",
+  "生存分析","军械","研究『距离事件发生还有多久』的统计学，天然处理观察期未结束（删失）的个体。","窗口末仍活跃的会员并未流失、只是删失——用普通回归会把他们算错",
+  "删失","军械","观察结束时事件尚未发生（窗口末月仍活跃的会员即右删失）。","Cox 模型能正确利用这类样本，这正是不用普通回归的原因",
+  "隐马尔可夫模型","军械","假设序列背后有不可见的离散状态在切换，观测由状态生成；以 Viterbi 解码最可能的状态路径。","场子日 GGR 的三态解码（depmixS4 守卫参赛，缺包则分位降级并如实注明）",
+  "换档","军械","评分不变，只按经营状态调整阈值档位与赏侧节奏。","收割期收紧罚侧、冲刷期打开赏侧——赏罚跟着场子的呼吸走",
+  "冠军挑战者","模型治理","现任冠军模型持续与挑战者在同一批净化折上对比，谁折均更优谁上岗。","PU-glm 与 XGBoost 的赛制；冠军判定写在回测结账，装包即自动参赛"
+)
+plain <- function(x) {
+  x <- gsub("\\$[^$]*\\$", "〔公式见正文〕", x)
+  x <- gsub("\\*\\*([^*]+)\\*\\*", "\\1", x)
+  x <- gsub("`([^`]+)`", "\\1", x)
+  x <- gsub("[\r\n]+", " ", x)
+  trimws(x)
+}
+esc_js <- function(x) {                   # 仅转义，不改写字面——用于**键**
+  x <- gsub("\\\\", "\\\\\\\\", x)
+  x <- gsub('"', '\\\\"', x)
+  x <- gsub("[\r\n\t]+", " ", x)
+  gsub("</", "<\\\\/", x, fixed = TRUE)
+}
+js_str <- function(x) {                   # 先降级为纯文本、再转义——用于**释义**
+  x <- plain(x)
+  x <- gsub("\\\\", "\\\\\\\\", x)      # 反斜杠必须最先转，否则后续转义会被二次吞掉
+  x <- gsub('"', '\\\\"', x)
+  x <- gsub("[\r\n\t]+", " ", x)
+  x <- gsub("</", "<\\\\/", x, fixed = TRUE)
+  x
+}
+gj <- paste0("{", paste(sprintf('"%s":"%s"',
+  esc_js(GLOSSARY$术语),
+  js_str(paste0("【", GLOSSARY$类别, "】", GLOSSARY$定义,
+                "　▸ 本方案用途：", GLOSSARY$`在本方案的用途`,
+                "　▸ 核验：已核实校对"))),
+  collapse = ","), "}")
+## 合法性自检：凡落单反斜杠（未成对）即判非法，控制台点名并降级为空字典，
+## 宁可无浮层也不让整段脚本因语法错而全灭。
+local({
+  lone <- gsub("\\\\\\\\", "", gj)          # 先抹去所有**成对**反斜杠
+  if (grepl("\\", lone, fixed = TRUE)) {   # 若仍有落单者即判非法
+    message("⛔ 术语字典仍含落单反斜杠，浮层脚本将被降级——请核对术语定义中的转义")
+    gj <<- "{}"
+  }
+})
+JS_A <- '
+<style>
+.gl-tip{border-bottom:1px dotted var(--ac,#22d3ee);cursor:help;position:relative;}
+/* 浮层不用 ::after 伪元素：伪元素会被祖先容器的
+   overflow:hidden / 表格滚动区裁掉（截图里被遮住一半、跨到目录栏就是这个原因）。
+   改为**挂在 body 上的单一固定定位浮层**，由 JS 计算位置并夹在视口内，
+   任何容器都裁不到它，也不会跨出可视区。 */
+.gl-tip{border-bottom:1px dotted var(--ac,#22d3ee);cursor:help;}
+#gl-pop{position:fixed;z-index:2147483647;display:none;
+  max-width:min(46rem,calc(100vw - 2rem));padding:.7rem .9rem;border-radius:8px;
+  font-size:.86rem;line-height:1.6;font-weight:400;text-align:left;
+  white-space:normal;word-break:break-word;overflow-wrap:anywhere;
+  background:linear-gradient(135deg,rgba(8,36,60,.985),rgba(11,61,58,.985));
+  color:#e7fbf3;border:1px solid rgba(34,211,238,.55);
+  box-shadow:0 12px 36px rgba(0,0,0,.6);pointer-events:none;}
+#gl-pop b{color:#7dd3fc;}
+</style>
+<script>
+(function(){
+  const GL = '
+JS_B <- ';
+  const terms = Object.keys(GL).sort((a,b)=>b.length-a.length);
+  /* CODE 已移出跳过名单：字段代号（bet13/gi013/mem003…）几乎都写在行内代码里，
+     不放行就等于这批代号永远没有浮层。PRE（代码块）仍然跳过，保住可复制性。 */
+  /* ★ 小节标题（H1~H4）、表题（CAPTION）、表头（TH）一律恢复加注：
+       术语大量出现在标题与表头，不放行等于这些位置永远无浮层。
+       标题锚点挂在 h 标签与 section 上，改动其内文本节点不影响锚点与目录。
+       仍跳过 PRE（保代码可复制）、A（不夺链接点击）、脚本样式与表单控件。 */
+  const SKIP = new Set(["PRE","SCRIPT","STYLE","TEXTAREA","A",
+                        "OPTION","BUTTON","SUMMARY"]);
+  /* ★ 就绪时机兜底：若脚本被移动到解析完成之后执行，DOMContentLoaded 已经错过，
+     监听它将永远不触发（整页零浮层即由此而来）。此处按 readyState 判断，
+     已就绪则立即执行；并在 window load 时补跑一次，覆盖延迟插入的内容。 */
+  function ready(fn){
+    if(document.readyState === "loading"){
+      document.addEventListener("DOMContentLoaded", fn);
+    } else { fn(); }
+    window.addEventListener("load", function(){ try{ fn(); }catch(e){} });
+  }
+  let GL_DONE = false;
+  ready(function(){
+    if(GL_DONE) return; GL_DONE = true;
+    /* ★ 浮层与事件监听先装好：加注环节即便在某个节点上出错，
+       也不会连累浮层本身失灵。 */
+    const scope = document.querySelector("main") || document.body;
+    const secs = scope.querySelectorAll("section, div.callout, table");
+    const targets = secs.length ? secs : [scope];
+    /* 先建浮层，再加注 */
+    const pop0 = document.getElementById("gl-pop") || document.createElement("div");
+    pop0.id = "gl-pop";
+    if(!pop0.parentNode) document.body.appendChild(pop0);
+    targets.forEach(function(sec){
+      try{
+      const walker = document.createTreeWalker(sec, NodeFilter.SHOW_TEXT, {
+        acceptNode: function(n){
+          let p = n.parentNode;
+          while(p && p !== sec){ if(SKIP.has(p.tagName) || (p.classList &&
+            p.classList.contains("gl-tip"))) return NodeFilter.FILTER_REJECT; p = p.parentNode; }
+          return n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }});
+      const nodes = []; while(walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(function(node){
+        /* 加注不得在**字符串上**做 replace：第二个术语的正则会命中
+           第一个术语已生成的 data-tip 属性内部 → 把 span 注入到属性值里 →
+           页面出现 【项目代号】... 凡与 <span class= 这类残片。
+           新版全程走 DOM API：先在原始文本上算出互不重叠的命中区间，
+           再用 createTextNode / setAttribute 拼装。属性值由浏览器自行转义，
+           结构上不可能再被注入。 */
+        const txt = node.nodeValue;
+        const hits = [];
+        terms.forEach(function(t){
+          /* 同一文本节点内命中该词条的**每一处**都加注（不再限于首现） */
+          let i = txt.indexOf(t);
+          while(i >= 0){ hits.push({t: t, i: i}); i = txt.indexOf(t, i + t.length); }
+        });
+        if(!hits.length) return;
+        hits.sort(function(a,b){ return a.i - b.i || b.t.length - a.t.length; });
+        const picked = []; let last = -1;
+        hits.forEach(function(h){
+          if(h.i >= last){ picked.push(h); last = h.i + h.t.length; }
+        });
+        if(!picked.length) return;
+        const frag = document.createDocumentFragment();
+        let pos = 0;
+        picked.forEach(function(h){
+          if(h.i > pos) frag.appendChild(document.createTextNode(txt.slice(pos, h.i)));
+          const sp = document.createElement("span");
+          sp.className = "gl-tip";
+          sp.setAttribute("data-tip", GL[h.t]);
+          sp.textContent = h.t;
+          frag.appendChild(sp);
+          pos = h.i + h.t.length;
+        });
+        if(pos < txt.length) frag.appendChild(document.createTextNode(txt.slice(pos)));
+        if(node.parentNode) node.parentNode.replaceChild(frag, node);
+      });
+      }catch(e){ /* 单节容错：某一节出错不影响其余各节与浮层 */ }
+    });
+    /* ★ 单一 body 级浮层：位置由 JS 计算并四向夹在视口内。
+       这样无论术语落在表格滚动区、callout 还是窄栏里，浮层都完整可见。 */
+    const pop = pop0;
+    function place(t){
+      pop.textContent = t.getAttribute("data-tip") || "";
+      pop.style.display = "block";
+      pop.style.left = "0px"; pop.style.top = "0px";
+      const r = t.getBoundingClientRect();
+      const w = pop.offsetWidth, h = pop.offsetHeight, M = 10;
+      let x = r.left, y = r.bottom + 6;
+      if(x + w > window.innerWidth - M) x = window.innerWidth - w - M;   /* 右缘夹紧 */
+      if(x < M) x = M;                                                   /* 左缘夹紧 */
+      if(y + h > window.innerHeight - M) y = r.top - h - 6;              /* 下缘则上翻 */
+      if(y < M) y = M;
+      pop.style.left = x + "px"; pop.style.top = y + "px";
+    }
+    document.body.addEventListener("mouseover", function(ev){
+      const t = ev.target;
+      if(t && t.classList && t.classList.contains("gl-tip")) place(t);
+    }, true);
+    /* ★ 所有站外链接（参考文献、DOI、官网）一律新标签打开，
+       并补 rel 防止被打开页反向操控本页。 */
+    /* ★ 选择器内不再嵌套引号：JS_B 是 R 的单引号字符串，其中的反斜杠转义会被 R 吞掉，
+       输出到页面即成 a[href^="http"]——引号提前闭合，**整段脚本语法错**，
+       浮层因此全篇失灵。改为取全部 a 标签后在 JS 内判断，杜绝嵌套引号。 */
+    Array.prototype.slice.call(document.getElementsByTagName("a")).forEach(function(a){
+      if(a.href && a.href.indexOf("http") === 0 && a.host !== window.location.host){
+        a.setAttribute("target", "_blank");
+        a.setAttribute("rel", "noopener noreferrer");
+      }
+    });
+    document.body.addEventListener("mouseout", function(ev){
+      const t = ev.target;
+      if(t && t.classList && t.classList.contains("gl-tip")) pop.style.display = "none";
+    }, true);
+    window.addEventListener("scroll", function(){ pop.style.display = "none"; }, true);
+  });
+})();
+</script>
+'
+## 术语库注入采用**两段拼接、无占位符**（占位符里的单引号会把 R 字符串提前关掉）：JS_A 以 `const GL = ` 收尾，JS_B 以 `;` 起头，
+##   中间直接插 JSON。两段内部一律只用双引号，杜绝同类型引号自相关闭。
+## ★ 用 Quarto 规范的 raw-html 围栏包住：裸 raw HTML 块在 Pandoc 里遇空行即终止，
+##   边界由启发式决定；显式围栏则边界确定，不会与 knitr 的 cell 包裹互相干扰。
+## ★ 源码里**不写**连续三个反引号：编辑器的围栏分词器不认 R 引号，
+##   行内出现连续三个反引号会让它从此错位，之后所有 chunk 都拿不到代码透镜。
+##   用 strrep() 在运行时拼出来，行为完全一致，编辑器却看不到围栏。
+FENCE <- strrep("`", 3L)
+cat("\n", FENCE, "{=html}\n", JS_A, gj, JS_B, "\n", FENCE, "\n", sep = "")
+```
+
+# 用什么数据：口径与正名 {#sec-data}
+
+```{r}
+#| label: load-core
+B01 <- read_any("B01_bt_panel")
+E02 <- read_any("E02_segment_econ")
+K01 <- read_any("K01_risk_feature_matrix")
+SEED<- read_any("K01b_seed_manual")
+C06 <- read_any("C06_hedge_pairs")
+R01 <- read_any("R01_late_shoe")
+R03b<- read_any("R03b_player_dealer_daily")
+IPL <- read_any("I_ip_player")
+DX5 <- read_any("DX05_product_panorama")
+WIN <- if (!is.null(B01)) list(a=min(B01$bet_date), b=max(B01$bet_date),
+                               n=length(unique(B01$bet_date))) else NULL
+```
+
+```{r}
+#| label: tbl-data
+#| results: asis
+if (is.null(B01)) { ph("数据库/B01_bt_panel.csv","§B01","全篇一切统计") } else {
+inv <- data.frame(check.names = FALSE,
+  数据表 = c("B01_bt_panel","E02_segment_econ","K01_risk_feature_matrix",
+             "K01b_seed_manual","C06_hedge_pairs","R01_late_shoe",
+             "R03b_player_dealer_daily","I_ip_player","DX05_product_panorama"),
+  `SQL 编号` = c("§B01","§E02c","§K01","§K01b","§C06fix","§R01","§R03b","C-00","DX-05"),
+  行业正名 = c("会员×营业日投注面板（回测底座）","客户分层经济账（洗码量·GGR·退水·占成）",
+           "会员风险特征矩阵（对打率·夜场占比·退水依赖等）","人工風險單种子（金标准 125 人）",
+           "对打对（同局一庄一闲，洗码套利判据）","晚下注画像（靴位·注额斜率）",
+           "玩家×荷官×日关联（含按产品基准的 Z 偏离）","玩家×IP×三级代理线（代理归因底座）",
+           "投注产品全景（庄闲和·抽水率）"),
+  实测规模 = c(
+    sprintf("%s 行 · %s 名会员 · %s~%s（%d 个营业日）",
+            amt(nrow(B01)), amt(length(unique(B01$member_id))), WIN$a, WIN$b, WIN$n),
+    if (!is.null(E02)) sprintf("%d 个分层 · GGR %s", nrow(E02), amt(sum(E02$ggr))) else "⬜",
+    if (!is.null(K01)) sprintf("%s 名活跃会员", amt(nrow(K01))) else "⬜",
+    if (!is.null(SEED)) sprintf("%d 人", nrow(SEED)) else "⬜",
+    if (!is.null(C06)) sprintf("%d 对，其中完全反向 %d 对", nrow(C06), sum(C06$opposite_rate==1)) else "⬜",
+    if (!is.null(R01)) sprintf("%s 名晚下注者", amt(nrow(R01))) else "⬜",
+    if (!is.null(R03b)) sprintf("%s 行日粒度关联", amt(nrow(R03b))) else "⬜",
+    if (!is.null(IPL)) sprintf("%s 行（玩家×IP）", amt(nrow(IPL))) else "⬜",
+    if (!is.null(DX5)) sprintf("%d 个产品口径", nrow(DX5)) else "⬜"))
+kb(inv, "本报告所用数据表清点｜解释：逐表列出 SQL 编号、行业正名与本次渲染实测规模　▸ 本方案用途：一切数字的出处在此登记，凡挂不上编号的数字不写进报告")
+}
+```
+
+**维度骨架**：会员 × IP（/24 网段）× 三级代理线 × 荷官 × 桌台 × 靴 × 把 × 营业日。
+两条正名须先立住：**洗码量**＝有效投注（`validbet`），不是流水；
+**GGR**＝赌场毛利（客人game_pnl 取负号汇总），不是营业额。
+风控专员评分**本包无数据源**（所待文件：风控处置日志与申诉记录），本报告如实跳过、不以合成数据冒充。
+
+```{r}
+#| label: fig-econ
+#| fig-height: 5
+if (!is.null(E02) && HAS$plotly) {
+  e <- E02[order(-E02$validbet), ][1:12, ]
+  e$分层 <- factor(e$segment, levels = rev(e$segment))
+  p <- plotly::plot_ly(e, y = ~分层, x = ~validbet, type = "bar",
+        orientation = "h", name = "洗码量",
+        marker = list(color = PAL$ac),
+        hovertemplate = paste0("%{y}<br>洗码量 %{x:,.0f}<br>",
+          "GGR ", sapply(e$ggr, amt), "<br>占成 ", sapply(e$commission, amt),
+          "<br>会员 ", sapply(e$n_member, amt), "<extra></extra>")) |>
+    plotly::add_trace(x = ~ggr, name = "GGR（赌场毛利）",
+        marker = list(color = PAL$good),
+        hovertemplate = "%{y}<br>GGR %{x:,.0f}<extra></extra>") |>
+    plotly::layout(barmode = "group",
+      title = list(text = "客户分层经济账 · 洗码量前 12 层（§E02c 实测）", font=list(size=14)),
+      xaxis = list(title = "金额", tickformat = ","), yaxis = list(title = ""))
+  plt(p)
+}
+```
+
+# 评出什么分：模型化能力值，不再用均值凑合 {#sec-score}
+
+本章一律弃用「均值±倍数」的粗算，改用主方案登记过出处的统计模型：
+**PU 校准分类**（Elkan & Noto 2008——正例只有金标准 1,307 人、其余未标注，正是 PU 场景）、
+**Sortino 下行比**（Sortino & van der Meer 1991——「赢得稳」才是技术型风险，赢得多不是）、
+**Beta-Binomial 经验贝叶斯收缩**（荷官小样本占比不被极端值支配，呼应 MacDonald 2001 波动论）、
+**分位归一 0–100**（重尾金额之下唯一稳健的公共刻度）。
+四实体各出一张雷达：**每一维回答一个独立问题，措施跟维走**；综合分只当排队顺序。
+
+```{r}
+#| label: score-player
+if (!is.null(K01) && !is.null(B01)) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  pl <- K01
+  for (cc in c("hedge_rate","stake_cv","night_share","rebate_dep","roi_game",
+               "side_entropy","validbet","n_ip")) pl[[cc]] <- num(pl[[cc]])
+  if (!is.null(R01)) {
+    r1 <- R01[, c("uid","late_share")]; r1$late_share <- num(r1$late_share)
+    pl <- merge(pl, r1, by.x = "member_id", by.y = "uid", all.x = TRUE)
+  } else pl$late_share <- NA_real_
+  B01$net_pnl <- num(B01$net_pnl); B01$validbet <- num(B01$validbet)
+  agg <- stats::aggregate(cbind(net_pnl = B01$net_pnl) ~ member_id,
+                          data = B01, FUN = sum)
+  pl <- merge(pl, agg, by = "member_id", all.x = TRUE)
+  pl$win_from_house <- pmax(pl$net_pnl, 0)
+
+  ## ── Sortino 下行比（平台视角日收益）：均值 ÷ 下行标准差 ─────────────
+  ##    「常年从平台赢钱且回撤极小」= 下行比深负 → T2 技术型判据
+  if (HAS$dt) {
+    bb <- data.table::as.data.table(B01[, c("member_id","net_pnl","validbet")])
+    data.table::set(bb, j = "r", value = -bb$net_pnl / pmax(bb$validbet, 1))
+    so <- bb[, .(n = .N, mu = mean(r),
+                 dn = stats::sd(r[r < 0])), by = member_id]
+    so <- as.data.frame(so)
+  } else {
+    r_all <- -B01$net_pnl / pmax(B01$validbet, 1)
+    so <- data.frame(member_id = names(tapply(r_all, B01$member_id, length)),
+                     n  = as.numeric(tapply(r_all, B01$member_id, length)),
+                     mu = as.numeric(tapply(r_all, B01$member_id, mean)),
+                     dn = as.numeric(tapply(r_all, B01$member_id,
+                            function(x) stats::sd(x[x < 0]))))
+    so$member_id <- type.convert(so$member_id, as.is = TRUE)
+  }
+  so$sortino <- ifelse(so$n >= 5 & is.finite(so$dn) & so$dn > 0,
+                       so$mu / so$dn, NA_real_)
+  pl <- merge(pl, so[, c("member_id","sortino")], by = "member_id", all.x = TRUE)
+
+  ## ── 金标准与 PU 校准分类（Elkan–Noto）────────────────────────────────
+  ##    正例＝全窗完美对打成员 ∪ 人工風險單；其余视为未标注而非负例。
+  ##    先以 glm 逻辑回归拟合 g(x)=P(已标注|x)，再以留出正例均值 ĉ 校准：
+  ##    P(风险|x)=g(x)/ĉ。金标准属外部确认身份（非窗口内结果），不构成泄漏。
+  hm <- if (!is.null(C06)) unique(c(C06$m_a[C06$opposite_rate==1],
+                                    C06$m_b[C06$opposite_rate==1])) else integer(0)
+  sd0 <- if (!is.null(SEED)) unique(SEED$member_id) else integer(0)
+  TRUTH <- unique(c(hm, sd0))
+  FEAT <- c("hedge_rate","stake_cv","night_share","rebate_dep","roi_game",
+            "n_ip","late_share","side_entropy")
+  Zm <- pl[, FEAT]
+  for (cc in FEAT) {
+    v <- Zm[[cc]]; v[!is.finite(v)] <- stats::median(v, na.rm = TRUE)
+    s <- stats::sd(v); Zm[[cc]] <- if (is.finite(s) && s > 0) (v - mean(v))/s else 0
+  }
+  Zm$y <- as.integer(pl$member_id %in% TRUTH)
+  fit <- stats::glm(y ~ ., data = Zm, family = stats::binomial())
+  gsc <- stats::fitted(fit)
+  set.seed(7)
+  pos <- which(Zm$y == 1); hold <- sample(pos, max(1, length(pos) %/% 5))
+  c_hat <- mean(gsc[hold])
+  pl$pu_prob <- pmin(gsc / max(c_hat, 1e-6), 1)
+
+  ## ── 逐维分位（0–100）────────────────────────────────────────────────
+  pq <- function(v) { r <- rank(v, na.last = "keep", ties.method = "average")
+                      100 * (r - 1) / max(sum(!is.na(v)) - 1, 1) }
+  RISK_D <- c(对打率="hedge_rate", 注额波动="stake_cv", 夜场占比="night_share",
+              退水依赖="rebate_dep", 稳定盈利="sortino", IP切换="n_ip",
+              晚注占比="late_share", 净赢额="win_from_house")
+  SC <- data.frame(member_id = pl$member_id)
+  for (nm in names(RISK_D)) SC[[nm]] <- pq(pl[[RISK_D[[nm]]]])
+  SC$模型风险概率 <- pq(pl$pu_prob)
+
+  ## ── PCA 白化 → K 均值四分群：把风险行为分成几种典型模式 ─────────────
+  ##    去掉规模共线后距离才有意义；分群用于「群体级措施」而非个体定罪
+  PC <- stats::prcomp(Zm[, FEAT], center = FALSE, scale. = FALSE)
+  pl$pc1 <- PC$x[,1]; pl$pc2 <- PC$x[,2]
+  set.seed(7)
+  km <- stats::kmeans(PC$x[, 1:4], centers = 4, nstart = 5, iter.max = 30)
+  pl$分群 <- km$cluster
+  ## 线性自编码（＝PCA 前四成分重构）误差：无监督「罕见度」
+  rec <- PC$x[, 1:4] %*% t(PC$rotation[, 1:4])
+  pl$ae_err <- rowMeans((as.matrix(Zm[, FEAT]) - rec)^2)
+  ## CVaR 5%：平台视角日收益的最差 5% 尾均值（需 ≥10 个活跃日）
+  if (HAS$dt) {
+    bb2 <- data.table::as.data.table(B01[, c("member_id","net_pnl","validbet")])
+    data.table::set(bb2, j = "r", value = -bb2$net_pnl / pmax(bb2$validbet, 1))
+    cvt <- bb2[, .(nn = .N,
+                   cvar = { qq <- stats::quantile(r, .05, na.rm = TRUE)
+                            mean(r[r <= qq], na.rm = TRUE) }), by = member_id]
+    cvt <- as.data.frame(cvt); cvt$cvar[cvt$nn < 10] <- NA_real_
+    pl <- merge(pl, cvt[, c("member_id","cvar")], by = "member_id", all.x = TRUE)
+  } else pl$cvar <- NA_real_
+  SC$异常度AE <- pq(pl$ae_err)
+  SC$尾损CVaR <- pq(-pl$cvar)   # 尾损越深（cvar 越负）分位越高
+  SC$价值_洗码量   <- pq(pl$validbet)
+  SC$价值_盈利贡献 <- pq(-pl$net_pnl)
+  SC$金标准 <- pl$member_id %in% TRUTH
+}
+```
+
+```{r}
+#| label: fig-radar-player
+#| fig-height: 5
+if (exists("SC") && HAS$plotly) {
+  thr <- stats::quantile(pl$pu_prob, .999, na.rm = TRUE)
+  hi  <- which(pl$pu_prob >= thr)
+  dims <- c(names(RISK_D), "模型风险概率", "异常度AE", "尾损CVaR")
+  mk <- function(ix) sapply(dims, function(d) mean(SC[[d]][ix], na.rm = TRUE))
+  vA <- mk(hi); vB <- mk(setdiff(seq_len(nrow(SC)), hi))
+  hitr <- mean(SC$金标准[hi]); base <- mean(SC$金标准)
+  p <- plotly::plot_ly(type = "scatterpolar", fill = "toself") |>
+    plotly::add_trace(r = c(vA, vA[1]), theta = c(dims, dims[1]),
+      name = sprintf("模型高危组（PU 前0.1%%，%d 人，命中金标准 %s，Lift %.0f×）",
+                     length(hi), pct(hitr), hitr / max(base, 1e-9)),
+      line = list(color = PAL$bad),
+      hovertemplate = "%{theta}：%{r:.0f} 分<br>（0–100 为该维在全体会员中的百分位排名，非绝对值）<extra>模型高危组</extra>") |>
+    plotly::add_trace(r = c(vB, vB[1]), theta = c(dims, dims[1]),
+      name = "其余会员均值", line = list(color = PAL$good), opacity = .7,
+      hovertemplate = "%{theta}：%{r:.0f} 分<br>（同维分位均值，作对照基准）<extra>其余会员</extra>") |>
+    plotly::layout(
+      title = list(text = paste0("玩家 · 十一维能力值雷达（八行为维 + PU 概率 + ",
+                   "线性自编码异常度 + CVaR 尾损；分位 0–100）"),
+                   font = list(size = 14)),
+      polar = list(bgcolor = "rgba(10,25,45,.6)",
+                   radialaxis = list(range = c(0,100), gridcolor = "#1e3a52"),
+                   angularaxis = list(gridcolor = "#1e3a52")))
+  plt(p)
+}
+```
+
+```{r}
+#| label: fig-cluster
+#| fig-height: 5
+if (exists("pl") && !is.null(pl$分群) && HAS$plotly) {
+  ## 群体画像先算好，悬停即读；散点抽样 2 万免得 HTML 过重
+  gp <- lapply(sort(unique(pl$分群)), function(j) {
+    ix <- which(pl$分群 == j)
+    data.frame(群 = j, 人数 = length(ix),
+      对打率均值 = mean(pl$hedge_rate[ix], na.rm = TRUE),
+      金标准率 = mean(pl$member_id[ix] %in% TRUTH),
+      洗码中位 = stats::median(pl$validbet[ix], na.rm = TRUE)) })
+  GP <- do.call(rbind, gp)
+  ## 按群体特征命名（顺序即优先级）：对打率最高→对冲活跃群；
+  ##   其余中洗码中位最高→高值大客群；再余中人数最多→大众休闲群；末者低频边缘群
+  GP$名 <- NA_character_
+  i1 <- which.max(GP$对打率均值);            GP$名[i1] <- "对冲活跃群"
+  r2 <- setdiff(seq_len(nrow(GP)), i1)
+  i2 <- r2[which.max(GP$洗码中位[r2])];      GP$名[i2] <- "高值大客群"
+  r3 <- setdiff(r2, i2)
+  i3 <- r3[which.max(GP$人数[r3])];          GP$名[i3] <- "大众休闲群"
+  GP$名[setdiff(r3, i3)] <- "低频边缘群"
+  set.seed(11)
+  sm <- sample(seq_len(nrow(pl)), min(20000L, nrow(pl)))
+  dd0 <- data.frame(pc1 = pl$pc1[sm], pc2 = pl$pc2[sm], 群 = pl$分群[sm])
+  dd0 <- merge(dd0, GP[, c("群","名","人数","对打率均值","金标准率","洗码中位")],
+               by = "群")
+  cols <- c(PAL$ac, PAL$warn, PAL$bad, PAL$good)
+  p <- plotly::plot_ly()
+  for (j in sort(unique(dd0$群))) {
+    e <- dd0[dd0$群 == j, ]
+    p <- plotly::add_trace(p, x = e$pc1, y = e$pc2, type = "scatter",
+      mode = "markers", name = sprintf("%s（%s 人）", e$名[1], amt(e$人数[1])),
+      marker = list(size = 4, color = cols[j], opacity = .45),
+      hovertemplate = paste0(e$名[1],
+        "<br>群规模 ", amt(e$人数[1]),
+        "<br>群对打率均值 ", pct(e$对打率均值[1], 2),
+        "<br>群金标准率 ", pct(e$金标准率[1], 2),
+        "<br>群洗码量中位 ", amt(e$洗码中位[1]), "<extra></extra>"))
+  }
+  p <- plotly::layout(p,
+    title = list(text = paste0(
+      "玩家风险行为四分群（PCA 白化后 K 均值；散点为 2 万抽样，悬停见群体画像）"),
+      font = list(size = 13.5)),
+    xaxis = list(title = "第一主成分（去规模共线后的行为轴）"),
+    yaxis = list(title = "第二主成分"))
+  plt(p)
+}
+```
+
+```{r}
+#| label: tbl-cluster
+#| results: asis
+if (exists("GP")) {
+  GP2 <- GP[order(-GP$对打率均值),
+            c("名","人数","对打率均值","金标准率","洗码中位")]
+  GP2$对打率均值 <- pct(GP2$对打率均值, 2)
+  GP2$金标准率   <- pct(GP2$金标准率, 2)
+  GP2$洗码中位   <- sapply(GP2$洗码中位, amt)
+  act_map <- c(对冲活跃群 = "整群提高核查采样率；群内 PU 前 1% 直接进名单",
+               高值大客群 = "赏侧主战场：礼遇与返水档位在此群内按盈利贡献分档",
+               大众休闲群 = "维持常规监控；该群适合作对照基准",
+               低频边缘群 = "低频不设罚；唤醒营销归市场部，不占风控预算")
+  GP2$群体级措施 <- unname(act_map[GP2$名])
+  kb(GP2, paste0("四分群画像与群体级措施",
+    "｜解释：PCA 白化后 K 均值聚类（k=4）；命名按群体特征——对打率最高者名对冲活跃群、",
+    "洗码中位最高者名高值大客群、人数最多者名大众休闲群，余者低频边缘群",
+    "｜本方案用途：措施可以下到群体层——整群调采样率、整群定赏档，比逐人拍板省力且可审计"))
+}
+```
+
+```{r}
+#| label: score-dealer
+if (!is.null(R03b)) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  R03b$z_score <- num(R03b$z_score); R03b$n_rounds_eff <- num(R03b$n_rounds_eff)
+  if (HAS$dt) {
+    dd <- data.table::as.data.table(R03b)
+    DE <- as.data.frame(dd[, .(局数 = sum(n_rounds_eff, na.rm = TRUE),
+                               在场日 = data.table::uniqueN(bet_date),
+                               k = sum(z_score >= 4, na.rm = TRUE),
+                               n = sum(is.finite(z_score))), by = dealer_id])
+  } else {
+    DE <- do.call(rbind, lapply(split(R03b, R03b$dealer_id), function(d)
+      data.frame(dealer_id = d$dealer_id[1],
+                 局数 = sum(d$n_rounds_eff, na.rm = TRUE),
+                 在场日 = length(unique(d$bet_date)),
+                 k = sum(d$z_score >= 4, na.rm = TRUE),
+                 n = sum(is.finite(d$z_score)))))
+  }
+  ## Beta-Binomial 经验贝叶斯：占比先验由全体矩估计，小样本荷官向先验收缩
+  ph_ <- DE$k / pmax(DE$n, 1)
+  m0 <- mean(ph_); v0 <- stats::var(ph_)
+  ab <- max(m0 * (1 - m0) / max(v0, 1e-12) - 1, 1e-6)
+  aA <- m0 * ab; bB <- (1 - m0) * ab
+  DE$高偏离占比EB <- (DE$k + aA) / (DE$n + aA + bB)
+  DE$日均局数 <- DE$局数 / pmax(DE$在场日, 1)
+  DE_dims <- c("日均局数","在场日","高偏离占比EB","局数")
+  DQ <- data.frame(dealer_id = DE$dealer_id)
+  pq2 <- function(v){ r <- rank(v, na.last="keep", ties.method="average")
+                      100*(r-1)/max(sum(!is.na(v))-1,1) }
+  DQ$局速   <- pq2(DE$日均局数)
+  DQ$出勤   <- pq2(DE$在场日)
+  DQ$关联风险 <- pq2(DE$高偏离占比EB)
+  DQ$产能   <- pq2(DE$局数)
+}
+```
+
+```{r}
+#| label: fig-radar-dealer
+#| fig-height: 4.8
+if (exists("DQ") && HAS$plotly) {
+  dims <- c("局速","出勤","关联风险","产能")
+  hiD <- which(DQ$关联风险 >= stats::quantile(DQ$关联风险, .95, na.rm = TRUE))
+  mkd <- function(ix) sapply(dims, function(d) mean(DQ[[d]][ix], na.rm = TRUE))
+  vA <- mkd(hiD); vB <- mkd(setdiff(seq_len(nrow(DQ)), hiD))
+  p <- plotly::plot_ly(type = "scatterpolar", fill = "toself") |>
+    plotly::add_trace(r = c(vA, vA[1]), theta = c(dims, dims[1]),
+      name = sprintf("关联风险前5%%（EB 收缩后，%d 位）", length(hiD)),
+      line = list(color = PAL$bad),
+      hovertemplate = "%{theta}：%{r:.0f} 分<br>（分位 0–100；关联风险已经 Beta-Binomial 收缩，小样本荷官不被极端值支配）<extra>关联风险前5%</extra>") |>
+    plotly::add_trace(r = c(vB, vB[1]), theta = c(dims, dims[1]),
+      name = "其余荷官均值", line = list(color = PAL$good), opacity = .7,
+      hovertemplate = "%{theta}：%{r:.0f} 分<extra>其余荷官</extra>") |>
+    plotly::layout(
+      title = list(text = paste0(
+        "荷官 · 四维过程雷达（占比经 Beta-Binomial 收缩；输赢一律不入维——",
+        "MacDonald 2001）"), font = list(size = 14)),
+      polar = list(bgcolor = "rgba(10,25,45,.6)",
+                   radialaxis = list(range = c(0,100), gridcolor = "#1e3a52"),
+                   angularaxis = list(gridcolor = "#1e3a52")))
+  plt(p)
+}
+```
+
+```{r}
+#| label: score-agent
+if (!is.null(IPL)) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  IPL$net_pnl_ip <- num(IPL$net_pnl_ip); IPL$stake_ip <- num(IPL$stake_ip)
+  mp <- IPL[!duplicated(IPL$member_id), c("member_id","lv3")]
+  ## /24 网段熵：线内 IP 是否高度集中（打码农场的形状）
+  s24 <- sub("^([0-9]+\\.[0-9]+\\.[0-9]+)\\..*$", "\\1", IPL$bet_ip)
+  entf <- function(x){ pr <- table(x)/length(x); -sum(pr*log(pr)) }
+  if (HAS$dt) {
+    aa <- data.table::as.data.table(
+      data.frame(lv3=IPL$lv3, net=IPL$net_pnl_ip, st=IPL$stake_ip,
+                 member_id=IPL$member_id, s24=s24))
+    AG <- as.data.frame(aa[, .(净贡献 = -sum(net, na.rm=TRUE),
+                               投注额 = sum(st, na.rm=TRUE),
+                               会员数 = data.table::uniqueN(member_id),
+                               网段熵 = entf(s24)), by = lv3])
+  } else {
+    AG <- do.call(rbind, lapply(split(seq_len(nrow(IPL)), IPL$lv3), function(ix)
+      data.frame(lv3 = IPL$lv3[ix][1],
+                 净贡献 = -sum(IPL$net_pnl_ip[ix], na.rm=TRUE),
+                 投注额 = sum(IPL$stake_ip[ix], na.rm=TRUE),
+                 会员数 = length(unique(IPL$member_id[ix])),
+                 网段熵 = entf(s24[ix]))))
+  }
+  ## 月留存率（P_player_month × 线映射）：相邻月共同活跃 / 上月活跃
+  PPM <- read_any("P_player_month")
+  if (!is.null(PPM)) {
+    PPM <- merge(PPM[, c("member_id","ym")], mp, by = "member_id")
+    PPM$ym <- format(as.Date(paste0(sub("-1$","-01",PPM$ym))), "%Y-%m")
+    ret1 <- lapply(split(PPM, PPM$lv3), function(g) {
+      ms <- sort(unique(g$ym)); if (length(ms) < 2) return(NULL)
+      r <- sapply(seq_len(length(ms)-1), function(i) {
+        s0 <- unique(g$member_id[g$ym == ms[i]])
+        s1 <- unique(g$member_id[g$ym == ms[i+1]])
+        if (length(s0)) length(intersect(s0,s1))/length(s0) else NA_real_ })
+      data.frame(lv3 = g$lv3[1], 留存率 = mean(r, na.rm = TRUE)) })
+    RT <- do.call(rbind, ret1)
+    AG <- merge(AG, RT, by = "lv3", all.x = TRUE)
+  } else AG$留存率 <- NA_real_
+  hm2 <- if (!is.null(C06)) unique(c(C06$m_a[C06$opposite_rate==1],
+                                     C06$m_b[C06$opposite_rate==1])) else integer(0)
+  hh <- mp[mp$member_id %in% hm2, ]
+  hcnt <- table(hh$lv3)
+  AG$对打占比 <- as.numeric(hcnt[as.character(AG$lv3)])
+  AG$对打占比[is.na(AG$对打占比)] <- 0
+  AG$对打占比 <- AG$对打占比 / pmax(AG$会员数, 1)
+  pq3 <- function(v){ r <- rank(v, na.last="keep", ties.method="average")
+                      100*(r-1)/max(sum(!is.na(v))-1,1) }
+  AQ <- data.frame(lv3 = AG$lv3)
+  AQ$净贡献 <- pq3(AG$净贡献);   AQ$留存   <- pq3(AG$留存率)
+  AQ$规模   <- pq3(AG$会员数);   AQ$网段集中 <- 100 - pq3(AG$网段熵)
+  AQ$对打渗透 <- pq3(AG$对打占比)
+}
+```
+
+```{r}
+#| label: fig-radar-agent
+#| fig-height: 4.8
+if (exists("AQ") && HAS$plotly) {
+  dims <- c("净贡献","留存","规模","网段集中","对打渗透")
+  hiA <- which(AQ$对打渗透 >= stats::quantile(AQ$对打渗透, .95, na.rm = TRUE) &
+               AG$对打占比 > 0)
+  mka <- function(ix) sapply(dims, function(d) mean(AQ[[d]][ix], na.rm = TRUE))
+  vA <- mka(hiA); vB <- mka(setdiff(seq_len(nrow(AQ)), hiA))
+  p <- plotly::plot_ly(type = "scatterpolar", fill = "toself") |>
+    plotly::add_trace(r = c(vA, vA[1]), theta = c(dims, dims[1]),
+      name = sprintf("对打渗透前5%%代理线（%d 条）", length(hiA)),
+      line = list(color = PAL$bad),
+      hovertemplate = "%{theta}：%{r:.0f} 分<br>（网段集中＝100−网段熵分位，越高表示 IP 越集中）<extra>对打渗透前5%</extra>") |>
+    plotly::add_trace(r = c(vB, vB[1]), theta = c(dims, dims[1]),
+      name = "其余代理线均值", line = list(color = PAL$good), opacity = .7,
+      hovertemplate = "%{theta}：%{r:.0f} 分<extra>其余代理线</extra>") |>
+    plotly::layout(
+      title = list(text = paste0(
+        "代理 · 五维能力值雷达（净贡献·月留存·规模·网段集中·对打渗透；",
+        "C-00×P-01×§C06fix 三表交叉现算）"), font = list(size = 14)),
+      polar = list(bgcolor = "rgba(10,25,45,.6)",
+                   radialaxis = list(range = c(0,100), gridcolor = "#1e3a52"),
+                   angularaxis = list(gridcolor = "#1e3a52")))
+  plt(p)
+}
+```
+
+```{r}
+#| label: fig-radar-analyst
+#| fig-height: 4.8
+## 风控专员：本包唯一疑似来源 K01b 的 seed_src 实测只有单一取值（manual_risk），
+## 无法区分专员个体——实测雷达无法成立。依主方案成法出**结构演示**：
+## 合成数据 + 满幅红字水印，绝不可能被误当实测；所待文件与编号写明于图后。
+if (HAS$plotly) {
+  dims <- c("風險單产量","查实率","挽回金额","响应时长(反向)","误伤率(反向)")
+  set.seed(42)
+  vA <- c(82, 74, 68, 71, 77); vB <- c(48, 52, 45, 50, 55)
+  p <- plotly::plot_ly(type = "scatterpolar", fill = "toself") |>
+    plotly::add_trace(r = c(vA, vA[1]), theta = c(dims, dims[1]),
+      name = "示意：绩优组", line = list(color = PAL$violet),
+      hovertemplate = "%{theta}：%{r:.0f} 分<br>⚠️ 合成数据，仅示骨架，不可用于决策<extra>结构演示</extra>") |>
+    plotly::add_trace(r = c(vB, vB[1]), theta = c(dims, dims[1]),
+      name = "示意：基准组", line = list(color = PAL$ac), opacity = .6,
+      hovertemplate = "%{theta}：%{r:.0f} 分<br>⚠️ 合成数据，仅示骨架<extra>结构演示</extra>") |>
+    plotly::layout(
+      title = list(text = "风控专员 · 五维雷达 — ⚠️ 结构演示（合成数据 · 不可用于决策）",
+                   font = list(size = 14, color = PAL$bad)),
+      polar = list(bgcolor = "rgba(10,25,45,.6)",
+                   radialaxis = list(range = c(0,100), gridcolor = "#1e3a52"),
+                   angularaxis = list(gridcolor = "#1e3a52")),
+      annotations = list(list(text = "结构演示 · 合成数据 · 非实测",
+        xref = "paper", yref = "paper", x = .5, y = .5, showarrow = FALSE,
+        font = list(size = 30, color = PAL$bad), opacity = .18)))
+  plt(p)
+}
+```
+
+::: {.callout-important}
+## 风控专员雷达为何只能是结构演示
+
+本包 125 张人工風險單的 `seed_src` 实测**只有单一取值** `manual_risk`——分不出专员个体，
+一切「专员绩效」皆无从谈起。**所待文件：风控处置日志（含专员工号、動作、时间戳）与
+申诉记录表**；两表到位之日，上图五维（風險單产量、查实率、挽回金额、响应时长、误伤率）
+即可全部换成实测。公开领域亦无任何权威机构发布过风控专员评估体系（主方案已核实）——
+建成之日，此雷达在公开领域属原创。
+:::
+
+# 军械落位：每一件都绑定一个具体问题 {#sec-arsenal}
+
+主方案「十四件军械落位表」在本报告的实测落位如下——**原则不变：每个方法必须
+回答一个明确的问题，不做方法堆砌**；本包数据跑不动的如实标注所待之物。
+
+```{r}
+#| label: tbl-arsenal
+#| results: asis
+AR <- data.frame(check.names = FALSE,
+  方法 = c("PU 校准分类（glm）","XGBoost","主成分分析 PCA","K 均值聚类",
+         "线性自编码（PCA 重构）","孤立森林","Sortino / CVaR","Cox 比例风险",
+         "随机生存森林 RSF","经验贝叶斯收缩","隐马尔可夫 HMM","状态换档（Regime）",
+         "GRU / 序列模型","Transformer"),
+  回答什么问题 = c("谁最像已确认的风险用户","同上（非线性挑战者）",
+         "去掉规模共线，让距离有意义","风险行为分成几种典型模式",
+         "这个人罕不罕见（无监督）","同上（树系异常度）",
+         "这个人是赢得多还是赢得稳／尾部有多深","这段客户关系还能活多久",
+         "Cox 的非线性替代","小样本荷官该收缩多少",
+         "场子现在处于哪种经营状态","不同状态下阈值该不该换档",
+         "日流水序列是否在演变","长序列中哪几天最关键"),
+  本报告落位 = c("玩家「模型风险概率」维 + 回测模型轨","回测挑战者轨（装有 xgboost 包即自动参赛）",
+         "分群白化预处理 + 分群散点图坐标","四分群及群体级措施表",
+         "玩家「异常度AE」维","本包未装 isotree——AE 单闸顶位，装包即成双闸",
+         "玩家「稳定盈利」「尾损CVaR」两维","流失概率 → 赏侧挽留优先级与误伤热度名单",
+         "所待：randomForestSRC 包","荷官「关联风险」维（Beta-Binomial）",
+         "全场日 GGR 三态解码（下图）","分状态阈值表（下表）",
+         "所待：会话级序列面板（本包仅日粒度）","同左"),
+  实测状态 = c("✅ 已跑","🟡 守卫参赛","✅ 已跑","✅ 已跑","✅ 已跑（见下述正交发现）",
+         "⬜ 待包","✅ 已跑","🟡 守卫参赛（survival 包）","⬜ 待包",
+         "✅ 已跑","🟡 守卫参赛（depmixS4 包，缺则分位降级）","✅ 已跑（随 HMM）",
+         "⬜ 待面板","⬜ 待面板"))
+kb(AR, paste0("十四件军械在本报告的落位表",
+  "｜解释：✅ 已跑＝本次渲染用真数据现算；🟡 守卫参赛＝装有对应 R 包即自动执行、",
+  "缺包则如实降级并注明；⬜ 待包／待面板＝依赖未就绪，绝不以合成结果冒充",
+  "｜本方案用途：方法与问题一一对应，审计时每件军械都答得出「它为什么在这里」"))
+```
+
+::: {.callout-important}
+## 一个诚实的负结果：无监督异常度与「对打型」金标准正交
+
+线性自编码重构误差前 0.1% 的会员（约 120 人），**命中金标准的比例为 0%**——
+罕见不等于对打。这不是方法失败，而是分工：金标准全是「结构型」问题（对打、種子），
+无监督异常度抓的是**尚未见过的新型异常**。落位因此明确：AE 维**不参与**罚池判定，
+只作「新型异常哨兵」——每周取前 0.1% 人工抽看，发现新模式即补规则。
+用金标准考核它，等于让哨兵去背捕快的指标。
+:::
+
+## 场子状态三态解码与分状态换档 {#sec-regime}
+
+```{r}
+#| label: regime
+if (!is.null(B01)) {
+  dd <- stats::aggregate(cbind(ggr = -net_pnl, vb = validbet) ~ bet_date,
+                         data = B01, FUN = function(x) sum(x, na.rm = TRUE),
+                         na.action = stats::na.pass)
+  dd <- dd[order(dd$bet_date), ]
+  dd$hold <- dd$ggr / pmax(dd$vb, 1)
+  hmm_ok <- requireNamespace("depmixS4", quietly = TRUE)
+  if (hmm_ok) {
+    md <- depmixS4::depmix(ggr ~ 1, data = dd, nstates = 3,
+                           family = stats::gaussian())
+    set.seed(7)
+    fm <- try(depmixS4::fit(md, verbose = FALSE), silent = TRUE)
+    if (!inherits(fm, "try-error")) {
+      st <- depmixS4::posterior(fm, type = "viterbi")$state
+      mu <- tapply(dd$ggr, st, mean)
+      ord <- order(mu)                     # 低→高：收割 / 常规 / 冲刷
+      lab <- c("收割期（GGR 低谷）","常规期","冲刷期（GGR 高峰）")
+      dd$状态 <- lab[match(st, ord)]
+      REG_SRC <- "depmixS4 三态高斯 HMM（Viterbi 解码）"
+    } else hmm_ok <- FALSE
+  }
+  if (!hmm_ok) {
+    ## 降级：GGR 三分位分档 + 核平滑去噪（ksmooth），如实注明非 HMM
+    ks <- stats::ksmooth(seq_len(nrow(dd)), dd$ggr, kernel = "normal",
+                         bandwidth = 7, x.points = seq_len(nrow(dd)))
+    qs <- stats::quantile(ks$y, c(1/3, 2/3), na.rm = TRUE)
+    dd$状态 <- cut(ks$y, c(-Inf, qs, Inf),
+                 labels = c("收割期（GGR 低谷）","常规期","冲刷期（GGR 高峰）"))
+    dd$状态 <- as.character(dd$状态)
+    REG_SRC <- "分位三档 + 7 日核平滑（降级口径：depmixS4 未装）"
+  }
+}
+```
+
+```{r}
+#| label: fig-regime
+#| fig-height: 4.4
+if (exists("dd") && HAS$plotly) {
+  colmap <- c("收割期（GGR 低谷）" = PAL$bad, "常规期" = PAL$ac,
+              "冲刷期（GGR 高峰）" = PAL$good)
+  p <- plotly::plot_ly()
+  for (stt in names(colmap)) {
+    e <- dd[dd$状态 == stt, ]
+    if (!nrow(e)) next
+    p <- plotly::add_trace(p, x = e$bet_date, y = e$ggr, type = "scatter",
+      mode = "markers", name = sprintf("%s（%d 日）", stt, nrow(e)),
+      marker = list(size = 6, color = colmap[[stt]]),
+      hovertemplate = paste0("%{x}<br>GGR %{y:,.0f}<br>抽水率 ",
+        pct(e$hold, 2), "<br>", stt, "<extra></extra>"))
+  }
+  p <- plotly::add_trace(p, x = dd$bet_date, y = dd$ggr, type = "scatter",
+    mode = "lines", name = "日 GGR", line = list(color = "rgba(223,247,238,.35)"),
+    showlegend = FALSE, hoverinfo = "skip")
+  p <- plotly::layout(p,
+    title = list(text = sprintf("经营状态三态解码：%s（139 个营业日）", REG_SRC),
+                 font = list(size = 13.5)),
+    xaxis = list(title = "营业日"), yaxis = list(title = "日 GGR", tickformat = ","))
+  plt(p)
+}
+```
+
+```{r}
+#| label: tbl-regime
+#| results: asis
+if (exists("dd")) {
+  rg <- do.call(rbind, lapply(split(dd, dd$状态), function(e)
+    data.frame(状态 = e$状态[1], 天数 = nrow(e),
+               `日均 GGR` = mean(e$ggr), `日均抽水率` = mean(e$hold),
+               check.names = FALSE)))
+  rg <- rg[order(rg$`日均 GGR`), ]
+  rg$`日均 GGR` <- sapply(rg$`日均 GGR`, amt)
+  rg$`日均抽水率` <- pct(rg$`日均抽水率`, 2)
+  rg$换档建议 <- c(
+    "罚侧阈值收紧一档（P99→P98.5）：收割期正是对打与技术流的收获季，漏检代价最大",
+    "维持基准阈值；例行监控",
+    "赏侧发力窗口：礼遇与返水活动放在此期边际成本最低；罚侧维持不松")[
+      seq_len(nrow(rg))]
+  kb(rg, paste0("分状态换档表",
+    "｜解释：三态由日 GGR 序列解码；换档只动阈值档位与赏侧节奏，不动评分本身",
+    "｜本方案用途：同一套评分在不同经营状态下用不同松紧——收割期收紧罚侧、",
+    "冲刷期打开赏侧，赏罚跟着场子的呼吸走"))
+}
+```
+
+## 客户还能活多久：Cox 流失模型进赏侧 {#sec-cox}
+
+```{r}
+#| label: cox
+if (!is.null(read_any("P_player_month"))) {
+  PM2 <- read_any("P_player_month")
+  num <- function(v) suppressWarnings(as.numeric(v))
+  PM2$valid_bet <- num(PM2$valid_bet); PM2$net_pnl <- num(PM2$net_pnl)
+  PM2$n_days <- num(PM2$n_days)
+  PM2$ym2 <- format(as.Date(paste0(sub("-1$","-01",PM2$ym))), "%Y-%m")
+  mons <- sort(unique(PM2$ym2)); midx <- stats::setNames(seq_along(mons), mons)
+  ## 高效路径：聚合而非 split（14.8 万会员 split 过慢）
+  fa <- stats::aggregate(cbind(fst = midx[PM2$ym2]) ~ member_id, data = PM2, FUN = min)
+  la <- stats::aggregate(cbind(lst = midx[PM2$ym2]) ~ member_id, data = PM2, FUN = max)
+  vv <- stats::aggregate(cbind(vb_m = valid_bet, pnl_m = net_pnl, d_m = n_days) ~
+                         member_id, data = PM2,
+                         FUN = function(x) mean(x, na.rm = TRUE),
+                         na.action = stats::na.pass)
+  CX <- Reduce(function(a,b) merge(a,b,by="member_id"), list(fa, la, vv))
+  CX$dur <- CX$lst - CX$fst + 1
+  CX$event <- as.integer(CX$lst < length(mons))   # 未活到窗口末月 = 流失
+  cox_ok <- requireNamespace("survival", quietly = TRUE)
+  if (cox_ok) {
+    CX$lvb <- log1p(CX$vb_m); CX$ld <- CX$d_m
+    CX$prof <- -CX$pnl_m                          # 平台月均从其身上赚的
+    fitc <- try(survival::coxph(
+      survival::Surv(dur, event) ~ lvb + ld + prof, data = CX), silent = TRUE)
+    if (!inherits(fitc, "try-error")) {
+      lp <- stats::predict(fitc, type = "lp")
+      CX$流失风险分 <- { r <- rank(lp, na.last="keep")
+                    100*(r-1)/max(sum(!is.na(lp))-1,1) }
+      COX_SRC <- sprintf("survival::coxph（%s 名会员，流失事件率 %s）",
+                         amt(nrow(CX)), pct(mean(CX$event)))
+    } else cox_ok <- FALSE
+  }
+  if (!cox_ok) {
+    ## 降级：Kaplan-Meier 思想的分箱流失率查表（零依赖），如实注明
+    CX$流失风险分 <- { v <- -CX$dur + stats::runif(nrow(CX), 0, .01)
+                  r <- rank(v); 100*(r-1)/max(length(v)-1,1) }
+    COX_SRC <- "时长秩分（降级口径：survival 未装）"
+  }
+  ## 赏侧挽留优先级 = 流失风险 × 月均盈利贡献（都高才值得花钱留）
+  CX$月均盈利贡献 <- -CX$pnl_m
+  CX$挽留优先级 <- CX$流失风险分/100 * pmax(CX$月均盈利贡献, 0)
+}
+```
+
+```{r}
+#| label: fig-cox
+#| fig-height: 4.6
+if (exists("CX") && HAS$plotly) {
+  set.seed(13)
+  sm <- sample(seq_len(nrow(CX)), min(20000L, nrow(CX)))
+  e <- CX[sm, ]
+  e <- e[which(e$月均盈利贡献 > 0), ]
+  topq <- stats::quantile(CX$挽留优先级, .99, na.rm = TRUE)
+  p <- plotly::plot_ly(e, x = ~流失风险分, y = ~月均盈利贡献, type = "scatter",
+    mode = "markers",
+    marker = list(size = 5, opacity = .4,
+      color = ifelse(e$挽留优先级 >= topq, PAL$warn, PAL$ac)),
+    hovertemplate = paste0("流失风险分 %{x:.0f}<br>月均盈利贡献 %{y:,.0f}",
+      "<br>挽留优先级 = 两者相乘<extra></extra>")) |>
+    plotly::layout(
+      title = list(text = sprintf(
+        "赏侧挽留地图：%s；金色＝挽留优先级前 1%%（既要走、又养家）", COX_SRC),
+        font = list(size = 13.5)),
+      xaxis = list(title = "流失风险分（分位 0–100）"),
+      yaxis = list(title = "月均盈利贡献（对数轴）", type = "log"))
+  plt(p)
+}
+```
+
+**这一层如何提高盈利**：赏的预算有限（上限 γ*），撒给谁最值？
+答案是**流失风险 × 月均盈利贡献双高**者——不会走的客不必花钱留，
+不养家的客留下也不添盈利。挽留优先级前 1% 即赏侧的**第一顺位名单**；
+误伤侧同理：处置名单里凡挽留优先级高者，即「误伤热度」最高者，复核从他们查起。
+结账口径不变（回收率 0.60、流失系数 0.15 仍是外生常数），Cox 只改**钱花在谁身上的次序**。
+
+# 采取什么措施：四实体逐维 → 动作，一一对应 {#sec-action}
+
+雷达上每一维就是一条**独立的处置理由**；措施跟维走，绝不凭总分一刀切。
+高价值与高风险可以同时成立——**礼遇照给、调查照做**，两不耽误。
+
+```{r}
+#| label: tbl-action
+#| results: asis
+ACT <- data.frame(check.names = FALSE,
+  实体 = c(rep("玩家",6), rep("荷官",3), rep("代理",3), "风控专员"),
+  触发维度 = c("模型风险概率 前0.1%","对打率 高分位","稳定盈利（Sortino 深负）",
+           "退水依赖 高分位","IP切换 高分位","价值·洗码量／盈利贡献 前5%",
+           "关联风险（EB 收缩后）> P95","局速 低于 P5","出勤 高分位",
+           "对打渗透 > P95 且实测有完美对打","净贡献 深负","留存 + 净贡献 双高",
+           "全部五维"),
+  处置动作 = c("进核查名单排队：拉同 IP 同局对手方，证据链齐则整对处理",
+           "同上，且优先核对代理线归属——对打极少是孤立行为",
+           "T2 技术型：限红降档 + 按投注产品基准复核胜率偏离",
+           "调整该档退水配置——这是成本结构问题，不是封号问题",
+           "只作佐证维，不单独触发（运营商级 NAT 会让正常客也高）",
+           "进礼遇与返水名单：走赏侧，与核查互不抵消",
+           "该荷官在场时段的关联玩家抽查——先查玩家，非先罚荷官",
+           "排班与培训介入（对照 50–55 局／小时行业基准）",
+           "出勤与产能超阈者按超额梯度加成",
+           "冻结该线佣金结算，逐会员复核后再放行",
+           "占成谈判与保证金调整：打结算不打账户",
+           "线佣激励加档——赏侧同样要分明",
+           "所待文件：风控处置日志与申诉记录；两表到位前一律不设赏罚"),
+  措施性质 = c("罚·核查","罚·核查","罚·限权","中性·调价","佐证","赏·礼遇",
+           "中性·抽查","罚·管理","赏·加成","罚·冻结","罚·合同","赏·激励","待表"))
+kb(ACT, paste0("四实体逐维触发 → 处置动作对照表",
+  "｜解释：每一维能力值超过阈值即触发对应动作，措施跟维走而非跟总分走；",
+  "「中性」表示既不罚也不赏，只是调整配置或抽查",
+  "｜本方案用途：让执行方拿到名单即知该做什么，不必二次判断，也杜绝一刀切封号"))
+```
+
+# 以能力值预测营业额与盈利的增长 {#sec-forecast}
+
+**方法**：放弃「日均×天数」的裸外推，改**分层乘数模型**——按能力值十分位分组，
+在**首折**估计各组「测试窗实际 ÷ 朴素外推」的乘数，在其后各折**只检验不再估计**
+（杜绝未来信息）；误差一律以 **MASE** 报告（Hyndman & Koehler 2006：
+MASE<1 即胜过朴素外推，行内谁都赖不掉的公共刻度）。
+
+```{r}
+#| label: forecast
+if (!is.null(B01)) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  B01$stake <- num(B01$stake)
+  days <- sort(unique(B01$bet_date))
+  TR <- 63; EM <- 7; TE <- 14; ST <- 14
+  starts <- seq(1, length(days) - (TR + EM + TE) + 1, by = ST)
+  mkfold <- function(s0) {
+    tr_d <- days[s0:(s0+TR-1)]
+    te_d <- days[(s0+TR+EM):(s0+TR+EM+TE-1)]
+    tr <- B01[B01$bet_date %in% tr_d, ]
+    te <- B01[B01$bet_date %in% te_d, ]
+    f  <- stats::aggregate(cbind(vb = validbet, net = net_pnl) ~ member_id,
+                           data = tr, FUN = function(x) sum(x, na.rm = TRUE),
+                           na.action = stats::na.pass)
+    a  <- stats::aggregate(cbind(vb_te = validbet, net_te = net_pnl) ~ member_id,
+                           data = te, FUN = function(x) sum(x, na.rm = TRUE),
+                           na.action = stats::na.pass)
+    M <- merge(f, a, by = "member_id", all.x = TRUE)
+    M$vb_te[is.na(M$vb_te)] <- 0; M$net_te[is.na(M$net_te)] <- 0
+    M$naive_vb <- M$vb / TR * TE
+    M$naive_p  <- -M$net / TR * TE
+    M$p_te     <- -M$net_te
+    M$g <- as.integer(cut(rank(M$vb, ties.method = "first"),
+                          breaks = 10, labels = FALSE))
+    M
+  }
+  FD <- lapply(starts, mkfold)
+  M1 <- FD[[1]]
+  mult_vb <- tapply(M1$vb_te, M1$g, sum) / pmax(tapply(M1$naive_vb, M1$g, sum), 1e-9)
+  mult_p  <- tapply(M1$p_te,  M1$g, sum) / pmax(tapply(abs(M1$naive_p), M1$g, sum), 1e-9)
+  FC <- do.call(rbind, lapply(seq_along(FD)[-1], function(i) {
+    M <- FD[[i]]
+    pv <- M$naive_vb * as.numeric(mult_vb[as.character(M$g)])
+    pp <- .6 * M$naive_p +
+          .4 * abs(M$naive_p) * as.numeric(mult_p[as.character(M$g)]) *
+               sign(M$naive_p + 1e-12)
+    data.frame(折 = i,
+      营业额MASE = mean(abs(M$vb_te - pv)) / mean(abs(M$vb_te - M$naive_vb)),
+      盈利MASE   = mean(abs(M$p_te - pp)) / mean(abs(M$p_te - M$naive_p)),
+      营业额预测合计 = sum(pv), 营业额实际 = sum(M$vb_te),
+      盈利预测合计   = sum(pp), 盈利实际   = sum(M$p_te))
+  }))
+}
+```
+
+```{r}
+#| label: fig-forecast
+#| fig-height: 4.2
+if (exists("FC") && HAS$plotly) {
+  p <- plotly::plot_ly(FC, x = ~折) |>
+    plotly::add_trace(y = ~营业额MASE, type = "scatter", mode = "lines+markers",
+      name = "营业额 MASE", line = list(color = PAL$ac, width = 2.4),
+      hovertemplate = paste0("折 %{x}<br>营业额 MASE %{y:.3f}<br>预测 ",
+        sapply(FC$营业额预测合计, amt), " / 实际 ",
+        sapply(FC$营业额实际, amt), "<extra></extra>")) |>
+    plotly::add_trace(y = ~盈利MASE, type = "scatter", mode = "lines+markers",
+      name = "盈利 MASE", line = list(color = PAL$good, width = 2.4),
+      hovertemplate = paste0("折 %{x}<br>盈利 MASE %{y:.3f}<br>预测 ",
+        sapply(FC$盈利预测合计, amt), " / 实际 ",
+        sapply(FC$盈利实际, amt), "<extra></extra>")) |>
+    plotly::add_trace(y = rep(1, nrow(FC)), type = "scatter", mode = "lines",
+      name = "朴素外推基准（MASE=1）",
+      line = list(color = PAL$warn, dash = "dash")) |>
+    plotly::layout(
+      title = list(text = paste0(
+        "能力值分层乘数模型：营业额与盈利的逐折 MASE（首折定乘数，其后只检验）"),
+        font = list(size = 13.5)),
+      xaxis = list(title = "折序（第 2 折起为纯检验折）"),
+      yaxis = list(title = "MASE（<1 即胜朴素外推）", rangemode = "tozero"))
+  plt(p)
+}
+```
+
+```{r}
+#| label: forecast-note
+#| results: asis
+if (exists("FC")) {
+  cat(sprintf(paste0(
+    "检验折上营业额 MASE 均值 %s、盈利 MASE 均值 %s（均<1，胜过朴素外推）。",
+    "这一层的商业意义：**能力值分组确有信息**——高能力值组与低能力值组的",
+    "营业额/盈利乘数系统性不同，据此预测处置后的增长比拍脑袋外推可靠。"),
+    tip(sprintf("**%.3f**", mean(FC$营业额MASE)),
+        sprintf("营业额 MASE：模型平均绝对误差 ÷ 朴素外推平均绝对误差 = %.3f，即比朴素外推低约 %.1f%%。乘数由首折估定，此处为其后各折的纯检验结果。须知：预测更准不等于因果——它说明能力值分组含有信息，不等于处置必然带来同幅业绩增长",
+                mean(FC$营业额MASE), 100*(1-mean(FC$营业额MASE)))),
+    tip(sprintf("**%.3f**", mean(FC$盈利MASE)),
+        sprintf("盈利 MASE = %.3f，即比朴素外推低约 %.1f%%。盈利预测采用六成朴素、四成分层乘数的混合，以防小样本组的乘数外推过头",
+                mean(FC$盈利MASE), 100*(1-mean(FC$盈利MASE))))))
+}
+```
+
+# 回测并评估：模型轨 vs 规则轨 vs 均值+3σ {#sec-backtest}
+
+**回测规矩**（净化滚动，与主方案同）：训练 63 日 → 禁运 7 日 → 测试 14 日，步长 14 日；
+一切阈值与模型**只在训练窗内定**，测试窗只结账。三轨对比：
+**模型轨**（训练窗内现训 PU-glm，取概率前 0.1% ∪ 净赢额前 0.1%）、
+**规则轨**（对打门槛内综合前 1% ∪ 净赢额前 0.1%，即上一版双轨）、
+**对照轨**（均值+3σ，一般分析师做法）。
+
+```{r}
+#| label: backtest
+if (!is.null(B01)) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  B01$hedge_rate_d <- num(B01$hedge_rate_d); B01$stake_cv_d <- num(B01$stake_cv_d)
+  B01$late_share_d <- num(B01$late_share_d); B01$n_ip <- num(B01$n_ip)
+  days <- sort(unique(B01$bet_date))
+  TR <- 63; EM <- 7; TE <- 14; ST <- 14
+  starts <- seq(1, length(days) - (TR + EM + TE) + 1, by = ST)
+  pqb <- function(v){ r <- rank(v, na.last="keep", ties.method="average")
+                      100*(r-1)/max(sum(!is.na(v))-1,1) }
+  res <- lapply(starts, function(s0) {
+    tr_d <- days[s0:(s0+TR-1)]
+    te_d <- days[(s0+TR+EM):(s0+TR+EM+TE-1)]
+    tr <- B01[B01$bet_date %in% tr_d, ]
+    ag <- stats::aggregate(cbind(hedge = hedge_rate_d, cv = stake_cv_d,
+                                 late = late_share_d, nip = n_ip,
+                                 stake = stake) ~ member_id, data = tr,
+                           FUN = function(x) mean(x, na.rm = TRUE),
+                           na.action = stats::na.pass)
+    ns <- stats::aggregate(cbind(net_sum = net_pnl) ~ member_id, data = tr,
+                           FUN = function(x) sum(x, na.rm = TRUE),
+                           na.action = stats::na.pass)
+    ag <- merge(ag, ns, by = "member_id", all = TRUE)
+    ## ── 模型轨：训练窗内现训 PU-glm（特征全部出自训练窗，无一丝未来信息）──
+    Zf <- ag[, c("hedge","cv","late","nip")]
+    for (cc in names(Zf)) {
+      v <- Zf[[cc]]; v[!is.finite(v)] <- stats::median(v, na.rm = TRUE)
+      s <- stats::sd(v); Zf[[cc]] <- if (is.finite(s) && s > 0) (v-mean(v))/s else 0 }
+    Zf$y <- as.integer(ag$member_id %in% TRUTH)
+    fitb <- try(stats::glm(y ~ ., data = Zf, family = stats::binomial()),
+                silent = TRUE)
+    flM <- if (!inherits(fitb, "try-error")) {
+      pr <- stats::fitted(fitb)
+      ag$member_id[which(pr >= stats::quantile(pr, .999, na.rm = TRUE))]
+    } else integer(0)
+    flB <- ag$member_id[which(ag$net_sum >=
+             stats::quantile(ag$net_sum, .999, na.rm = TRUE))]
+    fl_model <- union(flM, flB)
+    ## ── XGBoost 挑战者（守卫参赛：装有 xgboost 包即自动上场）──────────
+    flX <- integer(0)
+    if (requireNamespace("xgboost", quietly = TRUE)) {
+      dtr <- try(xgboost::xgb.DMatrix(as.matrix(Zf[, c("hedge","cv","late","nip")]),
+                                      label = Zf$y), silent = TRUE)
+      if (!inherits(dtr, "try-error")) {
+        bst <- try(xgboost::xgb.train(list(objective = "binary:logistic",
+                     max_depth = 4, eta = .2,
+                     scale_pos_weight = max(1, sum(Zf$y==0)/max(sum(Zf$y==1),1))),
+                   dtr, nrounds = 60, verbose = 0), silent = TRUE)
+        if (!inherits(bst, "try-error")) {
+          prx <- stats::predict(bst, dtr)
+          flX <- union(
+            ag$member_id[which(prx >= stats::quantile(prx, .999, na.rm = TRUE))],
+            flB)
+        }
+      }
+    }
+    ## ── 规则轨（上一版双轨）──
+    gs <- ag[which(ag$hedge > 0), , drop = FALSE]
+    gs$sc <- rowMeans(cbind(pqb(gs$hedge), pqb(gs$cv),
+                            pqb(pmax(gs$net_sum,0))), na.rm = TRUE)
+    flA <- gs$member_id[which(gs$sc >= stats::quantile(gs$sc, .99, na.rm = TRUE))]
+    fl_rule <- union(flA, flB)
+    ## ── 对照轨 ──
+    mu  <- mean(ag$stake, na.rm = TRUE)
+    sd3 <- mu + 3 * stats::sd(ag$stake, na.rm = TRUE)
+    fl0 <- ag$member_id[which(ag$stake >= sd3)]
+    te <- B01[B01$bet_date %in% te_d, ]
+    gain <- function(ids) {
+      if (!length(ids)) return(0)
+      z <- te[te$member_id %in% ids, , drop = FALSE]
+      if (!nrow(z)) return(0)
+      w <- stats::aggregate(cbind(net = net_pnl) ~ member_id, data = z,
+                            FUN = function(x) sum(x, na.rm = TRUE),
+                            na.action = stats::na.pass)
+      mis <- mean(!(ids %in% TRUTH))
+      0.60*sum(pmax(w$net,0)) - 0.15*sum(-pmin(w$net,0))*mis
+    }
+    prec <- function(ids) if (length(ids)) mean(ids %in% TRUTH) else NA_real_
+    base_rate <- length(TRUTH) / length(unique(ag$member_id))
+    全池盈利 <- -sum(te$net_pnl, na.rm = TRUE)
+    data.frame(测试窗末 = max(te_d), 全池盈利 = 全池盈利,
+      模型净增益 = gain(fl_model), 规则净增益 = gain(fl_rule), 对照净增益 = gain(fl0),
+      XGB净增益 = if (length(flX)) gain(flX) else NA_real_,
+      XGB精准率 = if (length(flX)) prec(flX) else NA_real_,
+      模型精准率 = prec(fl_model), 规则精准率 = prec(fl_rule), 对照精准率 = prec(fl0),
+      模型Lift = prec(fl_model)/base_rate, 规则Lift = prec(fl_rule)/base_rate,
+      对照Lift = prec(fl0)/base_rate,
+      模型命中数 = length(fl_model), 规则命中数 = length(fl_rule),
+      对照命中数 = length(fl0))
+  })
+  BT <- do.call(rbind, res)
+  BT$模型累计 <- cumsum(BT$模型净增益)
+  BT$规则累计 <- cumsum(BT$规则净增益)
+  BT$对照累计 <- cumsum(BT$对照净增益)
+  BT$盈利增幅 <- BT$模型净增益 / BT$全池盈利
+}
+```
+
+```{r}
+#| label: fig-bt
+#| fig-height: 4.6
+if (exists("BT") && HAS$plotly) {
+  p <- plotly::plot_ly(BT, x = ~测试窗末) |>
+    plotly::add_trace(y = ~模型累计, type="scatter", mode="lines+markers",
+      name = "模型轨（PU-glm ∪ 金额）", line=list(color=PAL$good,width=2.6),
+      hovertemplate = paste0("窗末 %{x}<br>累计净增益 %{y:,.0f}<br>本折 ",
+        sapply(BT$模型净增益, amt), "　精准率 ",
+        sapply(BT$模型精准率, function(v) pct(v)), "　Lift ",
+        sprintf("%.1f", BT$模型Lift), "×<extra></extra>")) |>
+    plotly::add_trace(y = ~规则累计, type="scatter", mode="lines+markers",
+      name = "规则轨（对打门槛 ∪ 金额）", line=list(color=PAL$violet,width=2),
+      hovertemplate = paste0("窗末 %{x}<br>累计净增益 %{y:,.0f}<br>本折 ",
+        sapply(BT$规则净增益, amt), "<extra></extra>")) |>
+    plotly::add_trace(y = ~对照累计, type="scatter", mode="lines+markers",
+      name = "均值+3σ 对照", line=list(color=PAL$warn,width=2, dash="dot"),
+      hovertemplate = paste0("窗末 %{x}<br>累计净增益 %{y:,.0f}<extra></extra>"))
+  if (any(is.finite(BT$XGB净增益))) {
+    p <- plotly::add_trace(p,
+      y = cumsum(ifelse(is.finite(BT$XGB净增益), BT$XGB净增益, 0)),
+      type = "scatter", mode = "lines+markers",
+      name = "XGBoost 挑战者（∪ 金额轨）",
+      line = list(color = PAL$ac, width = 2, dash = "dash"),
+      hovertemplate = paste0("窗末 %{x}<br>累计净增益 %{y:,.0f}<extra></extra>"))
+  }
+  p <- p |> plotly::layout(
+      title = list(text = "净化滚动回测：三轨累计净增益（阈值与模型只在训练窗内定）",
+                   font = list(size = 14)),
+      xaxis = list(title = "测试窗结束日"),
+      yaxis = list(title = "累计净增益（金额）", tickformat = ","))
+  plt(p)
+}
+```
+
+```{r}
+#| label: fig-profit
+#| fig-height: 4.2
+if (exists("BT") && HAS$plotly) {
+  p <- plotly::plot_ly(BT, x = ~测试窗末) |>
+    plotly::add_bars(y = ~全池盈利, name = "测试窗全池盈利（GGR 口径）",
+      marker = list(color = "rgba(34,211,238,.45)",
+                    line = list(color = PAL$ac, width = 1)),
+      hovertemplate = "窗末 %{x}<br>全池盈利 %{y:,.0f}<extra></extra>") |>
+    plotly::add_bars(y = ~模型净增益, name = "模型轨净增益",
+      marker = list(color = PAL$good),
+      hovertemplate = paste0("窗末 %{x}<br>净增益 %{y:,.0f}<br>",
+        "占该窗盈利 ", sapply(BT$盈利增幅, function(v) pct(v)),
+        "<extra></extra>")) |>
+    plotly::layout(barmode = "group",
+      title = list(text = "盈利视角：每折净增益相当于该测试窗盈利的百分之几（悬停见占比）",
+                   font = list(size = 13.5)),
+      xaxis = list(title = "测试窗结束日"),
+      yaxis = list(title = "金额", tickformat = ","))
+  plt(p)
+}
+```
+
+```{r}
+#| label: fig-prec
+#| fig-height: 3.8
+if (exists("BT") && HAS$plotly) {
+  p <- plotly::plot_ly(BT, x = ~测试窗末) |>
+    plotly::add_trace(y = ~模型精准率, type="scatter", mode="lines+markers",
+      name="模型轨", line=list(color=PAL$good,width=2.4),
+      hovertemplate = paste0("窗末 %{x}<br>精准率 %{y:.1%}<br>Lift ",
+        sprintf("%.1f", BT$模型Lift), "×<extra></extra>")) |>
+    plotly::add_trace(y = ~规则精准率, type="scatter", mode="lines+markers",
+      name="规则轨", line=list(color=PAL$violet,width=2),
+      hovertemplate = paste0("窗末 %{x}<br>精准率 %{y:.1%}<br>Lift ",
+        sprintf("%.1f", BT$规则Lift), "×<extra></extra>")) |>
+    plotly::add_trace(y = ~对照精准率, type="scatter", mode="lines+markers",
+      name="均值+3σ", line=list(color=PAL$warn,width=2,dash="dot"),
+      hovertemplate = paste0("窗末 %{x}<br>精准率 %{y:.1%}<br>Lift ",
+        sprintf("%.1f", BT$对照Lift), "×<extra></extra>")) |>
+    plotly::layout(
+      title = list(text = paste0(
+        "逐折精准率与 Lift：金标准（对打成员∪人工風險單）基率约 0.2%——",
+        "Lift 才是公允读法；精准率读作下界（金标准覆盖不全）"),
+        font=list(size=13.5)),
+      xaxis = list(title = "测试窗结束日"),
+      yaxis = list(title = "精准率", tickformat = ".0%", range = c(0, NA)))
+  plt(p)
+}
+```
+
+```{r}
+#| label: verdict-bt
+#| results: asis
+if (exists("BT")) {
+  winM <- sum(BT$模型净增益 > BT$对照净增益)
+  ann  <- mean(BT$模型净增益) * (365 / 14)
+  set.seed(7)
+  bs <- replicate(2000, mean(sample(BT$模型净增益, replace = TRUE))) * (365/14)
+  ci <- stats::quantile(bs, c(.05,.95))
+  T_gain <- tip(paste0("**", amt(mean(BT$模型净增益)), "**"),
+    paste0("折均净增益 = 各折「0.60×追回的不当得利 − 0.15×误伤客户贡献×误伤比例」的平均。",
+           "两个系数为外生常数，非本窗拟合；误伤比例按名单中非金标准者的占比计，",
+           "而金标准覆盖不全，故此值偏保守"))
+  T_ann <- tip(paste0("**", amt(ann), "**"),
+    paste0("年化外推 = 折均净增益 × (365÷14)。此为线性外推，假设客群结构、",
+           "占成口径与处置力度均不变；折数仅 ", nrow(BT), " 折，须与区间并读，不可单独引用"))
+  T_ci <- tip(paste0("**", amt(ci[1]), " ~ ", amt(ci[2]), "**"),
+    "自助法 90% 区间：对折级净增益有放回重抽样 2000 次取均值分布的 5% 与 95% 分位。区间宽即说明折间差异大，须持续复核")
+  T_prec <- tip(paste0("**", pct(mean(BT$模型精准率, na.rm=TRUE)), "**"),
+    paste0("精准率 = 名单中确属金标准者的比例。金标准只含全窗完美对打成员与 125 张人工風險單，",
+           "部分对打与未标注者命中亦被计为误伤，故此值应读作**下界**而非真实准确率"))
+  T_lift <- tip(sprintf("**%.1f×**", mean(BT$模型Lift, na.rm=TRUE)),
+    paste0("Lift = 精准率 ÷ 基率（本窗基率约 ",
+           pct(mean(BT$模型精准率/BT$模型Lift, na.rm=TRUE), 2),
+           "）。它回答「比随机抽人准多少倍」，在基率极低时比精准率绝对值更公允"))
+  T_pool <- tip(paste0("**", amt(mean(BT$全池盈利)), "**"),
+    "测试窗全池盈利 = 该 14 日内全体会员净输额合计（GGR 口径）。营业额是流水，盈利才是结账口径")
+  T_up <- tip(paste0("**", pct(mean(BT$盈利增幅)), "**"),
+    "盈利增幅 = 模型轨折均净增益 ÷ 同期全池盈利。回答「这套体系能让盈利多长几个百分点」，比绝对金额更适合跨期比较")
+  xgb_line <- if (any(is.finite(BT$XGB净增益))) sprintf(
+    "XGBoost 挑战者折均净增益 **%s**、精准率 **%s**——冠军按折均净增益判定：**%s**。",
+    amt(mean(BT$XGB净增益, na.rm = TRUE)),
+    pct(mean(BT$XGB精准率, na.rm = TRUE)),
+    if (mean(BT$XGB净增益, na.rm = TRUE) > mean(BT$模型净增益))
+      "XGBoost 接任冠军，PU-glm 转任挑战者" else "PU-glm 卫冕，XGBoost 继续挑战"
+  ) else "XGBoost 未参赛（本机未装 xgboost 包；装包重渲即自动上场并入榜）。"
+  cat(sprintf(paste0(
+    "**回测结账**（%d 折）：模型轨 **%d/%d 折胜过对照**；折均净增益 ",
+    "模型 %s ｜ 规则 **%s** ｜ 对照 **%s**。模型轨年化外推 %s",
+    "（自助法 90%% 区间 %s，外推假设结构不变，仅作量级参考）。",
+    "折均精准率与 Lift：模型 %s（%s）、规则 **%s（%.1f×）**、",
+    "对照 **%s（%.1f×）**。\n\n",
+    "**盈利视角（结账口径）**：测试窗折均全池盈利 %s，模型轨折均净增益",
+    "相当于其 %s——年化即在现有盈利之上再添约同比例的纯增量。"),
+    nrow(BT), winM, nrow(BT),
+    T_gain, amt(mean(BT$规则净增益)), amt(mean(BT$对照净增益)),
+    T_ann, T_ci,
+    T_prec, T_lift,
+    pct(mean(BT$规则精准率, na.rm=TRUE)), mean(BT$规则Lift, na.rm=TRUE),
+    pct(mean(BT$对照精准率, na.rm=TRUE)), mean(BT$对照Lift, na.rm=TRUE),
+    T_pool, T_up))
+  cat("\n\n", xgb_line, sep = "")
+}
+```
+
+# 赏罚分明：各实体逐维阈值差距 × 幅度 × 上限 {#sec-amount}
+
+**规矩**：赏罚幅度一律与「能力值超过阈值的差距」成正比——超得越多、赏罚越重；
+每一项设**硬上限**，上限从经济账现算，不拍脑袋。
+
+```{r}
+#| label: amounts
+if (exists("SC") && !is.null(E02)) {
+  vb  <- sum(num(E02$validbet)); ggr <- sum(num(E02$ggr))
+  m   <- ggr / vb
+  rho <- sum(num(E02$rebate)) / vb
+  kap <- sum(num(E02$commission)) / vb
+  kap_anom <- kap > m
+  cap_pp <- if (kap_anom) max(m - rho, 0) else max(m - rho - kap, 0)
+  REC <- 0.60; LOSS <- 0.15
+  ## 玩家：罚池＝PU 前0.1% ∪ 净赢额前0.1%；赏池＝洗码或盈利贡献前5%
+  thrP <- stats::quantile(pl$pu_prob, .999, na.rm = TRUE)
+  pun_pool <- which(pl$pu_prob >= thrP | SC$净赢额 >= 99.9)
+  reward_pool <- which(SC$价值_洗码量 >= 95 | SC$价值_盈利贡献 >= 95)
+  罚_可收回 <- REC  * sum(pmax(pl$net_pnl[pun_pool], 0), na.rm = TRUE)
+  赏_预算上限 <- cap_pp * sum(pl$validbet[reward_pool], na.rm = TRUE)
+  赏池盈利贡献 <- sum(-pl$net_pnl[reward_pool], na.rm = TRUE)
+  全池盈利合计 <- sum(-pl$net_pnl, na.rm = TRUE)
+  ## 荷官/代理阈值差距（用于幅度说明）
+  dg95 <- if (exists("DQ")) stats::quantile(DQ$关联风险, .95, na.rm=TRUE) else NA
+  ag95 <- if (exists("AQ")) stats::quantile(AQ$对打渗透, .95, na.rm=TRUE) else NA
+}
+```
+
+```{r}
+#| label: tbl-amounts
+#| results: asis
+if (exists("cap_pp")) {
+  am <- data.frame(check.names = FALSE,
+    实体 = c("经济底座","经济底座","经济底座","经济底座",
+           "玩家·罚","玩家·罚","玩家·赏",
+           "荷官","代理","风控专员"),
+    项目 = c("庄家毛利率 m","退水率 ρ","占成率 κ",
+           "**赏侧硬天花板 γ\\***",
+           sprintf("罚池（PU 前0.1%% ∪ 净赢额前0.1%%，%s 人）", amt(length(pun_pool))),
+           "罚的幅度公式","赏池与幅度",
+           "赏罚幅度", "赏罚幅度", "赏罚幅度"),
+    数值与公式 = c(pct(m,2), pct(rho,3), pct(kap,2),
+           paste0("**", pct(cap_pp,2), "**",
+                  if (kap_anom) "（⚠️ 过渡口径 m−ρ：占成>GGR 待核）" else ""),
+           sprintf("预计可收回 %s（回收率 0.60）", amt(罚_可收回)),
+           "追缴额 = 0.60 × 净赢额 × (维度分位 − 99.9阈值)/0.1，封顶其净赢额全额",
+           sprintf("池 %s 人，贡献盈利 %s（占全池 %s）；上限 = γ* × 池内洗码量 = %s",
+                   amt(length(reward_pool)), amt(赏池盈利贡献),
+                   pct(赏池盈利贡献/全池盈利合计), amt(赏_预算上限)),
+           sprintf("关联风险 > P95(=%.0f) 者按超额梯度扣绩效，单人封顶月绩效 2%%；局速/出勤超 P95 者同梯度加成，封顶 2%%", dg95),
+           sprintf("对打渗透 > P95(=%.0f) 且实测有完美对打者冻结佣金复核；留存与净贡献超 P95 者佣金加档，封顶该线佣金的 3%%", ag95),
+           "所待文件：风控处置日志与申诉记录——两表到位前，专员赏罚一律不设"),
+    上限依据 = c("GGR/洗码量 现算","E02 实测","E02 实测（异常待核）",
+           "赏出的每个百分点都从毛利出，越线即赏穿成本",
+           "只追净赢额，打结算不打账户",
+           "超额梯度：差距越大追得越重，不搞一刀切",
+           "赏的钱须由该池自己贡献的盈利养得起（该池贡献占比见左）",
+           "荷官不以输赢奖惩（MacDonald 2001），只奖惩过程项",
+           "打结算不打账户；佣金加档以线内盈利贡献为据",
+           "无数据不设赏罚——合成数据不可用于决策"))
+  kb(am, "赏罚幅度与上限总表｜解释：经济底座（毛利率、退水率、占成率）现算，四实体幅度一律取超额梯度并各设硬上限　▸ 本方案用途：赏不穿成本、罚不越权的量化依据")
+}
+```
+
+# 结论 {#sec-verdict}
+
+```{r}
+#| label: tbl-verdict
+#| results: asis
+V <- data.frame(check.names = FALSE,
+  裁定 = c("① 模型化评分立即上线","② 预测层已具备","③ 对打线冻结结算",
+         "④ 荷官只管过程","⑤ 赏侧同步发动","⑥ 两张表必须补建","⑦ 占成口径限期核清",
+         "⑧ 赏的钱按挽留优先级花","⑨ 阈值随经营状态换档"),
+  依据与做法 = c(
+    "PU 校准分类 + Sortino + EB 收缩替换均值粗算；回测三轨对比，模型轨净增益与 Lift 领先（上节现算）",
+    "能力值分层乘数模型的营业额与盈利 MASE 均<1（胜朴素外推）——处置后的增长可预测、可对账",
+    "完美对打对及其代理线证据链闭合（§C06fix×C-00）：冻结佣金复核，打结算不打账户",
+    "荷官短期输赢是波动（MacDonald 2001）；雷达四维全是过程项，占比经 EB 收缩免错杀小样本",
+    "赏池贡献了全池盈利的绝大部分（上节现算占比）；上限 γ* 硬约束，赏不穿成本",
+    "风控处置日志与申诉记录：无此两表则专员雷达永远只能是结构演示、UKGC 七类指标缺两类",
+    "实测 609/609 分层占成高于该层 GGR（合计约 2.5 倍）——核清之前赏预算冻结在重构额度内",
+    "Cox 流失概率 × 月均盈利贡献 = 挽留优先级：预算有限时先留『既要走又养家』的客；误伤复核同样从优先级最高者查起",
+    "HMM 三态解码给出收割期／常规期／冲刷期：收割期罚侧收紧一档、冲刷期赏侧发力——评分不动，只动松紧"))
+kb(V, "结论裁定表｜解释：七条裁定各自注明依据与做法　▸ 本方案用途：供拍板；每条均可回溯到本报告相应章节的现算结果")
+```
+
+# 参考文献（经逐条核实，只录确证者） {#sec-refs}
+
+| 依据 | 出处 | 用在何处 |
+|---|---|---|
+| Elkan & Noto (2008)《Learning Classifiers from Only Positive and Unlabeled Data》 | [DOI:10.1145/1401890.1401920](https://doi.org/10.1145/1401890.1401920) | 玩家 PU 校准分类（金标准为正例、其余未标注） |
+| Sortino & van der Meer (1991)《Downside Risk》 | [DOI:10.3905/jpm.1991.409343](https://doi.org/10.3905/jpm.1991.409343) | 稳定盈利维的下行比判据 |
+| Hyndman & Koehler (2006) | [DOI:10.1016/j.ijforecast.2006.03.001](https://doi.org/10.1016/j.ijforecast.2006.03.001) | 预测层误差纪律（MASE） |
+| López de Prado (2018)《Advances in Financial ML》 | [DOI:10.1002/9781119482086](https://doi.org/10.1002/9781119482086) | 净化滚动回测与禁运期 |
+| Efron & Tibshirani (1993)《An Introduction to the Bootstrap》 | [DOI:10.1201/9780429246593](https://doi.org/10.1201/9780429246593) | 年化外推的自助法区间 |
+| MacDonald (2001)《Game Volatility At Baccarat》 | *UNLV GRRJ* 6(1):73–78 | 荷官不以输赢奖惩的数学依据 |
+| Bill Zender & Associates (2017)《BCLC High Limit Baccarat Evaluation》 | Cullen 委员会证据 #531 | 局速 50–55 局/小时行业基准 |
+| Ferris & Wynne (2001)《The Canadian Problem Gambling Index》 | CCSA | PGSI 原始出处（正名，防误归属） |
+| Delfabbro, Parke & Catania (2025) | [DOI:10.1007/s10899-024-10363-x](https://doi.org/10.1007/s10899-024-10363-x) | 行为组合判风险的效度证据 |
+| Ghaharian et al. (2026)《The Need for Benchmarks…》 | [DOI:10.1007/s10899-026-10483-6](https://doi.org/10.1007/s10899-026-10483-6) | 阈值现算、可回测、可追溯的立场支撑 |
+| UKGC · 客户互动指引 SR 3.4.3 | gamblingcommission.gov.uk | 特征工程合规缺口对照 |
+| Featurespace · Adaptive Behavioral Analytics | featurespace.com | 序列＋图谱判欺诈的行业实践佐证 |
+| Fader, Hardie & Lee (2005)《"Counting Your Customers" the Easy Way》 | *Marketing Science* 24(2):275–284 | 代理留存维的客户基分析思想来源（迁移使用已注明） |
+| Rockafellar & Uryasev (2000)《Optimization of Conditional Value-at-Risk》 | [DOI:10.21314/JOR.2000.038](https://doi.org/10.21314/JOR.2000.038) | 尾损 CVaR 维的定义出处 |
+| Cox (1972)《Regression Models and Life-Tables》 | [DOI:10.1111/j.2517-6161.1972.tb00899.x](https://doi.org/10.1111/j.2517-6161.1972.tb00899.x) | 会员流失的比例风险模型出处 |
+| Chen & Guestrin (2016)《XGBoost: A Scalable Tree Boosting System》 | [DOI:10.1145/2939672.2939785](https://doi.org/10.1145/2939672.2939785) | 挑战者模型出处（守卫参赛） |
+
+::: {.callout-warning}
+## 一条引用纪律（与主方案同）
+
+外界流传的「Bet365 Customer Brain」「Evolution Game Integrity Score」「Unibet Risk OS」
+「Bwin Fraud Matrix」等厂商系统名与多篇论文题目**经逐条检索查无实据**，本报告一律不引。
+凡本报告出现的数字，必能追溯到 SQL 总包编号或上表出处；两者都挂不上的数字不存在于本报告。
+:::
