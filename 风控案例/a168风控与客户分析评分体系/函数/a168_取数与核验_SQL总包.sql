@@ -4722,9 +4722,16 @@ ORDER BY n_agent DESC
 LIMIT 40;
 -- 读法：档位若集中于 94~96 数档 → 系「代理留成率」（代理拿走的比例）；
 --       若集中于 4~6 数档 → 系「平台留成率」，二者互为补数，须辨明方向。
---   ★ 方向之辨至关紧要：若 ag012=95 意为「代理拿 95%」，则 κ = 0.95×m；
---     若意为「平台拿 95%」，则 κ = 0.05×m —— 两者相差二十倍，
---     须以 §EX-17a3 用一条线的实际 GGR 与其代理入账对账定夺。
+--   ★ 方向之辨至关紧要（2026-08-10 依先生指正更正措辞）：
+--     · 若 ag012=95 记的是**代理的份额** → 代理拿 95%、**平台仅拿 5%** → κ = 0.95×m；
+--     · 若 ag012=95 记的是**平台的份额** → 代理只拿 5%、**平台拿 95%** → κ = 0.05×m。
+--     两者相差二十倍且正负异号，须实证定夺。
+--   ★★ 【已定案】§EX-19b 层级单调性检验（14,112 对父子）实测：
+--       上级 > 下级 61.64%、上级 = 下级 38.30%、**上级 < 下级仅 0.06%**
+--       —— 非降序达 99.94%，即**严格的逐级不增**，正是「逐级抽成」之形。
+--       故 **ag012 记的是「代理留成率」：上游先抽，下游只得其余**。
+--       κ = ag012 × m ⇒ 以下级均值 86.53% 计，κ = 1.6596%，
+--       γ* = m − ρ − κ = 1.918% − 0.349% − 1.660% = **−0.091%** ⇒ 赏侧须锁死。
 
 -- ▸ 导出：需要 —— 存为「数据库/EV02_member_disposal.csv」（§EX-17b 会员级处置事件表·全窗）。
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -4790,3 +4797,312 @@ ORDER BY lmc09;
    ★ 量级预期：三日 199 笔，全窗（139 日）约 9,200 笔，
      其中会员级处置（限额/停用/状态）约占四成。
      仍属小样本，一切结论须配 Wilson 或 Jeffreys 区间。 */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §EX-18 · 占成方向对账 —— 占成之案的最后一关
+   ---------------------------------------------------------------------------
+   §EX-17a/17a2 实测已确证两事，先记明：
+
+   ★ 同源确证：agent_dtl.ag012 在 gid=101 上，非零者 32,456 行（覆盖 71.1%），
+     高档 89~100 占非零者 **76.5%**，众数 94／96／95
+     —— 与 dailyreport 的 bet23~27 实测均值 96.07／96.03／95.71 **完全吻合**。
+     故 bet23~27 即 ag012 的逐日镜像；其「与金额基数无关」正是理所当然。
+
+   ★ 方向两案（2026-08-10 依先生指正更正措辞）：
+       · 若 ag012=95 记的是**代理的份额** → 代理拿 95%、**平台仅拿 5%**
+         → κ = 0.95×m = 1.8221% → γ* = m − ρ − κ = **−0.253%**（赏侧须锁死）
+       · 若 ag012=95 记的是**平台的份额** → 代理只拿 5%、**平台拿 95%**
+         → κ = 0.05×m = 0.0959% → γ* = **+1.473%**（赏侧宽裕）
+     **一字之差，正负异号**。信用盘两种写法皆有，不可凭常识断，须以实证定夺。
+   ★★ 【已定案·见 §EX-19b】层级单调性检验判为**代理留成率**（前一案），
+       γ* 为负，**赏侧锁死**。本节 §EX-18b/18c 的对账已无须再跑
+       （且 §EX-19c 实测 lacc03 无一能在代理主档找到，对账之路本已断绝）。
+
+   ★ 另两处待解，一并纳入本条：
+       · ag012 = 0 者占 28.9%（13,212 行）—— 是「无配置」还是「零占成」？
+       · ag003 均值 0.347 —— 是否为退水率？若是，ρ 亦有着落，γ* 可完整算出。
+
+   ─── 对账之法（本条的核心逻辑）────────────────────────────────────────
+     取若干条 ag012 已知的代理线，两侧各算一数：
+       左：该线线下会员在窗内的实际 GGR（自 dailyreport 按 lv3 归线聚合）
+       右：该线代理账号在 log_age_cash_change 中的入账合计（正值部分）
+     再看比值落在哪一侧：
+       入账 ÷ 线GGR ≈ ag012/100（约 0.95）  → **代理拿 95%**，κ = 0.95×m
+       入账 ÷ 线GGR ≈ 1 − ag012/100（约 0.05）→ **平台拿 95%**，κ = 0.05×m
+   ★ 本条是 §EX 系列首次动用 JOIN；为控成本，只取入账最多的二十条线作样本，
+     且两侧皆限三日窗。样本虽小，方向之辨只需量级，不需精度。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+-- ▸ 导出：不需要 —— §EX-18a ag012 = 0 之辨（无配置抑或零占成），屏幕看结果。
+--   ★ 判据：若 ag012=0 的代理其线下确有投注（可在 I 侧找到会员），
+--     则「零占成」成立（该线不分成）；若其线下几无会员，则属「无配置」的空壳线。
+SELECT
+  CASE WHEN CAST(NULLIF(TRIM(ag012),'') AS DECIMAL(10,4)) > 0
+       THEN 'has_rate' ELSE 'zero_rate' END                          AS grp,
+  COUNT(*)                                                           AS n_rows,
+  COUNT(DISTINCT ag001)                                              AS n_agent,
+  AVG(CAST(NULLIF(TRIM(ag003),'') AS DECIMAL(10,4)))                 AS avg_ag003,
+  SUM(CASE WHEN CAST(NULLIF(TRIM(ag003),'') AS DECIMAL(10,4)) > 0
+           THEN 1 ELSE 0 END)                                        AS n_ag003_pos,
+  MIN(CAST(NULLIF(TRIM(ag003),'') AS DECIMAL(10,4)))                 AS min_ag003,
+  MAX(CAST(NULLIF(TRIM(ag003),'') AS DECIMAL(10,4)))                 AS max_ag003
+FROM ods_mariadb_2b.ods_a168_agent_dtl
+WHERE CAST(NULLIF(TRIM(ag002),'') AS INT) = 101
+GROUP BY CASE WHEN CAST(NULLIF(TRIM(ag012),'') AS DECIMAL(10,4)) > 0
+              THEN 'has_rate' ELSE 'zero_rate' END;
+-- 读法：
+--   · ag003 若在 has_rate 组内呈 0.3~1.2 的分布 → 系**退水率**，ρ 有了着落；
+--   · 若 ag003 恒为 0 或与 ag012 互补（如 ag012+ag003=100）→ 系分成的另一侧，
+--     此时 ag012 与 ag003 的和即全额，方向可由此直接判定，不必再对账。
+
+-- ▸ 导出：不需要 —— §EX-18b 代理线 GGR（对账左侧：线下会员实际赢利），屏幕看结果。
+--   ★ 以 lv3 归线（与 §S-03 同键），三日窗，取 GGR 最大的二十条线。
+SELECT bet20                                                         AS lv3,
+       COUNT(DISTINCT bet05)                                         AS n_member,
+       SUM((CAST(NULLIF(TRIM(bet13),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(bet14),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(bet11),'') AS DECIMAL(20,8)))          AS line_ggr,
+       SUM(CAST(NULLIF(TRIM(bet41),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(bet11),'') AS DECIMAL(20,8)))          AS line_validbet
+FROM ods_mariadb_2b.ods_a168_dailyreport_member
+WHERE dt >= '2026-08-04' AND dt < '2026-08-07'
+  AND bet02 = '101' AND category = '1'
+  AND CAST(NULLIF(TRIM(bet11),'') AS DECIMAL(20,8)) > 0
+  AND NULLIF(TRIM(bet20),'') IS NOT NULL
+GROUP BY bet20
+ORDER BY line_ggr DESC
+LIMIT 20;
+-- 读法：把 lv3 与 line_ggr 两列抄下，与 §EX-18c 的入账按 lv3 对齐相除。
+--   ★ 若 dailyreport 无 bet20 列（代理层级列名或不同），改用 §S-03 所用的归线列；
+--     报错即说明列名有异，须先以 §EX-00 核对该表的代理层级列。
+
+-- ▸ 导出：不需要 —— §EX-18c 代理入账（对账右侧：资金流水中的正向入账），屏幕看结果。
+--   ★ 以 lacc03 为代理账号（§EX-16a 实测其取值 67,779 种，量级与代理数相当）。
+--     只计正值（入账），三日窗，取入账最多的二十个账号。
+SELECT lacc03                                                        AS agent_ref,
+       COUNT(*)                                                      AS n_tx,
+       SUM(CASE WHEN CAST(NULLIF(TRIM(lacc06),'') AS DECIMAL(20,4)) > 0
+                THEN CAST(NULLIF(TRIM(lacc06),'') AS DECIMAL(20,4))
+                ELSE 0 END)                                          AS sum_in,
+       SUM(CASE WHEN CAST(NULLIF(TRIM(lacc06),'') AS DECIMAL(20,4)) < 0
+                THEN -CAST(NULLIF(TRIM(lacc06),'') AS DECIMAL(20,4))
+                ELSE 0 END)                                          AS sum_out,
+       SUM(CAST(NULLIF(TRIM(lacc06),'') AS DECIMAL(20,4)))           AS sum_net
+FROM ods_mariadb_2b.ods_a168_log_age_cash_change
+WHERE dt >= '2026-08-04' AND dt < '2026-08-07'
+  AND lacc02 = '7' AND lacc04 = '0'          -- 主类，占 99.8% 行数
+GROUP BY lacc03
+ORDER BY sum_in DESC
+LIMIT 20;
+-- 读法：与 §EX-18b 的 lv3 逐一对齐（若编号体系一致），算比值 sum_in ÷ line_ggr：
+--   · 比值 ≈ 0.95（即 ag012/100）      → **代理拿 95%**，κ = 0.95×m，γ* ≈ +0.10%
+--   · 比值 ≈ 0.05（即 1 − ag012/100）  → **平台拿 95%**，κ = 0.05×m，γ* ≈ +1.82%
+--   · 比值远大于 1                      → sum_in 含充值转账，非纯占成，
+--                                          须再按 lacc05（30 种）细分后重对
+--   ★ 若两侧编号体系不通（lacc03 非 lv3 编号），则本路不通，
+--     占成即判**不可得**，γ* 锁死在保守口径 m − ρ，赏侧不设金额层。
+
+-- ▸ 导出：不需要 —— §EX-18d 编号体系连通性预检（先看两侧编号能否对上），屏幕看结果。
+--   ★ 本条应**先于** §EX-18b/18c 跑：若编号体系不通，后两条即无须再跑。
+SELECT
+  (SELECT COUNT(DISTINCT bet20)
+   FROM ods_mariadb_2b.ods_a168_dailyreport_member
+   WHERE dt >= '2026-08-04' AND dt < '2026-08-07'
+     AND bet02 = '101' AND NULLIF(TRIM(bet20),'') IS NOT NULL)        AS d_lv3_in_report,
+  (SELECT COUNT(DISTINCT lacc03)
+   FROM ods_mariadb_2b.ods_a168_log_age_cash_change
+   WHERE dt >= '2026-08-04' AND dt < '2026-08-07')                    AS d_agent_in_cash,
+  (SELECT COUNT(DISTINCT ag001)
+   FROM ods_mariadb_2b.ods_a168_agent_dtl
+   WHERE CAST(NULLIF(TRIM(ag002),'') AS INT) = 101)                   AS d_agent_in_dtl,
+  (SELECT COUNT(DISTINCT age001)
+   FROM ods_mariadb_2b.ods_a168_agent)                                AS d_agent_master;
+-- 读法：四个数若量级相当（皆数万），则编号体系很可能同源，可续跑 18b/18c；
+--   若 d_lv3_in_report 仅数百而其余数万，说明 lv3 只是层级中的一级，
+--   须改以 agent 主档的 age007~age010（上级链）把 lv3 映射到实际收款账号后再对。
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §EX-19 · 占成方向的旁证之法（对账不通后的替代路径）
+   ---------------------------------------------------------------------------
+   §EX-18 实测两获，先记明：
+
+   ★ 获一：**ag003 确系退水率，ρ 首次有了实测来源**
+     两组（有占成率/零占成率）的 ag003 均值几乎相同（0.3418 vs 0.3491），
+     范围 0~1.5，**与 ag012 不互补**（若互补应为 100−ag012），
+     且恰落在信用盘退水惯例 0.3~1.2% 之内。
+     故 ag003 = 退水率，量纲为百分数（1.5 表 1.5%），ρ ≈ 0.349%。
+     ——本方案原用 E02 旧版的 ρ ≈ 0，自此有据可依。
+
+   ★ 获二：**编号落差显形，直接对账不可行**
+       dailyreport.bet20（lv3）        294 种
+       agent_dtl.ag001             44,417 种
+       agent 主档 age001            46,284 种
+       log_age_cash_change.lacc03  67,853 种
+     lv3 仅 294 种而其余四万至六万，**相差两个数量级**
+     ⇒ lv3 是层级中的一级（总代理／大股东级），**不是收款账号**；
+       lacc03 的 67,853 甚至多于代理主档，其中或混有会员账号。
+     故 §EX-18b/18c 的直接对账须搁置，改走本节旁证。
+
+   ★★ 方向两案（2026-08-10 依先生指正更正措辞）：
+       · 若 ag012=95 记的是**代理的份额** → 代理拿 95%、**平台仅拿 5%**
+         → κ = 0.95×m = 1.8221% → γ* = m − ρ − κ = **−0.2532%** ⛔ 赏侧须锁死
+       · 若 ag012=95 记的是**平台的份额** → 代理只拿 5%、**平台拿 95%**
+         → κ = 0.05×m = 0.0959% → γ* = **+1.4730%** ✅ 赏侧宽裕
+     两案**正负异号**，一边是赏侧永久关闭、一边是宽裕可发，此结不解不可落笔。
+
+   ─── 旁证之法（本节核心逻辑）────────────────────────────────────────
+     不必动用资金流水，只用 agent 主档的上级链与 agent_dtl 的配置率：
+       · 若 ag012 记的是**代理留成率**，则同一条线内**上级的 ag012 应大于下级**
+         （逐级抽成，上游先抽、下游只得其余，故自上而下递减或至少不增）；
+       · 若记的是**平台留成率**，则各级面对的都是同一个平台，
+         其值与层级深浅**无单调关系**（甚至下级更高，因下级议价力弱）。
+     此查只需两张表，成本远低于对账。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+-- ▸ 导出：不需要 —— §EX-19a agent 主档层级结构验货（打通编号的钥匙），屏幕看结果。
+--   ★ 先看主档有哪些层级列、各级代理数分布，方能判定上级链如何构成。
+SELECT
+  COUNT(*)                                                            AS n_rows,
+  COUNT(DISTINCT age001)                                              AS d_age001,
+  COUNT(DISTINCT age007)                                              AS d_age007,
+  COUNT(DISTINCT age008)                                              AS d_age008,
+  COUNT(DISTINCT age009)                                              AS d_age009,
+  COUNT(DISTINCT age010)                                              AS d_age010,
+  SUM(CASE WHEN NULLIF(TRIM(age007),'') IS NULL THEN 1 ELSE 0 END)    AS n_null007,
+  SUM(CASE WHEN NULLIF(TRIM(age008),'') IS NULL THEN 1 ELSE 0 END)    AS n_null008,
+  SUM(CASE WHEN NULLIF(TRIM(age009),'') IS NULL THEN 1 ELSE 0 END)    AS n_null009,
+  SUM(CASE WHEN NULLIF(TRIM(age010),'') IS NULL THEN 1 ELSE 0 END)    AS n_null010
+FROM ods_mariadb_2b.ods_a168_agent;
+-- 读法：
+--   · 若 d_age007 ≈ 294（与 lv3 同数）→ age007 即 lv3 所在的那一级，编号由此打通；
+--   · 各级的 NULL 数逐级递增 → 上级链自浅至深，NULL 表示该级不存在（层级未满五级）；
+--   · 若四列的 distinct 数皆为个位数或全 NULL，说明层级不记在 age007~010，
+--     须改以 §EX-19a2 全列扫描另寻。
+
+-- ▸ 导出：不需要 —— §EX-19a2 agent 主档全列名（若 19a 判为不在 age007~010 时用），屏幕看结果。
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'ods_mariadb_2b'
+  AND table_name = 'ods_a168_agent'
+ORDER BY ordinal_position;
+-- 读法：找出层级／上级／父级一类的列（常见命名：parent、pid、upline、level、path），
+--       以及与 bet18~22（LV1~LV5 代理 ID）可对齐的那一列。
+
+-- ▸ 导出：不需要 —— §EX-19b 占成率的层级单调性检验（★ 方向判定的关键一条），屏幕看结果。
+--   ★ 判据（本条的全部意义所在）：
+--     · 上级 ag012 **系统性大于**下级（差值均值显著为正、上>下的比例远超五成）
+--         → ag012 记的是**代理留成率**（逐级抽成，上游先抽）
+--         → 代理拿 95%、平台仅拿 5% → κ = 0.95×m → γ* 为负，**赏侧锁死**；
+--     · 无单调关系（差值均值近零、上>下的比例约五成）或下级反高
+--         → ag012 记的是**平台留成率**（各级面对同一平台，与层级无关）
+--         → 代理只拿 5%、平台拿 95% → κ = 0.05×m → γ* 转正，**赏侧可解冻**。
+--   ★ 以 age007 为上级键作自连接；若 §EX-19a 判定上级列另有其名，把 age007 替换即可。
+WITH d AS (            -- 百家乐占成率，一代理一行（同代理多行者取其最大，避免重复）
+  SELECT ag001                                              AS agent_id,
+         MAX(CAST(NULLIF(TRIM(ag012),'') AS DECIMAL(10,4))) AS rate
+  FROM ods_mariadb_2b.ods_a168_agent_dtl
+  WHERE CAST(NULLIF(TRIM(ag002),'') AS INT) = 101
+    AND CAST(NULLIF(TRIM(ag012),'') AS DECIMAL(10,4)) > 0
+  GROUP BY ag001
+),
+p AS (                 -- 上级链：子 → 父
+  SELECT age001 AS child_id, age007 AS parent_id
+  FROM ods_mariadb_2b.ods_a168_agent
+  WHERE NULLIF(TRIM(age007),'') IS NOT NULL
+)
+SELECT
+  COUNT(*)                                                            AS n_pairs,
+  AVG(dp.rate - dc.rate)                                              AS avg_parent_minus_child,
+  AVG(CASE WHEN dp.rate > dc.rate THEN 1.0 ELSE 0.0 END)              AS share_parent_gt_child,
+  AVG(CASE WHEN dp.rate < dc.rate THEN 1.0 ELSE 0.0 END)              AS share_parent_lt_child,
+  AVG(CASE WHEN dp.rate = dc.rate THEN 1.0 ELSE 0.0 END)              AS share_equal,
+  AVG(dc.rate)                                                        AS avg_child_rate,
+  AVG(dp.rate)                                                        AS avg_parent_rate,
+  MIN(dp.rate - dc.rate)                                              AS min_diff,
+  MAX(dp.rate - dc.rate)                                              AS max_diff
+FROM p
+JOIN d dc ON dc.agent_id = p.child_id
+JOIN d dp ON dp.agent_id = p.parent_id;
+-- 读法（照上方判据对号入座）：
+--   share_parent_gt_child 若 ≥ 0.80 且 avg_parent_minus_child 显著为正
+--     → **代理留成率**，γ* 为负，赏侧锁死；
+--   share_parent_gt_child 若约 0.50 且 avg 近零
+--     → **平台留成率**，γ* 转正，赏侧可解冻；
+--   n_pairs 若过小（不足数百），样本不足以判，须放宽至全部游戏类别再跑。
+
+-- ▸ 导出：不需要 —— §EX-19c lacc03 实体性质普查（判资金流水表以谁为主体），屏幕看结果。
+--   ★ 承 §EX-18d：lacc03 有 67,853 种，多于代理主档的 46,284——其中或混有会员账号。
+--     本条以「能否在代理主档找到」分组，判该表究竟记代理还是记会员。
+SELECT CASE WHEN a.age001 IS NOT NULL THEN 'in_agent_master'
+            ELSE 'not_in_agent_master' END                            AS grp,
+       COUNT(*)                                                       AS n_tx,
+       COUNT(DISTINCT c.lacc03)                                       AS d_ref,
+       AVG(ABS(CAST(NULLIF(TRIM(c.lacc06),'') AS DECIMAL(20,4))))     AS abs_avg,
+       SUM(CASE WHEN CAST(NULLIF(TRIM(c.lacc06),'') AS DECIMAL(20,4)) > 0
+                THEN CAST(NULLIF(TRIM(c.lacc06),'') AS DECIMAL(20,4))
+                ELSE 0 END)                                           AS sum_in
+FROM ods_mariadb_2b.ods_a168_log_age_cash_change c
+LEFT JOIN ods_mariadb_2b.ods_a168_agent a
+  ON TRIM(a.age001) = TRIM(c.lacc03)
+WHERE c.dt >= '2026-08-04' AND c.dt < '2026-08-07'
+  AND c.lacc02 = '7' AND c.lacc04 = '0'
+GROUP BY CASE WHEN a.age001 IS NOT NULL THEN 'in_agent_master'
+              ELSE 'not_in_agent_master' END;
+-- 读法：
+--   · in_agent_master 占多数 → 本表确以代理为主体，对账之路尚存，
+--     可待编号打通后重启 §EX-18b/18c；
+--   · not_in_agent_master 占多数 → 本表主体非代理（或为会员上下分流水），
+--     对账之路即断，占成方向只能靠 §EX-19b 的旁证定夺。
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §EX-20 · 占成之案结案记录（2026-08-10）—— 本节不含查询，只作定案存照
+   ---------------------------------------------------------------------------
+   历经 §EX-06 / 10 / 12 / 15b / 16a / 17a / 18a / 18d / 19a / 19b / 19c
+   十一条探查，占成、退水与 γ* 三案俱已结账。谨记其始末与定论，
+   以免日后重启同一路径、重付同一代价。
+
+   ─── 一、占成率 κ：**已定案，取代理留成率口径** ────────────────────────
+   【料源】agent_dtl.ag012（按代理 × 游戏类别配置），dailyreport.bet23~27 系其逐日镜像。
+   【量纲】百分数（94 表 94%）；另有 0.05~0.94 共 92 行疑为小数比率，占非零者 0.3%，
+           采用时须比照 §E02c 作量纲判别。
+   【覆盖】gid=101 共 45,668 行，ag012 > 0 者 32,456 行（71.1%）。
+   【方向】**代理留成率**——§EX-19b 以 14,112 对父子作层级单调性检验：
+             上级 > 下级 61.64%、上级 = 下级 38.30%、**上级 < 下级仅 0.06%**，
+             非降序 99.94%，差值均值 +7.73 个百分点（下级均 86.53、上级均 94.26）
+           —— 严格的逐级不增，正是「上游先抽、下游只得其余」之形。
+   【取值】以**下级均值 86.53%** 为准（下级即直面会员那一级，其留成率乘 GGR
+           方为代理链自会员处分走的总额）。
+   【结论】κ = 0.8653 × m = 0.8653 × 1.918% = **1.6596%**
+
+   ─── 二、退水率 ρ：**已定案** ──────────────────────────────────────────
+   【料源】agent_dtl.ag003；§EX-18a 实测两组均值 0.3418 与 0.3491，范围 0~1.5，
+           与 ag012 不互补，恰落信用盘惯例 0.3~1.2% 之内。
+   【结论】ρ ≈ **0.349%**（未加权粗值）。
+   ★ 采用前须按洗码量加权重算——大线与小线的退水率不同，等权平均会失真。
+
+   ─── 三、赏侧天花板 γ*：**判为负，赏侧锁死** ──────────────────────────
+     γ* = m − ρ − κ = 1.918% − 0.349% − 1.660% = **−0.091%**
+   【释义】平台自会员处所得毛利（1.918%），扣去退水（0.349%）与代理占成（1.660%）后
+           **已无余额**，尚差 0.091 个百分点。故赏侧**没有可发放的经济空间**——
+           这不是「暂缓」，是**结构性的没有**。
+   【落地】本方案自此：
+             · 赏侧一律**不设金额层**，只保留过程性激励（授权、排序、绩效基线）；
+             · 罚侧不受影响，照常执行（追缴、冻结结算、限红降档、授权降档）；
+             · 报告中凡「赏预算」「γ* 天花板」「占成待核清」等表述，
+               一律改为「**占成实测已定，γ* 为负，赏侧无金额空间**」。
+   ★ 此结论若要推翻，只有两途：① 平台调降代理占成率；② 提高庄家毛利率 m。
+     二者皆属商务决策，非数据分析所能及。
+
+   ─── 四、已断绝的三条路（记明以免重走）────────────────────────────────
+     · dailyreport.bet23~32 —— 系配置镜像，与金额基数无关（§EX-12）；
+     · 代理占成配置表 —— 不存在，命中者皆为提现费率、汇率、佣金模式标记（§EX-06）；
+     · log_age_cash_change —— **主体不是代理**：§EX-19c 实测 314,132 笔中
+       lacc03 **无一** 能在 agent 主档找到，故其为会员上下分流水，
+       与代理占成无涉；对账之路彻底断绝。
+
+   ─── 五、尚未打通者（留待日后）──────────────────────────────────────
+     lv3 编号仍未打通：dailyreport.bet20 仅 294 种，而 agent 主档的四级上级链
+     age007~010 各有 692 / 1,664 / 4,220 / 7,912 种，无一为 294。
+     故 lv3 另有出处。此事不影响 γ* 的定案（κ 已由 ag012 直接得出），
+     但若日后要按线核算占成金额，仍须先解此结。
+   ═══════════════════════════════════════════════════════════════════════════ */
