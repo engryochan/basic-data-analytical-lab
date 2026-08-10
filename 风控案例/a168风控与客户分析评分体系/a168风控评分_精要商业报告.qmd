@@ -15,8 +15,6 @@ format:
     code-tools: true
     code-summary: "查看计算代码（全部数字由此现算）"
     toc-location: left
-    toc-expand: 3            # ★ 目录默认展开三级，避免看起来「只到 19.2」
-    df-print: paged
 execute:
   echo: false
   warning: false
@@ -33,6 +31,16 @@ body{background:
 h1,h2,h3{color:#7dffd4;}
 table{font-size:.9rem;}
 .callout{border-left-color:#22d3ee;}
+/* ★ 十六轮：长表滚动壳——表头吸顶，纵横皆可滚，不再撑破版心 */
+.tbl-scroll{overflow:auto;border:1px solid #1e3a52;border-radius:6px;
+            background:rgba(5,13,26,.35);margin:.6rem 0 1rem;}
+.tbl-scroll table{margin:0;width:100%;}
+.tbl-scroll thead th{position:sticky;top:0;z-index:3;
+            background:#0b1f33;color:#7dffd4;box-shadow:inset 0 -1px 0 #1e3a52;}
+.tbl-scroll caption{position:sticky;left:0;background:transparent;
+            text-align:left;padding:.45rem .6rem;color:#dff7ee;}
+table b{color:#7dffd4;font-weight:700;}
+table code{background:rgba(34,211,238,.12);padding:0 .25em;border-radius:3px;}
 </style>
 ```
 
@@ -172,12 +180,36 @@ cap_tip <- function(caption) {
     '" style="font-weight:600">ⓘ</span>'))
 }
 ## 统一出表：表题一律过 cap_tip
-kb <- function(x, caption = NULL, escape = TRUE) knitr::kable(u8df(x), format = "html",
-        escape = escape,
-        caption = if (is.null(caption)) NULL else cap_tip(caption))
+## ★ 十六轮两项斧正：
+##   ① **表内粗体**——`knitr::kable(format="html")` 不解析单元格内的 Markdown，
+##      故 `**先查玩家**` 会原样显示星号（先生实测截图为证）。今于 escape=FALSE 时
+##      把 `**…**` 转 `<b>`、`` `…` `` 转 `<code>`；因 tip() 已剥去属性内的星号与
+##      反引号，此转换绝不会误伤 data-tip 属性值。
+##   ② **长表滚动**——传 scroll=像素高度即套滚动壳，表头吸顶、纵横皆可滚。
+md_cell <- function(v) {
+  if (!is.character(v)) return(v)
+  v <- gsub("\\*\\*(.+?)\\*\\*", "<b>\\1</b>", v, perl = TRUE)
+  v <- gsub("`([^`]+)`", "<code>\\1</code>", v, perl = TRUE)
+  v
+}
+kb <- function(x, caption = NULL, escape = TRUE, scroll = NULL) {
+  d <- u8df(x)
+  if (isFALSE(escape)) {
+    for (j in seq_along(d)) d[[j]] <- md_cell(d[[j]])
+    names(d) <- md_cell(names(d))
+  }
+  out <- knitr::kable(d, format = "html", escape = escape,
+           caption = if (is.null(caption)) NULL else cap_tip(caption))
+  if (is.null(scroll)) return(out)
+  knitr::asis_output(paste0('<div class="tbl-scroll" style="max-height:',
+    scroll, 'px;">', paste(as.character(out), collapse = "\n"), '</div>'))
+}
 ## ★ 行内数字挂悬停：凡阈值与结账结果，一律以 tip() 包裹，
 ##   鼠标停留即见它是怎么算出来的、该怎么读。
 tip <- function(txt, why) {
+  ## ★ 十六轮：先剥 Markdown 记号（与 cap_tip 同规），免 ** 与反引号混入 data-tip
+  ##   属性值，令 kb() 的粗体转换误伤属性内文。
+  why <- gsub("[*`]", "", why)
   why <- gsub("&","&amp;",why,fixed=TRUE); why <- gsub("<","&lt;",why,fixed=TRUE)
   why <- gsub(">","&gt;",why,fixed=TRUE);  why <- gsub('"',"&quot;",why,fixed=TRUE)
   paste0('<span class="gl-tip" data-tip="', why, '">', txt, '</span>')
@@ -452,7 +484,8 @@ er_pie <- function(tag, title, rows, cols, note = "", height = 460) {
 '        + "投注额（洗码量）：" + f(d.value) + "<br/>"\n',
 '        + "盈利（GGR）：" + f(d.盈利) + "<br/>"\n',
 '        + "返水支出：" + f(d.返水) + "<br/>"\n',
-'        + "该层毛利率：" + (d.毛利率*100).toFixed(3) + "%"\n',
+'        + "该层级平台毛利率：" + (d.毛利率*100).toFixed(3)\n',
+'        + "%（平台从这一层每 1 元洗码量赚到的）"\n',
 '        + "<br/><span style=\\"opacity:.72\\">', note, '</span>";\n',
 '    }},\n',
 '  legend: {bottom: 2, textStyle: {color: "', PAL$fg, '", fontSize: 11}},\n',
@@ -550,7 +583,7 @@ er_ladder <- function(tag, title, rows, note = "", height = 380) {
   er_mount(er_id(tag), opt, height)
 }
 
-## ④ 直方图 + 门槛线：会员毛利率分布 × 净贡献门槛
+## ④ 直方图 + 门槛线：会员级平台毛利率分布 × 净贡献门槛
 er_hist <- function(tag, title, mids, cnt, thr, thr_lab, xlab, note = "",
                     height = 430) {
   opt <- paste0(
@@ -562,7 +595,7 @@ er_hist <- function(tag, title, mids, cnt, thr, thr_lab, xlab, note = "",
 '    backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
 '    textStyle: {color: "', PAL$fg, '", fontSize: 12},\n',
 '    formatter: function(ps){ var p = ps[0];\n',
-'      return "毛利率区间 " + p.name + "<br/>会员数："\n',
+'      return "平台毛利率区间 " + p.name + "（会员级 m_i）<br/>会员数："\n',
 '        + p.value.toLocaleString("en-US")\n',
 '        + "<br/><span style=\\"opacity:.72\\">', note, '</span>"; }},\n',
 '  xAxis: {type: "category", data: ', EJ(mids), ',\n',
@@ -808,15 +841,15 @@ GLOSSARY <- tibble::tribble(
   "登记跨度","风控专员维度","首次登记至最近登记的天数（§17.2 原式由两列派生）。","专员赏侧维——持续在岗贡献，而非一次性突击标注",
   "判定详尽度","风控专员维度","标注备注的平均字数。","专员赏侧维——判定理由是否可复核",
   "待表·置零","呈现纪律","缺数据的维度在雷达上一律以 0 呈现并在轴名注明「待表·置零」。","风控专员四个待表维的呈现方式（§17.2 成法）：无数据即零，绝不合成",
-  "净贡献门槛 2.59%","单位经济学","会员个人毛利率须高于 ρ/(1−κ_share)＝0.349%/(1−86.53%)＝2.59%，其流水方为平台净赚。","全案最要紧的一条算术线（@sec-unit）——低于此线者流水越大平台越亏；它同时解释了 γ* 为何为负：全平台平均毛利率 1.918% 本就在门槛之下",
-  "个人毛利率 m_i","单位经济学","该会员净输额 ÷ 其洗码量。","门槛图的横轴；m_i 为负即此人在赢平台的钱",
+  "净贡献门槛 2.59%","单位经济学","会员会员级平台毛利率须高于 ρ/(1−κ_share)＝0.349%/(1−86.53%)＝2.59%，其流水方为平台净赚。","全案最要紧的一条算术线（@sec-unit）——低于此线者流水越大平台越亏；它同时解释了 γ* 为何为负：全平台平均毛利率 1.918% 本就在门槛之下",
+  "会员级平台毛利率 m_i","单位经济学","**平台**自该会员所得 GGR ÷ 该会员洗码量。名为「会员级」是因按会员切分，赚这笔钱的仍是**平台**、不是会员。","门槛图的横轴；m_i 越高即平台从此人身上赚得越多，m_i 为负即此人在**赢平台的钱**。全篇「毛利」「毛利率」主语一律是平台，三个层级（全体 m／会员级 m_i／层级）只是聚合口径之别，分子分母定义完全一致（详见单位经济学章口径栏）",
   "决策模拟","证据纪律","在无处置日志的前提下，以回测折级结果推算「若当时照此处置，账面会如何」。","本报告一切赏罚金额结果的正确性质（§EX-01 已证无处置日志）——**不是已发生的现金，不得称已证 ROI**",
   "证据等级","证据纪律","样本外 → 处置落地 → 参数实测 → 口径核清 → 随机对照 → 前瞻验证，共六级。","对外引用任何金额前必须先报的位置（@sec-ladder）；本报告只达第①与第④级",
   "RelAE（组级）","预测评估","聚合层的相对绝对误差：|Σ实际−Σ预测| ÷ |Σ实际−Σ朴素|。","本报告十分位组与实体级所用者实为此量，非以样本内朴素 MAE 为尺的标准 MASE——二者在组内正负相消时可差出数量级，故自此分名",
   "秩持续性 Jaccard","预测评估","相邻两期高价值名单的重合度。","实测仅 0.02（以历史净贡献排名亦只 0.18）——故本方案是**群体分层工具，非个体挑选工具**；此约束只及赏侧与价值排序，不及罚侧证据链",
   "物理上限（自相关）","预测评估","同一个体相邻两期指标的自相关，是任何模型可解释部分的天花板。","个体毛利率两期自相关实测仅 0.112，当前模型 Spearman 0.20 已达其 189%——**换模型无用，换标的才有出路**",
   "能力值轨","回测轨道","以 §17.2 式折内综合分（只用训练窗现算）圈定罚池：罚侧四维（对打率·净赢额·IP切换·稳定赢强度）分位前 0.1% ∪ 净赢额前 0.1%。","本报告回测主轨；与 PU-glm 模型轨、旧规则轨、均值+3σ 对照轨四轨并跑，冠军以折均净增益判定",
-  "预算折减 δ_pred","赏罚定标","min(1, 1/盈利MASE折均)：预测胜过朴素外推即足额（δ=1），预测不如朴素即按比例收敛。","先生令「按预测误差定额度」的落地——预测不牢，赏罚就不敢给满；一切幅度公式统一乘此因子",
+  "预算折减 δ_pred","赏罚定标","min(1, 1/盈利RelMAE折均)：预测胜过朴素外推即足额（δ=1），预测不如朴素即按比例收敛。","先生令「按预测误差定额度」的落地——预测不牢，赏罚就不敢给满；一切幅度公式统一乘此因子",
   "赏罚后盈利比带","结账口径","上界＝罚侧净增益÷全池盈利（赏零发放）；下界＝再扣除赏池按 γ* 天花板足额发放的成本。","真实落点随发放率在带内移动；带体在零线上即最坏组合仍净赚——赏罚的钱由体系自己挣回",
   "发放率","赏罚定标","赏侧实际发放额占天花板（γ*×池内洗码量）的比例。","盈利比带上下界之间的滑动变量；实际档位由运营按月定，报告只保两端",
   "维度ROI","结账口径","某一维高分位组（≥P90）的盈利率相对全体盈利率的差值。","「各领域能力值带来的 ROI」的直接度量：正差在筛盈利、负差在筛风险，赏罚幅度按此账分维定",
@@ -1091,7 +1124,7 @@ inv <- data.frame(check.names = FALSE,
     if (!is.null(S04)) sprintf("%d 名专员", nrow(S04)) else "⬜ 所待：数据库/S04_analyst_score.csv（§S04p）",
     if (!is.null(C01)) sprintf("%s 个 IP", amt(nrow(C01))) else "⬜",
     if (!is.null(C08s)) sprintf("%s 个稀疏网段", amt(nrow(C08s))) else "⬜"))
-kb(inv, "本报告所用数据表清点｜解释：逐表列出 SQL 编号、行业正名与本次渲染实测规模　▸ 本方案用途：一切数字的出处在此登记，凡挂不上编号的数字不写进报告")
+kb(inv, "本报告所用数据表清点｜解释：逐表列出 SQL 编号、行业正名与本次渲染实测规模　▸ 本方案用途：一切数字的出处在此登记，凡挂不上编号的数字不写进报告", escape = FALSE, scroll = 460)
 }
 ```
 **读法**：本表是全篇数字的**料源清单**——每行一张表，注明行业正名、SQL 编号与实测规模。
@@ -1119,14 +1152,14 @@ if (!is.null(E02) && HAS$plotly) {
   vb_s <- sum(num(E02$validbet), na.rm = TRUE); gg_s <- sum(num(E02$ggr), na.rm = TRUE)
   e$洗码占比 <- e$validbet / pmax(vb_s, 1)
   e$GGR占比  <- e$ggr / pmax(gg_s, 1)
-  e$层毛利率 <- e$ggr / pmax(e$validbet, 1)
+  e$层级平台毛利率 <- e$ggr / pmax(e$validbet, 1)
   e$分层 <- factor(e$segment, levels = rev(e$segment))
   p <- plotly::plot_ly(e, y = ~分层, x = ~洗码占比, type = "bar",
         orientation = "h", name = "洗码量占比",
         marker = list(color = PAL$ac),
         hovertemplate = paste0("%{y}<br>洗码量占比 %{x:.2%}<br>",
           "GGR 占比 ", sapply(e$GGR占比, function(v) pct(v,2)),
-          "<br>层毛利率 ", sapply(e$层毛利率, function(v) pct(v,3)),
+          "<br>层级平台毛利率 ", sapply(e$层级平台毛利率, function(v) pct(v,3)),
           "<br>会员占比 ", sapply(e$n_member/pmax(sum(num(E02$n_member),na.rm=TRUE),1),
                                   function(v) pct(v,2)),
           "<br>（§EX-07：本表绝对额与 bet02 差 5.24 倍，故只取比率）<extra></extra>")) |>
@@ -1142,8 +1175,8 @@ if (!is.null(E02) && HAS$plotly) {
 ```
 **读法**：横轴是**占比**而非金额——`E02` 的绝对额与 `bet02` 实测相差 5.24 倍（§EX-07），
 故一律只读比率。两条柱一层一对：青条是该层占全平台洗码量之比，绿条是占全平台 GGR 之比。
-**青长绿短即该层「下注多、留钱少」**，其层毛利率必低于全体，须与门槛线 2.59% 对照（见 @sec-unit）；
-绿长青短则相反。悬停即见该层的洗码占比、GGR 占比、层毛利率与会员占比四项；
+**青长绿短即该层「下注多、留钱少」**，其层级平台毛利率必低于全体，须与门槛线 2.59% 对照（见 @sec-unit）；
+绿长青短则相反。悬停即见该层的洗码占比、GGR 占比、层级平台毛利率与会员占比四项；
 凡占成 > GGR 者以警色标出——此形态今已查明成因：`dailyreport` 的占成列系**配置百分比的逐日镜像**，非金额（§EX-12），故不可与 GGR 直接相比。真实占成率取自 `agent_dtl.ag012`，详见 @sec-verdict 第 ⑨ 条。
 
 
@@ -1509,7 +1542,7 @@ if (exists("GP")) {
     "洗码中位最高者名高值大客群、人数最多者名大众休闲群，余者低频边缘群；",
     "群盈亏＝该群会员净输额合计（GGR 口径，正数即平台赚），群盈亏率＝群盈亏÷群洗码量",
     "｜本方案用途：措施可以下到群体层——整群调采样率、整群定赏档，比逐人拍板省力且可审计；",
-    "盈亏列即各群「养不养家」的直接凭据"))
+    "盈亏列即各群「养不养家」的直接凭据"), escape = FALSE, scroll = 460)
 }
 ```
 **读法**：四行即四群。看两组数：**风险面**（对打率均值、金标准率）与**价值面**（洗码中位、
@@ -2053,7 +2086,7 @@ if (!is.null(SYM)) {
     "｜解释：罚侧维数为零即属豁免，本报告不允许任何实体豁免；",
     "「罚侧状态」须为「已生效」——**待表不得作为不罚的理由**，",
     "缺金额层时应以现有实测料源派生可核验的过程维，先立罚侧、再等金额层",
-    "｜本方案用途：常设看门人——日后任何一轮修订若削去某实体的罚侧，本表即刻显形"))
+    "｜本方案用途：常设看门人——日后任何一轮修订若削去某实体的罚侧，本表即刻显形"), escape = FALSE, scroll = 420)
 }
 ```
 
@@ -2127,7 +2160,7 @@ AR <- data.frame(check.names = FALSE,
 kb(AR, paste0("十四件军械在本报告的落位表",
   "｜解释：✅ 已跑＝本次渲染用真数据现算；🟡 守卫参赛＝装有对应 R 包即自动执行、",
   "缺包则如实降级并注明；⬜ 待包／待面板＝依赖未就绪，绝不以合成结果冒充",
-  "｜本方案用途：方法与问题一一对应，审计时每件军械都答得出「它为什么在这里」"))
+  "｜本方案用途：方法与问题一一对应，审计时每件军械都答得出「它为什么在这里」"), escape = FALSE, scroll = 520)
 ```
 **读法**：本表答「这十四件方法各自用在了哪」。左列是方法，右列是它在本报告的**落位**——
 落位为「内部量」者不直接出现在结论里，只参与罚池判定或特征构造；落位为「已上线」者
@@ -2234,7 +2267,7 @@ if (exists("dd")) {
   kb(rg, paste0("分状态换档表",
     "｜解释：三态由日 GGR 序列解码；换档只动阈值档位与赏侧节奏，不动评分本身",
     "｜本方案用途：同一套评分在不同经营状态下用不同松紧——收割期收紧罚侧、",
-    "冲刷期打开赏侧，赏罚跟着经营节律走"))
+    "冲刷期打开赏侧，赏罚跟着经营节律走"), escape = FALSE, scroll = 400)
 }
 ```
 **读法**：三行对应三种经营状态，每行给出该状态下的**罚侧档位与赏侧节奏**两个动作。
@@ -2347,6 +2380,24 @@ if (exists("CX") && HAS$plotly) {
 
 # 单位经济学：一元洗码量走完全程还剩多少 {#sec-unit}
 
+::: {.callout-note}
+## 先立一条口径：本报告的「毛利」「毛利率」一律是**平台**的，不是会员的
+
+全篇凡见「毛利」「毛利率」，主语一律是**平台（庄家）**，绝无例外。三个层级只是聚合口径不同，
+分子分母的定义完全一致：
+
+| 名称 | 算式 | 主语 | 出现于 |
+|---|---|---|---|
+| **平台毛利率 $m$**（亦称庄家毛利率） | Σ GGR ÷ Σ 洗码量 | 平台 · 全体 | 经济底座、瀑布图 |
+| **会员级平台毛利率 $m_i$** | 平台自该会员所得 GGR ÷ 该会员洗码量 | 平台 · 单个会员 | 门槛分布图、门槛线 2.59% |
+| **层级平台毛利率** | 该层 Σ GGR ÷ 该层 Σ 洗码量 | 平台 · 客群分层 | 分层经济账、赏罚环图 |
+| **日平台毛利率**（Hold%） | 当日 GGR ÷ 当日洗码量 | 平台 · 单个营业日 | 控制图 |
+
+**须特别留意 $m_i$ 的读法**：它叫「会员级」，是因为**按会员切分**，但赚这笔钱的是**平台**。
+$m_i$ 越高，说明平台从这位会员身上赚得越多；$m_i$ **为负**，说明这位会员在**赢平台的钱**。
+凡本报告的悬停浮层，一律已注明该处所指为平台的哪一层聚合，不留歧义。
+:::
+
 本章只答一个问题，且只用三张图答完：**平台从会员身上赚到的每一元，扣完退水与代理占成之后还剩多少；
 谁在门槛之上、谁在门槛之下。** 三张图的数字全部来自已结案的经济底座（SQL 总包 §EX-20）与包内实测，
 无一处外推。
@@ -2360,7 +2411,7 @@ if (exists("m_house") || TRUE) {
   RHO_UNIT <- 0.00349
   KAP_UNIT <- 0.8653 * M_UNIT
   GAM_UNIT <- M_UNIT - RHO_UNIT - KAP_UNIT
-  ## 净贡献门槛：会员个人毛利率须高于此，其流水方为平台净赚
+  ## 净贡献门槛：会员会员级平台毛利率须高于此，其流水方为平台净赚
   ##   m_i(1−κ_share) − ρ > 0  ⟺  m_i > ρ/(1−κ_share)
   THR_UNIT <- RHO_UNIT / (1 - 0.8653)
   WF <- data.frame(check.names = FALSE, stringsAsFactors = FALSE,
@@ -2388,14 +2439,14 @@ if (exists("m_house") || TRUE) {
 ::: {.callout-important}
 ## 由瀑布导出的净贡献门槛：**m_i > 2.59%**
 
-同一个式子换个问法即得门槛。设某会员个人毛利率为 $m_i$（其净输额 ÷ 其洗码量），
+同一个式子换个问法即得门槛。设某会员会员级平台毛利率为 $m_i$（其净输额 ÷ 其洗码量），
 其流水给平台留下的净额为
 
 $$\text{净}_i = m_i\,(1-\kappa_{\text{share}}) - \rho$$
 
 令其大于零，得 $m_i > \rho/(1-\kappa_{\text{share}}) = 0.349\%/(1-86.53\%) = \mathbf{2.59\%}$。
 
-**读作**：个人毛利率低于 2.59% 的会员，其流水**越大、平台越亏**——因为占成与退水吃掉的比
+**读作**：会员级平台毛利率低于 2.59% 的会员，其流水**越大、平台越亏**——因为占成与退水吃掉的比
 赚到的还多。这条线是全案最要紧的一个数：它把「谁该赏、谁该罚、谁该放着不管」从主观判断
 变成一条可查的算术线，也解释了为何 γ\* 为负——**全平台平均毛利率 1.918% 本就在门槛之下。**
 :::
@@ -2417,7 +2468,7 @@ if (!is.null(B01)) {
                              member_id, data = B01, FUN = sum)
   }
   MB <- MB[is.finite(MB$vb) & MB$vb > 0, , drop = FALSE]
-  MB$mi <- -MB$np / MB$vb                      # 个人毛利率＝其净输额÷其洗码量
+  MB$mi <- -MB$np / MB$vb                      # 会员级平台毛利率＝其净输额÷其洗码量
   THR_UNIT <- if (exists("THR_UNIT")) THR_UNIT else 0.00349 / (1 - 0.8653)
   ## 只画中央区间，两尾归并入端箱——重尾之下全域直方图不可读
   lo <- -0.20; hi <- 0.20; brk <- seq(lo, hi, by = 0.01)
@@ -2430,10 +2481,10 @@ if (!is.null(B01)) {
   UNIT_STAT <- list(n_lo = n_lo, n_hi = n_hi, vb_lo = vb_lo, vb_hi = vb_hi,
                     n = nrow(MB), vb = vb_lo + vb_hi, thr = THR_UNIT)
   cat(er_hist("thr", sprintf(
-    "会员个人毛利率分布 × 净贡献门槛 2.59%%（%s 名有效投注会员）", amt(nrow(MB))),
+    "会员会员级平台毛利率分布 × 净贡献门槛 2.59%%（%s 名有效投注会员）", amt(nrow(MB))),
     mids, as.integer(h$counts), thr_i,
     sprintf("净贡献门槛 %.2f%%", 100*THR_UNIT),
-    "个人毛利率 m_i ＝ 该会员净输额 ÷ 其洗码量（两尾并入端箱）",
+    "会员级平台毛利率 m_i ＝ 该会员净输额 ÷ 其洗码量（两尾并入端箱）",
     note = "门槛左侧者流水越大平台越亏"))
 }
 ```
@@ -2477,7 +2528,7 @@ if (exists("P17") && exists("MB") && !is.null(B01)) {
     PIE_STAT <- ROWS
     cat(er_pie("pie", "赏罚分明的客群构成：按 §17.2 综合分五层结账（环宽＝洗码量占比）",
       ROWS, cols = c(PAL$bad, PAL$warn, PAL$ac, "#7dffd4", PAL$good),
-      note = "悬停即见该层人数·投注额·盈利·返水·层毛利率；金额一律由 B01 现算"))
+      note = "悬停即见该层人数·投注额·盈利·返水·层级平台毛利率；金额一律由 B01 现算"))
   }
 } else if (!exists("P17")) {
   cat(ph("数据库/K01_risk_feature_matrix.csv 与 B01_bt_panel.csv", "§K01×§B01",
@@ -2485,7 +2536,7 @@ if (exists("P17") && exists("MB") && !is.null(B01)) {
 }
 ```
 **读法**：**环的宽度是投注额占比，颜色是赏罚方向——红端该罚、绿端该赏。**
-悬停任一层即出五项关键量：**客群人数、投注额（洗码量）、盈利（GGR）、返水支出、该层毛利率**。
+悬停任一层即出五项关键量：**客群人数、投注额（洗码量）、盈利（GGR）、返水支出、该层级平台毛利率**。
 读法有三：其一，比**红环的洗码占比与其毛利率**——高危层若占了可观流水而毛利率低于 2.59% 门槛，
 即是罚侧最该动手之处；其二，比**绿环的毛利率与返水**——优质层若毛利率高而返水支出也高，
 说明礼遇已在发生、无须再加码（况且 γ\* 为负，本就无金额空间）；其三，看**中间层**——
@@ -2687,11 +2738,30 @@ if (!is.null(B01)) {
     误判成本 <- 0.15 * L_fl * mean(!(flC %in% TRUTH))          # gain() 同式的罚项
     零误判净增益 <- 0.60 * W_fl                                 # mis=0 反事实
     盈亏平衡误判率 <- min(1, if (L_fl > 0) (0.60 * W_fl) / (0.15 * L_fl) else 1)
+    ## ★★ 十六轮斧正（先生核实指正）：旧版把「礼遇发给了当期净赢的会员」记作赏侧误判——
+    ##    此定性有误，且会误导经营决策。三条理由：
+    ##    ① **单期输赢是波动，不是身份**。百家乐单注方差极大，会员在 14 日窗内净赢
+    ##       纯属常态；以单期结果判定「赏错人」，等于把随机波动当成识别失败。
+    ##    ② **礼遇的目的不是即期回本**，是留存与口碑（先生所指的广告效应）。
+    ##       赢钱的会员往往正是最活跃、最愿意口耳相传的一群；此时收回礼遇，
+    ##       反而是把最好的宣传口撤掉。
+    ##    ③ **真正的赏侧误判只有一种**：把礼遇发给了**罚侧证据链已确凿**的人
+    ##       （完美对打、人工單金标准）——那不是波动，是拿平台的钱补贴对手方。
+    ##    故今分立两个量，各挂各的名，绝不混为一谈：
+    ##      · **赏罚冲突率**（真误判）＝赏池 ∩ 罚侧证据链 ÷ 赏池——此数须压到零；
+    ##      · **即期未回本率**（非误判，仅作现金流提示）＝赏池中当期净赢者占比。
     赏zc <- te_w[te_w$member_id %in% 赏池, , drop = FALSE]
-    赏误判率 <- if (nrow(赏zc)) mean(赏zc$w > 0) else NA_real_  # 赏了个净赢家
-    赏误判成本 <- if (is.finite(cap_bt))
-      cap_bt * sum(num(te$validbet[te$member_id %in%
-        赏zc$member_id[赏zc$w > 0]]), na.rm = TRUE) else NA_real_
+    赏冲突 <- intersect(赏池, TRUTH)                      # 赏池 ∩ 金标准证据链
+    赏罚冲突率 <- if (length(赏池)) length(赏冲突) / length(赏池) else NA_real_
+    赏冲突成本 <- if (is.finite(cap_bt) && length(赏冲突))
+      cap_bt * sum(num(te$validbet[te$member_id %in% 赏冲突]), na.rm = TRUE) else 0
+    即期未回本率 <- if (nrow(赏zc)) mean(赏zc$w > 0) else NA_real_
+    ## 赏侧盈亏平衡：礼遇每付出 1 元，须换来多少增量洗码量方能回本？
+    ##   增量洗码量的单位净贡献即 γ*（＝m−ρ−κ）。γ* 为正时门槛＝1/γ*；
+    ##   γ* 为负时**任何增量流水都回不了本**——多来的流水本身就在亏，
+    ##   故赏侧唯一可能的回本路径是「引来毛利率高于 2.59% 门槛的人」，而非「引来更多流水」。
+    赏池洗码额 <- sum(num(te$validbet[te$member_id %in% 赏池]), na.rm = TRUE)
+    赏成本实付 <- if (is.finite(cap_bt)) cap_bt * 赏池洗码额 else NA_real_
     ## ★ 十五轮补三列：供三情景走势的反事实构造（洗码、返水、活跃三条腿）
     名单洗码 <- sum(num(te$validbet[te$member_id %in% flC]), na.rm = TRUE)
     名单日均活跃 <- if (length(flC)) {
@@ -2709,7 +2779,10 @@ if (!is.null(B01)) {
                                             na.rm = TRUE) else NA_real_,
       经济误判率 = mis_e, 误判率下 = mis_lo, 误判率上 = mis_hi,
       盈亏平衡误判率 = 盈亏平衡误判率, 误判成本 = 误判成本,
-      零误判净增益 = 零误判净增益, 赏误判率 = 赏误判率, 赏误判成本 = 赏误判成本,
+      零误判净增益 = 零误判净增益,
+      赏罚冲突率 = 赏罚冲突率, 赏冲突成本 = 赏冲突成本,
+      即期未回本率 = 即期未回本率, 赏池洗码额 = 赏池洗码额,
+      赏成本实付 = 赏成本实付,
       基率 = base_rate, 名单占比 = 名单占比(flC),
       经济命中率 = econ_hit(flC), 赢额覆盖率 = won_cov(flC),
       金标准召回 = recall(flC),
@@ -2882,7 +2955,7 @@ kb(ACT, paste0("四实体逐维触发 → 阈值 → 处置动作 → 实测凭�
   "「中性」表示既不罚也不赏，只是调整配置或抽查；末列注明该维在维度 ROI 结账中的实测表现，",
   "凡实测差值为正（该维在筛盈利）者不得挂罚侧、为负者不得挂赏侧——本表每行均已据此核对",
   "｜本方案用途：让执行方拿到名单即知该做什么、凭什么做，不必二次判断，也杜绝不加区分地统一处置封号"),
-  escape = FALSE)   # 末列逐行挂悬停浮层，须放行 HTML
+  escape = FALSE, scroll = 620)   # 末列逐行挂悬停浮层，须放行 HTML；表长故套滚动壳
 ```
 
 **读法**：五列连读即一条完整的处置理由链——**哪一维**（对应雷达图上的哪条轴）、
@@ -2979,6 +3052,16 @@ if (!is.null(B01)) {
     M
   }
   FD <- lapply(starts, mkfold)
+  ## ★ 十六轮：登记各折的**检验窗起讫**——折内一切结果皆为该 14 日窗的**期间总额**，
+  ##   非单日值，故图表横轴一律以期间呈现，不得只标折序（先生核实指正）。
+  FDW <- do.call(rbind, lapply(seq_along(starts), function(i) {
+    s0 <- starts[i]; td <- days[(s0+TR+EM):(s0+TR+EM+TE-1)]
+    data.frame(折 = i, 窗首 = as.character(min(td)), 窗末 = as.character(max(td)),
+               窗长 = length(td), stringsAsFactors = FALSE)
+  }))
+  FDW$期间 <- sprintf("%s～%s", substr(FDW$窗首, 6, 10), substr(FDW$窗末, 6, 10))
+  message(sprintf("📅 预测折窗登记：%d 折，窗长 %d 日，首折 %s，末折 %s",
+                  nrow(FDW), TE, FDW$期间[1], FDW$期间[nrow(FDW)]))
   M1 <- FD[[1]]
   mult_vb <- tapply(M1$vb_te, M1$g, sum) / pmax(tapply(M1$naive_vb, M1$g, sum), 1e-9)
   mult_p  <- tapply(M1$p_te,  M1$g, sum) / pmax(tapply(abs(M1$naive_p), M1$g, sum), 1e-9)
@@ -2995,9 +3078,19 @@ if (!is.null(B01)) {
     pp <- .6 * M$naive_p +
           .4 * abs(M$naive_p) * as.numeric(mult_p[as.character(M$g)]) *
                sign(M$naive_p + 1e-12)
+    ## ★ 十六轮正名与补尺：此处的分母是**样本外朴素外推**的同期 MAE，
+    ##   非 Hyndman-Koehler 的样本内朴素 MAE，故正名 **RelMAE**（相对平均绝对误差）；
+    ##   并补 WAPE 与 Bias 两尺——前者给量纲直观的「差了几成」，后者盯系统性方向。
     data.frame(折 = i,
-      营业额MASE = mean(abs(M$vb_te - pv)) / mean(abs(M$vb_te - M$naive_vb)),
-      盈利MASE   = mean(abs(M$p_te - pp)) / mean(abs(M$p_te - M$naive_p)),
+      期间 = if (exists("FDW")) FDW$期间[match(i, FDW$折)] else NA_character_,
+      窗首 = if (exists("FDW")) FDW$窗首[match(i, FDW$折)] else NA_character_,
+      窗末 = if (exists("FDW")) FDW$窗末[match(i, FDW$折)] else NA_character_,
+      营业额RelMAE = mean(abs(M$vb_te - pv)) / mean(abs(M$vb_te - M$naive_vb)),
+      盈利RelMAE   = mean(abs(M$p_te - pp)) / mean(abs(M$p_te - M$naive_p)),
+      营业额WAPE = sum(abs(M$vb_te - pv)) / pmax(sum(abs(M$vb_te)), 1e-9),
+      盈利WAPE   = sum(abs(M$p_te  - pp)) / pmax(sum(abs(M$p_te)),  1e-9),
+      营业额Bias = (sum(pv) - sum(M$vb_te)) / pmax(abs(sum(M$vb_te)), 1e-9),
+      盈利Bias   = (sum(pp) - sum(M$p_te))  / pmax(abs(sum(M$p_te)),  1e-9),
       营业额预测合计 = sum(pv), 营业额实际 = sum(M$vb_te),
       盈利预测合计   = sum(pp), 盈利实际   = sum(M$p_te))
   }))
@@ -3006,38 +3099,77 @@ if (!is.null(B01)) {
 
 ```{r}
 #| label: fig-forecast
-#| fig-height: 4.2
-#| fig-cap: "图：能力值分层乘数模型的逐折 MASE。横轴为检验折序（第 2 折起为纯检验折），纵轴为 MASE（模型平均绝对误差 ÷ 朴素外推平均绝对误差），黄色虚线 MASE=1 即朴素外推基准，线在其下即模型更准。"
+#| fig-height: 4.6
+#| fig-cap: "图：能力值分层乘数模型的逐折预测误差四尺。横轴为检验折序与检验窗期间（第 2 折起为纯检验折），左纵轴为 RelMAE 与 WAPE，黄色虚线 RelMAE=1 即朴素外推基准；Bias 另挂右轴，正为高估、负为低估。"
 if (exists("FC") && HAS$plotly) {
-  p <- plotly::plot_ly(FC, x = ~折) |>
-    plotly::add_trace(y = ~营业额MASE, type = "scatter", mode = "lines+markers",
-      name = "营业额 MASE", line = list(color = PAL$ac, width = 2.4),
-      hovertemplate = paste0("折 %{x}<br>营业额 MASE %{y:.3f}<br>预测 ",
-        sapply(FC$营业额预测合计, amt), " / 实际 ",
-        sapply(FC$营业额实际, amt), "<extra></extra>")) |>
-    plotly::add_trace(y = ~盈利MASE, type = "scatter", mode = "lines+markers",
-      name = "盈利 MASE", line = list(color = PAL$good, width = 2.4),
-      hovertemplate = paste0("折 %{x}<br>盈利 MASE %{y:.3f}<br>预测 ",
-        sapply(FC$盈利预测合计, amt), " / 实际 ",
-        sapply(FC$盈利实际, amt), "<extra></extra>")) |>
+  ## ★ 十六轮：单一比值不足以服人，四尺并陈——
+  ##   RelMAE 比朴素、WAPE 报「差了几成」、Bias 盯方向、零线为方向基准。
+  xlab <- if ("期间" %in% names(FC) && any(!is.na(FC$期间)))
+    sprintf("第%d折<br>%s", FC$折, FC$期间) else sprintf("第%d折", FC$折)
+  per <- if ("窗首" %in% names(FC)) sprintf("%s 至 %s", FC$窗首, FC$窗末) else rep("—", nrow(FC))
+  p <- plotly::plot_ly(x = xlab) |>
+    plotly::add_trace(y = FC$营业额RelMAE, type = "scatter", mode = "lines+markers",
+      name = "营业额 RelMAE", line = list(color = PAL$ac, width = 2.4),
+      hovertemplate = paste0("检验窗 ", per, "（14 日期间总额）<br>",
+        "营业额 RelMAE %{y:.3f}<br>预测 ", sapply(FC$营业额预测合计, amt),
+        " / 实际 ", sapply(FC$营业额实际, amt), "<extra></extra>")) |>
+    plotly::add_trace(y = FC$盈利RelMAE, type = "scatter", mode = "lines+markers",
+      name = "盈利 RelMAE", line = list(color = PAL$good, width = 2.4),
+      hovertemplate = paste0("检验窗 ", per, "（14 日期间总额）<br>",
+        "盈利 RelMAE %{y:.3f}<br>预测 ", sapply(FC$盈利预测合计, amt),
+        " / 实际 ", sapply(FC$盈利实际, amt), "<extra></extra>")) |>
+    plotly::add_trace(y = FC$营业额WAPE, type = "scatter", mode = "lines",
+      name = "营业额 WAPE（差了几成）",
+      line = list(color = PAL$ac, width = 1.6, dash = "dot"),
+      hovertemplate = "营业额 WAPE %{y:.1%}<br>（|Σ实际−Σ预测| ÷ |Σ实际|）<extra></extra>") |>
+    plotly::add_trace(y = FC$盈利WAPE, type = "scatter", mode = "lines",
+      name = "盈利 WAPE（差了几成）",
+      line = list(color = PAL$good, width = 1.6, dash = "dot"),
+      hovertemplate = "盈利 WAPE %{y:.1%}<extra></extra>") |>
     plotly::add_trace(y = rep(1, nrow(FC)), type = "scatter", mode = "lines",
-      name = "朴素外推基准（MASE=1）",
-      line = list(color = PAL$warn, dash = "dash")) |>
+      name = "朴素外推基准（RelMAE=1）",
+      line = list(color = PAL$warn, dash = "dash"), hoverinfo = "skip") |>
+    plotly::add_trace(y = FC$盈利Bias, type = "scatter", mode = "lines+markers",
+      name = "盈利 Bias（右轴｜+高估 −低估）", yaxis = "y2",
+      line = list(color = PAL$violet, width = 1.8),
+      marker = list(symbol = "diamond"),
+      hovertemplate = paste0("盈利 Bias %{y:+.1%}",
+        "<br>（Σ预测−Σ实际）÷|Σ实际|；正为高估、负为低估——",
+        "前两尺取绝对值会把方向抹平，故须单独盯<extra></extra>")) |>
     plotly::layout(
       title = list(text = paste0(
-        "能力值分层乘数模型：营业额与盈利的逐折 MASE（首折定乘数，其后只检验）"),
-        font = list(size = 13.5)),
-      xaxis = list(title = "检验折序（每折＝训练 63 日 → 禁运 7 日 → 测试 14 日；第 2 折起为纯检验折）",
-                   dtick = 1),
-      yaxis = list(title = "MASE ＝ 模型平均绝对误差 ÷ 朴素外推平均绝对误差（<1 即胜朴素外推）",
-                   rangemode = "tozero"))
+        "能力值分层乘数模型：逐检验折的四尺预测误差（首折定乘数，其后只检验；",
+        "每点为该 14 日窗的期间口径）"), font = list(size = 13)),
+      xaxis = list(title = "检验折序与检验窗期间（每折＝训练 63 日 → 禁运 7 日 → 测试 14 日）",
+                   type = "category", tickfont = list(size = 10.5)),
+      yaxis = list(title = "RelMAE 与 WAPE（RelMAE<1 即胜朴素外推）",
+                   rangemode = "tozero"),
+      yaxis2 = list(title = "Bias", overlaying = "y", side = "right",
+                    tickformat = "+.0%", zeroline = TRUE,
+                    zerolinecolor = "rgba(255,214,77,.5)"),
+      legend = list(orientation = "h", y = -0.30, x = .5, xanchor = "center",
+                    font = list(size = 10.5)),
+      margin = list(b = 128, r = 66))
   plt(p)
 }
 ```
-**读法**：两条线是营业额与盈利的逐折 MASE，黄色虚线是朴素外推基准（MASE=1）。
-**线在虚线以下即模型比「日均×天数」更准**，低多少即准多少。须守一条纪律：
-**预测更准 ≠ 处置必然增收**——它只证明「能力值分组含有信息」，赏侧的业绩增益仍须
-A/B 因果协议实证。乘数由首折估定，第 2 折起为纯检验，无一丝未来信息。
+**读法**：横轴每一格是一个 14 日检验窗（标签下方即起讫日期），**每点皆为该窗的期间口径，
+非单日值**。四把尺分工如下：
+
+| 尺 | 读法 | 用处 | 单独看的风险 |
+|---|---|---|---|
+| **RelMAE** | 实线，<1 即胜过朴素外推 | 对内判「模型值不值得上」 | 分母是朴素基准的误差，**朴素越烂此数越好看** |
+| **WAPE** | 点线，读作「差了几成」 | **对外汇报最该用**，量纲直观、可跨组比 | 不告诉你差在哪个方向 |
+| **Bias**（右轴） | 菱形线，正为高估、负为低估 | 定赏罚幅度的方向依据 | 正负相消时可能虚低 |
+| **朴素基准线** | 黄虚线 RelMAE=1 | 及格线 | — |
+
+**为什么不能只报 RelMAE**：它与 WAPE 皆取绝对值，会把系统性高估与低估一并抹平；
+若某组长期高估盈利，赏罚幅度就会长期给多——这只有 Bias 看得出来。故本报告自此
+**四尺并陈，缺一不引用**。
+
+须守一条纪律：**预测更准 ≠ 处置必然增收**——它只证明「能力值分组含有信息」，
+赏侧的业绩增益仍须随机对照实验实证（见 @sec-trial）。乘数由首折估定，第 2 折起为纯检验，
+无一丝未来信息。
 
 
 ```{r}
@@ -3048,12 +3180,12 @@ if (exists("FC")) {
     "检验折上营业额 MASE 均值 %s、盈利 MASE 均值 %s（均<1，胜过朴素外推）。",
     "这一层的商业意义：**能力值分组确有信息**——高能力值组与低能力值组的",
     "营业额/盈利乘数系统性不同，据此预测处置后的增长比主观设定外推可靠。"),
-    tip(sprintf("**%.3f**", mean(FC$营业额MASE)),
+    tip(sprintf("**%.3f**", mean(FC$营业额RelMAE)),
         sprintf("营业额 MASE：模型平均绝对误差 ÷ 朴素外推平均绝对误差 = %.3f，即比朴素外推低约 %.1f%%。乘数由首折估定，此处为其后各折的纯检验结果。须知：预测更准不等于因果——它说明能力值分组含有信息，不等于处置必然带来同幅业绩增长",
-                mean(FC$营业额MASE), 100*(1-mean(FC$营业额MASE)))),
-    tip(sprintf("**%.3f**", mean(FC$盈利MASE)),
+                mean(FC$营业额RelMAE), 100*(1-mean(FC$营业额RelMAE)))),
+    tip(sprintf("**%.3f**", mean(FC$盈利RelMAE)),
         sprintf("盈利 MASE = %.3f，即比朴素外推低约 %.1f%%。盈利预测采用六成朴素、四成分层乘数的混合，以防小样本组的乘数外推过头",
-                mean(FC$盈利MASE), 100*(1-mean(FC$盈利MASE))))))
+                mean(FC$盈利RelMAE), 100*(1-mean(FC$盈利RelMAE))))))
 }
 ```
 
@@ -3125,29 +3257,70 @@ if (exists("ROID") && HAS$plotly) {
 if (exists("FD") && length(FD) > 1 && HAS$dt) {
   num <- function(v) suppressWarnings(as.numeric(v))
   ENTF <- list()
+  ## ★ 十五轮·续 内存斧正（根因：归属表在折内反复展开）
+  ##   `map` 是**会员×实体**的归属表（荷官侧即 uid×dealer 注额表，数百万行），
+  ##   旧版每折都以 `base::merge` 把折内会员与之展开一次，再 `merge` 分组列——
+  ##   `merge.data.frame` 内部走 `cbind` 全表复制，故报 "cannot allocate 47.3 Mb"。
+  ##   **可整体消解**：pv／pp／vb_te 等皆是**会员级常量**，而聚合为按组求 Σ(x·w)，
+  ##     Σ_{d∈组} x_m·w_{m,d} = x_m · Σ_{d∈组} w_{m,d} = x_m · W_{m,组}
+  ##   故先把归属权重**折叠到「会员 × 组」**（每人至多 3 行），且只折叠一次、
+  ##   不在折内重复；折内改用 data.table 键连接，免 cbind 全表复制。
+  ##   结果与旧式**逐位相同**，只是先加权后展开改为先折叠后加权。
   add_ent <- function(map, score_df, key, ent) {
     if (is.null(map) || is.null(score_df)) return(NULL)
+    if (!all(c("member_id", key, "w") %in% names(map))) return(NULL)
     q <- stats::quantile(score_df$综合分, c(1/3, 2/3), na.rm = TRUE)
     score_df$组 <- cut(score_df$综合分, c(-Inf, q, Inf),
                        labels = c("低能力组","中能力组","高能力组"))
-    do.call(rbind, lapply(seq_along(FD)[-1], function(i) {
+    cols3 <- c("member_id", key, "w")
+    MP <- if (data.table::is.data.table(map)) map[, cols3, with = FALSE]
+          else data.table::as.data.table(map[, cols3])
+    SD <- data.table::as.data.table(score_df[, c(key, "组")])
+    data.table::set(MP, j = key, value = as.character(MP[[key]]))
+    data.table::set(SD, j = key, value = as.character(SD[[key]]))
+    SD <- SD[!is.na(SD$组)]
+    MG <- merge(MP, SD, by = key, allow.cartesian = TRUE)
+    rm(MP, SD); gc2()
+    MG <- MG[, .(W = sum(w, na.rm = TRUE)), by = .(member_id, 组)]
+    data.table::setkey(MG, member_id)
+    message(sprintf("🔗 归属权重已折叠[%s]：会员×组 %s 行（每人至多 3 行）",
+                    ent, amt(nrow(MG))))
+    out <- do.call(rbind, lapply(seq_along(FD)[-1], function(i) {
       M <- FD[[i]]
       pv <- M$naive_vb * as.numeric(mult_vb[as.character(M$g)])
       pp <- .6 * M$naive_p + .4 * abs(M$naive_p) *
             as.numeric(mult_p[as.character(M$g)]) * sign(M$naive_p + 1e-12)
-      mm <- merge(data.frame(member_id = num(M$member_id), pv = pv, pp = pp,
-                             vb_te = M$vb_te, p_te = M$p_te,
-                             nvb = M$naive_vb, np = M$naive_p),
-                  map, by = "member_id")
-      mm <- merge(mm, score_df[, c(key, "组")], by = key)
-      ag <- stats::aggregate(cbind(pv = pv*w, vb = vb_te*w, nv = nvb*w,
-                                   pp = pp*w, pt = p_te*w, np = np*w) ~ 组,
-                             data = mm, FUN = sum)
-      data.frame(实体 = ent, 折 = i, 组 = ag$组,
-        营业额MASE = abs(ag$vb - ag$pv) / pmax(abs(ag$vb - ag$nv), 1e-9),
-        盈利MASE   = abs(ag$pt - ag$pp) / pmax(abs(ag$pt - ag$np), 1e-9),
+      DT <- data.table::data.table(member_id = num(M$member_id),
+              pv = pv, pp = pp, vb_te = M$vb_te, p_te = M$p_te,
+              nvb = M$naive_vb, np = M$naive_p)
+      J <- MG[DT, on = "member_id", nomatch = 0L]
+      if (!nrow(J)) return(NULL)
+      ag <- J[, .(pv = sum(pv*W, na.rm=TRUE), vb = sum(vb_te*W, na.rm=TRUE),
+                  nv = sum(nvb*W, na.rm=TRUE), pp = sum(pp*W, na.rm=TRUE),
+                  pt = sum(p_te*W, na.rm=TRUE), np = sum(np*W, na.rm=TRUE)),
+                by = 组]
+      rm(J, DT)
+      ## ★ 十六轮：单一比值不足以服人，故与三尺并陈——
+      ##   ① RelAE（原名 MASE，今正名）：本法误差 ÷ 朴素外推误差，<1 即胜过朴素；
+      ##   ② WAPE：|实际−预测| ÷ |实际|，读作「差了几成」，量纲直观、可跨组比；
+      ##   ③ Bias：（预测−实际）÷ |实际|，正为高估、负为低估——RelAE 与 WAPE 皆为
+      ##      绝对值口径，会把系统性高估与低估一并抹平，故须以 Bias 单独盯方向。
+      data.frame(实体 = ent, 折 = i,
+        期间 = if (exists("FDW")) FDW$期间[match(i, FDW$折)] else NA_character_,
+        窗首 = if (exists("FDW")) FDW$窗首[match(i, FDW$折)] else NA_character_,
+        窗末 = if (exists("FDW")) FDW$窗末[match(i, FDW$折)] else NA_character_,
+        窗长 = if (exists("FDW")) FDW$窗长[match(i, FDW$折)] else NA_integer_,
+        组 = as.character(ag$组),
+        营业额RelAE = abs(ag$vb - ag$pv) / pmax(abs(ag$vb - ag$nv), 1e-9),
+        盈利RelAE   = abs(ag$pt - ag$pp) / pmax(abs(ag$pt - ag$np), 1e-9),
+        营业额WAPE  = abs(ag$vb - ag$pv) / pmax(abs(ag$vb), 1e-9),
+        盈利WAPE    = abs(ag$pt - ag$pp) / pmax(abs(ag$pt), 1e-9),
+        营业额Bias  = (ag$pv - ag$vb) / pmax(abs(ag$vb), 1e-9),
+        盈利Bias    = (ag$pp - ag$pt) / pmax(abs(ag$pt), 1e-9),
         盈利增长乘数 = ag$pt / pmax(abs(ag$np), 1e-9))
     }))
+    rm(MG); gc2()
+    out
   }
   ## 荷官「盈利」不可直接读作贡献（先生审计指正：限红、客群、时长、桌位皆不同）——
   ## 改报 Observed − Expected：以该桌洗码量的线性基线为期望，残差才是荷官层的净效应。
@@ -3165,12 +3338,15 @@ if (exists("FD") && length(FD) > 1 && HAS$dt) {
     }
   }
   if (exists("D17") && exists("DW")) {
-    w1 <- DW                            # 复用 score-dealer 已聚合的 uid×dealer 注额表
-    tot <- tapply(w1$st, w1$uid, sum)
-    w1$w <- w1$st / pmax(as.numeric(tot[as.character(w1$uid)]), 1)
-    ## 2026-08-09 斧正：DW 列序为 dealer_id, uid, st——按**列名**改名，绝不按列位
-    names(w1)[names(w1) == "uid"] <- "member_id"
-    ENTF$荷官 <- add_ent(w1[, c("member_id","dealer_id","w")], D17, "dealer_id", "荷官")
+    ## ★ 归属权重改 data.table 就地算：`tapply` 于数百万行的 uid×dealer 表上
+    ##   须建全量索引与命名向量，内存代价高；分组求和改由 radix 分组承担。
+    ##   2026-08-09 既有斧正保留：DW 列序为 dealer_id, uid, st——按**列名**改名，绝不按列位。
+    data.table::setDT(DW)                       # 就地转换，零拷贝
+    if ("uid" %in% names(DW)) data.table::setnames(DW, "uid", "member_id")
+    DW[, w := st / pmax(sum(st, na.rm = TRUE), 1), by = member_id]
+    ENTF$荷官 <- add_ent(DW, D17, "dealer_id", "荷官")   # 直传 data.table，免再复制
+    if (exists("DW", inherits = FALSE)) rm(DW); gc2()
+    mem("释放 DW 后")
   }
   if (exists("AQ") && exists("mp")) {
     w2 <- mp; names(w2) <- c("member_id","lv3"); w2$member_id <- num(w2$member_id); w2$w <- 1
@@ -3184,22 +3360,50 @@ if (exists("FD") && length(FD) > 1 && HAS$dt) {
 #| label: tbl-forecast-entity
 #| results: asis
 if (exists("EF") && !is.null(EF)) {
-  ag <- stats::aggregate(cbind(营业额MASE, 盈利MASE, 盈利增长乘数) ~ 实体 + 组,
-                         data = EF, FUN = function(x) mean(x, na.rm = TRUE))
+  cols_m <- c("营业额RelAE","盈利RelAE","营业额WAPE","盈利WAPE",
+              "营业额Bias","盈利Bias","盈利增长乘数")
+  ag <- stats::aggregate(EF[, cols_m], by = list(实体 = EF$实体, 组 = EF$组),
+                         FUN = function(x) mean(x, na.rm = TRUE))
   ag <- ag[order(ag$实体, ag$组), ]
-  for (cc in c("营业额MASE","盈利MASE")) ag[[cc]] <- sprintf("%.3f", ag[[cc]])
-  ag$盈利增长乘数 <- sprintf("%.2f×", ag$盈利增长乘数)
-  kb(ag, paste0("实体级预测结账：荷官与代理按 §17.2 综合分三分组的检验折均 MASE 与盈利增长乘数",
-    "｜解释：会员级预测经归属结构（荷官＝R03b 注额权重；代理＝lv3 归线）聚合到实体组后结账；",
-    "盈利增长乘数＝组内测试窗实际盈利 ÷ 朴素外推——高能力组乘数高即「能力值在实体层同样带得动盈利」",
-    "｜本方案用途：赏罚定标的实体级依据；风控专员因无处置日志联动表而如实缺席，两表到位即补"))
+  per <- if ("期间" %in% names(EF)) sprintf("%s 至 %s（%d 折 × %d 日）",
+           min(EF$窗首, na.rm=TRUE), max(EF$窗末, na.rm=TRUE),
+           length(unique(EF$折)), max(EF$窗长, na.rm=TRUE)) else "—"
+  OUT <- data.frame(check.names = FALSE, stringsAsFactors = FALSE,
+    实体 = ag$实体, 能力组 = ag$组,
+    `检验期间` = per,
+    `营业额 RelAE` = tip(sprintf("%.3f", ag$营业额RelAE),
+      "相对绝对误差：|Σ实际−Σ预测| ÷ |Σ实际−Σ朴素外推|。小于 1 即胜过朴素外推，大于 1 即不如。此为聚合层口径，非以样本内朴素 MAE 为尺的标准 MASE，故正名 RelAE"),
+    `盈利 RelAE` = tip(sprintf("%.3f", ag$盈利RelAE),
+      "同上，标的换为期间盈利。盈利较营业额难预测得多，故此列普遍高于左列，属正常"),
+    `营业额 WAPE` = tip(pct(ag$营业额WAPE, 1),
+      "加权绝对百分误差：|Σ实际−Σ预测| ÷ |Σ实际|，读作「差了几成」。量纲直观、可跨组跨实体直接比较，不受朴素基准好坏影响——RelAE 会因朴素基准太差而虚高，WAPE 不会"),
+    `盈利 WAPE` = tip(pct(ag$盈利WAPE, 1),
+      "同上，标的换为期间盈利"),
+    `营业额 Bias` = tip(sprintf("%+.1f%%", 100*ag$营业额Bias),
+      "系统性偏向：（Σ预测−Σ实际）÷ |Σ实际|。正为高估、负为低估。RelAE 与 WAPE 皆取绝对值，会把高估与低估一并抹平，故须以 Bias 单独盯方向；定赏罚幅度时，长期低估者可适度放宽、长期高估者须收紧"),
+    `盈利 Bias` = tip(sprintf("%+.1f%%", 100*ag$盈利Bias),
+      "同上，标的换为期间盈利"),
+    `盈利增长乘数` = tip(sprintf("%.2f×", ag$盈利增长乘数),
+      "该组在整个检验窗的实际盈利合计 ÷ 同窗朴素外推合计。大于 1 即跑赢外推。此为期间总额之比，非单日值"))
+  kb(OUT, paste0("实体级预测结账：荷官与代理按 §17.2 综合分三分组的四尺并陈",
+    "｜解释：会员级预测经归属结构（荷官＝R03b 注额权重；代理＝lv3 归线）聚合到实体组后结账。",
+    "四尺各司其职——RelAE 比朴素、WAPE 比量纲、Bias 盯方向、乘数看跑赢；单看任何一尺皆可能被误导",
+    "｜本方案用途：赏罚定标的实体级依据；风控专员因无处置日志联动表而如实缺席，两表到位即补",
+    "｜口径提示：全表皆为检验窗的期间总额结果，非单日值"), escape = FALSE, scroll = 400)
 }
 ```
-**读法**：每行是一个实体的一个能力组。**MASE 两列 < 1 即该组的业绩比朴素外推更可预测**；
-**盈利增长乘数 > 1 即该组测试窗实际盈利跑赢外推**。要看的是**高能力组与低能力组的乘数是否
-系统性拉开**——拉开即「能力值在实体层同样带得动盈利」，这是荷官与代理赏罚定幅的实体级依据；
-若两组乘数接近，则该实体的能力值只宜作过程管理、不宜挂金额。逐折走势见下图。
-**风控专员因无业绩联动表而如实缺席**，非遗漏。
+**读法**：每行是一个实体的一个能力组，**全表皆为检验窗的期间总额结果**（每折 14 个营业日），
+非单日值。四把尺各司其职，须并读，单看一把皆可能被误导：
+
+- **RelAE < 1**——胜过朴素外推。但它的分母是朴素基准的误差，**朴素越烂、此数越好看**，故不可单独引用。
+- **WAPE**——「差了几成」，量纲直观，可跨组跨实体直接比较，不受朴素基准好坏影响。**这是对外汇报最该用的一把**。
+- **Bias**——正为高估、负为低估。前两把尺都取绝对值，会把高估与低估一并抹平；定赏罚幅度时，
+  长期低估者可适度放宽、长期高估者须收紧，方向须由此列单独盯。
+- **盈利增长乘数 > 1**——该组实际盈利跑赢外推。
+
+要看的是**高能力组与低能力组的乘数是否系统性拉开**——拉开即「能力值在实体层同样带得动盈利」，
+这是荷官与代理赏罚定幅的实体级依据；若两组乘数接近，则该实体的能力值只宜作过程管理、不宜挂金额。
+逐折走势见下图。**风控专员因无业绩联动表而如实缺席**，非遗漏。
 
 
 ```{r}
@@ -3210,27 +3414,43 @@ if (exists("EF") && !is.null(EF) && HAS$plotly) {
   ee$线 <- paste0(u8(ee$实体), "·", u8(ee$组))
   colm <- c(`荷官·高能力组`=PAL$violet, `荷官·低能力组`="#6b21a8",
             `代理·高能力组`=PAL$warn,   `代理·低能力组`="#b45309")
+  ## ★ 十六轮：横轴改「折序 · 检验窗期间」——本图每一点皆为该 14 日窗的**期间总额**
+  ##   之比，非单日值；只标折序会诱使读者误当日频序列，故期间与折序并列。
+  ee$期间标 <- if ("期间" %in% names(ee) && any(!is.na(ee$期间)))
+    sprintf("第%d折<br>%s", ee$折, ee$期间) else sprintf("第%d折", ee$折)
+  lv <- unique(ee$期间标[order(ee$折)])
   p <- plotly::plot_ly()
   for (ln in unique(ee$线)) {
-    e2 <- ee[ee$线 == ln, ]
-    p <- plotly::add_trace(p, x = e2$折, y = e2$盈利增长乘数,
+    e2 <- ee[ee$线 == ln, ]; e2 <- e2[order(e2$折), ]
+    p <- plotly::add_trace(p, x = e2$期间标, y = e2$盈利增长乘数,
       type = "scatter", mode = "lines+markers", name = ln,
       line = list(color = colm[[ln]], width = if (grepl("高", ln)) 2.6 else 1.8,
                   dash = if (grepl("低", ln)) "dot" else "solid"),
-      hovertemplate = paste0(ln, "<br>折 %{x}<br>盈利增长乘数 %{y:.2f}×",
-        "<br>（组内测试窗实际盈利 ÷ 朴素外推；>1 即跑赢外推）<extra></extra>"))
+      hovertemplate = paste0(ln, "<br>检验窗 ",
+        if ("窗首" %in% names(e2)) paste0(e2$窗首, " 至 ", e2$窗末,
+          "（共 ", e2$窗长, " 日）") else "—",
+        "<br>盈利增长乘数 %{y:.2f}×",
+        "<br>（该组在**整个检验窗**的实际盈利合计 ÷ 同窗朴素外推合计；",
+        ">1 即跑赢外推。此为期间总额之比，非单日值）<extra></extra>"))
   }
   p <- plotly::layout(p,
     title = list(text = paste0(
-      "实体级长期走势：荷官与代理按 §17.2 综合分分组的盈利增长乘数（逐检验折）——",
+      "实体级长期走势：荷官与代理按 §17.2 综合分分组的盈利增长乘数",
+      "（逐检验折；每点为该 14 日窗的期间总额之比）——",
       "高能力组持续在上即「能力值在实体层带得动盈利」的长期证据"),
-      font = list(size = 13.5)),
-    xaxis = list(title = "检验折序", dtick = 1),
-    yaxis = list(title = "盈利增长乘数（×）"))
+      font = list(size = 13)),
+    xaxis = list(title = "检验折序与检验窗期间（每折 14 个营业日）",
+                 type = "category", categoryorder = "array", categoryarray = lv,
+                 tickfont = list(size = 10.5)),
+    yaxis = list(title = "盈利增长乘数（×）"),
+    margin = list(b = 86))
   plt(p)
 }
 ```
 **读法**：四条线是荷官与代理的高／低能力组逐折盈利增长乘数（实线＝高能力组，点线＝低能力组）。
+**横轴每一格是一个 14 日检验窗，标签下方即该窗的起讫日期**；纵轴的每一个点是**该窗内的期间
+总额之比**（该组实际盈利合计 ÷ 同窗朴素外推合计），**不是某一日的值**——本图读的是窗与窗之间
+的走势，不可当作日频曲线看。
 **要看的是高低两线是否持续分离**——分离即「能力值在实体层带得动盈利」的长期证据，
 一两折的交叉属正常波动。若某实体两线长期纠缠，则该实体的能力值只宜作过程管理、
 不宜挂金额赏罚。这是本方案「长期利益」的实体级视角。
@@ -3370,9 +3590,21 @@ if (exists("BT") && HAS$plotly) {
       name="经济口径误判率（上界）", line=list(color=PAL$ac, width=2.6),
       hovertemplate=paste0("窗末 %{x}<br>经济误判率 %{y:.1%}（名单中测试窗未赢钱者占比）",
         "<br>⚠️ 此为**上界**：对打者盘面常近似打平，未即时赢钱≠清白<extra></extra>")) |>
-    plotly::add_trace(y = ~赏误判率, type="scatter", mode="lines+markers",
-      name="赏侧误判率（礼遇了净赢家）", line=list(color=PAL$violet, width=2),
-      hovertemplate="窗末 %{x}<br>赏侧误判率 %{y:.1%}<extra></extra>") |>
+    plotly::add_trace(y = ~赏罚冲突率, type="scatter", mode="lines+markers",
+      name="赏罚冲突率（真误判：礼遇发给了证据链已确凿者）",
+      line=list(color=PAL$violet, width=2.4),
+      hovertemplate=paste0("窗末 %{x}<br>赏罚冲突率 %{y:.2%}",
+        "<br>＝赏池 ∩ 罚侧金标准证据链 ÷ 赏池。",
+        "这才是赏侧唯一的真误判——拿平台的钱补贴对手方，须压到零",
+        "<extra></extra>")) |>
+    plotly::add_trace(y = ~即期未回本率, type="scatter", mode="lines",
+      name="即期未回本率（非误判，仅现金流提示）",
+      line=list(color="#a78bfa", width=1.6, dash="dot"),
+      hovertemplate=paste0("窗末 %{x}<br>即期未回本率 %{y:.1%}",
+        "<br>＝礼遇名单中当期净赢平台者占比。",
+        "单期输赢是波动不是身份，故此数不作误判计——赢钱的会员往往正是最活跃、",
+        "最愿口耳相传的一群，收回礼遇等于撤掉最好的宣传口",
+        "<extra></extra>")) |>
     plotly::add_trace(y = ~盈亏平衡误判率, type="scatter", mode="lines",
       name="盈亏平衡误判率（越线才亏钱）",
       line=list(color=PAL$warn, width=2, dash="dash"),
@@ -3380,18 +3612,49 @@ if (exists("BT") && HAS$plotly) {
         "<br>= min(1, 0.60×名单赢走额 ÷ 0.15×名单输掉额)——实际误判率低于此线即净赚",
         "<extra></extra>")) |>
     plotly::layout(
-      title=list(text=paste0("误判率走势与盈亏平衡线（逐折）：实际误判远低于平衡线即",
-        "「误判成本有界」——罚只追缴净赢者，错了也追不到无辜者的钱"),
-        font=list(size=13.5)),
+      title=list(text=paste0("误判率走势与盈亏平衡线（逐检验折，每点为该 14 日窗的期间口径）：",
+        "实际误判远低于平衡线即「误判成本有界」——罚只追缴净赢者，错了也追不到无辜者的钱"),
+        font=list(size=13)),
       xaxis=list(title="测试窗结束日"),
       yaxis=list(title="比率", tickformat=".0%", range=c(0, 1.05)))
   plt(p)
 }
 ```
-**读法**：青线是玩家罚侧的经济误判率（配 Jeffreys 95% 区间带），紫线是赏侧误判率
-（礼遇发给了正在赢钱的人），黄色虚线是**盈亏平衡误判率**。**只看一件事：青线离黄线多远**——
-在黄线以下，误伤罚项就吞不掉追缴收益。青线偏高不必惊慌，它是**上界**：对打者盘面常近似
-打平，当期未赢钱不等于清白。紫线才是要压的——赏错人是真金白银的成本，赏前须过罚池交叉核。
+**读法**：横轴每一格是一个 14 日检验窗的窗末日，四条线读法各异：
+
+- **青线（罚侧经济误判率）** 配 Jeffreys 95% 区间带。**只看一件事：青线离黄线多远**——
+  在黄线以下，误伤罚项就吞不掉追缴收益。青线偏高不必惊慌，它是**上界**：对打者盘面常近似
+  打平，当期未赢钱不等于清白。
+- **黄虚线（盈亏平衡误判率）** ＝ min(1, 0.60×名单赢走额 ÷ 0.15×名单输掉额)，越线才亏钱。
+- **深紫实线（赏罚冲突率）** 是**赏侧唯一的真误判**——礼遇发给了罚侧证据链已确凿的人
+  （完美对打、人工單金标准）。那不是波动，是拿平台的钱补贴对手方，**须压到零**。
+- **浅紫点线（即期未回本率）** 只作现金流提示，**不作误判计**。
+
+::: {.callout-important}
+## 为何「会员赢钱了还要赏」——旧版此处定性有误，本轮已斧正
+
+先生核实指出的正是要害。旧版把「礼遇发给了当期净赢的会员」记作**赏侧误判**，此定性不成立：
+
+1. **单期输赢是波动，不是身份。** 百家乐单注方差极大，会员在 14 日窗内净赢纯属常态；
+   以单期结果判定「赏错人」，等于把随机波动当成识别失败。真要判身份，须看**跨期持续性**——
+   而本报告已实证个体毛利率两期自相关仅 **0.112**（见 @sec-forecast 硬约束其一），
+   即「这期赢的人下期多半不赢」。
+2. **礼遇的目的不是即期回本，是留存与口碑。** 赢钱的会员往往正是最活跃、最愿口耳相传的一群；
+   此时收回礼遇，等于把最好的宣传口撤掉。先生所指的广告效应，正在此处。
+3. **真正的赏侧误判只有一种**：把礼遇发给了**罚侧证据链已确凿**的人。故本轮分立两个量、
+   各挂各的名——**赏罚冲突率**（真误判，须压到零）与**即期未回本率**（非误判，仅提示现金流）。
+
+**但广告效应能否回本，须算过账才敢说**，此处即本报告能给出的最硬的一条：
+
+> 礼遇每付出 1 元，须换来多少增量洗码量方能回本？增量洗码量的单位净贡献即
+> $\gamma^{*}=m-\rho-\kappa$。$\gamma^{*}>0$ 时门槛为 $1/\gamma^{*}$；而本平台
+> **$\gamma^{*}=-0.091\%$ 为负**——这意味着**多来的流水本身就在亏钱，无论来多少都回不了本**。
+
+**故赏侧唯一可能的回本路径，不是「引来更多流水」，而是「引来毛利率高于 2.59% 门槛的人」**
+（见 @sec-unit）。这条结论把礼遇设计整个翻转过来：**不看谁下注多，看谁的每一元下注给平台留下的多**。
+在 $\gamma^{*}$ 转正之前（须调降代理占成或提高庄家毛利率，皆属商务决策），
+本方案的赏侧只保留**过程性激励**——优先派单、优先支持、绩效基线——不涉金额。
+:::
 
 
 ```{r}
@@ -3463,7 +3726,10 @@ if (exists("BT")) {
       sprintf("经济口径 **%s**（95%% 区间 %s~%s；上界——对打者常打平，未即时赢钱≠清白）",
         pct(mean(BT$经济误判率, na.rm=TRUE)),
         pct(mean(BT$误判率下, na.rm=TRUE)), pct(mean(BT$误判率上, na.rm=TRUE))),
-      sprintf("**%s**（礼遇名单中当期净赢平台者占比）", pct(mean(BT$赏误判率, na.rm=TRUE))),
+      sprintf(paste0("赏罚冲突率 **%s**（真误判：赏池 ∩ 罚侧证据链）；",
+        "另附即期未回本率 %s——**此项不作误判计**，单期输赢是波动不是身份"),
+        pct(mean(BT$赏罚冲突率, na.rm=TRUE), 2),
+        pct(mean(BT$即期未回本率, na.rm=TRUE))),
       if (exists("FLP") && "荷官·罚名单" %in% FLP$实体)
         sprintf("决策翻转率 **%s**（重抽样 2,000 次阈值不稳致误圈的概率）",
           pct(FLP$误判率[FLP$实体=="荷官·罚名单"])) else "⬜",
@@ -3473,8 +3739,10 @@ if (exists("BT")) {
     `误判的盈利代价（折均/年化）` = c(
       sprintf("折均 **%s**（0.15×名单输掉额×非金标占比）；零误判反事实折均 %s——两者之差即误判拖累",
         amt(mean(BT$误判成本, na.rm=TRUE)), amt(mean(BT$零误判净增益, na.rm=TRUE))),
-      sprintf("折均 **%s**（γ*×误赏者洗码量：礼遇发给了正在赢钱的人）",
-        amt(mean(BT$赏误判成本, na.rm=TRUE))),
+      sprintf(paste0("折均 **%s**（赏罚冲突者的礼遇支出——拿平台的钱补贴对手方，",
+        "这是赏侧唯一的真代价）。即期净赢者的礼遇**不计入代价**：其回本靠留存与口碑，",
+        "非靠即期；惟 γ* 为负时增量流水本身在亏，故回本只能靠引来毛利率高于 2.59%% 门槛的人"),
+        amt(mean(BT$赏冲突成本, na.rm=TRUE))),
       if (exists("FLP") && "荷官·罚名单" %in% FLP$实体)
         sprintf("期望 **%s**（0.15×其桌盈利×翻转概率——错查好荷官的流失风险代价）",
           amt(FLP$误判代价[FLP$实体=="荷官·罚名单"])) else "⬜",
@@ -3494,7 +3762,7 @@ if (exists("BT")) {
     "对照——实际低于平衡线即误判不足以吞掉追缴收益；荷官/代理无金标准，以重抽样决策翻转率",
     "估计误圈概率并以 0.15 流失系数折算代价；专员待申诉记录（申诉改判率即天然误判实测）",
     "｜本方案用途：先生令「评估误判率对盈利的盈亏幅度、与没误判比较」的落地表；",
-    "配套走势图见上两图，长期利益一目了然"))
+    "配套走势图见上两图，长期利益一目了然"), escape = FALSE, scroll = 480)
 }
 ```
 **读法**：三列各答一问——**误判率是多少**、**误判要赔多少钱**、**误判率到哪条线才真亏**。
@@ -3867,7 +4135,7 @@ if (exists("THT")) {
     "｜解释：玩家阈值由回测逐折现选（成本敏感=期望净增益最大化；净养账=最坏发放后留存最大化），",
     "折间波动即其不确定度；荷官与代理罚维阈值为 P95 配个体重抽样 2,000 次的分位自助法 90% 区间；",
     "凡样本过小处如实不报区间",
-    "｜本方案用途：先生令「以顶级统计计算各实体阈值」的落地表——赏罚一律按「个体与此阈值的差距」定幅"))
+    "｜本方案用途：先生令「以顶级统计计算各实体阈值」的落地表——赏罚一律按「个体与此阈值的差距」定幅"), escape = FALSE, scroll = 520)
 }
 ```
 **读法**：每行一条阈值，**须连着括号里的区间一起读**——点估计告诉你线画在哪，区间告诉你
@@ -3905,10 +4173,10 @@ if (exists("P17") && !is.null(E02)) {
   GAMMA_NEG <- cap_pp < 0
   REC <- 0.60; LOSS <- 0.15
   ## ── 折减因子（先生令：赏罚额度须按预测误差与精准度定）─────────────
-  ##    预算折减 δ_pred = min(1, 1/盈利MASE折均)：预测胜过朴素外推（MASE<1）
+  ##    预算折减 δ_pred = min(1, 1/盈利RelMAE折均)：预测胜过朴素外推（MASE<1）
   ##      即足额；不如朴素（MASE>1）即按比例收敛——预测不牢，赏罚就不敢给满。
   ##    罚侧另录金标准命中率（下界）、Lift 与经济命中率三尺：名单越准，追缴越敢给足。
-  δ_pred <- if (exists("FC")) min(1, 1 / mean(FC$盈利MASE, na.rm = TRUE)) else NA_real_
+  δ_pred <- if (exists("FC")) min(1, 1 / mean(FC$盈利RelMAE, na.rm = TRUE)) else NA_real_
   prec_c <- if (exists("BT")) mean(BT$能力值精准率, na.rm = TRUE) else NA_real_
   lift_c <- if (exists("BT")) mean(BT$能力值Lift,  na.rm = TRUE) else NA_real_
   base_c <- if (exists("BT")) mean(BT$基率, na.rm = TRUE) else NA_real_
@@ -3964,7 +4232,7 @@ if (exists("cap_pp")) {
            "荷官","代理","风控专员"),
     项目 = c("庄家毛利率 m","退水率 ρ","占成率 κ",
            "**赏侧硬天花板 γ\\***",
-           "预算折减 δ_pred＝min(1, 1/盈利MASE折均)",
+           "预算折减 δ_pred＝min(1, 1/盈利RelMAE折均)",
            "能力值轨名单质量三尺（下界·Lift·经济）",
            "赏罚净额年化上限（自助法 90% 下界）",
            sprintf("罚池（§17.2 罚分 ≥折均最优档位 P%.2f ∪ 净赢额前0.1%%，%s 人）",
@@ -3977,8 +4245,8 @@ if (exists("cap_pp")) {
                     sprintf("　⛔ **为负**：m %s − ρ %s − κ %s（κ＝代理留成率 %s × m，§EX-19b 实证）——赏侧**无金额空间**",
                             pct(m,2), pct(rho,3), pct(kap,2), pct(KAPPA_SHARE,1))
                   else ""),
-           if (is.finite(δ_pred)) sprintf("**%.3f**（盈利MASE折均 %.3f）", δ_pred,
-             mean(FC$盈利MASE, na.rm=TRUE)) else "⬜ 待预测层",
+           if (is.finite(δ_pred)) sprintf("**%.3f**（盈利RelMAE折均 %.3f）", δ_pred,
+             mean(FC$盈利RelMAE, na.rm=TRUE)) else "⬜ 待预测层",
            if (is.finite(prec_c)) sprintf(paste0(
              "金标准命中率 %s（**下界**，基率仅 %s → Lift %.1f×）；",
              "经济命中率 **%s**——罚侧真尺"),
@@ -4016,7 +4284,7 @@ if (exists("cap_pp")) {
     "｜解释：一切幅度 = 基准额 × 超额梯度 × δ_pred（预测不牢则收敛）；罚侧另受名单质量三尺约束；",
     "赏罚净额年化不得越过回测净增益的自助法下界——三重闸，赏不穿成本、罚不越证据",
     "｜本方案用途：先生令「根据预测误差与精准度后的挣盈利比设赏罚额度与上限」的落地表，",
-    "每一格可回溯到预测章 MASE、回测章名单质量三尺与盈利比带的现算结果"))
+    "每一格可回溯到预测章 MASE、回测章名单质量三尺与盈利比带的现算结果"), escape = FALSE, scroll = 560)
 }
 ```
 **读法**：本表自上而下是一条**收敛链**——经济底座定出赏侧硬天花板 γ\*，折减因子按预测误差
@@ -4121,7 +4389,7 @@ if (exists("RPL")) {
     "金额类幅度 = 基准额 × 差距 × δ_pred 并各设封顶，过程类幅度以差距百分比定档；",
     "玩家阈值取回测折均最优档位映射到全窗 §17.2 分数，荷官/代理取 P95（区间见上表）",
     "｜本方案用途：先生令「列表中每个成员与阈值的差距定赏罚」的落地样张——",
-    "全量名单由同一公式批量导出，此处示前 6 名以供核样"))
+    "全量名单由同一公式批量导出，此处示前 6 名以供核样"), escape = FALSE, scroll = 520)
 }
 ```
 **读法**：这是赏罚**落到人头**的样张，每行一个成员。看三列即可：能力值（他现在多少分）、
@@ -4191,7 +4459,7 @@ if (exists("UP")) {
     "只列经总闸的预算上限；荷官与代理的金额账并入玩家罚池以免重复计，其独立贡献以",
     "实体级盈利增长乘数作方向佐证；合计以带呈现——下界即最坏组合",
     "｜本方案用途：先生令「盈利可以增加与增幅一一计算出来」的总账页；",
-    "一切数字可回溯到回测折级结果与经济底座常数"))
+    "一切数字可回溯到回测折级结果与经济底座常数"), escape = FALSE, scroll = 420)
 }
 ```
 **读法**：这是全案的**钱账总结页**，左列增加额、右列增幅，一一对应。读时须分清三种性质：
@@ -4246,7 +4514,7 @@ if (exists("SENS")) {
     "年化后以 moving-block 自助法给出 90% 区间与 P(Δ>0)；",
     "凡区间跨 0 者即该情景下**未能证实增利**",
     "｜本方案用途：把「预计增加 X%」换成「在何种参数假设下、以多大概率增利」——",
-    "这才是可交付给董事会的口径；真实参数须由处置后的反事实与随机对照实验估定"))
+    "这才是可交付给董事会的口径；真实参数须由处置后的反事实与随机对照实验估定"), escape = FALSE, scroll = 520)
 }
 ```
 
@@ -4299,15 +4567,37 @@ KPI <- data.frame(check.names = FALSE,
     "**未算**：须扣除降返水导致的流水流失，净额＝SavedRebate − LostGGR；只记省下的退水即高估",
     "**未证实**：机制成立但须 A/B；文献亦有免费筹码未收回面值成本之例",
     "**未算**：分母（风控人力与系统投入）本报告未取数"),
-  可否对外宣称 = c(rep("可（须三尺同读）", 5),
-             "否——须 RCT","否——须占成核清","否——须弹性实测",
-             "否——须 A/B","否——须成本口径"))
+  ## ★ 十六轮：末列逐行挂悬停（先生令）——写明「凭什么可说／为什么不可说」、
+  ##   可说时的必附条件、不可说时的解锁前提，以免一句「可」被断章取义。
+  可否对外宣称 = c(
+    tip("**可**（须三尺同读）",
+      "可对外宣称的前提：命中率必须与基率、Lift 三者同时给出。单报命中率会被误读为「十个里对九个」——本平台金标准基率极低，脱离基率的命中率毫无意义。凡对外只报一个数者，视同未经审核"),
+    tip("**可**（须附基率与名单占比）",
+      "Lift 是相对量，须同时给出基率与名单占比方可解读。只说「几倍」而不说「相对什么」，等于没说；另须注明这是名单质量的倍数，不是盈利的倍数"),
+    tip("**可**（须注明为期间口径）",
+      "经济命中率＝名单中在检验窗实际赢走平台钱的人占比。须注明其为 14 日窗的期间口径，且当期未赢钱不等于清白——对打者盘面常近似打平"),
+    tip("**可**（须与名单占比并列）",
+      "赢额覆盖率单独看会显得很高，须与名单占比并列，读作「用百分之几的人拦住百分之几的钱」，集中度倍数才是真正的杠杆"),
+    tip("**可**（须同时给平衡线）",
+      "误判率必须与盈亏平衡误判率并列，否则读者无从判断这个数是高是低。只报误判率而不给平衡线，等于给了个没有及格线的分数"),
+    tip("**否**——须随机对照实验",
+      "解锁前提：小流量随机对照实验（见证据阶梯第 5 级）。回测的净增益是历史会计结果，答的是「若当时照此处置，账面会如何」，不是上线后真实发生的增量。平台无处置日志（§EX-01 已证），故此项当前只能作决策模拟"),
+    tip("**否**——须占成口径核清后重述",
+      "口径本身已核清（κ＝1.660%、ρ＝0.349%、γ*＝−0.091%，§EX-20），但结论是「赏侧无金额空间」而非「NGR 可增」。故可对外说的是口径成立，不可说 NGR 已增——增量只能来自罚侧，且仍受上一行的 RCT 前提约束"),
+    tip("**否**——须返水弹性实测",
+      "解锁前提：降返水导致的流水流失系数实测。净额＝省下的退水 − 因此流失的 GGR；只记省下的部分即系统性高估。本包内无此弹性，须俟灰度实验产生真实断点"),
+    tip("**否**——须 A/B 实证留存增益",
+      "解锁前提：留存与 CLV 的 A/B 实证。机制成立不等于效果成立；行业亦有免费筹码未收回面值成本之例。另须留意本报告已实证的两条硬约束：个体价值排名的秩持续性 Jaccard 仅 0.02、个体毛利率两期自相关仅 0.112——个体层面的长期价值承诺缺乏统计支撑"),
+    tip("**否**——须先取风控投入成本",
+      "解锁前提：分母取数。风控人力工时与系统投入本报告未取数，故投入产出比无法闭合。此项是全表最终该认的数字，惟其分子（增量净利）与分母（投入）当前皆缺")))
 kb(KPI, paste0("两层验收指标分立表：风控层 vs 经济层",
   "｜解释：上层五项已由本报告现算，可对外引用（须按三尺同读之律）；",
   "下层五项一律未证实或未算，**不得以上层成绩代替下层结论**——",
   "「模型很准」与「平台盈利已因此增加」是两句话",
   "｜本方案用途：给管理层一张不会读错的验收表；最终唯一该认的数字是**增量净利**，",
-  "既不是准确率，也不是评分，甚至不是 GGR"))
+  "既不是准确率，也不是评分，甚至不是 GGR",
+  "｜末列悬停：逐行写明「凭什么可说／为什么不可说」与其解锁前提"),
+  escape = FALSE, scroll = 560)
 ```
 
 **读法**：**上五项已可对外引用，下五项一律不可**。这张表的用处是防止一句常见的误读——
@@ -4427,7 +4717,7 @@ if (exists("DAY") && nrow(DAY) > 20) {
   SPC_STAT <- list(mu = mu, sg = sg, ucl = ucl, lcl = lcl,
                    n_out = n_out, n_bel = n_bel, n = length(hold))
   cat(er_xyline("spc", sprintf(
-    "日毛利率（Hold%%）控制图：均值 %.3f%% · 三西格玛限 [%.3f%%, %.3f%%]",
+    "日平台毛利率（Hold%%）控制图：均值 %.3f%% · 三西格玛限 [%.3f%%, %.3f%%]",
     100*mu, 100*lcl, 100*ucl),
     as.character(DAY$bet_date),
     list(list(名称 = "日毛利率（实测）", 值 = round(hold, 6), 色 = PAL$ac, 粗 = TRUE)),
@@ -4518,7 +4808,7 @@ if (!is.null(B01) && exists("MB")) {
 ::: {.callout-important}
 ## 待接：多目标架构的 Margin 引擎
 
-价值侧的第二个引擎（标的＝**净贡献 ÷ 洗码量**，即本章反复出现的个人毛利率 $m_i$）
+价值侧的第二个引擎（标的＝**净贡献 ÷ 洗码量**，即本章反复出现的会员级平台毛利率 $m_i$）
 已启动但尚未产出可写入本报告的结果。按证据纪律，此处只留点名，不作任何预告：
 
 - **所待文件**：`Margin 引擎折级结果`（含逐折 WAPE／RMSLE／Bias／Top-K 四层指标，与 Scale 引擎同框十一折）
@@ -4579,7 +4869,7 @@ kb(BM, paste0("顶级同业标杆对照与自评表",
   "｜解释：前八行是本方案的强项，多数已达或接近一线写法；后五行是明确缺口，",
   "其中前两项（处置闭环、对照实验）直接决定「能否真的增加盈利」，其余为阻塞或定位差异",
   "｜本方案用途：给管理层一张不含自夸的自评——强项可即用，缺口须立项，",
-  "不以强项掩盖缺口"))
+  "不以强项掩盖缺口"), escape = FALSE, scroll = 560)
 ```
 
 **读法**：**前八行可即行采用，后五行须立项推进**。应关注者非平均分，而在**分布形状**——
@@ -4692,7 +4982,7 @@ if (exists("TRIAL")) {
     "CV（标准差÷均值）是重尾程度的直接读数",
     "｜本方案用途：回答「灰度要多大、跑多久、看哪个指标」——",
     "顶级同业的做法是命中→动作→30/90 天净利与投诉，本表即其功效前提"),
-    amt(TRIAL_N)))
+    amt(TRIAL_N)), escape = FALSE, scroll = 480)
 }
 ```
 
@@ -4759,7 +5049,7 @@ RM <- data.frame(check.names = FALSE,
 kb(RM, paste0("四层升级路线：改哪里 · 不动哪里 · 当前到哪",
   "｜解释：**不重做**净化滚动、嵌套选阈、四实体雷达、分位归一、措施跟维走、",
   "金标准三尺同读——这些经外部审计确认方向正确；只补参数、补处置、补对照、优闸门",
-  "｜本方案用途：把「还差什么」写成可派工的清单，而非笼统的「继续优化」"))
+  "｜本方案用途：把「还差什么」写成可派工的清单，而非笼统的「继续优化」"), escape = FALSE, scroll = 480)
 ```
 
 **读法**：三列连读即一条派工单——**做什么**、**改本报告哪里**、**现在到哪**。
@@ -4811,7 +5101,7 @@ WD <- data.frame(check.names = FALSE,
 kb(WD, paste0("对外表述规范表：可写与不可写",
   "｜解释：左栏为超出本报告证据范围的表述，不得出现于对外材料；",
   "右栏为本报告现算结果可支撑的等价表述，可直接引用",
-  "｜本方案用途：措辞即承诺——本表将结论的表达边界固化，供撰稿与合规审阅逐条比对"))
+  "｜本方案用途：措辞即承诺——本表将结论的表达边界固化，供撰稿与合规审阅逐条比对"), escape = FALSE, scroll = 480)
 ```
 
 **读法**：左右两栏之别不在语气强弱，而在**证据边界**。左栏各句的共同缺陷，
@@ -4855,7 +5145,7 @@ V <- data.frame(check.names = FALSE,
     "净赢重尾（CV 约 8）令朴素灰度检不出效应：主指标须缩尾 1%/99% 或改净赢率（方差削减约八成），随机化到玩家而非代理线，样本累积约 8 个滚动折（约 16 周）方能把 MDE 压到 20%——**灰度至少一个季度，不是四周**；停止规则预设、中途不窥视（见 @sec-trial）",
     "m_i > ρ/(1−κ_share) = **2.59%** 方为净贡献为正：低于此线者流水越大平台越亏。此线把「该赏该罚」从主观判断变成一条可查的算术线，亦是罚侧的经济分母与赏侧的硬约束（见 @sec-unit）；须记低于门槛≠该罚，罚侧仍以证据链为准",
     "个体毛利率两期自相关仅 **0.112**，当前模型 Spearman 0.20 已达其 **189%**——预测能力已逼近物理上限，继续调参无收益。资源应转向留存（谁会来、来多久）与毛利率（一元流水留下多少）两个新标的；同期实测秩持续性 Jaccard 仅 **0.02**，故本方案只作群体分层，不作个体长期价值承诺（罚侧证据链不受此限）"))
-kb(V, "结论裁定表｜解释：十二条裁定各自注明依据与做法　▸ 本方案用途：供拍板；每条均可回溯到本报告相应章节的现算结果")
+kb(V, "结论裁定表｜解释：十二条裁定各自注明依据与做法　▸ 本方案用途：供拍板；每条均可回溯到本报告相应章节的现算结果", escape = FALSE, scroll = 560)
 ```
 **读法**：十二条裁定即本报告请先生拍板的全部事项，每条都注明依据与做法，且都能回溯到
 前文某一张现算的图或表。三类须分开处置：①⑥是**可即刻执行**（体系上线与荷官过程口径，不涉金额承诺）；
@@ -4898,6 +5188,73 @@ kb(V, "结论裁定表｜解释：十二条裁定各自注明依据与做法　�
 :::
 
 # 变更日志 {#sec-changelog}
+
+**2026-08-10 · 第十六轮：预测四尺并陈 · 赏侧误判定性斧正 · 表内粗体与长表滚动 · 毛利率口径统一**
+
+**一、表内粗体一律不显（先生截图实证，本轮根治）**
+
+`knitr::kable(format = "html")` **不解析单元格内的 Markdown**，故表 5 的「\*\*先查玩家，非先罚荷官\*\*」原样带星显示。此为中枢缺陷，非个别失误。斧正分两步：① `tip()` 增一道剥离——`why` 先去星号与反引号（与 `cap_tip` 同规），确保 Markdown 记号绝不混入 `data-tip` 属性值；② `kb()` 于 `escape = FALSE` 时把 `**…**` 转 `<b>`、`` `…` `` 转 `<code>`。经四例实测（含悬停套粗体、粗体套反引号、属性内含算式者），转换绝不侵入属性值。另查出**十张含粗体的表原本未放行 HTML**（`ACT`／`SYM`／`mm`／`am`／`UP`／`KPI`／`BM`／`TRIAL`／`RM`／`V`），今连同其余共 **18 张一律改 `escape = FALSE`**，星号问题全篇绝迹。
+
+**二、长表滚动（表 5／9／10／12 等 20 张）**
+
+`kb()` 增 `scroll` 参数：传像素高度即套滚动壳，**表头吸顶、纵横皆可滚**，长表不再撑破版心。样式另立 `.tbl-scroll`（含 `position: sticky` 表头与 `table b` 着色）。
+
+**三、图 8 横轴与口径（先生核实指正）**
+
+**核实结论**：图 8 的每一点确系**期间总额**——`vb_te`／`net_te` 皆按 `te_d`（14 个营业日）聚合，非单日值。旧版横轴只标「检验折序」，极易诱使读者当作日频序列。斧正：① 折构造处新立 `FDW` 登记各折**检验窗起讫**；② 横轴改「第 N 折 ＋ 该窗起讫日期」两行标签，悬停另出完整起讫与窗长；③ 读法明写「本图读的是窗与窗之间的走势，不可当作日频曲线看」。表 6 同步加「检验期间」列。
+
+**四、预测评估由单尺改四尺并陈（图 5、表 6）**
+
+先生问「除 MASE 外还需补什么」，答案是**三把**。单一比值不足以服人，且各有盲区：
+
+| 尺 | 读法 | 用处 | 单看的风险 |
+|---|---|---|---|
+| **RelMAE**（原称 MASE，本轮正名） | <1 即胜过朴素外推 | 对内判模型值不值得上 | 分母是朴素基准的误差，**朴素越烂此数越好看** |
+| **WAPE** | 「差了几成」 | **对外汇报最该用**，量纲直观可跨组比 | 不告诉你差在哪个方向 |
+| **Bias** | 正为高估、负为低估 | 定赏罚幅度的方向依据 | 正负相消时可能虚低 |
+| **朴素基准线** | RelMAE=1 | 及格线 | — |
+
+**为何非补 Bias 不可**：RelMAE 与 WAPE 皆取绝对值，会把系统性高估与低估一并抹平；若某组长期高估盈利，赏罚幅度即长期给多——只有 Bias 看得出来。图 5 遂改双轴（左 RelMAE/WAPE、右 Bias），表 6 改七列并逐列挂悬停。**正名理由**：此处分母是**样本外朴素外推**的同期 MAE，非 Hyndman-Koehler 的样本内朴素 MAE，故会员级正名 `RelMAE`、聚合级正名 `RelAE`，「MASE」一词自此不再滥用。
+
+**五、图 12 赏侧「误判」定性斧正——先生此问切中要害**
+
+旧版把「礼遇发给了当期净赢的会员」记作**赏侧误判**。**此定性不成立**，三条理由：① **单期输赢是波动，不是身份**——百家乐单注方差极大，14 日窗内净赢纯属常态；以单期结果判「赏错人」，等于把随机波动当成识别失败，况且本报告已实证个体毛利率两期自相关仅 0.112，即「这期赢的人下期多半不赢」；② **礼遇的目的不是即期回本，是留存与口碑**——赢钱的会员往往正是最活跃、最愿口耳相传的一群，此时收回礼遇等于撤掉最好的宣传口（先生所指的广告效应正在此处）；③ **真正的赏侧误判只有一种**——把礼遇发给**罚侧证据链已确凿**者，那不是波动，是拿平台的钱补贴对手方。
+
+故分立两量、各挂各名：**赏罚冲突率**（＝赏池 ∩ 金标准证据链 ÷ 赏池，真误判，须压到零）与**即期未回本率**（非误判，仅作现金流提示）。图 12 由四线改五线，表 7 同步重述。
+
+**并补一条本报告能给出的最硬的账**：礼遇每付出 1 元，须换来多少增量洗码量方能回本？增量洗码量的单位净贡献即 $\gamma^{*}$；$\gamma^{*}>0$ 时门槛为 $1/\gamma^{*}$，而本平台 $\gamma^{*}=-0.091\%$ **为负**——**多来的流水本身就在亏，无论来多少都回不了本**。故**赏侧唯一可能的回本路径不是「引来更多流水」，而是「引来平台毛利率高于 2.59% 门槛的人」**。这条把礼遇设计整个翻转：**不看谁下注多，看谁的每一元下注给平台留下的多**。
+
+**六、表 13 末列逐行悬停**
+
+「可否对外宣称」十行各挂浮层，写明**凭什么可说／为什么不可说**、可说时的必附条件（如「命中率须与基率、Lift 三尺同读」）、不可说时的**解锁前提**（如「须随机对照实验」「须返水弹性实测」「须先取风控投入成本」），杜绝一句「可」被断章取义。
+
+**七、毛利与毛利率口径全篇统一**
+
+**核实结论**：全篇「毛利」「毛利率」实为**同一个量的不同聚合层级，主语一律是平台**，但「个人毛利率」四字极易被读成「会员自己的毛利」。斧正：① 正名——`个人毛利率 → 会员级平台毛利率 m_i`、`层毛利率 → 层级平台毛利率`、`日毛利率 → 日平台毛利率（Hold%）`；② 单位经济学章立**口径对照栏**，四个层级的算式、主语与出现位置逐一列明，并特别注明「$m_i$ 名为会员级是因按会员切分，赚这笔钱的仍是平台；$m_i$ 为负即此人在**赢平台的钱**」；③ 环图与直方图悬停同步改写为「该层级的平台毛利率（平台从这一层每 1 元洗码量赚到的）」「平台毛利率区间（会员级 $m_i$）」；④ 术语库该条重写。
+
+**八、例检与一处自查所得**
+
+**自查所得（本轮渲染报错 `is.null()` 三参数之因）**：首次批量插入 `escape`／`scroll` 时，
+所用的括号配对判定有误，参数普遍落进 `paste0(` 而非 `kb(`，其中一处更落进
+`if (!is.null(E02))`，遂报「3个参数给'is.null'，但它只需要1个」；另有一处污染了变更日志正文。
+**此为我的过失**。今全数剥离重做，改以「自 `kb(` 的左括号起逐字符扫描、遇字符串即跳过」的
+配对算法定位收尾括号，并新立两道复验：① 反向扫描验明每处参数确在 `kb(` 的实参位（37 处全对）；
+② 模拟 R 解析器拆解 19 个 `kb(` 调用的实参签名，验明具名参数只含 `caption`／`escape`／`scroll`
+且无重复（19 处全合法）。
+
+R 块 68 块零不平衡、非法转义零、行内 R 表达式 19 条括号平衡、20 张表挂滚动壳且 20 处放行 HTML、粗体转换四例实测不侵入悬停属性。
+
+
+**2026-08-10 · 第十五轮（续）：`forecast-entity` 内存中断斧正——归属表折内反复展开**
+
+- **报错原文**：`cannot allocate vector of size 47.3 Mb`，止于 51%（`forecast-entity`），栈底为 `merge.data.frame → cbind → data.frame`。前次的 `score-dealer` 中断已解（渲染由 18% 推进至 51%），此为**另一处独立病灶**。
+- **根因**：`add_ent()` 的 `map` 参数是**会员×实体**的归属表（荷官侧即 `uid × dealer` 注额表，数百万行）。旧版**每一折**都以 `base::merge` 把折内会员与该表展开一次，再 `merge` 一次分组列；`merge.data.frame` 内部走 `cbind` 全表复制，两次叠加即在折内反复制造数百万行的中间表。
+- **可整体消解，非局部修补**：`pv`／`pp`／`vb_te`／`p_te`／`nvb`／`np` 皆是**会员级常量**，而聚合式为按组求 $\sum(x\cdot w)$，故
+  $$\sum_{d\in 组} x_m\,w_{m,d} \;=\; x_m\sum_{d\in 组} w_{m,d} \;=\; x_m\,W_{m,组}$$
+  「先加权后展开」与「先折叠后加权」**逐位等价**。斧正遂把归属权重**折叠到「会员 × 组」**（每人至多 3 行，因分组只有低／中／高三档），且**只折叠一次**、不在折内重复；折内改用 `data.table` 键连接（`MG[DT, on="member_id"]`），免 `cbind` 全表复制。行数由「会员×实体」（数百万）降至「会员×3」。
+- **同块另两处精化**：① 归属权重原以 `tapply(w1$st, w1$uid, sum)` 计算，须在数百万行上建全量索引与命名向量，今改 `data.table` 的 `by = member_id` radix 分组就地算；② `DW` 改 `setDT()` 就地转换并**直传** `add_ent`（免 `as.data.frame` → `as.data.table` 的双重复制），用毕即 `rm(DW)` 并报 `🧮 内存[释放 DW 后]`。
+- **口径未动**：本轮只改数据流与内存路径，`营业额MASE`／`盈利MASE`／`盈利增长乘数` 三列的算式一字未改，`add_ent` 的输入输出契约不变；另加两道守卫——`map` 缺 `member_id`／`key`／`w` 任一列即返回 `NULL`（不静默出错），折内连接无匹配即跳过该折。
+- **新增诊断**：折叠完成时打印 `🔗 归属权重已折叠[荷官/代理]：会员×组 N 行`，N 若远大于会员数的三倍即说明分组列有异常，可据此一眼判定。
 
 **2026-08-10 · 第十五轮：Phase 3 限制性发现写入 + 六张关键图新增 + 三处内部不一致斧正**
 
