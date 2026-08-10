@@ -279,7 +279,9 @@ ttl2 <- function(main, sub = NULL, size = 14, subsize = 11, width = 46) {
   if (!is.null(sub) && nzchar(sub))
     txt <- paste0(txt, "<br><span style=\"font-size:", subsize,
                   "px;opacity:.78\">", w_(sub, width + 10), "</span>")
-  list(text = txt, x = .5, xanchor = "center", font = list(size = size))
+  ## ★ 二十轮：主副标题一并显式给色——同样不靠 layout.font 继承（理由见 plt() 注）
+  list(text = txt, x = .5, xanchor = "center",
+       font = list(size = size, color = PAL$fg))
 }
 pct <- function(x, d=1) paste0(formatC(100*x, format="f", digits=d), "%")
 amt <- function(x) formatC(x, format="f", digits=0, big.mark=",")
@@ -330,16 +332,44 @@ plt <- function(p) {
     } else if (!is.null(tt)) {
       ly$title$x <- .5; ly$title$xanchor <- "center"
     }
-    ## 各轴：开 automargin，轴标题换行
+    ## ★★ 二十轮斧正（先生查证：标签「显示不全」的真身是**透明色**）
+    ##   `layout(font = list(color = PAL$fg))` 只是**默认继承源**；而本函数在
+    ##   plotly_build **之后**把轴标题整个换成一个新对象——旧版那句
+    ##   `ly[[ax]]$title <- list(text = w_(at, 52))` 只带 text、**不带 font**，
+    ##   继承链就此断裂，plotly.js 回落到它自己的默认色，在深底上近乎不可见。
+    ##   教训：**凡显式重建某个对象，必须把它原有的样式一并带回**。
+    ##   自此四个颜色位一律显式给定，不靠继承——轴名 title$font$color、
+    ##   刻度 tickfont$color、轴线 linecolor、网格 gridcolor，另加图例 legend$font$color。
     for (ax in grep("^[xy]axis", names(ly), value = TRUE)) {
       ly[[ax]]$automargin <- TRUE
-      at <- ly[[ax]]$title
-      if (is.character(at) && nzchar(at)) {
-        ly[[ax]]$title <- list(text = w_(at, 52))
-      } else if (is.list(at) && !is.null(at$text) && nzchar(at$text) &&
-                 !grepl("<br>", at$text, fixed = TRUE)) {
-        ly[[ax]]$title$text <- w_(at$text, 52)
+      at  <- ly[[ax]]$title
+      txt <- if (is.character(at)) at else if (is.list(at)) at$text else NULL
+      if (!is.null(txt) && nzchar(txt)) {
+        if (!grepl("<br>", txt, fixed = TRUE)) txt <- w_(txt, 52)
+        fnt <- if (is.list(at) && is.list(at$font)) at$font else list()
+        fnt$color <- PAL$fg                       # ★ 轴名颜色
+        if (is.null(fnt$size)) fnt$size <- 13
+        ly[[ax]]$title <- list(text = txt, font = fnt, standoff = 14)
       }
+      tf <- if (is.list(ly[[ax]]$tickfont)) ly[[ax]]$tickfont else list()
+      tf$color <- PAL$fg                          # ★ 刻度数字颜色
+      if (is.null(tf$size)) tf$size <- 11
+      ly[[ax]]$tickfont <- tf
+      if (is.null(ly[[ax]]$linecolor)) ly[[ax]]$linecolor <- "#1e3a52"
+      if (is.null(ly[[ax]]$gridcolor)) ly[[ax]]$gridcolor <- "#132a3f"
+    }
+    if (is.list(ly$legend)) {                     # ★ 图例文字颜色
+      lf <- if (is.list(ly$legend$font)) ly$legend$font else list()
+      lf$color <- PAL$fg; if (is.null(lf$size)) lf$size <- 11
+      ly$legend$font <- lf
+    }
+    if (is.list(ly$annotations) && length(ly$annotations)) {   # ★ 注记文字颜色
+      ly$annotations <- lapply(ly$annotations, function(an) {
+        if (!is.list(an)) return(an)
+        af <- if (is.list(an$font)) an$font else list()
+        if (is.null(af$color)) af$color <- PAL$fg
+        an$font <- af; an
+      })
     }
     b$x$layout <- ly
     p <- b
@@ -3652,7 +3682,7 @@ if (exists("EF") && !is.null(EF)) {
       "系统性偏向：（Σ预测−Σ实际）÷ |Σ实际|。正为高估、负为低估。RelAE 与 WAPE 皆取绝对值，会把高估与低估一并抹平，故须以 Bias 单独盯方向；定赏罚幅度时，长期低估者可适度放宽、长期高估者须收紧"),
     `盈利 Bias` = tip(sprintf("%+.1f%%", 100*ag$盈利Bias),
       "同上，标的换为期间盈利"),
-    `盈利增长乘数` = tip(sprintf("%.2f×", ag$盈利增长乘数),
+    `盈利增长乘数` = tip(sprintf("%.2f 倍", ag$盈利增长乘数),
       "该组在整个检验窗的实际盈利合计 ÷ 同窗朴素外推合计。大于 1 即跑赢外推。此为期间总额之比，非单日值"))
   kb(OUT, paste0("实体级预测结账：荷官与代理按 §17.2 综合分三分组的四尺并陈",
     "｜解释：会员级预测经归属结构（荷官＝R03b 注额权重；代理＝lv3 归线）聚合到实体组后结账。",
@@ -3668,7 +3698,7 @@ if (exists("EF") && !is.null(EF)) {
 - **WAPE**——「差了几成」，量纲直观，可跨组跨实体直接比较，不受朴素基准好坏影响。**这是对外汇报最该用的一把**。
 - **Bias**——正为高估、负为低估。前两把尺都取绝对值，会把高估与低估一并抹平；定赏罚幅度时，
   长期低估者可适度放宽、长期高估者须收紧，方向须由此列单独盯。
-- **盈利增长乘数 > 1**——该组实际盈利跑赢外推。
+- **盈利增长乘数 > 1 倍**——该组实际盈利跑赢朴素外推；单位为「倍」，非乘号。
 
 要看的是**高能力组与低能力组的乘数是否系统性拉开**——拉开即「能力值在实体层同样带得动盈利」，
 这是荷官与代理赏罚定幅的实体级依据；若两组乘数接近，则该实体的能力值只宜作过程管理、不宜挂金额。
@@ -3698,7 +3728,7 @@ if (exists("EF") && !is.null(EF) && HAS$plotly) {
       hovertemplate = paste0(ln, "<br>检验窗 ",
         if ("窗首" %in% names(e2)) paste0(e2$窗首, " 至 ", e2$窗末,
           "（共 ", e2$窗长, " 日）") else "—",
-        "<br>盈利增长乘数 %{y:.2f}×",
+        "<br>盈利增长乘数 %{y:.2f} 倍",
         "<br>（该组在**整个检验窗**的实际盈利合计 ÷ 同窗朴素外推合计；",
         ">1 即跑赢外推。此为期间总额之比，非单日值）<extra></extra>"))
   }
@@ -3711,12 +3741,21 @@ if (exists("EF") && !is.null(EF) && HAS$plotly) {
     xaxis = list(title = "检验折序与检验窗期间（每折 14 个营业日）",
                  type = "category", categoryorder = "array", categoryarray = lv,
                  tickfont = list(size = 10.5)),
-    yaxis = list(title = "盈利增长乘数（×）"),
-    margin = list(b = 86))
+    ## ★ 二十轮：①「×」改「倍」——× 有乘号／叉号／倍号三重歧义，旋转 90° 后更难辨；
+    ##   ② 四个颜色位一律显式给定，不靠继承；③ 补左边距，免旋转后的轴名被容器左缘裁去。
+    yaxis = list(
+      title     = list(text = "盈利增长乘数（倍）",
+                       font = list(color = PAL$fg, size = 13), standoff = 14),
+      tickfont      = list(color = PAL$fg, size = 11),
+      linecolor     = "#1e3a52", gridcolor = "#132a3f",
+      zerolinecolor = "rgba(255,214,77,.45)", automargin = TRUE),
+    margin = list(l = 96, b = 86))
   plt(p)
 }
 ```
-**读法**：四条线是荷官与代理的高／低能力组逐折盈利增长乘数（实线＝高能力组，点线＝低能力组）。
+**读法**：四条线是荷官与代理的高／低能力组逐折**盈利增长乘数（单位：倍）**——
+即该组在该窗内实际赚到的钱，是「日均×天数」这种最笨的朴素外推所预期的**几倍**：
+`1.0 倍` 即打平，`0.8 倍` 即只有外推的八成，`1.2 倍` 即跑赢两成（实线＝高能力组，点线＝低能力组）。
 **横轴每一格是一个 14 日检验窗，标签下方即该窗的起讫日期**；纵轴的每一个点是**该窗内的期间
 总额之比**（该组实际盈利合计 ÷ 同窗朴素外推合计），**不是某一日的值**——本图读的是窗与窗之间
 的走势，不可当作日频曲线看。
@@ -5465,6 +5504,60 @@ kb(V, "结论裁定表｜解释：十二条裁定各自注明依据与做法　�
 :::
 
 # 变更日志 {#sec-changelog}
+
+::: {.callout-important}
+## 常设纪律：标签「显示不全」时的排查次序（先生查证所立，日后一律照办）
+
+先生查证后指出：此前多处「标签只显示局部」的真身，**不是裁切、不是折行、不是字体，而是颜色——
+文字确实画出来了，只是与底色同色或近乎透明，肉眼看不见**。此事教训有二，今立为常设纪律。
+
+**排查次序（自最易被忽略者查起，不得跳步）**
+
+1. **颜色**——浏览器 F12 选中该文字节点，看其 `fill` 属性。若为 `rgb(68,68,68)`、`transparent`
+   或空值，即已找到病灶；若为 `#dff7ee` 方可排除。**此步最易被忽略，故置于首位。**
+2. **裁切**——看该节点是否落在 `clip-path` 之外，或被容器左右缘切断。
+3. **折行与行高**——多行标签在行高不足时会互相压叠（图 7 曾因此而混乱）。
+4. **首绘度量**——容器零宽或字体未就位时按错误画幅定版面（雷达图曾因此须转动方显）。
+5. **语法**——`setOption` 抛错则整幅不画（瀑布图曾因 R 兑现 `\n` 转义而一片乌黑）。
+
+**为何颜色会「凭空」失效**：`layout(font = list(color = ...))` 只是**默认继承源**。
+凡在 `plotly_build` **之后**重建某个对象（本报告的 `plt()` 曾把轴标题整个换成
+`list(text = ...)`），该对象原有的 font 即被丢弃，继承链就此断裂，plotly.js 回落到
+它自己的深灰默认色——在深底主题上近乎不可见。
+
+**由此立一条通则**：**凡显式重建某个对象，必须把它原有的样式一并带回**；
+凡关键文字，**颜色一律显式给定，不靠继承**。plotly 的轴有四个各自独立的颜色位——
+轴名 `title$font$color`、刻度 `tickfont$color`、轴线 `linecolor`、网格 `gridcolor`——
+缺一即可能整条不可见；图例另有 `legend$font$color`，注记另有 `annotations[i]$font$color`。
+:::
+
+**2026-08-10 · 第二十轮：透明色根治 · 「×」改「倍」**
+
+**一、根因（先生查证所得）**
+
+`plt()` 在 `plotly_build` **之后**把轴标题整个换成 `list(text = w_(at, 52))`——**只带 text、
+不带 font**，继承链就此断裂。此为我的疏漏：重建对象时未把原有样式带回。
+
+**二、斧正范围：四个颜色位 + 图例 + 注记，一律显式给定**
+
+`plt()` 内的轴循环改为：轴名 `title$font$color`、刻度 `tickfont$color` 一律强制设为 `PAL$fg`
+（原有 font 若在则保留其 size 等属性，只覆写 color），轴线与网格在未设时给定深蓝灰底色，
+并为轴名加 `standoff = 14` 免与刻度贴死；另补 `legend$font$color` 与
+`annotations[i]$font$color` 两处兜底。`ttl2()` 返回的主副标题亦一并显式给色——
+它此前同样只给了 size。**全篇十四张 plotly 图皆经 `plt()` 一道，故一处斧正、全篇受益。**
+
+**三、图 8 三处同步：「×」改「倍」**
+
+`×` 有乘号／叉号／倍号三重歧义，旋转 90° 挂在纵轴上只剩「（×）」时更难辨（先生即因此发问）。
+今轴名、悬停浮层、读法三处一并改为「倍」，并于读法首句写明其算式与读数
+（`1.0 倍` 打平、`0.8 倍` 只有外推八成、`1.2 倍` 跑赢两成）。表 6 的同名列一并改「倍」；
+`Lift n×` 系行业通用写法，保留不动。该图另补左边距 96px，免旋转后的轴名被容器左缘裁去。
+
+**四、例检**
+
+R 块 68 块零不平衡、R 块内非法转义零、十四图颜色位逐张自查（皆有中枢兜底，
+横条图另有左边距）、UTF-8 合法无 BOM。
+
 
 **2026-08-10 · 第十九轮：图 7 纵轴标签压叠根治 · 全篇纵轴普查具名**
 
