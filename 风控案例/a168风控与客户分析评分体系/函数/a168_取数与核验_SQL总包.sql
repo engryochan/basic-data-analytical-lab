@@ -5616,7 +5616,7 @@ ORDER BY opposite_rate DESC, n_opposite_round DESC;
      ① 该表确为**逐日快照**（每个 dt 皆有全量会员行），而非只存最新一版；
      ② 配置值**确有跳变**（若全窗恒定，则窗口内无任何处置发生，此路无货）；
      ③ 跳变**可定日**（跳变日即处置日，误差不超过一日）。
-   §TL-01 至 §TL-03 依次查此三事。三者皆过，方可进 §TL-04 抽取事件表。
+   §TL-01 至 §TL-03 依次查此三事。三者皆过，方可进 §TL-03 抽取事件表。
 
    ⚠ 纵使三者皆过，所得仍是**准处置台账**而非处置台账：
      它记得「配置何时变了」，记不得「为何而变、由谁决定、是否属实验组」。
@@ -5800,3 +5800,145 @@ SELECT  CAST(id AS STRING)                                AS seed_id,
         TRIM(remarks)                                     AS remarks
 FROM    ods_mariadb_2b.ods_a168_alert_ip_setting
 ORDER BY addtime;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL 续 · 实测三结论与随之而来的四条查明（2026-08-10）
+   ---------------------------------------------------------------------------
+   【结论一】前提①成立，惟有一道时间断崖。
+     §TL-01 实测：窗口内每一日皆有行，日均约 44,000 会员、每会员约 13.9 行
+     （按 mem002 分 22 类），确为**逐日快照**。
+     ⚠ 但自 **2026-07-19 起行数断崖**：由 72 万骤降至 8,409，其后每日仅数十至数百行。
+       即该表实际只覆盖到 **2026-07-18**。准处置台账的可观察期因此止于该日，
+       其后十九日（07-19 ~ 08-06）**无处置可观察**，非「无处置发生」。二者不可混为一谈。
+     ⚠ 另有两处尖峰疑为重同步：2026-05-21（104,609 会员）与 2026-07-18（71,769 会员），
+       其每会员行数降至 10.5，与常日的 13.9 不符，抽取事件时须先剔除或单独处置。
+
+   【结论二】前提②成立，且 §TL-03 的零结果系其自身缺陷，非「确无处置」。
+     §TL-02 实测（全表 5,702,058 会员为分母）：
+       新版限額 mem015 变更率 **99.11%**（5,651,502 人）
+       退水     mem003 变更率 **1.24%**（70,923 人）
+       最大可贏 mem012 变更率 0.11%（6,312 人）
+       可贏可輸起算 mem013 0.055%（3,124 人）
+       最大押分 mem009 **1 人**
+     而 §TL-03 返回零行——两者**直接矛盾**，故 §TL-03 有缺陷。已查得三处：
+       ⓐ 其 `WHERE CAST(mem002 AS STRING) = '1'` 未经核实即写死；mem002 有 22 类，
+         '1' 未必存在、亦未必是主类；
+       ⓑ 其 `WHERE rebate_prev IS NOT NULL` 令 mem003 为空者整批落空，
+         且 SQL 三值逻辑下 `a <> b` 遇 NULL 返回 NULL 而非 TRUE，比较自然不成立；
+       ⓒ 其未纳入 **mem015**——而这恰是变更率最高的一列。
+     §TL-03b 为其斧正版。
+
+   【结论三】mem015 的 99.11% 变更率**高得可疑，不可直接采信为处置**。
+     一个平台九成九的会员在同窗口内改过限额，不合经营常理。
+     该列为 varchar(300)「新版限額」，极可能是**序列化的限额表**，
+     其字面随重算或排序而变，而非限额本身变动。§TL-05 先探其取值形态，
+     形态未明之前，**mem015 一律不得计入处置事件**。
+
+   【结论四】另有两张表，名字就叫变更日志——此前从未查过。
+     §TL-00 扫描列出 `ods_a168_log_mem_change`（会员变更日志，17 列 / 2 处置类列）
+     与 `ods_a168_change_log`（14 列 / **5 处置类列**，为全库处置类列第十）。
+     **若其中任一记的是会员配置的变更流水，则准处置台账无须由快照推断，可直接取用。**
+     §TL-04 先看结构，§TL-06 再看内容。此路若通，胜过快照差分远矣。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+-- §TL-04 · 三张日志表的结构（先看骨，再看肉）
+-- ▸ 导出：需要 —— 存为「数据库/TL04_log_schema.csv」（§TL-04 三张日志表结构）。
+-- 读法：找三类列——**主体列**（会员或代理编号）、**时点列**（操作时间）、
+--       **内容列**（改了什么、由何值变为何值、操作人）。三者俱全即为可用的处置流水。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT
+FROM    information_schema.columns
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND   TABLE_NAME IN ('ods_a168_log_mem_change',
+                       'ods_a168_change_log',
+                       'ods_a168_log_age_cash_change')
+ORDER BY TABLE_NAME, ORDINAL_POSITION;
+
+-- §TL-05 · mem002 取值分布与 mem015 取值形态（解结论三之疑）
+-- ▸ 导出：不需要 —— §TL-05 形态探针，屏幕看结果。
+-- 读法：① mem002 各取值的会员数与占比，判定哪一类才是主类（§TL-03 写死 '1' 之误由此正）；
+--       ② mem015 的样例取值与长度分布——若为长串序列化文本，即证其变更率之高
+--          源于字面重排而非限额变动，该列遂不可作处置信号。
+SELECT  CAST(mem002 AS STRING)                            AS 类别,
+        COUNT(*)                                          AS 行数,
+        COUNT(DISTINCT CAST(mem001 AS STRING))            AS 会员数,
+        AVG(LENGTH(CAST(mem015 AS STRING)))               AS mem015_平均长度,
+        MAX(LENGTH(CAST(mem015 AS STRING)))               AS mem015_最长,
+        COUNT(DISTINCT CAST(mem015 AS STRING))            AS mem015_不同取值数,
+        MAX(CAST(mem015 AS STRING))                       AS mem015_样例,
+        COUNT(DISTINCT CAST(mem003 AS STRING))            AS mem003_不同取值数
+FROM    ods_mariadb_2b.ods_a168_member_dtl
+WHERE   dt >= '2026-03-21'
+  AND   dt <= '2026-07-18'
+GROUP BY 1
+ORDER BY 会员数 DESC;
+
+-- §TL-03b · 变更事件抽取（斧正版：去写死类别 · NULL 安全 · 限于可观察期）
+-- ▸ 导出：需要 —— 存为「数据库/TL03b_pseudo_treatment.csv」（§TL-03b 准处置台账·斧正版）。
+-- 三处斧正：ⓐ 不再写死 mem002='1'，改按会员×类别分区，各类别各自比对；
+--           ⓑ NULL 安全——以 COALESCE 转哨兵值再比，杜绝三值逻辑下的静默漏判；
+--           ⓒ 窗口收至 2026-07-18，即该表的实际覆盖末日（§TL-01 实测断崖）。
+--           另：mem015 形态未明，本条**不纳入**，待 §TL-05 判定后再议。
+-- 读法：每行一次配置跳变——谁、哪一类、哪一日、哪一项、由何值变为何值、收紧抑或放宽。
+WITH snap AS (
+    SELECT  CAST(mem001 AS STRING)                        AS member_id,
+            CAST(mem002 AS STRING)                        AS cate,
+            dt,
+            COALESCE(CAST(NULLIF(TRIM(mem003), '') AS DOUBLE), -999999) AS rebate,
+            COALESCE(CAST(NULLIF(TRIM(mem009), '') AS DOUBLE), -999999) AS maxbet,
+            COALESCE(CAST(NULLIF(TRIM(mem012), '') AS DOUBLE), -999999) AS maxwin,
+            COALESCE(CAST(NULLIF(TRIM(mem014), '') AS DOUBLE), -999999) AS maxloss
+    FROM    ods_mariadb_2b.ods_a168_member_dtl
+    WHERE   dt >= '2026-03-21'
+      AND   dt <= '2026-07-18'
+      AND   dt NOT IN ('2026-05-21', '2026-07-18')
+),
+lagged AS (
+    SELECT  member_id, cate, dt, rebate, maxbet, maxwin, maxloss,
+            LAG(rebate)  OVER (PARTITION BY member_id, cate ORDER BY dt) AS rebate_p,
+            LAG(maxbet)  OVER (PARTITION BY member_id, cate ORDER BY dt) AS maxbet_p,
+            LAG(maxwin)  OVER (PARTITION BY member_id, cate ORDER BY dt) AS maxwin_p,
+            LAG(maxloss) OVER (PARTITION BY member_id, cate ORDER BY dt) AS maxloss_p,
+            LAG(dt)      OVER (PARTITION BY member_id, cate ORDER BY dt) AS dt_p
+    FROM    snap
+)
+SELECT  member_id,
+        cate,
+        dt_p                                              AS prev_date,
+        dt                                                AS change_date,
+        CASE WHEN rebate  <> rebate_p  THEN '退水'
+             WHEN maxbet  <> maxbet_p  THEN '最大押分'
+             WHEN maxwin  <> maxwin_p  THEN '最大可贏'
+             ELSE '最大可輸' END                           AS action_type,
+        CASE WHEN rebate  <> rebate_p  THEN rebate_p
+             WHEN maxbet  <> maxbet_p  THEN maxbet_p
+             WHEN maxwin  <> maxwin_p  THEN maxwin_p
+             ELSE maxloss_p END                            AS value_before,
+        CASE WHEN rebate  <> rebate_p  THEN rebate
+             WHEN maxbet  <> maxbet_p  THEN maxbet
+             WHEN maxwin  <> maxwin_p  THEN maxwin
+             ELSE maxloss END                              AS value_after,
+        CASE WHEN rebate  <> rebate_p  THEN CASE WHEN rebate  < rebate_p  THEN '收紧' ELSE '放宽' END
+             WHEN maxbet  <> maxbet_p  THEN CASE WHEN maxbet  < maxbet_p  THEN '收紧' ELSE '放宽' END
+             WHEN maxwin  <> maxwin_p  THEN CASE WHEN maxwin  < maxwin_p  THEN '收紧' ELSE '放宽' END
+             ELSE CASE WHEN maxloss < maxloss_p THEN '收紧' ELSE '放宽' END
+        END                                                AS direction
+FROM    lagged
+WHERE   dt_p IS NOT NULL
+  AND  (rebate  <> rebate_p
+     OR maxbet  <> maxbet_p
+     OR maxwin  <> maxwin_p
+     OR maxloss <> maxloss_p)
+ORDER BY member_id, cate, change_date;
+
+-- §TL-06 · 会员变更日志的内容探查（结论四之肉）
+-- ▸ 导出：需要 —— 存为「数据库/TL06_log_mem_change.csv」（§TL-06 会员变更日志抽样与计数）。
+-- 前置：须先跑 §TL-04 确认列名；本条按「表名即语义」的常见形制先写，列名不符即依 §TL-04 改写。
+-- 读法：若该表逐行记「谁、何时、改了哪一项、由何值变为何值、操作人」，
+--       则准处置台账无须由快照差分推断，可**直接取用**——此路胜过 §TL-03b 远矣。
+SELECT  dt,
+        COUNT(*)                                          AS 行数
+FROM    ods_mariadb_2b.ods_a168_log_mem_change
+WHERE   dt >= '2026-03-21'
+  AND   dt <  '2026-08-07'
+GROUP BY dt
+ORDER BY dt;
