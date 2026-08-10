@@ -5520,6 +5520,13 @@ ORDER BY a.mem, a.d;
 
 -- §C06d · 同 IP 对打对（带首末时点）
 -- ▸ 导出：需要 —— 存为「数据库/C06d_hedge_pairs_dated.csv」（§C06d 对打对·带时点）。
+-- ⚠ 门槛不一，取用前必先对齐（2026-08-10 实测查获，此为本条初版之误）：
+--   §C06fix 的 HAVING 为 COUNT(*) >= 30（不设反向比例门槛）；
+--   本条初版误设为 COUNT(*) >= 20 AND opposite_rate >= 0.9，故两表**不可逐行对齐**。
+--   实测差额：本条全量 1,574 对，其中 n_same_round >= 30 且完全反向者 1,096 对，
+--   仅因 20 <= n < 30 而多出者 339 对。今已将门槛改回 COUNT(*) >= 30 与 §C06fix 一致。
+--   ★ 已导出的旧版 C06d（20 门槛）仍可用，但**下游必须再加 n_same_round >= 30 过滤**方与
+--     §C06fix 同口径；重跑本条后即无须此步。
 -- 读法：与 §C06fix 逐行可比（同 bet_ip + m_a + m_b 即同一对），多出三列时点。
 --       凡 first_opposite_dt 落在某折测试窗内者，该对成员在该折**不得**计入训练标签。
 WITH ta AS (
@@ -5587,6 +5594,5 @@ JOIN        side b
       AND   a.round_key = b.round_key
       AND   a.member_id < b.member_id
 GROUP BY a.bet_ip, a.member_id, b.member_id
-HAVING  COUNT(*) >= 20
-   AND  SUM(CASE WHEN a.dir_stake*b.dir_stake < 0 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) >= 0.9
+HAVING  COUNT(*) >= 30
 ORDER BY opposite_rate DESC, n_opposite_round DESC;
