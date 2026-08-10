@@ -392,6 +392,325 @@ er_radar <- function(tag, title, labels, series, cols,
 '})();\n',
 '</script>\n')
 }
+
+## ══ ECharts 通用图件（2026-08-10 十五轮）══════════════════════════════
+##   与 er_radar() 同一套骨架：容器零宽即不初始化、四处事件自动复算、
+##   载入失败即点名不留白。以下五件各答一类问题，皆由包内表现算。
+EJ <- function(x) as.character(jsonlite::toJSON(x, auto_unbox = TRUE,
+                                                digits = 6, na = "null"))
+## 统一的挂载脚本：OPT 已在外层备妥，此处只管初始化与自愈
+er_mount <- function(id, opt_js, height) paste0(
+'<div class="er-chart" id="', id, '" style="width:100%;height:', height, 'px;"></div>\n',
+'<script>\n(function(){\n  var OPT = ', opt_js, ';\n',
+'  var el = document.getElementById("', id, '"), chart = null;\n',
+'  function boot(){\n',
+'    if (!window.echarts || !el) { return false; }\n',
+'    if (!(el.clientWidth > 1)) { return false; }\n',
+'    if (!chart) { chart = echarts.init(el); chart.setOption(OPT); }\n',
+'    return true;\n  }\n',
+'  function fit(){ if (chart) { chart.resize(); } else { boot(); } }\n',
+'  if (!boot()) {\n',
+'    var k = 0, iv = setInterval(function(){\n',
+'      if (boot() || ++k > 200) {\n        clearInterval(iv);\n',
+'        if (!chart && el) { el.innerHTML = "<p style=\\"color:', PAL$bad,
+';text-align:center;padding:2em\\">⬜ ECharts 未能载入（所待：R 包 echarts4r，',
+'或联网取用 CDN）；受影响输出：本图</p>"; }\n      }\n    }, 100);\n  }\n',
+'  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); }\n',
+'  window.addEventListener("resize", fit);\n',
+'  if (window.ResizeObserver) { new ResizeObserver(fit).observe(el); }\n',
+'  if (window.IntersectionObserver) {\n',
+'    new IntersectionObserver(function(es){\n',
+'      es.forEach(function(e){ if (e.isIntersecting) { fit(); } });\n',
+'    }).observe(el);\n  }\n})();\n</script>\n')
+
+## ① 环图：赏罚分明的客群构成。rows 须含 名称/人数/洗码量/盈利/返水 五列
+er_pie <- function(tag, title, rows, cols, note = "", height = 460) {
+  message(sprintf("🥧 环图[%s] %d 层：%s", tag, nrow(rows),
+                  paste(rows$名称, collapse = " ｜ ")))
+  dat <- lapply(seq_len(nrow(rows)), function(i) list(
+    name = rows$名称[i], value = round(as.numeric(rows$洗码量[i]), 0),
+    itemStyle = list(color = cols[i]),
+    人数 = as.numeric(rows$人数[i]), 盈利 = round(as.numeric(rows$盈利[i]), 0),
+    返水 = round(as.numeric(rows$返水[i]), 0),
+    毛利率 = round(as.numeric(rows$盈利[i]) / max(as.numeric(rows$洗码量[i]), 1), 6)))
+  opt <- paste0(
+'{\n  backgroundColor: "transparent",\n',
+'  title: {text: ', EJ(title), ', left: "center", top: 2,\n',
+'          textStyle: {color: "', PAL$fg, '", fontSize: 13, fontWeight: "normal"}},\n',
+'  tooltip: {trigger: "item", confine: true,\n',
+'    backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
+'    textStyle: {color: "', PAL$fg, '", fontSize: 12},\n',
+'    formatter: function(p){\n',
+'      var d = p.data, f = function(x){ return (x||0).toLocaleString("en-US",\n',
+'        {maximumFractionDigits:0}); };\n',
+'      return "<b>" + d.name + "</b>（占洗码量 " + p.percent + "%）<br/>"\n',
+'        + "客群人数：" + f(d.人数) + " 人<br/>"\n',
+'        + "投注额（洗码量）：" + f(d.value) + "<br/>"\n',
+'        + "盈利（GGR）：" + f(d.盈利) + "<br/>"\n',
+'        + "返水支出：" + f(d.返水) + "<br/>"\n',
+'        + "该层毛利率：" + (d.毛利率*100).toFixed(3) + "%"\n',
+'        + "<br/><span style=\\"opacity:.72\\">', note, '</span>";\n',
+'    }},\n',
+'  legend: {bottom: 2, textStyle: {color: "', PAL$fg, '", fontSize: 11}},\n',
+'  series: [{type: "pie", radius: ["38%", "66%"], center: ["50%", "48%"],\n',
+'    avoidLabelOverlap: true, padAngle: 2,\n',
+'    itemStyle: {borderColor: "rgba(5,13,26,.9)", borderWidth: 2},\n',
+'    label: {color: "', PAL$fg, '", fontSize: 11,\n',
+'            formatter: "{b}\\n{d}%"},\n',
+'    labelLine: {lineStyle: {color: "#1e3a52"}},\n',
+'    data: ', EJ(dat), '}]\n}')
+  er_mount(er_id(tag), opt, height)
+}
+
+## ② 瀑布：单位经济学逐段拆解。steps 须含 名称/增量 两列，末行可设 total=TRUE
+er_waterfall <- function(tag, title, steps, unit = "%", note = "", height = 420) {
+  v <- as.numeric(steps$增量); n <- length(v)
+  base <- numeric(n); run <- 0
+  for (i in seq_len(n)) {
+    if (isTRUE(steps$total[i])) { base[i] <- 0 } else {
+      base[i] <- if (v[i] >= 0) run else run + v[i]
+    }
+    run <- if (isTRUE(steps$total[i])) run else run + v[i]
+  }
+  vis <- ifelse(isTRUE(steps$total), abs(v), abs(v))
+  cl <- ifelse(steps$total, PAL$ac, ifelse(v >= 0, PAL$good, PAL$bad))
+  bar <- lapply(seq_len(n), function(i) list(
+    value = abs(v[i]), itemStyle = list(color = cl[i]),
+    实值 = v[i], 累计 = if (isTRUE(steps$total[i])) v[i] else sum(v[seq_len(i)]),
+    说明 = steps$说明[i]))
+  opt <- paste0(
+'{\n  backgroundColor: "transparent",\n',
+'  title: {text: ', EJ(title), ', left: "center", top: 2,\n',
+'          textStyle: {color: "', PAL$fg, '", fontSize: 13, fontWeight: "normal"}},\n',
+'  grid: {left: 70, right: 40, top: 56, bottom: 78},\n',
+'  tooltip: {trigger: "axis", axisPointer: {type: "shadow"}, confine: true,\n',
+'    backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
+'    textStyle: {color: "', PAL$fg, '", fontSize: 12},\n',
+'    formatter: function(ps){\n',
+'      var p = null, i;\n',
+'      for (i = 0; i < ps.length; i++) { if (ps[i].seriesName === "值") { p = ps[i]; } }\n',
+'      if (!p) { return ""; }\n',
+'      var d = p.data;\n',
+'      return "<b>" + p.name + "</b><br/>本段：" + (d.实值 >= 0 ? "+" : "")\n',
+'        + d.实值.toFixed(3) + "', unit, '<br/>累计：" + d.累计.toFixed(3) + "', unit, '"\n',
+'        + "<br/><span style=\\"opacity:.72\\">" + (d.说明 || "") + "</span>";\n',
+'    }},\n',
+'  xAxis: {type: "category", data: ', EJ(as.character(steps$名称)), ',\n',
+'    axisLabel: {color: "', PAL$fg, '", fontSize: 11, interval: 0},\n',
+'    axisLine: {lineStyle: {color: "#1e3a52"}}},\n',
+'  yAxis: {type: "value", name: "', unit, '",\n',
+'    nameTextStyle: {color: "', PAL$fg, '"},\n',
+'    axisLabel: {color: "', PAL$fg, '", fontSize: 11},\n',
+'    splitLine: {lineStyle: {color: "#1e3a52"}}},\n',
+'  series: [\n',
+'    {name: "底", type: "bar", stack: "w", silent: true,\n',
+'     itemStyle: {color: "transparent"}, data: ', EJ(round(base, 6)), '},\n',
+'    {name: "值", type: "bar", stack: "w", barMaxWidth: 54,\n',
+'     label: {show: true, position: "top", color: "', PAL$fg, '", fontSize: 11,\n',
+'             formatter: function(p){ return (p.data.实值 >= 0 ? "+" : "")\n',
+'               + p.data.实值.toFixed(3); }},\n',
+'     data: ', EJ(bar), '}\n  ]\n}')
+  er_mount(er_id(tag), opt, height)
+}
+
+## ③ 进度阶梯：六级证据等级，已达者实心、未达者空心
+er_ladder <- function(tag, title, rows, note = "", height = 380) {
+  dat <- lapply(seq_len(nrow(rows)), function(i) list(
+    value = if (isTRUE(rows$已达[i])) 1 else 0.999,
+    itemStyle = list(color = if (isTRUE(rows$已达[i])) PAL$good else "rgba(30,58,82,.55)",
+                     borderColor = if (isTRUE(rows$已达[i])) PAL$good else PAL$warn,
+                     borderWidth = if (isTRUE(rows$已达[i])) 0 else 1.5),
+    状态 = if (isTRUE(rows$已达[i])) "✅ 已达" else "⬜ 未达",
+    说明 = rows$说明[i]))
+  opt <- paste0(
+'{\n  backgroundColor: "transparent",\n',
+'  title: {text: ', EJ(title), ', left: "center", top: 2,\n',
+'          textStyle: {color: "', PAL$fg, '", fontSize: 13, fontWeight: "normal"}},\n',
+'  grid: {left: 190, right: 40, top: 52, bottom: 34},\n',
+'  tooltip: {trigger: "item", confine: true,\n',
+'    backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
+'    textStyle: {color: "', PAL$fg, '", fontSize: 12},\n',
+'    formatter: function(p){\n',
+'      return "<b>" + p.name + "</b><br/>" + p.data.状态\n',
+'        + "<br/><span style=\\"opacity:.78\\">" + p.data.说明 + "</span>";\n',
+'    }},\n',
+'  xAxis: {type: "value", max: 1, show: false},\n',
+'  yAxis: {type: "category", inverse: true,\n',
+'    data: ', EJ(as.character(rows$级)), ',\n',
+'    axisLabel: {color: "', PAL$fg, '", fontSize: 11.5},\n',
+'    axisLine: {lineStyle: {color: "#1e3a52"}},\n',
+'    axisTick: {show: false}},\n',
+'  series: [{type: "bar", barMaxWidth: 22, data: ', EJ(dat), ',\n',
+'    label: {show: true, position: "insideLeft", color: "#050d1a", fontSize: 11,\n',
+'            formatter: function(p){ return p.data.状态; }}}]\n}')
+  er_mount(er_id(tag), opt, height)
+}
+
+## ④ 直方图 + 门槛线：会员毛利率分布 × 净贡献门槛
+er_hist <- function(tag, title, mids, cnt, thr, thr_lab, xlab, note = "",
+                    height = 430) {
+  opt <- paste0(
+'{\n  backgroundColor: "transparent",\n',
+'  title: {text: ', EJ(title), ', left: "center", top: 2,\n',
+'          textStyle: {color: "', PAL$fg, '", fontSize: 13, fontWeight: "normal"}},\n',
+'  grid: {left: 76, right: 40, top: 56, bottom: 66},\n',
+'  tooltip: {trigger: "axis", axisPointer: {type: "shadow"}, confine: true,\n',
+'    backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
+'    textStyle: {color: "', PAL$fg, '", fontSize: 12},\n',
+'    formatter: function(ps){ var p = ps[0];\n',
+'      return "毛利率区间 " + p.name + "<br/>会员数："\n',
+'        + p.value.toLocaleString("en-US")\n',
+'        + "<br/><span style=\\"opacity:.72\\">', note, '</span>"; }},\n',
+'  xAxis: {type: "category", data: ', EJ(mids), ',\n',
+'    name: ', EJ(xlab), ', nameLocation: "middle", nameGap: 34,\n',
+'    nameTextStyle: {color: "', PAL$fg, '"},\n',
+'    axisLabel: {color: "', PAL$fg, '", fontSize: 10, interval: "auto"},\n',
+'    axisLine: {lineStyle: {color: "#1e3a52"}}},\n',
+'  yAxis: {type: "value", name: "会员数",\n',
+'    nameTextStyle: {color: "', PAL$fg, '"},\n',
+'    axisLabel: {color: "', PAL$fg, '", fontSize: 10},\n',
+'    splitLine: {lineStyle: {color: "#1e3a52"}}},\n',
+'  series: [{type: "bar", barCategoryGap: "12%",\n',
+'    itemStyle: {color: "', PAL$ac, '"},\n',
+'    data: ', EJ(cnt), ',\n',
+'    markLine: {symbol: "none", silent: true,\n',
+'      lineStyle: {color: "', PAL$warn, '", width: 2, type: "dashed"},\n',
+'      label: {color: "', PAL$warn, '", fontSize: 11, position: "insideEndTop",\n',
+'              formatter: ', EJ(thr_lab), '},\n',
+'      data: [{xAxis: ', EJ(thr), '}]}}]\n}')
+  er_mount(er_id(tag), opt, height)
+}
+
+## ⑤ 金融式多格联动走势：共用横轴 + 区间缩放 + 折窗标注 + 情景带
+##    panes 为列表，每元素含 name／unit／series（列表：名称/值/色/型/带上下界）
+er_panel <- function(tag, title, dates, panes, marks = NULL, note = "",
+                     height = 720) {
+  np <- length(panes)
+  gh <- 100 / np
+  grids <- lapply(seq_len(np), function(i) list(
+    left = 78, right = 46,
+    top = paste0(round(58 + (i - 1) * (height - 150) / np), "px"),
+    height = paste0(round((height - 165) / np - 16), "px")))
+  xs <- lapply(seq_len(np), function(i) list(
+    type = "category", gridIndex = i - 1, data = dates,
+    boundaryGap = FALSE,
+    axisLine = list(lineStyle = list(color = "#1e3a52")),
+    axisLabel = list(show = i == np, color = PAL$fg, fontSize = 10),
+    axisPointer = list(label = list(show = i == np))))
+  ys <- lapply(seq_len(np), function(i) list(
+    type = "value", gridIndex = i - 1, scale = TRUE,
+    name = panes[[i]]$name, nameTextStyle = list(color = PAL$fg, fontSize = 11),
+    axisLabel = list(color = PAL$fg, fontSize = 10),
+    splitLine = list(lineStyle = list(color = "#132a3f"))))
+  ser <- list()
+  for (i in seq_len(np)) for (s in panes[[i]]$series) {
+    it <- list(name = s$名称, type = "line", xAxisIndex = i - 1, yAxisIndex = i - 1,
+               data = s$值, showSymbol = FALSE, smooth = FALSE,
+               connectNulls = FALSE,
+               lineStyle = list(color = s$色, width = if (isTRUE(s$粗)) 2 else 1.4,
+                                type = if (is.null(s$型)) "solid" else s$型),
+               itemStyle = list(color = s$色))
+    if (isTRUE(s$带)) { it$stack <- paste0("band", i); it$areaStyle <-
+      list(color = if (isTRUE(s$下)) "transparent" else s$带色, opacity = .5)
+      it$lineStyle$opacity <- if (isTRUE(s$下)) 0 else 1 }
+    if (i == 1 && !is.null(marks)) it$markArea <- marks
+    ser[[length(ser) + 1]] <- it
+  }
+  opt <- paste0(
+'{\n  backgroundColor: "transparent", animation: false,\n',
+'  title: {text: ', EJ(title), ', left: "center", top: 2,\n',
+'          textStyle: {color: "', PAL$fg, '", fontSize: 13, fontWeight: "normal"}},\n',
+'  tooltip: {trigger: "axis", confine: true,\n',
+'    axisPointer: {type: "cross", link: [{xAxisIndex: "all"}],\n',
+'                  lineStyle: {color: "', PAL$ac, '", opacity: .6}},\n',
+'    backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
+'    textStyle: {color: "', PAL$fg, '", fontSize: 12}},\n',
+'  axisPointer: {link: [{xAxisIndex: "all"}]},\n',
+'  legend: {top: 26, textStyle: {color: "', PAL$fg, '", fontSize: 11}},\n',
+'  toolbox: {right: 12, top: 2, iconStyle: {borderColor: "', PAL$ac, '"},\n',
+'            feature: {dataZoom: {yAxisIndex: "none"}, restore: {}}},\n',
+'  dataZoom: [{type: "inside", xAxisIndex: ', EJ(seq_len(np) - 1), ', start: 0, end: 100},\n',
+'             {type: "slider", xAxisIndex: ', EJ(seq_len(np) - 1),
+', bottom: 8, height: 22,\n',
+'              borderColor: "#1e3a52", fillerColor: "rgba(34,211,238,.18)",\n',
+'              textStyle: {color: "', PAL$fg, '", fontSize: 10}}],\n',
+'  grid: ', EJ(grids), ',\n  xAxis: ', EJ(xs), ',\n  yAxis: ', EJ(ys), ',\n',
+'  series: ', EJ(ser), '\n}')
+  er_mount(er_id(tag), opt, height)
+}
+
+## ⑥ 通用折线（可挂门槛线／控制限／对角参照）
+er_xyline <- function(tag, title, xcat, series, xlab = "", ylab = "",
+                      mlines = NULL, ypct = FALSE, note = "", height = 430) {
+  ser <- lapply(series, function(s) {
+    it <- list(name = s$名称, type = "line", data = s$值, showSymbol = FALSE,
+               lineStyle = list(color = s$色, width = if (isTRUE(s$粗)) 2.2 else 1.4,
+                                type = if (is.null(s$型)) "solid" else s$型),
+               itemStyle = list(color = s$色))
+    if (isTRUE(s$填)) it$areaStyle <- list(color = s$色, opacity = .12)
+    it
+  })
+  if (!is.null(mlines) && length(ser))
+    ser[[1]]$markLine <- list(symbol = "none", silent = TRUE,
+      label = list(color = PAL$warn, fontSize = 11, position = "insideEndTop"),
+      lineStyle = list(color = PAL$warn, width = 1.6, type = "dashed"),
+      data = mlines)
+  opt <- paste0(
+'{\n  backgroundColor: "transparent", animation: false,\n',
+'  title: {text: ', EJ(title), ', left: "center", top: 2,\n',
+'          textStyle: {color: "', PAL$fg, '", fontSize: 13, fontWeight: "normal"}},\n',
+'  grid: {left: 82, right: 44, top: 58, bottom: 74},\n',
+'  tooltip: {trigger: "axis", confine: true,\n',
+'    axisPointer: {type: "cross", lineStyle: {color: "', PAL$ac, '", opacity: .6}},\n',
+'    backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
+'    textStyle: {color: "', PAL$fg, '", fontSize: 12}},\n',
+'  legend: {bottom: 4, textStyle: {color: "', PAL$fg, '", fontSize: 11}},\n',
+'  xAxis: {type: "category", data: ', EJ(xcat), ', boundaryGap: false,\n',
+'    name: ', EJ(xlab), ', nameLocation: "middle", nameGap: 30,\n',
+'    nameTextStyle: {color: "', PAL$fg, '"},\n',
+'    axisLabel: {color: "', PAL$fg, '", fontSize: 10},\n',
+'    axisLine: {lineStyle: {color: "#1e3a52"}}},\n',
+'  yAxis: {type: "value", scale: true, name: ', EJ(ylab), ',\n',
+'    nameTextStyle: {color: "', PAL$fg, '"},\n',
+'    axisLabel: {color: "', PAL$fg, '", fontSize: 10',
+      if (ypct) ', formatter: function(v){ return (v*100).toFixed(1) + "%"; }' else '',
+'},\n    splitLine: {lineStyle: {color: "#132a3f"}}},\n',
+'  series: ', EJ(ser), '\n}')
+  er_mount(er_id(tag), opt, height)
+}
+
+## ⑦ 热力图：同期群留存三角等
+er_heat <- function(tag, title, xcat, ycat, cells, vmax = 1, note = "",
+                    height = 440) {
+  opt <- paste0(
+'{\n  backgroundColor: "transparent", animation: false,\n',
+'  title: {text: ', EJ(title), ', left: "center", top: 2,\n',
+'          textStyle: {color: "', PAL$fg, '", fontSize: 13, fontWeight: "normal"}},\n',
+'  grid: {left: 108, right: 84, top: 58, bottom: 62},\n',
+'  tooltip: {position: "top", confine: true,\n',
+'    backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
+'    textStyle: {color: "', PAL$fg, '", fontSize: 12},\n',
+'    formatter: function(p){\n',
+'      if (p.value[2] === null) { return "无数据"; }\n',
+'      return "首月 " + ', EJ(ycat), '[p.value[1]] + " → " + ', EJ(xcat), '[p.value[0]]\n',
+'        + "<br/>留存率：" + (p.value[2]*100).toFixed(1) + "%"\n',
+'        + "<br/><span style=\\"opacity:.72\\">', note, '</span>"; }},\n',
+'  xAxis: {type: "category", data: ', EJ(xcat), ', splitArea: {show: true},\n',
+'    axisLabel: {color: "', PAL$fg, '", fontSize: 11},\n',
+'    axisLine: {lineStyle: {color: "#1e3a52"}}},\n',
+'  yAxis: {type: "category", data: ', EJ(ycat), ', splitArea: {show: true},\n',
+'    axisLabel: {color: "', PAL$fg, '", fontSize: 11},\n',
+'    axisLine: {lineStyle: {color: "#1e3a52"}}},\n',
+'  visualMap: {min: 0, max: ', vmax, ', calculable: true, orient: "vertical",\n',
+'    right: 8, top: "middle", textStyle: {color: "', PAL$fg, '", fontSize: 10},\n',
+'    inRange: {color: ["#0b1f33", "', PAL$ac, '", "', PAL$good, '"]}},\n',
+'  series: [{type: "heatmap", data: ', EJ(cells), ',\n',
+'    label: {show: true, color: "#050d1a", fontSize: 10,\n',
+'            formatter: function(p){ return p.value[2] === null ? "" :\n',
+'              (p.value[2]*100).toFixed(0) + "%"; }},\n',
+'    itemStyle: {borderColor: "rgba(5,13,26,.8)", borderWidth: 1}}]\n}')
+  er_mount(er_id(tag), opt, height)
+}
 ```
 
 ```{r}
@@ -485,6 +804,13 @@ GLOSSARY <- tibble::tribble(
   "登记跨度","风控专员维度","首次登记至最近登记的天数（§17.2 原式由两列派生）。","专员赏侧维——持续在岗贡献，而非一次性突击标注",
   "判定详尽度","风控专员维度","标注备注的平均字数。","专员赏侧维——判定理由是否可复核",
   "待表·置零","呈现纪律","缺数据的维度在雷达上一律以 0 呈现并在轴名注明「待表·置零」。","风控专员四个待表维的呈现方式（§17.2 成法）：无数据即零，绝不合成",
+  "净贡献门槛 2.59%","单位经济学","会员个人毛利率须高于 ρ/(1−κ_share)＝0.349%/(1−86.53%)＝2.59%，其流水方为平台净赚。","全案最要紧的一条算术线（@sec-unit）——低于此线者流水越大平台越亏；它同时解释了 γ* 为何为负：全平台平均毛利率 1.918% 本就在门槛之下",
+  "个人毛利率 m_i","单位经济学","该会员净输额 ÷ 其洗码量。","门槛图的横轴；m_i 为负即此人在赢平台的钱",
+  "决策模拟","证据纪律","在无处置日志的前提下，以回测折级结果推算「若当时照此处置，账面会如何」。","本报告一切赏罚金额结果的正确性质（§EX-01 已证无处置日志）——**不是已发生的现金，不得称已证 ROI**",
+  "证据等级","证据纪律","样本外 → 处置落地 → 参数实测 → 口径核清 → 随机对照 → 前瞻验证，共六级。","对外引用任何金额前必须先报的位置（@sec-ladder）；本报告只达第①与第④级",
+  "RelAE（组级）","预测评估","聚合层的相对绝对误差：|Σ实际−Σ预测| ÷ |Σ实际−Σ朴素|。","本报告十分位组与实体级所用者实为此量，非以样本内朴素 MAE 为尺的标准 MASE——二者在组内正负相消时可差出数量级，故自此分名",
+  "秩持续性 Jaccard","预测评估","相邻两期高价值名单的重合度。","实测仅 0.02（以历史净贡献排名亦只 0.18）——故本方案是**群体分层工具，非个体挑选工具**；此约束只及赏侧与价值排序，不及罚侧证据链",
+  "物理上限（自相关）","预测评估","同一个体相邻两期指标的自相关，是任何模型可解释部分的天花板。","个体毛利率两期自相关实测仅 0.112，当前模型 Spearman 0.20 已达其 189%——**换模型无用，换标的才有出路**",
   "能力值轨","回测轨道","以 §17.2 式折内综合分（只用训练窗现算）圈定罚池：罚侧四维（对打率·净赢额·IP切换·稳定赢强度）分位前 0.1% ∪ 净赢额前 0.1%。","本报告回测主轨；与 PU-glm 模型轨、旧规则轨、均值+3σ 对照轨四轨并跑，冠军以折均净增益判定",
   "预算折减 δ_pred","赏罚定标","min(1, 1/盈利MASE折均)：预测胜过朴素外推即足额（δ=1），预测不如朴素即按比例收敛。","先生令「按预测误差定额度」的落地——预测不牢，赏罚就不敢给满；一切幅度公式统一乘此因子",
   "赏罚后盈利比带","结账口径","上界＝罚侧净增益÷全池盈利（赏零发放）；下界＝再扣除赏池按 γ* 天花板足额发放的成本。","真实落点随发放率在带内移动；带体在零线上即最坏组合仍净赚——赏罚的钱由体系自己挣回",
@@ -778,27 +1104,42 @@ kb(inv, "本报告所用数据表清点｜解释：逐表列出 SQL 编号、行
 ```{r}
 #| label: fig-econ
 #| fig-height: 5
+## ★ 十五轮斧正（§EX-07）：`E02_segment_econ` 的 validbet/ggr/rebate 三列
+##   与 bet02 实测洗码量相差 **5.24 倍**，**绝对金额不可用，只可取比率**。
+##   故本图一律改占比口径（各层占全体之百分比）与层内毛利率，绝对额一概不呈现。
 if (!is.null(E02) && HAS$plotly) {
-  e <- E02[order(-E02$validbet), ][1:12, ]
+  num <- function(v) suppressWarnings(as.numeric(v))
+  e <- E02; e$validbet <- num(e$validbet); e$ggr <- num(e$ggr)
+  e$n_member <- num(e$n_member)
+  e <- e[order(-e$validbet), ][seq_len(min(12, nrow(e))), ]
+  vb_s <- sum(num(E02$validbet), na.rm = TRUE); gg_s <- sum(num(E02$ggr), na.rm = TRUE)
+  e$洗码占比 <- e$validbet / pmax(vb_s, 1)
+  e$GGR占比  <- e$ggr / pmax(gg_s, 1)
+  e$层毛利率 <- e$ggr / pmax(e$validbet, 1)
   e$分层 <- factor(e$segment, levels = rev(e$segment))
-  p <- plotly::plot_ly(e, y = ~分层, x = ~validbet, type = "bar",
-        orientation = "h", name = "洗码量",
+  p <- plotly::plot_ly(e, y = ~分层, x = ~洗码占比, type = "bar",
+        orientation = "h", name = "洗码量占比",
         marker = list(color = PAL$ac),
-        hovertemplate = paste0("%{y}<br>洗码量 %{x:,.0f}<br>",
-          "GGR ", sapply(e$ggr, amt), "<br>占成 ", sapply(e$commission, amt),
-          "<br>会员 ", sapply(e$n_member, amt), "<extra></extra>")) |>
-    plotly::add_trace(x = ~ggr, name = "GGR（赌场毛利）",
+        hovertemplate = paste0("%{y}<br>洗码量占比 %{x:.2%}<br>",
+          "GGR 占比 ", sapply(e$GGR占比, function(v) pct(v,2)),
+          "<br>层毛利率 ", sapply(e$层毛利率, function(v) pct(v,3)),
+          "<br>会员占比 ", sapply(e$n_member/pmax(sum(num(E02$n_member),na.rm=TRUE),1),
+                                  function(v) pct(v,2)),
+          "<br>（§EX-07：本表绝对额与 bet02 差 5.24 倍，故只取比率）<extra></extra>")) |>
+    plotly::add_trace(x = ~GGR占比, name = "GGR 占比",
         marker = list(color = PAL$good),
-        hovertemplate = "%{y}<br>GGR %{x:,.0f}<extra></extra>") |>
+        hovertemplate = "%{y}<br>GGR 占比 %{x:.2%}<extra></extra>") |>
     plotly::layout(barmode = "group",
-      title = list(text = "客户分层经济账 · 洗码量前 12 层（§E02c 实测）", font=list(size=14)),
-      xaxis = list(title = "金额", tickformat = ","), yaxis = list(title = ""))
+      title = list(text = "客户分层经济账 · 洗码量前 12 层（§E02c；**占比口径**）",
+                   font=list(size=14)),
+      xaxis = list(title = "占全体之比", tickformat = ".1%"), yaxis = list(title = ""))
   plt(p)
 }
 ```
-**读法**：横轴是洗码量分层（左为大客），柱高是该层**给平台留下的钱**（GGR 口径）。
-一层的柱子高不等于该层「好」——须与其占成、退水一并看：占成率高于该层 GGR 的分层，
-洗码量越大，平台越亏。悬停即见该层的洗码量、GGR、退水与占成四项原值；
+**读法**：横轴是**占比**而非金额——`E02` 的绝对额与 `bet02` 实测相差 5.24 倍（§EX-07），
+故一律只读比率。两条柱一层一对：青条是该层占全平台洗码量之比，绿条是占全平台 GGR 之比。
+**青长绿短即该层「下注多、留钱少」**，其层毛利率必低于全体，须与门槛线 2.59% 对照（见 @sec-unit）；
+绿长青短则相反。悬停即见该层的洗码占比、GGR 占比、层毛利率与会员占比四项；
 凡占成 > GGR 者以警色标出——此形态今已查明成因：`dailyreport` 的占成列系**配置百分比的逐日镜像**，非金额（§EX-12），故不可与 GGR 直接相比。真实占成率取自 `agent_dtl.ag012`，详见 @sec-verdict 第 ⑨ 条。
 
 
@@ -1999,6 +2340,155 @@ if (exists("CX") && HAS$plotly) {
 误伤侧同理：处置名单里凡挽留优先级高者，即「误伤热度」最高者，复核从他们查起。
 结账口径不变（回收率 0.60、流失系数 0.15 仍是外生常数），Cox 只改**钱花在谁身上的次序**。
 
+
+# 单位经济学：一元洗码量走完全程还剩多少 {#sec-unit}
+
+本章只答一个问题，且只用三张图答完：**平台从会员身上赚到的每一元，扣完退水与代理占成之后还剩多少；
+谁在门槛之上、谁在门槛之下。** 三张图的数字全部来自已结案的经济底座（SQL 总包 §EX-20）与包内实测，
+无一处外推。
+
+```{r}
+#| label: unit-waterfall
+#| results: asis
+if (exists("m_house") || TRUE) {
+  ## 经济底座三常数（与 @sec-amount 同源，§EX-20 结案存照；此处只作呈现，不重算）
+  M_UNIT   <- if (exists("m") && is.finite(m)) m else 0.01918
+  RHO_UNIT <- 0.00349
+  KAP_UNIT <- 0.8653 * M_UNIT
+  GAM_UNIT <- M_UNIT - RHO_UNIT - KAP_UNIT
+  ## 净贡献门槛：会员个人毛利率须高于此，其流水方为平台净赚
+  ##   m_i(1−κ_share) − ρ > 0  ⟺  m_i > ρ/(1−κ_share)
+  THR_UNIT <- RHO_UNIT / (1 - 0.8653)
+  WF <- data.frame(check.names = FALSE, stringsAsFactors = FALSE,
+    名称 = c("庄家毛利率 m", "− 退水 ρ", "− 代理占成 κ", "= γ*（赏侧空间）"),
+    增量 = c(100*M_UNIT, -100*RHO_UNIT, -100*KAP_UNIT, 100*GAM_UNIT),
+    total = c(FALSE, FALSE, FALSE, TRUE),
+    说明 = c(
+      "GGR ÷ 洗码量，本窗实测（§E02）",
+      "agent_dtl.ag003 实测均值，已配置成本",
+      "agent_dtl.ag012 × m；ag012 经 14,112 对父子层级单调性检验确证为代理留成率（上级<下级仅 0.06%）",
+      "m − ρ − κ；为负即赏侧结构性无金额空间，非暂缓"))
+  cat(er_waterfall("unit", sprintf(
+    "单位经济学瀑布：每 100 元洗码量的去向（γ* = %.3f%%）", 100*GAM_UNIT),
+    WF, unit = "%",
+    note = "四段皆为实测常数，非估计值"))
+}
+```
+**读法**：**四根柱子讲完全案的钱从哪来、到哪去。** 绿柱是平台从会员手上赚到的毛利（每 100 元洗码量
+赚 `r if (exists("M_UNIT")) sprintf("%.3f", 100*M_UNIT) else "1.918"` 元），两根红柱是已配置出去的成本——
+退水归会员、占成归代理，青柱是**扣完之后还剩的**。剩下的是**负数**，故本方案不设赏侧金额层，
+只留过程性激励（授权、排序、绩效基线）。须留意此结论的性质：**它不是「暂时没钱」，是结构性的没有**；
+要改变只有两途——**调降代理占成率，或提高庄家毛利率 m**，二者皆属商务决策，非数据分析所能及。
+罚侧完全不受影响：γ\* 为负说的是「没钱可赏」，不是「不必罚」。
+
+::: {.callout-important}
+## 由瀑布导出的净贡献门槛：**m_i > 2.59%**
+
+同一个式子换个问法即得门槛。设某会员个人毛利率为 $m_i$（其净输额 ÷ 其洗码量），
+其流水给平台留下的净额为
+
+$$\text{净}_i = m_i\,(1-\kappa_{\text{share}}) - \rho$$
+
+令其大于零，得 $m_i > \rho/(1-\kappa_{\text{share}}) = 0.349\%/(1-86.53\%) = \mathbf{2.59\%}$。
+
+**读作**：个人毛利率低于 2.59% 的会员，其流水**越大、平台越亏**——因为占成与退水吃掉的比
+赚到的还多。这条线是全案最要紧的一个数：它把「谁该赏、谁该罚、谁该放着不管」从主观判断
+变成一条可查的算术线，也解释了为何 γ\* 为负——**全平台平均毛利率 1.918% 本就在门槛之下。**
+:::
+
+```{r}
+#| label: unit-threshold
+#| results: asis
+if (!is.null(B01)) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  MB <- NULL
+  if (isTRUE(HAS$dt)) {
+    d9 <- data.table::as.data.table(B01[, c("member_id","validbet","net_pnl")])
+    d9[, `:=`(validbet = num(validbet), net_pnl = num(net_pnl))]
+    MB <- as.data.frame(d9[, .(vb = sum(validbet, na.rm = TRUE),
+                               np = sum(net_pnl,  na.rm = TRUE)), by = member_id])
+    rm(d9); gc2()
+  } else {
+    MB <- stats::aggregate(cbind(vb = num(B01$validbet), np = num(B01$net_pnl)) ~
+                             member_id, data = B01, FUN = sum)
+  }
+  MB <- MB[is.finite(MB$vb) & MB$vb > 0, , drop = FALSE]
+  MB$mi <- -MB$np / MB$vb                      # 个人毛利率＝其净输额÷其洗码量
+  THR_UNIT <- if (exists("THR_UNIT")) THR_UNIT else 0.00349 / (1 - 0.8653)
+  ## 只画中央区间，两尾归并入端箱——重尾之下全域直方图不可读
+  lo <- -0.20; hi <- 0.20; brk <- seq(lo, hi, by = 0.01)
+  x  <- pmin(pmax(MB$mi, lo + 1e-9), hi - 1e-9)
+  h  <- graphics::hist(x, breaks = brk, plot = FALSE)
+  mids <- sprintf("%.0f%%", 100*h$mids)
+  thr_i <- which.min(abs(h$mids - THR_UNIT)) - 1L
+  n_lo <- sum(MB$mi <  THR_UNIT); n_hi <- sum(MB$mi >= THR_UNIT)
+  vb_lo <- sum(MB$vb[MB$mi <  THR_UNIT]); vb_hi <- sum(MB$vb[MB$mi >= THR_UNIT])
+  UNIT_STAT <- list(n_lo = n_lo, n_hi = n_hi, vb_lo = vb_lo, vb_hi = vb_hi,
+                    n = nrow(MB), vb = vb_lo + vb_hi, thr = THR_UNIT)
+  cat(er_hist("thr", sprintf(
+    "会员个人毛利率分布 × 净贡献门槛 2.59%%（%s 名有效投注会员）", amt(nrow(MB))),
+    mids, as.integer(h$counts), thr_i,
+    sprintf("净贡献门槛 %.2f%%", 100*THR_UNIT),
+    "个人毛利率 m_i ＝ 该会员净输额 ÷ 其洗码量（两尾并入端箱）",
+    note = "门槛左侧者流水越大平台越亏"))
+}
+```
+**读法**：**竖着的黄虚线就是 2.59% 门槛，线左边的人是净负贡献。**
+本窗实测：门槛**左侧** `r if (exists("UNIT_STAT")) amt(UNIT_STAT$n_lo) else "—"` 人
+（占 `r if (exists("UNIT_STAT")) pct(UNIT_STAT$n_lo/UNIT_STAT$n) else "—"`），
+其洗码量合计 `r if (exists("UNIT_STAT")) amt(UNIT_STAT$vb_lo) else "—"`
+（占 `r if (exists("UNIT_STAT")) pct(UNIT_STAT$vb_lo/UNIT_STAT$vb) else "—"`）；
+门槛**右侧** `r if (exists("UNIT_STAT")) amt(UNIT_STAT$n_hi) else "—"` 人，洗码量
+`r if (exists("UNIT_STAT")) amt(UNIT_STAT$vb_hi) else "—"`
+（占 `r if (exists("UNIT_STAT")) pct(UNIT_STAT$vb_hi/UNIT_STAT$vb) else "—"`）。
+分布左半的一大片是**技术型与对打型**的所在——他们不是「输得少」，是**在赢**（m_i 为负即其净赢平台）。
+这张图给出的是**罚侧的经济分母**：追缴与冻结要拦的钱在哪一段，一眼可见；
+也给出**赏侧的硬约束**——礼遇若发到门槛左侧，等于替亏损加码。
+须留意两点纪律：其一，**低于门槛不等于该罚**——正常输赢波动亦会短期落在左侧，故罚侧仍以证据链
+（完美对打、人工單）为准，此图只定经济分母；其二，两尾已并入端箱，故端箱高度含极端值，
+不可读作该区间的真实密度。
+
+```{r}
+#| label: unit-pie
+#| results: asis
+if (exists("P17") && exists("MB") && !is.null(B01)) {
+  ## 赏罚分明的客群构成：按 §17.2 综合分把会员切成五层，逐层结出钱账。
+  ##   分层只用综合分（训练口径同 @sec-score），金额一律由 B01 现算，绝不取 E02 绝对额。
+  RHO_PIE <- 0.00349
+  q5 <- stats::quantile(P17$综合分, c(.05, .25, .75, .95), na.rm = TRUE)
+  lab5 <- c("高危层（综合分≤P5）","偏罚层（P5–P25）","中间层（P25–P75）",
+            "偏赏层（P75–P95）","优质层（≥P95）")
+  P17$层 <- cut(P17$综合分, c(-Inf, q5, Inf), labels = lab5)
+  mm <- merge(data.frame(member_id = suppressWarnings(as.numeric(P17$member_id)),
+                         层 = P17$层),
+              MB[, c("member_id","vb","np")], by = "member_id")
+  if (nrow(mm)) {
+    ag5 <- stats::aggregate(cbind(vb = vb, np = np) ~ 层, data = mm, FUN = sum)
+    cn5 <- stats::aggregate(member_id ~ 层, data = mm, FUN = length)
+    ag5 <- merge(ag5, cn5, by = "层")
+    ROWS <- data.frame(check.names = FALSE, stringsAsFactors = FALSE,
+      名称 = as.character(ag5$层), 人数 = ag5$member_id,
+      洗码量 = ag5$vb, 盈利 = -ag5$np, 返水 = ag5$vb * RHO_PIE)
+    ROWS <- ROWS[match(lab5, ROWS$名称), ]; ROWS <- ROWS[!is.na(ROWS$名称), ]
+    PIE_STAT <- ROWS
+    cat(er_pie("pie", "赏罚分明的客群构成：按 §17.2 综合分五层结账（环宽＝洗码量占比）",
+      ROWS, cols = c(PAL$bad, PAL$warn, PAL$ac, "#7dffd4", PAL$good),
+      note = "悬停即见该层人数·投注额·盈利·返水·层毛利率；金额一律由 B01 现算"))
+  }
+} else if (!exists("P17")) {
+  cat(ph("数据库/K01_risk_feature_matrix.csv 与 B01_bt_panel.csv", "§K01×§B01",
+         "赏罚分明客群构成环图"))
+}
+```
+**读法**：**环的宽度是投注额占比，颜色是赏罚方向——红端该罚、绿端该赏。**
+悬停任一层即出五项关键量：**客群人数、投注额（洗码量）、盈利（GGR）、返水支出、该层毛利率**。
+读法有三：其一，比**红环的洗码占比与其毛利率**——高危层若占了可观流水而毛利率低于 2.59% 门槛，
+即是罚侧最该动手之处；其二，比**绿环的毛利率与返水**——优质层若毛利率高而返水支出也高，
+说明礼遇已在发生、无须再加码（况且 γ\* 为负，本就无金额空间）；其三，看**中间层**——
+它通常占最大一块，是「不必处置」的多数，风控人力不该耗在这里。
+须记一条纪律：**环的大小只说明流水规模，不说明该赏该罚**——方向由综合分定，力度由与阈值的差距定
+（见 @sec-amount），绝不按环的大小发钱。
+
 # 采取什么措施：四实体逐维 → 动作，一一对应 {#sec-action}
 
 雷达上每一维就是一条**独立的处置理由**；措施跟维走，绝不凭总分不加区分地统一处置。
@@ -2198,7 +2688,15 @@ if (!is.null(B01)) {
     赏误判成本 <- if (is.finite(cap_bt))
       cap_bt * sum(num(te$validbet[te$member_id %in%
         赏zc$member_id[赏zc$w > 0]]), na.rm = TRUE) else NA_real_
-    data.frame(测试窗末 = max(te_d), 全池盈利 = 全池盈利,
+    ## ★ 十五轮补三列：供三情景走势的反事实构造（洗码、返水、活跃三条腿）
+    名单洗码 <- sum(num(te$validbet[te$member_id %in% flC]), na.rm = TRUE)
+    名单日均活跃 <- if (length(flC)) {
+      z9 <- unique(te[te$member_id %in% flC, c("member_id","bet_date")])
+      nrow(z9) / length(te_d)
+    } else 0
+    data.frame(测试窗末 = max(te_d), 测试窗首 = min(te_d), 窗长 = length(te_d),
+      全池盈利 = 全池盈利, 全池洗码 = sum(num(te$validbet), na.rm = TRUE),
+      名单洗码 = 名单洗码, 名单日均活跃 = 名单日均活跃,
       能力值净增益 = gain(flC), 能力值精准率 = prec(flC),
       能力值Lift = prec(flC)/base_rate, 能力值命中数 = length(flC),
       罚档位 = q_pun, 罚阈值 = th_pun, 赏档位 = q_rew,
@@ -2399,6 +2897,35 @@ kb(ACT, paste0("四实体逐维触发 → 阈值 → 处置动作 → 实测凭�
 MASE<1 即胜过朴素外推，行内谁都赖不掉的公共刻度）。首折训练窗的
 **能力值十分位 → 盈利率（ROI）总账**与**四实体维度 → ROI 结账**随后两图现算——
 这正是「各领域能力值带来的 ROI」的直接答卷。
+
+::: {.callout-warning}
+## 本章的三条硬约束：先看清天花板，再读结果
+
+以下三条来自后续多目标建模阶段的实测，**皆为限制性发现**——只收紧本章结论，不放宽，
+故一律先行写入，不等证据等级晋级。
+
+**其一 · 预测能力有物理上限，且已逼近。** 同一会员相邻两期（各两周）的毛利率**自相关仅 0.112**。
+自相关是任何模型可解释部分的天花板：昨天的他与今天的他只有这么点相似，再精巧的模型也变不出
+更多信息。当前模型的 Spearman 秩相关约 0.20，**已达该上限的 189%**（因秩相关比线性自相关更宽松）。
+**推论：换模型无用，换标的才有出路**——把力气花在「预测谁会来、来多久」（留存）与
+「一元流水留下多少」（毛利率）上，胜过继续调参预测「他会下多少注」。
+
+**其二 · 本方案是群体分层工具，不是个体挑选工具。** 相邻两期价值排名的重合度
+（Jaccard）**仅 0.02**（以历史净贡献排名亦只有 0.18）。也就是说，**这一期的高价值名单，
+下一期基本换了一批人**。故本章的分层乘数只可用于**群体口径**的资源分配与队列排序，
+**不可**据以对特定个人作长期价值承诺（如「此人是终身高价值客，须长期加码礼遇」）。
+**须严格限定适用边界**：此条约束**只及于赏侧与价值排序**，**不及于罚侧证据链**——
+完美对打是同局一庄一闲、全窗反向比例为 1 的**确定性证据**，不是预测，
+999 对完美对冲对不因价值排名不稳而失效。
+
+**其三 · MASE 的可算率与名实。** 会员级 MASE 在本平台的**可算率仅约 9.8%**——
+禁运 7 日后目标零值率高达 83.4%，朴素外推的分母为零者无从相除，故会员级 MASE 只能作
+高流水层的附报，不可作总体刻度。且本章十分位组与实体级所报的「MASE」，
+其算式为 $|\sum \text{实际} - \sum \text{预测}| \div |\sum \text{实际} - \sum \text{朴素}|$，
+是**聚合层的相对绝对误差（RelAE）**，与以样本内朴素 MAE 为尺的标准 MASE 并不同名同实——
+二者在组内正负相消时可差出数量级。本报告自此在组级与实体级一律标注 **RelAE（组级）**，
+「MASE」一词只保留给会员级的时间序列误差。
+:::
 
 ```{r}
 #| label: forecast
@@ -3060,8 +3587,12 @@ if (exists("BT")) {
            "两个系数为外生常数，非本窗拟合；误伤比例按名单中非金标准者的占比计，",
            "而金标准覆盖不全，故此值偏保守"))
   T_ann <- tip(paste0("**", amt(ann), "**"),
-    paste0("年化外推 = 折均净增益 × (365÷14)。此为线性外推，假设客群结构、",
-           "占成口径与处置力度均不变；折数仅 ", nrow(BT), " 折，须与区间并读，不可单独引用"))
+    paste0("★ **年化只作附报**，主数字一律取折均／折数／窗长／中位／IQR／正折率。",
+           "年化外推 = 折均净增益 × (365÷14)，须以下六项同时成立方不失真：",
+           "① 客群不衰减（本平台会员在册中位仅约 1 个月，一年换手逾十轮，此项已知不成立）、",
+           "② regime 不改变、③ 无容量约束（可处置人数无上限）、④ 无策略拥挤、",
+           "⑤ 干预成本为零、⑥ 收益无自相关。",
+           "折数仅 ", nrow(BT), " 折，须与区间并读，不可单独引用"))
   T_ci <- tip(paste0("**", amt(ci[1]), " ~ ", amt(ci[2]), "**"),
     paste0("**分块**自助法 90% 区间（Künsch 1989 moving-block，块长 ⌈√折数⌉，2000 次）：",
            "折级序列存在自相关与季节性，普通 iid 重抽样会低估方差、令区间偏窄，",
@@ -3140,6 +3671,134 @@ if (exists("BT")) {
   cat("\n\n", xgb_line, sep = "")
 }
 ```
+
+
+# 三情景金融走势：原走势 · 仅监控 · 依方案赏罚 {#sec-track}
+
+本章把全案的经济效果放进一张**金融终端式的联动走势面板**：四格共用横轴（营业额 · 活跃会员数 ·
+盈利 · 返水），可拖拽缩放、十字光标联动、检验折窗以阴影标出。三条情景线的定义须先讲明，
+否则必被误读：
+
+| 情景 | 定义 | 线型 |
+|---|---|---|
+| **① 原走势** | 平台**实测**日频序列，未加任何干预 | 实线（青） |
+| **② 仅监控·不赏罚** | 上线评分体系但**只巡检、不处置** | 点划线（黄）——**与①完全重合** |
+| **③ 依方案赏罚** | 在检验折窗内，按回测折级结果作**决策模拟** | 带（绿，上下界） |
+
+**情景②与①重合不是失误，是结论**：评分本身不动一分钱，不处置即不改变任何财务量。
+这条线存在的意义，正是让「模型上线」与「钱变多」在图上分得清清楚楚。
+
+情景③是 **Decision Simulation（决策模拟）**，不是预测，更不是已发生的现金——
+平台无处置日志（§EX-01 已证），故此带只回答「若当时照此处置，账面会如何」，
+**不得读作已实证的收益**（见 @sec-kpi 与增利证据阶梯）。
+
+```{r}
+#| label: track-panel
+#| results: asis
+if (exists("BT") && !is.null(B01) && all(c("名单洗码","名单日均活跃","测试窗首")
+                                         %in% names(BT))) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  RHO_TRK <- 0.00349
+  ## ── 日频实测底表（营业额·活跃会员数·盈利·返水）───────────────────
+  if (isTRUE(HAS$dt)) {
+    d8 <- data.table::as.data.table(B01[, c("bet_date","member_id","validbet","net_pnl")])
+    d8[, `:=`(validbet = num(validbet), net_pnl = num(net_pnl))]
+    DAY <- as.data.frame(d8[, .(洗码 = sum(validbet, na.rm = TRUE),
+                                活跃 = data.table::uniqueN(member_id),
+                                盈利 = -sum(net_pnl, na.rm = TRUE)), by = bet_date])
+    rm(d8); gc2()
+  } else {
+    DAY <- stats::aggregate(cbind(洗码 = num(B01$validbet),
+                                  盈利 = -num(B01$net_pnl)) ~ bet_date,
+                            data = B01, FUN = sum)
+    DAY$活跃 <- stats::aggregate(member_id ~ bet_date, data = B01,
+                                 FUN = function(v) length(unique(v)))[, 2]
+  }
+  DAY <- DAY[order(DAY$bet_date), ]
+  DAY$返水 <- DAY$洗码 * RHO_TRK
+  n8 <- nrow(DAY)
+  ## ── 反事实构造：折内按当日盈利占比摊派，折外为 NA（不外推）──────────
+  cf <- data.frame(洗码 = rep(NA_real_, n8), 活跃 = NA_real_,
+                   盈利上 = NA_real_, 盈利下 = NA_real_, 返水 = NA_real_)
+  for (k in seq_len(nrow(BT))) {
+    ix <- which(DAY$bet_date >= BT$测试窗首[k] & DAY$bet_date <= BT$测试窗末[k])
+    if (!length(ix)) next
+    wsum <- sum(DAY$盈利[ix], na.rm = TRUE); if (!is.finite(wsum) || wsum <= 0) next
+    sh   <- DAY$盈利[ix] / wsum                      # 当日盈利占该折之比
+    gcap <- if (is.finite(BT$赏成本上限[k])) BT$赏成本上限[k] else 0
+    cf$盈利上[ix] <- DAY$盈利[ix] + BT$能力值净增益[k] * sh          # 赏侧零发放
+    cf$盈利下[ix] <- DAY$盈利[ix] + (BT$能力值净增益[k] - gcap) * sh  # 赏按上限足额
+    vsh <- DAY$洗码[ix] / max(sum(DAY$洗码[ix], na.rm = TRUE), 1)
+    cf$洗码[ix] <- DAY$洗码[ix] - BT$名单洗码[k] * vsh               # 冻结者不再产流水
+    cf$返水[ix] <- cf$洗码[ix] * RHO_TRK                              # 返水随洗码同减
+    cf$活跃[ix] <- DAY$活跃[ix] - BT$名单日均活跃[k]                  # 名单日均活跃数
+  }
+  ## ── 检验折窗阴影 ─────────────────────────────────────────────
+  mk <- list(silent = TRUE,
+    itemStyle = list(color = "rgba(139,92,246,.13)"),
+    label = list(show = FALSE),
+    data = lapply(seq_len(nrow(BT)), function(k)
+      list(list(xAxis = as.character(BT$测试窗首[k])),
+           list(xAxis = as.character(BT$测试窗末[k])))))
+  L2 <- function(v) ifelse(is.finite(v), round(v, 2), NA)
+  mkser <- function(act, up, dn, lab) {
+    s <- list(list(名称 = paste0(lab, "·原走势"), 值 = L2(act), 色 = PAL$ac, 粗 = TRUE),
+              list(名称 = paste0(lab, "·仅监控"), 值 = L2(act), 色 = PAL$warn,
+                   型 = "dashed"))
+    if (!is.null(up)) s[[length(s)+1]] <-
+      list(名称 = paste0(lab, "·赏罚模拟"), 值 = L2(up), 色 = PAL$good, 粗 = TRUE)
+    if (!is.null(dn)) s[[length(s)+1]] <-
+      list(名称 = paste0(lab, "·赏罚下界"), 值 = L2(dn), 色 = PAL$violet, 型 = "dotted")
+    s
+  }
+  PANES <- list(
+    list(name = "营业额", series = mkser(DAY$洗码, cf$洗码, NULL, "营业额")),
+    list(name = "活跃会员", series = mkser(DAY$活跃, cf$活跃, NULL, "活跃会员")),
+    list(name = "盈利GGR", series = mkser(DAY$盈利, cf$盈利上, cf$盈利下, "盈利")),
+    list(name = "返水",   series = mkser(DAY$返水, cf$返水, NULL, "返水")))
+  TRK_STAT <- list(
+    d0 = min(DAY$bet_date), d1 = max(DAY$bet_date), n = n8,
+    folds = nrow(BT),
+    dgain = sum(BT$能力值净增益, na.rm = TRUE),
+    dreb  = sum(BT$名单洗码, na.rm = TRUE) * RHO_TRK,
+    dvb   = sum(BT$名单洗码, na.rm = TRUE),
+    dact  = sum(BT$名单日均活跃 * BT$窗长, na.rm = TRUE) /
+            max(sum(BT$窗长, na.rm = TRUE), 1))
+  cat(er_panel("track", sprintf(
+    "三情景金融走势面板 · %s 至 %s（%d 个营业日；紫底为 %d 个检验折窗）",
+    as.character(min(DAY$bet_date)), as.character(max(DAY$bet_date)), n8, nrow(BT)),
+    as.character(DAY$bet_date), PANES, marks = mk, height = 760))
+} else {
+  cat(ph("数据库/B01_bt_panel.csv（须先跑通 §sec-backtest 生成 BT）",
+         "§B01 × 回测块 backtest", "三情景金融走势面板"))
+}
+```
+**读法**：**四格从上到下依次是营业额、活跃会员数、盈利、返水；青线是实际发生的，
+绿线是「若照方案处置」的模拟，黄点划线压在青线底下——那就是「只上模型不处置」的结果。**
+
+逐格的读法各不相同，须分开看：
+
+- **营业额（洗码量）**：绿线**低于**青线。这是对的——罚侧冻结对打线，那部分流水本就不该留。
+  **营业额下降在此处是好消息**，因为被砍掉的是净负贡献的流水（见 @sec-unit 门槛图）。
+  凡以营业额论英雄者，必然与风控背道而驰，这一格正是要把这层误会摆到台面上。
+- **活跃会员数**：绿线低于青线，缺口即名单成员的日均活跃数
+  （本窗约 `r if (exists("TRK_STAT")) amt(round(TRK_STAT$dact)) else "—"` 人/日）。
+  这一格是**误伤的可见化**——缺口越大，越须回头看误判率与盈亏平衡线（见回测章）。
+- **盈利（GGR）**：绿线**高于**青线，两条绿线之间的距离即**赏侧发放率**的滑动区间：
+  上界为赏侧零发放，下界为赏按天花板足额发放。γ\* 实测为负，故本方案实际取上界一侧。
+- **返水**：绿线低于青线，差额即**省下的退水**
+  （本窗折内合计约 `r if (exists("TRK_STAT")) amt(round(TRK_STAT$dreb)) else "—"`）。
+  **此处切勿只记省下的部分**——降返水必然带来流水弹性反应，净额＝SavedRebate − LostGGR，
+  本报告未取到该弹性，故返水优化一律不入已证实增利（见 @sec-kpi 经济层第三项）。
+
+三条纪律，读图前须记牢：
+
+1. **绿带只在紫底区间内有值**，折外一律断开——不外推、不连线。折外无值不是数据缺失，
+   是**刻意不猜**：禁运期与训练窗内的处置效果无从结账。
+2. **黄线与青线重合是结论**。若哪天二者分开了，那一定是处置真正落地了——
+   在此之前，任何「上线即增收」的说法都缺一条证据。
+3. **本面板是 Decision Simulation，不是已发生的现金流**。平台无处置日志（§EX-01），
+   故绿线回答的是「若当时照此处置，账面会如何」；真实增量须经随机对照实验（见 @sec-trial）。
 
 # 赏罚分明：各实体逐维阈值差距 × 幅度 × 上限 {#sec-amount}
 
@@ -3532,7 +4191,9 @@ if (exists("UP")) {
 }
 ```
 **读法**：这是全案的**钱账总结页**，左列增加额、右列增幅，一一对应。读时须分清三种性质：
-**已实证**（玩家罚侧——回测实测净增益的年化，配自助法 90% 区间）、
+**已在净化回测中结算、但属决策模拟**（玩家罚侧——回测折级净增益，配分块自助法 90% 区间）——
+平台无处置日志（§EX-01 已证），故此数回答的是「若当时照此处置，账面会如何」，
+**不是已发生的现金，亦不得称已实证 ROI**；
 **已量化但为代价**（误判拖累与赏侧预算上限——前者是零误判反事实与实际之差，后者是成本上限而非收益）、
 **待实证**（赏侧增量须经 A/B 因果协议，故下界记 0，绝不把「预测更准」当成「处置必然增收」）。
 荷官与代理不单列金额以免与玩家罚池重复计，其独立贡献以实体级盈利增长乘数作方向佐证。
@@ -3651,7 +4312,7 @@ kb(KPI, paste0("两层验收指标分立表：风控层 vs 经济层",
 **潜在、待验证**。
 
 ::: {.callout-note}
-## 增利证据阶梯：从「名单准」到「真钱多」还差五级
+## 增利证据阶梯：从「名单准」到「真钱多」还差五级 {#sec-ladder}
 
 外部审计所列的最低条件，本报告照录并逐级标注当前位置：
 
@@ -3669,7 +4330,199 @@ kb(KPI, paste0("两层验收指标分立表：风控层 vs 经济层",
 不以单点年化承诺业绩。
 :::
 
+```{r}
+#| label: ladder-bar
+#| results: asis
+## 证据等级六级进度：与上列五级同源，另在最前补「样本外成立」一级——
+##   此级已达，正是本报告一切现算结果的所在，亦是**唯一**已达的一级。
+LAD <- data.frame(check.names = FALSE, stringsAsFactors = FALSE,
+  级 = c("① 样本外成立（OOS）",
+        "② 处置真正落地",
+        "③ 回收率与流失系数实测",
+        "④ 占成与退水口径核清",
+        "⑤ 小流量随机对照",
+        "⑥ 前瞻性验证与折数积累"),
+  已达 = c(TRUE, FALSE, FALSE, TRUE, FALSE, FALSE),
+  说明 = c(
+    "净化滚动回测、禁运 7 日、嵌套时序选阈；本报告一切现算结果止于此级",
+    "限红、冻结算、追佣金须真正执行；§EX-01 已证平台无处置日志，故当前只能作决策模拟",
+    "以历史处置单重估 0.60／0.15 两个外生假设；情景曲面已给参数区间，实测值仍缺",
+    "已达：κ＝1.660%（ag012）、ρ＝0.349%（ag003）、γ*＝−0.091%（§EX-20），惟结论是赏侧关闭",
+    "随机化到玩家、主指标用缩尾净赢；净赢 CV 约 8，须累积约 8 折（约 16 周）方能把 MDE 压到 20%",
+    "折数积累到两位数、跨活动季稳健；本窗仅 3 个检验折，年化与 P(Δ>0) 只作方向参考"))
+cat(er_ladder("ladder", sprintf(
+  "增利证据等级：六级只达 %d 级（① 与 ④）", sum(LAD$已达)), LAD, height = 360))
+```
+**读法**：**六格里只有两格是实心的。** 实心的①是本报告一切现算结果的所在，
+实心的④是占成之案已结（且结论为赏侧关闭，非放行）；其余四格皆空。
+这张图的用处只有一个——**防止一句最常见的误读：「模型 Lift 九倍，所以平台已经多赚钱了」**。
+Lift 高只说明**同样人力查得更准**（第①级的成就）；钱是否真的多了，要②③⑤⑥四级回答，
+而这四级目前无一完成。凡对外引用本报告的任何金额，一律须连同这张图一起给出。
+须补一句：**②与⑤是关键路径上的两级**——前者决定「有没有钱进来」，后者决定「进来的钱是不是因为我们」；
+其余两级只是把区间收窄。
 
+
+
+
+## 同业惯用而本报告此前缺席的三张图 {#sec-peer}
+
+顶级博彩公司与赌场的经营看板，除本报告已有的名单质量、净增益与情景曲面之外，
+另有几张几乎必备。经逐张核对可算性（**只用压缩包内表**），三张已补齐并现算于下，
+其余因缺表而如实点名，不以近似量充数。
+
+```{r}
+#| label: peer-lorenz
+#| results: asis
+if (exists("MB") && nrow(MB) > 100) {
+  ## 洛伦兹曲线：会员按对 GGR 的贡献排序，累计人数占比 → 累计 GGR 占比
+  g  <- -MB$np                      # 该会员给平台留下的钱（负即其净赢平台）
+  g  <- g[is.finite(g)]
+  gs <- sort(g)                     # 升序：最先是赢走平台钱的人
+  n  <- length(gs)
+  cum <- cumsum(gs); tot <- cum[n]
+  ix  <- unique(round(seq(1, n, length.out = 201)))
+  xs  <- ix / n
+  ys  <- if (is.finite(tot) && abs(tot) > 0) cum[ix] / tot else rep(NA_real_, length(ix))
+  GINI <- if (is.finite(tot) && abs(tot) > 0)
+    1 - 2 * sum((cum[-n] + cum[-1]) / 2) / (n * tot) else NA_real_
+  neg_n <- sum(g < 0); neg_amt <- -sum(g[g < 0])
+  top1  <- sum(sort(g, decreasing = TRUE)[seq_len(max(1, round(n*0.01)))]) / tot
+  LOR_STAT <- list(gini = GINI, neg_n = neg_n, neg_amt = neg_amt, n = n, top1 = top1)
+  cat(er_xyline("lorenz", sprintf(
+    "会员对 GGR 的贡献集中度（洛伦兹曲线；基尼 %.3f）", GINI),
+    sprintf("%.0f%%", 100*xs),
+    list(list(名称 = "累计 GGR 占比（实测）", 值 = round(ys, 5), 色 = PAL$good,
+              粗 = TRUE, 填 = TRUE),
+         list(名称 = "完全均等参照线", 值 = round(xs, 5), 色 = PAL$ac, 型 = "dashed")),
+    xlab = "会员累计人数占比（按贡献升序：左端为赢走平台钱的人）",
+    ylab = "累计 GGR 占比", ypct = TRUE))
+}
+```
+**读法**：**绿线在虚线下方凹得越深，钱越集中在少数人身上。** 横轴是会员按贡献从少到多排序的
+累计人数占比，纵轴是累计 GGR 占比；青虚线是「人人贡献相同」的参照。本窗实测基尼系数
+`r if (exists("LOR_STAT")) sprintf("%.3f", LOR_STAT$gini) else "—"`。
+两处最要紧：其一，**曲线起点在零线以下**——那一段是**净赢平台**的会员
+（`r if (exists("LOR_STAT")) amt(LOR_STAT$neg_n) else "—"` 人，
+合计赢走 `r if (exists("LOR_STAT")) amt(round(LOR_STAT$neg_amt)) else "—"`），
+罚侧要拦的钱就在这一段；其二，**右端最陡的一小截**是贡献最大的 1% 会员，
+其占全体 GGR 的 `r if (exists("LOR_STAT")) pct(LOR_STAT$top1) else "—"`——
+这一小撮既是收入命脉，也是**误伤代价最贵的一群**，故误判率的经济代价必须按金额算而非按人头算
+（见回测章的误判经济学）。基尼越高，说明「名单式风控」的杠杆越大：动少数人即动大部分钱。
+
+```{r}
+#| label: peer-spc
+#| results: asis
+if (exists("DAY") && nrow(DAY) > 20) {
+  ## 毛利率（Hold%）日走势 + 三西格玛控制限：赌场看板的基本盘
+  hold <- DAY$盈利 / pmax(DAY$洗码, 1)
+  mu <- mean(hold, na.rm = TRUE); sg <- stats::sd(hold, na.rm = TRUE)
+  ucl <- mu + 3*sg; lcl <- mu - 3*sg
+  THR_SPC <- 0.00349 / (1 - 0.8653)
+  n_out <- sum(hold > ucl | hold < lcl, na.rm = TRUE)
+  n_bel <- sum(hold < THR_SPC, na.rm = TRUE)
+  SPC_STAT <- list(mu = mu, sg = sg, ucl = ucl, lcl = lcl,
+                   n_out = n_out, n_bel = n_bel, n = length(hold))
+  cat(er_xyline("spc", sprintf(
+    "日毛利率（Hold%%）控制图：均值 %.3f%% · 三西格玛限 [%.3f%%, %.3f%%]",
+    100*mu, 100*lcl, 100*ucl),
+    as.character(DAY$bet_date),
+    list(list(名称 = "日毛利率（实测）", 值 = round(hold, 6), 色 = PAL$ac, 粗 = TRUE)),
+    xlab = "营业日", ylab = "毛利率", ypct = TRUE,
+    mlines = list(
+      list(yAxis = round(mu, 6),  name = "均值",
+           lineStyle = list(color = PAL$good, type = "solid", width = 1.4)),
+      list(yAxis = round(ucl, 6), name = "+3σ"),
+      list(yAxis = round(lcl, 6), name = "−3σ"),
+      list(yAxis = round(THR_SPC, 6), name = "净贡献门槛 2.59%",
+           lineStyle = list(color = PAL$bad, type = "dotted", width = 1.8)))))
+}
+```
+**读法**：**这是赌场看板最基本的一张，本报告此前竟无——今补上。**
+青线是每日毛利率（GGR ÷ 洗码量），绿实线是均值，两条黄虚线是三西格玛控制限，
+**红点线是 2.59% 净贡献门槛**。三层读法：
+其一，**点子出限即异常日**，本窗有 `r if (exists("SPC_STAT")) SPC_STAT$n_out else "—"` 天出限，
+须逐日回查是否有对打集中、限红变更或大额单局；
+其二，**整条线的位置**——本窗均值 `r if (exists("SPC_STAT")) pct(SPC_STAT$mu,3) else "—"`
+落在红门槛**之下**，共 `r if (exists("SPC_STAT")) SPC_STAT$n_bel else "—"` 天
+（占 `r if (exists("SPC_STAT")) pct(SPC_STAT$n_bel/SPC_STAT$n) else "—"`）在门槛下方，
+**这就是 γ\* 为负的日频证据**：不是某几天不好，是结构性地不够；
+其三，**离散度本身是风控指标**——毛利率忽高忽低而非围绕均值窄幅波动者，
+往往意味着少数大额个案在主导，须与洛伦兹曲线并读。
+须记一条：**控制图管的是过程稳定性，不是盈亏好坏**——落在限内的低毛利率日，
+是「稳定地不赚钱」，比出限更值得担心。
+
+```{r}
+#| label: peer-cohort
+#| results: asis
+if (!is.null(B01) && exists("MB")) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  CH <- NULL
+  if (isTRUE(HAS$dt)) {
+    d7 <- data.table::as.data.table(B01[, c("member_id","bet_date")])
+    d7[, ym := substr(as.character(bet_date), 1, 7)]
+    d7 <- unique(d7[, .(member_id, ym)])
+    d7[, first := min(ym), by = member_id]
+    CH <- as.data.frame(d7[, .N, by = .(first, ym)])
+    rm(d7); gc2()
+  }
+  if (!is.null(CH) && nrow(CH)) {
+    names(CH) <- c("首月","月","人数")
+    mos <- sort(unique(c(CH$首月, CH$月)))
+    base <- CH[CH$首月 == CH$月, c("首月","人数")]; names(base)[2] <- "基数"
+    CH <- merge(CH, base, by = "首月")
+    CH$期 <- match(CH$月, mos) - match(CH$首月, mos)
+    CH <- CH[CH$期 >= 0, ]
+    CH$留存 <- CH$人数 / pmax(CH$基数, 1)
+    xc <- paste0("第", sort(unique(CH$期)), "月")
+    yc <- sort(unique(CH$首月))
+    cells <- lapply(seq_len(nrow(CH)), function(i) list(
+      match(paste0("第", CH$期[i], "月"), xc) - 1L,
+      match(CH$首月[i], yc) - 1L, round(CH$留存[i], 4)))
+    m1 <- CH$留存[CH$期 == 1]
+    COH_STAT <- list(m1 = if (length(m1)) stats::median(m1, na.rm = TRUE) else NA_real_,
+                     nc = length(yc))
+    cat(er_heat("cohort", "同期群留存三角：按首次投注月分群，逐月留存率",
+      xc, yc, cells, vmax = 1,
+      note = "留存率＝该群当月仍有投注人数 ÷ 其首月人数"))
+  }
+}
+```
+**读法**：**每一行是一批同月入场的会员，往右看即这批人一个月一个月地剩下多少。**
+颜色越深越留不住。这张图直接决定两件事：
+其一，**赏侧值不值得投**——若第 1 个月留存率就掉到
+`r if (exists("COH_STAT") && is.finite(COH_STAT$m1)) pct(COH_STAT$m1) else "—"`，
+那么任何「长期养客」的礼遇设计都须重估，因为多数人根本活不到回本；
+其二，**年化外推站不站得住**——把 14 日的折均结果乘 26 得年化，
+预设的是**同一批客人整年都在**；同期群三角一看即知这个前提有多脆弱，
+故本报告已把年化降为附报（见 @sec-amount 的年化悬停注）。
+须留意两点：三角右上区因窗口未走完而缺格，属**右删失**，不是流失；
+末几行的样本量小，留存率波动大，不宜单独引用。
+
+::: {.callout-note}
+## 同业尚有四张图，本包无表可算——如实点名，不以近似量充数
+
+1. **理论赢 vs 实际赢（Theo vs Actual）**——须逐注的**下注类型**（庄/闲/和/对子）方能算理论优势；
+   `bet02` 无稳定的注型列，故不可算。所待：注型字段或其映射表。
+2. **AML／可疑交易漏斗**——须存取款流水与人工申报记录；本包无此两类表。
+   所待：`log_age_cash_change` 之外的会员级存提表与 SAR 台账。
+3. **责任博彩伤害标记看板（UKGC 七类）**——本报告已能覆盖五类，
+   缺**自我排除**与**干预响应**两类，皆须风控处置日志与申诉记录（与 @sec-verdict 第 ⑧ 条同源）。
+4. **渠道成本与 GGR 同口径月结**——`E02` 的绝对额与 `bet02` 差 5.24 倍（§EX-07），
+   只可取比率，故月结账在本包内不可闭合。所待：与 `bet02` 同基数的渠道成本表。
+:::
+
+::: {.callout-important}
+## 待接：多目标架构的 Margin 引擎
+
+价值侧的第二个引擎（标的＝**净贡献 ÷ 洗码量**，即本章反复出现的个人毛利率 $m_i$）
+已启动但尚未产出可写入本报告的结果。按证据纪律，此处只留点名，不作任何预告：
+
+- **所待文件**：`Margin 引擎折级结果`（含逐折 WAPE／RMSLE／Bias／Top-K 四层指标，与 Scale 引擎同框十一折）
+- **SQL 编号**：待定（须新增最小流水门槛与比率收缩两项取数）
+- **受影响输出**：@sec-unit 的门槛分布图将由「静态实测分布」升级为「预测分布 × 门槛」；
+  CLV 合成表（$\\text{CLV}=\\sum_t P(A_t)\\cdot E(\\text{Turnover}_t)\\cdot E(\\text{Margin}_t)$）
+  在 Retention 引擎到位前无法闭合，故本报告暂不设该表。
+:::
 
 ## 以顶级同业为尺：本方案站在哪里 {#sec-benchmark}
 
@@ -3981,7 +4834,8 @@ V <- data.frame(check.names = FALSE,
   裁定 = c("① §17.2 能力值体系立即上线","② 能力值→ROI 账已立","③ 预测层已具备",
          "④ 赏罚定标三重闸","⑤ 对打线冻结结算","⑥ 荷官只管过程",
          "⑦ 赏的钱按挽留优先级花","⑧ 两张表必须补建","⑨ 占成已核清：γ* 为负，赏侧无金额空间",
-         "⑩ 阈值随经营状态换档","⑪ 统一上线闸门（三条同时成立）","⑫ 灰度须先过功效关"),
+         "⑩ 阈值随经营状态换档","⑪ 统一上线闸门（三条同时成立）","⑫ 灰度须先过功效关",
+         "⑬ 单位经济学门槛 2.59% 为分母之尺","⑭ 换标的而非换模型"),
   依据与做法 = c(
     "四实体维度一律 §17.2 权威字典、全由压缩包内表现算（玩家十维·荷官八维·代理七维·专员十维骨架）；综合分＝赏均−罚均只当排队顺序，措施跟维走",
     "能力值十分位→盈利率与四实体维度→ROI 两图现算：哪一维在筛盈利、哪一维在筛风险一目了然——赏罚幅度即按此账定",
@@ -3994,13 +4848,19 @@ V <- data.frame(check.names = FALSE,
     "占成之案已结（SQL 总包 §EX-20，历十一条探查）：κ 取 agent_dtl.ag012（代理留成率，经 14,112 对父子的层级单调性检验确证——上级<下级仅 0.06%，严格逐级不增），ρ 取 ag003（退水率 0.349%）；γ* = m − ρ − κ = **−0.091%**，赏侧无金额空间，只设过程性激励。此非暂缓，是结构性的没有；欲改变须调降代理占成率或提高毛利率，皆属商务决策",
     "HMM 三态解码给出收割期／常规期／冲刷期：收割期罚侧收紧一档、冲刷期赏侧发力——评分不动，只动松紧",
     "嵌套窗折均净增益为正 且 情景曲面在业务认可参数区间内不转负 且 占成已核清（或赏侧维持冻结）——三条同时成立方可扩量；任一不成立只许作巡检与排序工具上线，不得挂金额赏罚（见 @sec-roadmap）",
-    "净赢重尾（CV 约 8）令朴素灰度检不出效应：主指标须缩尾 1%/99% 或改净赢率（方差削减约八成），随机化到玩家而非代理线，样本累积约 8 个滚动折（约 16 周）方能把 MDE 压到 20%——**灰度至少一个季度，不是四周**；停止规则预设、中途不窥视（见 @sec-trial）"))
+    "净赢重尾（CV 约 8）令朴素灰度检不出效应：主指标须缩尾 1%/99% 或改净赢率（方差削减约八成），随机化到玩家而非代理线，样本累积约 8 个滚动折（约 16 周）方能把 MDE 压到 20%——**灰度至少一个季度，不是四周**；停止规则预设、中途不窥视（见 @sec-trial）",
+    "m_i > ρ/(1−κ_share) = **2.59%** 方为净贡献为正：低于此线者流水越大平台越亏。此线把「该赏该罚」从主观判断变成一条可查的算术线，亦是罚侧的经济分母与赏侧的硬约束（见 @sec-unit）；须记低于门槛≠该罚，罚侧仍以证据链为准",
+    "个体毛利率两期自相关仅 **0.112**，当前模型 Spearman 0.20 已达其 **189%**——预测能力已逼近物理上限，继续调参无收益。资源应转向留存（谁会来、来多久）与毛利率（一元流水留下多少）两个新标的；同期实测秩持续性 Jaccard 仅 **0.02**，故本方案只作群体分层，不作个体长期价值承诺（罚侧证据链不受此限）"))
 kb(V, "结论裁定表｜解释：十二条裁定各自注明依据与做法　▸ 本方案用途：供拍板；每条均可回溯到本报告相应章节的现算结果")
 ```
 **读法**：十二条裁定即本报告请先生拍板的全部事项，每条都注明依据与做法，且都能回溯到
-前文某一张现算的图或表。三类须分开处置：①②③⑥是**已实证、可即刻执行**；
+前文某一张现算的图或表。三类须分开处置：①⑥是**可即刻执行**（体系上线与荷官过程口径，不涉金额承诺）；
+②③是**已现算但止于研究结果**——能力值→ROI 账与预测层皆只到证据阶梯第一级（样本外），
+尚差四级方可写入商业承诺（见 @sec-ladder）；
 ④⑦是**须配套约束才能执行**（三重闸、挽留优先级）；⑤⑧⑨是**受阻待清**——
-占成已核清而 γ\* 为负故赏侧无金额空间、两表未建则专员四维无法上线；⑪⑫是**扩量前必须过的两道关**——闸门与功效，任一不过即只许作巡检工具。
+占成已核清而 γ\* 为负故赏侧无金额空间、两表未建则专员四维无法上线；⑪⑫是**扩量前必须过的两道关**——闸门与功效，任一不过即只许作巡检工具；
+⑬⑭是**两条硬约束**——前者给出经济分母（2.59% 门槛），后者给出能力天花板（自相关 0.112），
+二者共同界定本方案能做什么、不能做什么。
 凡状态未变者，下次复核仍照此表逐条对账。
 
 
@@ -4034,6 +4894,43 @@ kb(V, "结论裁定表｜解释：十二条裁定各自注明依据与做法　�
 :::
 
 # 变更日志 {#sec-changelog}
+
+**2026-08-10 · 第十五轮：Phase 3 限制性发现写入 + 六张关键图新增 + 三处内部不一致斧正**
+
+**一、审核所得的三处内部不一致（与 Phase 3 无关，纯校对）**
+
+- **`tbl-uplift` 读法称玩家罚侧「已实证」，与本报告自身矛盾**：同一文件的增利证据阶梯第 1 级（处置真正落地）标为「未完成」，并明文「回测的净增益是『若处置能执行』的会计结果，不是已发生的现金」，§EX-01 亦已证平台无处置日志。今一律改为「**已在净化回测中结算、但属决策模拟**」，并明写「不是已发生的现金，亦不得称已实证 ROI」。结论章读法「①②③⑥是已实证、可即刻执行」同病，今拆为「①⑥可即刻执行（不涉金额承诺）」与「②③止于证据阶梯第一级」。
+- **年化为主数字**：全篇 12 处 ×365/14。今把年化悬停注升级为「**年化只作附报**，主数字一律取折均／折数／窗长／中位／IQR／正折率」，并列明须同时成立的**六项前提**（客群不衰减、regime 不变、无容量约束、无策略拥挤、干预成本为零、收益无自相关），其中第①项**已知不成立**——会员在册中位仅约 1 个月，一年换手逾十轮，新增的同期群留存三角即其直接证据。
+- **「MASE」名实不符**：十分位组与实体级所报者，算式为 |Σ实际−Σ预测| ÷ |Σ实际−Σ朴素|，实为**聚合层的相对绝对误差（RelAE）**，非以样本内朴素 MAE 为尺的标准 MASE，二者在组内正负相消时可差出数量级。今于预测章明文分名，术语库另立「RelAE（组级）」一条。
+
+**二、新查获并斧正的量级缺陷**
+
+- **`fig-econ` 以 `E02` 绝对金额画柱**，而 §EX-07 已实测 `E02` 的 validbet/ggr/rebate 与 `bet02` 相差 **5.24 倍**，**绝对额不可用、只可取比率**。今整图改**占比口径**（各层占全体之百分比 + 层内毛利率），读法同步重写，绝对额一概不呈现。
+
+**三、Phase 3 限制性发现写入（业绩类结果继续扣住不写）**
+
+证据等级的逻辑是单向的：正面结果须逐级授权方可写；**限制性发现只会收紧结论，扣住不写反令报告越界**。故以下四项一律先行写入，业绩类数字（折均 NC、相对 Naive 倍数、引擎选型、smearing 校正量）仍一字不写。
+
+- **预测能力有物理上限且已逼近**：个体毛利率两期自相关仅 **0.112**，当前模型 Spearman 0.20 已达其 **189%**——**换模型无用，换标的才有出路**。已写入预测章三条硬约束之首，并立结论第 ⑭ 条。
+- **本方案是群体分层工具，非个体挑选工具**：相邻两期价值排名 Jaccard 仅 **0.02**（以历史净贡献亦只 0.18）。**须严格限定适用边界**——此约束**只及赏侧与价值排序，不及罚侧证据链**：完美对打是同局一庄一闲、全窗反向比例为 1 的确定性证据，非预测，999 对完美对冲对不因价值排名不稳而失效。
+- **MASE 可算率仅 9.8%**（禁运后目标零值率 83.4%），会员级 MASE 只能作高流水层附报。
+- **净贡献门槛 m_i > 2.59%**（＝ρ/(1−κ_share)）：γ\* 结论的自然推论，今升为独立章节与结论第 ⑬ 条。
+
+**四、新增六张关键图（皆 ECharts，皆由包内表现算）**
+
+- **@sec-unit 单位经济学章**（新）——① **瀑布图**：每 100 元洗码量的去向 m→−ρ→−κ→γ\*，四段皆实测常数；② **门槛分布图**：会员个人毛利率直方 × 2.59% 门槛线，现算门槛两侧的人数与洗码量占比，给出罚侧的**经济分母**与赏侧的硬约束；③ **赏罚分明环图**：按 §17.2 综合分五层结账，悬停即出**客群人数·投注额·盈利·返水·层毛利率**五项（金额一律由 B01 现算，绝不取 E02 绝对额）。
+- **@sec-track 三情景金融走势面板**（新）——四格联动（营业额·活跃会员数·盈利·返水）、共用横轴、区间缩放、十字光标联动、检验折窗以紫底标出。三情景定义写在图前：**原走势**（实测）、**仅监控·不赏罚**（与实测**完全重合**——此重合是结论而非失误，评分不处置即不动分毫）、**依方案赏罚**（决策模拟带，上界赏零发放／下界赏按天花板足额）。为此在回测块补三列（`测试窗首`／`名单洗码`／`名单日均活跃`），反事实一律在折内按当日盈利占比摊派，**折外断开不外推**。读法逐格分写，其中「营业额下降在此处是好消息」一条为要害——被砍掉的是净负贡献流水。
+- **@sec-ladder 证据等级进度条**（新）——六级只达两级（① 样本外、④ 口径核清），专治「Lift 九倍所以已经多赚钱」之误读；明定凡对外引用任何金额须连同此图给出。
+- **@sec-peer 同业惯用图章**（新）——补齐三张赌场看板必备而本报告此前缺席者：**洛伦兹曲线 + 基尼系数**（贡献集中度；曲线起点以下即净赢平台者，右端最陡的 1% 既是收入命脉也是误伤代价最贵的一群）、**日毛利率控制图**（均值 ± 3σ + 2.59% 门槛线；均值落在门槛之下即 γ\* 为负的**日频证据**）、**同期群留存三角**（直接支撑「年化站不住」的判断，并回答赏侧值不值得投）。另**如实点名四张不可算者**（理论赢 vs 实际赢缺注型字段、AML 漏斗缺存提与申报表、责任博彩缺自我排除与干预响应两类、渠道成本月结因 §EX-07 量级不符而不可闭合），不以近似量充数。
+
+**五、Margin 引擎点名占位**
+
+按铁律留占位：所待 `Margin 引擎折级结果`（含逐折 WAPE／RMSLE／Bias／Top-K，与 Scale 同框十一折）；SQL 编号待定（须新增最小流水门槛与比率收缩两项取数）；受影响输出为 @sec-unit 门槛图的升级与 CLV 合成表——后者须俟 Retention 引擎到位方能闭合，故本报告暂不设该表。
+
+**六、通用图件与例检**
+
+新立七件 ECharts 生成器（`er_pie`／`er_waterfall`／`er_ladder`／`er_hist`／`er_panel`／`er_xyline`／`er_heat`），与 `er_radar` 同一骨架：**容器零宽即不初始化**、四处事件自动复算、载入失败即点名不留白。交付前例检：R 块 68 块零不平衡、非法转义零、七件生成器 JS 逐一经 `node --check`（`er_xyline` 的 `ypct` 两分支分别展开验证）、新增六块的定义—使用次序逐对核验。
+
 
 **2026-08-10 · 第十四轮：雷达轴名定位根治 + 专员维数校对**
 
