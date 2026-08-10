@@ -2853,23 +2853,53 @@ if (!is.null(B01)) {
     max(g, 0)           # 为负即 0：无可发放额度，故赏成本上限恒为 0
   } else NA_real_
   days <- sort(unique(B01$bet_date))
-  TR <- 63; EM <- 7; TE <- 14; ST <- 14
+  ## ★★ 每日滚动（先生令 2026-08-10）：步长由 14 改为 **1 个营业日**，
+  ##    自可切出完整折的第一日起，逐日滚动至窗口末日 2026-08-06。
+  ##    折数由 4 增至 length(days) − 83 ≈ 56，走势图遂能逐日读点。
+  ##    ⚠ 统计后果必须同时处理：步长 1 而测试窗 14，相邻折的测试窗重叠 13/14，
+  ##      折级统计量**高度相关**。名义折数不等于独立观测数——
+  ##      有效独立折数 ≈ 折数 × 步长 ÷ 测试窗长 = 折数 ÷ 14。
+  ##      故一切区间估计的分块自助**块长须取 ceiling(TE/ST) = 14**，
+  ##      不得沿用 ⌈√折数⌉ 的旧块长，否则区间会窄到虚假。
+  TR <- 63; EM <- 7; TE <- 14; ST <- 1
   starts <- seq(1, length(days) - (TR + EM + TE) + 1, by = ST)
+  BT_BLOCK <- max(1L, ceiling(TE / ST))     # 分块自助块长：重叠度的倒数
+  BT_EFF   <- length(starts) * ST / TE      # 有效独立折数
   pqb <- function(v){ r <- rank(v, na.last="keep", ties.method="average")
                       100*(r-1)/max(sum(!is.na(v))-1,1) }
+  ## ★ 每日滚动的代价是折数十四倍，旧式逐折 stats::aggregate 必然 OOM。
+  ##   故改建「一次性索引 + 单次分组」的窗口聚合器：B01 转 data.table、
+  ##   按营业日序号建键，每折以二分查找取窗，一次 by=member_id 分组同时算出全部所需列。
+  ##   同一窗口只扫一遍、只分组一次，取代原先每折九次 stats::aggregate。
+  BTD <- data.table::as.data.table(B01[, c("member_id","bet_date","hedge_rate_d",
+           "stake_cv_d","late_share_d","n_ip","stake","net_pnl","validbet")])
+  data.table::setnames(BTD,
+    c("hedge_rate_d","stake_cv_d","late_share_d","n_ip"),
+    c("hedge","cv","late","nip"))
+  BTD[, di := match(bet_date, days)]
+  BTD[, bet_date := NULL]
+  data.table::setkey(BTD, di)
+  win_agg <- function(lo, hi) {
+    z <- BTD[.(seq.int(lo, hi)), nomatch = 0L]
+    if (!nrow(z)) return(data.frame(member_id = character(0)))
+    a <- z[, list(hedge   = mean(hedge, na.rm = TRUE),
+                  cv      = mean(cv,    na.rm = TRUE),
+                  late    = mean(late,  na.rm = TRUE),
+                  nip     = mean(nip,   na.rm = TRUE),
+                  stake   = mean(stake, na.rm = TRUE),
+                  net_sum = sum(net_pnl,  na.rm = TRUE),
+                  vb      = sum(validbet, na.rm = TRUE),
+                  dct     = data.table::uniqueN(di),
+                  ws      = mean(net_pnl > 0, na.rm = TRUE)),
+           by = member_id]
+    rm(z); as.data.frame(a)
+  }
   res <- lapply(starts, function(s0) {
     tr_d <- days[s0:(s0+TR-1)]
     te_d <- days[(s0+TR+EM):(s0+TR+EM+TE-1)]
-    tr <- B01[B01$bet_date %in% tr_d, ]
-    ag <- stats::aggregate(cbind(hedge = hedge_rate_d, cv = stake_cv_d,
-                                 late = late_share_d, nip = n_ip,
-                                 stake = stake) ~ member_id, data = tr,
-                           FUN = function(x) mean(x, na.rm = TRUE),
-                           na.action = stats::na.pass)
-    ns <- stats::aggregate(cbind(net_sum = net_pnl) ~ member_id, data = tr,
-                           FUN = function(x) sum(x, na.rm = TRUE),
-                           na.action = stats::na.pass)
-    ag <- merge(ag, ns, by = "member_id", all = TRUE)
+    ## 训练窗一次分组即得全部所需列（hedge/cv/late/nip/stake/net_sum/vb/dct/ws）
+    ag <- win_agg(s0, s0 + TR - 1L)
+    if (!nrow(ag)) return(NULL)
     ## ── 模型轨：训练窗内现训 PU-glm ──
     ## ★ 须分别陈述，不可一句带过：
     ##   **特征侧**确无未来信息——Zf 各列皆由 tr（训练窗）聚合而来。
@@ -2911,16 +2941,7 @@ if (!is.null(B01)) {
       }
     }
     ## ── 能力值轨（§17.2 式折内综合分，只用训练窗；本方案主轨）─────────
-    dctb <- stats::aggregate(cbind(dct = bet_date) ~ member_id,
-              data = tr, FUN = function(x) length(unique(x)))
-    vbb  <- stats::aggregate(cbind(vb = validbet) ~ member_id, data = tr,
-              FUN = function(x) sum(num(x), na.rm = TRUE),
-              na.action = stats::na.pass)
-    wsb  <- stats::aggregate(cbind(ws = net_pnl > 0) ~ member_id, data = tr,
-              FUN = function(x) mean(x, na.rm = TRUE),
-              na.action = stats::na.pass)
-    ag <- Reduce(function(a,b2) merge(a,b2,by="member_id",all.x=TRUE),
-                 list(ag, dctb, vbb, wsb))
+    ## dct / vb / ws 三列已由 win_agg 一并算出，无须再行三次聚合与三次合表
     罚分 <- rowMeans(cbind(pqb(ag$hedge), pqb(pmax(ag$net_sum,0)), pqb(ag$nip),
                            pqb(ag$ws * ag$dct)), na.rm = TRUE)
     ## ── 阈值引擎：**嵌套时序成本敏感选阈**（Elkan 2001 × López de Prado 嵌套验证）──
@@ -2929,22 +2950,15 @@ if (!is.null(B01)) {
     ##    定案依据（真数据三案对照，见变更日志）：训练窗自身净赢做目标的裸 argmax
     ##    被少数极端高额个体主导（折均 −3.0 万）、1-SE 正则亦被挟持；嵌套时序 +13.3 万，
     ##    完胜固定 P99.9（+2.2 万）——「鲸鱼会重演」是假设，「未来的钱」才是目标。
-    sel_d <- tr_d[1:49]; val_d <- tr_d[50:63]
-    sl <- B01[B01$bet_date %in% sel_d, ]
-    a1 <- stats::aggregate(cbind(hg = hedge_rate_d, nip = n_ip) ~ member_id,
-            data = sl, FUN = function(x) mean(x, na.rm=TRUE), na.action = stats::na.pass)
-    a2 <- stats::aggregate(cbind(nets = net_pnl, vbs = validbet) ~ member_id,
-            data = sl, FUN = function(x) sum(x, na.rm=TRUE), na.action = stats::na.pass)
-    a3 <- stats::aggregate(cbind(dcts = bet_date) ~ member_id, data = sl,
-            FUN = function(x) length(unique(x)))
-    a4 <- stats::aggregate(cbind(wss = net_pnl > 0) ~ member_id, data = sl,
-            FUN = function(x) mean(x, na.rm=TRUE), na.action = stats::na.pass)
-    AS <- Reduce(function(a,b2) merge(a,b2,by="member_id",all=TRUE), list(a1,a2,a3,a4))
+    ## 训练窗内再切：前 49 日选人窗、后 14 日结账窗，皆走同一聚合器
+    AS <- win_agg(s0, s0 + 48L)
+    if (!nrow(AS)) return(NULL)
+    AS$hg <- AS$hedge; AS$nets <- AS$net_sum; AS$vbs <- AS$vb
+    AS$dcts <- AS$dct; AS$wss <- AS$ws
     fs <- rowMeans(cbind(pqb(AS$hg), pqb(pmax(AS$nets,0)), pqb(AS$nip),
                          pqb(AS$wss * AS$dcts)), na.rm = TRUE)
-    vv <- B01[B01$bet_date %in% val_d, ]
-    wv <- stats::aggregate(cbind(w = net_pnl, vbv = validbet) ~ member_id, data = vv,
-            FUN = function(x) sum(x, na.rm=TRUE), na.action = stats::na.pass)
+    wv <- win_agg(s0 + 49L, s0 + TR - 1L)
+    wv$w <- wv$net_sum; wv$vbv <- wv$vb
     g_nest <- function(ids) {
       z <- wv[wv$member_id %in% ids, , drop = FALSE]
       if (!nrow(z)) return(0)
@@ -2980,24 +2994,23 @@ if (!is.null(B01)) {
     mu  <- mean(ag$stake, na.rm = TRUE)
     sd3 <- mu + 3 * stats::sd(ag$stake, na.rm = TRUE)
     fl0 <- ag$member_id[which(ag$stake >= sd3)]
-    te <- B01[B01$bet_date %in% te_d, ]
+    ## 测试窗同走聚合器：一次分组即得每会员的净额、洗码量与活跃日数
+    teA <- win_agg(s0 + TR + EM, s0 + TR + EM + TE - 1L)
+    if (!nrow(teA)) return(NULL)
     gain <- function(ids) {
       if (!length(ids)) return(0)
-      z <- te[te$member_id %in% ids, , drop = FALSE]
+      z <- teA[teA$member_id %in% ids, , drop = FALSE]
       if (!nrow(z)) return(0)
-      w <- stats::aggregate(cbind(net = net_pnl) ~ member_id, data = z,
-                            FUN = function(x) sum(x, na.rm = TRUE),
-                            na.action = stats::na.pass)
       mis <- mean(!(ids %in% TRUTH))
-      0.60*sum(pmax(w$net,0)) - 0.15*sum(-pmin(w$net,0))*mis
+      0.60*sum(pmax(z$net_sum,0)) - 0.15*sum(-pmin(z$net_sum,0))*mis
     }
     prec <- function(ids) if (length(ids)) mean(ids %in% TRUTH) else NA_real_
     ## 基率＝金标准在**本折在册会员**中的占比（非全窗），Lift 的正确分母
     base_rate <- length(intersect(TRUTH, ag$member_id)) / length(unique(ag$member_id))
-    全池盈利 <- -sum(te$net_pnl, na.rm = TRUE)
+    全池盈利 <- -sum(teA$net_sum, na.rm = TRUE)
     ## ── 不依赖金标准覆盖的三把「真尺」（金标准只含完美对打与人工單，覆盖不全）──
-    te_w <- stats::aggregate(cbind(w = net_pnl) ~ member_id, data = te,
-              FUN = function(x) sum(x, na.rm = TRUE), na.action = stats::na.pass)
+    te_w <- data.frame(member_id = teA$member_id, w = teA$net_sum,
+                       stringsAsFactors = FALSE)
     赢额全平台 <- sum(pmax(te_w$w, 0), na.rm = TRUE)
     econ_hit <- function(ids) {
       z <- te_w[te_w$member_id %in% ids, , drop = FALSE]
@@ -3012,10 +3025,8 @@ if (!is.null(B01)) {
     名单占比 <- function(ids) length(ids) / length(unique(ag$member_id))
     recall <- function(ids) length(intersect(ids, TRUTH)) /
                             max(length(intersect(TRUTH, ag$member_id)), 1)
-    赏成本上限 <- if (is.finite(cap_bt)) {
-      zc <- te[te$member_id %in% 赏池, , drop = FALSE]
-      cap_bt * sum(num(zc$validbet), na.rm = TRUE)
-    } else NA_real_
+    赏成本上限 <- if (is.finite(cap_bt))
+      cap_bt * sum(teA$vb[teA$member_id %in% 赏池], na.rm = TRUE) else NA_real_
     ## ── 误判经济学（先生令）：误判率、其盈利代价、与零误判反事实之比 ──
     zc2 <- te_w[te_w$member_id %in% flC, , drop = FALSE]
     W_fl <- sum(pmax(zc2$w, 0), na.rm = TRUE)     # 名单在测试窗赢走额（可追）
@@ -3043,28 +3054,26 @@ if (!is.null(B01)) {
     赏冲突 <- intersect(赏池, TRUTH)                      # 赏池 ∩ 金标准证据链
     赏罚冲突率 <- if (length(赏池)) length(赏冲突) / length(赏池) else NA_real_
     赏冲突成本 <- if (is.finite(cap_bt) && length(赏冲突))
-      cap_bt * sum(num(te$validbet[te$member_id %in% 赏冲突]), na.rm = TRUE) else 0
+      cap_bt * sum(teA$vb[teA$member_id %in% 赏冲突], na.rm = TRUE) else 0
     即期未回本率 <- if (nrow(赏zc)) mean(赏zc$w > 0) else NA_real_
     ## 赏侧盈亏平衡：礼遇每付出 1 元，须换来多少增量洗码量方能回本？
     ##   增量洗码量的单位净贡献即 γ*（＝m−ρ−κ）。γ* 为正时门槛＝1/γ*；
     ##   γ* 为负时**任何增量流水都回不了本**——多来的流水本身就在亏，
     ##   故赏侧唯一可能的回本路径是「引来毛利率高于 2.59% 门槛的人」，而非「引来更多流水」。
-    赏池洗码额 <- sum(num(te$validbet[te$member_id %in% 赏池]), na.rm = TRUE)
+    赏池洗码额 <- sum(teA$vb[teA$member_id %in% 赏池], na.rm = TRUE)
     赏成本实付 <- if (is.finite(cap_bt)) cap_bt * 赏池洗码额 else NA_real_
     ## ★ 十五轮补三列：供三情景走势的反事实构造（洗码、返水、活跃三条腿）
-    名单洗码 <- sum(num(te$validbet[te$member_id %in% flC]), na.rm = TRUE)
-    名单日均活跃 <- if (length(flC)) {
-      z9 <- unique(te[te$member_id %in% flC, c("member_id","bet_date")])
-      nrow(z9) / length(te_d)
-    } else 0
+    名单洗码 <- sum(teA$vb[teA$member_id %in% flC], na.rm = TRUE)
+    名单日均活跃 <- if (length(flC))
+      sum(teA$dct[teA$member_id %in% flC], na.rm = TRUE) / length(te_d) else 0
     data.frame(测试窗末 = max(te_d), 测试窗首 = min(te_d), 窗长 = length(te_d),
-      全池盈利 = 全池盈利, 全池洗码 = sum(num(te$validbet), na.rm = TRUE),
+      全池盈利 = 全池盈利, 全池洗码 = sum(teA$vb, na.rm = TRUE),
       名单洗码 = 名单洗码, 名单日均活跃 = 名单日均活跃,
       能力值净增益 = gain(flC), 能力值精准率 = prec(flC),
       能力值Lift = prec(flC)/base_rate, 能力值命中数 = length(flC),
       罚档位 = q_pun, 罚阈值 = th_pun, 赏档位 = q_rew,
       名单赢走额 = W_fl, 名单输掉额 = L_fl, 非金标占比 = mean(!(flC %in% TRUTH)),
-      赏池洗码 = if (is.finite(cap_bt)) sum(num(te$validbet[te$member_id %in% 赏池]),
+      赏池洗码 = if (is.finite(cap_bt)) sum(teA$vb[teA$member_id %in% 赏池],
                                             na.rm = TRUE) else NA_real_,
       经济误判率 = mis_e, 误判率下 = mis_lo, 误判率上 = mis_hi,
       盈亏平衡误判率 = 盈亏平衡误判率, 误判成本 = 误判成本,
@@ -3085,6 +3094,7 @@ if (!is.null(B01)) {
       模型命中数 = length(fl_model), 规则命中数 = length(fl_rule),
       对照命中数 = length(fl0))
   })
+  res <- Filter(Negate(is.null), res)     # 步长 1 之下末几折可能取不满窗，如实剔除
   BT <- do.call(rbind, res)
   BT$能力值累计 <- cumsum(BT$能力值净增益)
   BT$模型累计 <- cumsum(BT$模型净增益)
@@ -3300,6 +3310,9 @@ if (!is.null(B01)) {
   for (cc in c("stake","validbet","net_pnl","hedge_rate_d","n_ip"))
     B01[[cc]] <- num(B01[[cc]])
   days <- sort(unique(B01$bet_date))
+  ## ★ 本块为**预测轨**，非回测轨，其折规格为契约中的「规格丁」：步长 14 日，
+  ##   各折测试窗互不重叠、折级指标近似独立，故不必并报有效独立折数。
+  ##   回测轨（规格甲乙）已于 2026-08-10 统一为每日滚动，两者用途不同，不得互相冒名。
   TR <- 63; EM <- 7; TE <- 14; ST <- 14
   starts <- seq(1, length(days) - (TR + EM + TE) + 1, by = ST)
   pqf <- function(v){ r <- rank(v, na.last="keep", ties.method="average")
@@ -3783,10 +3796,16 @@ if (exists("EF") && !is.null(EF) && HAS$plotly) {
 
 # 回测并评估：能力值轨 vs 模型轨 vs 规则轨 vs 均值+3σ {#sec-backtest}
 
-**回测规矩**（净化滚动）：训练 63 日 → 禁运 7 日 → 测试 14 日，**步长 14 日**。
-步长与主方案（7 日）**刻意不同**，非笔误：步长等于测试窗长时，各折测试窗**互不重叠**，
-折级统计量近似独立；主方案取 7 日则测试窗重叠一半，轨迹更密而折间相关，
-故其区间估计一律走分块自助。两者前三项参数完全一致，只此一项有别，各有所取。
+**回测规矩**（净化滚动）：训练 63 日 → 禁运 7 日 → 测试 14 日，**步长 1 个营业日**。
+自可切出完整折的第一日起**逐日滚动**至窗口末日 2026-08-06，
+故走势图上每一个营业日各有一点，逐日可比——此为先生所令。
+
+**每日滚动的统计代价，须先说白。** 步长 1 而测试窗 14，相邻两折的测试窗重叠 13/14，
+**折级统计量高度相关**：名义折数虽增至五十余，其中所含的独立信息量并未随之增加。
+故本报告一律并报两个数——**名义折数**与**有效独立折数**（≈ 名义折数 × 步长 ÷ 测试窗长），
+且一切区间估计的分块自助**块长取 ⌈测试窗长 ÷ 步长⌉ ＝ 14**，
+不再沿用 ⌈√折数⌉ 的旧块长。若不作此更正，折数由 4 增至 56 会让区间凭空收窄约两倍半，
+而那不是精度，是重复计数。
 一切阈值与模型**只在训练窗内定**，测试窗只结账。四轨对比：
 **能力值轨**（§17.2 式折内综合分：罚侧＝对打率·净赢额·IP切换·稳定赢强度四维分位——**罚阈值逐折以嵌套时序成本敏感准则现选**（前 49 日选人、后 14 日结账定档；Elkan 2001 × López de Prado 嵌套验证，候选档位 P99.5～P99.99），∪ 净赢额前 0.1%；本方案定标轨，折内仅能算十维之约半，读作体系**保守下界**）、
 **模型轨**（训练窗内现训 PU-glm，取概率前 0.1% ∪ 净赢额前 0.1%）、
@@ -3806,7 +3825,7 @@ if (exists("EF") && !is.null(EF) && HAS$plotly) {
 #| results: asis
 if (!is.null(B01)) {
   .days <- sort(unique(B01$bet_date))
-  .TR <- 63; .EM <- 7; .TE <- 14; .ST <- 14
+  .TR <- 63; .EM <- 7; .TE <- 14; .ST <- 1     # ★ 与回测块同步：每日滚动
   .st <- seq(1, length(.days) - (.TR + .EM + .TE) + 1, by = .ST)
   if (length(.st) < 1 || is.na(.st[1])) {
     cat(ph("B01_bt_panel.csv（营业日不足 84 日，切不出完整折）",
@@ -4253,7 +4272,10 @@ if (exists("BT")) {
   blk_boot0 <- function(v, B = 2000, seed = 7) {
     v <- v[is.finite(v)]; n <- length(v)
     if (n < 2) return(rep(mean(v), B))
-    l <- max(1, ceiling(sqrt(n))); k <- ceiling(n / l); set.seed(seed)
+    ## ★ 每日滚动之下块长不可再取 ⌈√折数⌉：步长 1 而测试窗 14，相邻折重叠 13/14，
+    ##   块长须至少覆盖一个完整测试窗，否则块内仍相关、区间窄到虚假。
+    l <- min(n, max(1, if (exists("BT_BLOCK")) BT_BLOCK else ceiling(sqrt(n))))
+    k <- ceiling(n / l); set.seed(seed)
     replicate(B, { st <- sample.int(n - l + 1, k, replace = TRUE)
       mean(unlist(lapply(st, function(i) v[i:(i + l - 1)]))[seq_len(n)]) })
   }
@@ -4271,7 +4293,10 @@ if (exists("BT")) {
            "⑤ 干预成本为零、⑥ 收益无自相关。",
            "折数仅 ", nrow(BT), " 折，须与区间并读，不可单独引用"))
   T_ci <- tip(paste0("**", amt(ci[1]), " ~ ", amt(ci[2]), "**"),
-    paste0("**分块**自助法 90% 区间（Künsch 1989 moving-block，块长 ⌈√折数⌉，2000 次）：",
+    paste0("**分块**自助法 90% 区间（Künsch 1989 moving-block，块长 ⌈测试窗长÷步长⌉＝",
+           if (exists("BT_BLOCK")) BT_BLOCK else "—",
+           "，2000 次；名义折数 ", nrow(BT), "、**有效独立折数约 ",
+           if (exists("BT_EFF")) sprintf("%.1f", BT_EFF) else "—", "**）：",
            "折级序列存在自相关与季节性，普通 iid 重抽样会低估方差、令区间偏窄，",
            "故按相邻折成块重抽样。区间宽即说明折间差异大，须持续复核"))
   T_prec <- tip(paste0("**", pct(mean(BT$能力值精准率, na.rm=TRUE)), "**"),
@@ -4596,7 +4621,10 @@ if (exists("P17") && !is.null(E02)) {
   blk_boot <- function(v, B = 2000, seed = 7) {
     v <- v[is.finite(v)]; n <- length(v)
     if (n < 2) return(rep(mean(v), B))
-    l <- max(1, ceiling(sqrt(n))); k <- ceiling(n / l)
+    ## ★ 每日滚动之下块长不可再取 ⌈√折数⌉：步长 1 而测试窗 14，相邻折重叠 13/14，
+    ##   块长须至少覆盖一个完整测试窗，否则块内仍相关、区间窄到虚假。
+    l <- min(n, max(1, if (exists("BT_BLOCK")) BT_BLOCK else ceiling(sqrt(n))))
+    k <- ceiling(n / l)
     set.seed(seed)
     replicate(B, {
       st <- sample.int(n - l + 1, k, replace = TRUE)
@@ -4818,7 +4846,10 @@ if (exists("BT")) {
   blk_u <- function(v, B = 2000, seed = 7) {
     v <- v[is.finite(v)]; n <- length(v)
     if (n < 2) return(rep(mean(v), B))
-    l <- max(1, ceiling(sqrt(n))); k <- ceiling(n / l); set.seed(seed)
+    ## ★ 每日滚动之下块长不可再取 ⌈√折数⌉：步长 1 而测试窗 14，相邻折重叠 13/14，
+    ##   块长须至少覆盖一个完整测试窗，否则块内仍相关、区间窄到虚假。
+    l <- min(n, max(1, if (exists("BT_BLOCK")) BT_BLOCK else ceiling(sqrt(n))))
+    k <- ceiling(n / l); set.seed(seed)
     replicate(B, { st <- sample.int(n - l + 1, k, replace = TRUE)
       mean(unlist(lapply(st, function(i) v[i:(i + l - 1)]))[seq_len(n)]) })
   }
@@ -4891,7 +4922,10 @@ if (exists("BT") && all(c("名单赢走额","名单输掉额","非金标占比")
   blk_s <- function(v, B = 1000, seed = 17) {
     v <- v[is.finite(v)]; n <- length(v)
     if (n < 2) return(rep(mean(v), B))
-    l <- max(1, ceiling(sqrt(n))); k <- ceiling(n / l); set.seed(seed)
+    ## ★ 每日滚动之下块长不可再取 ⌈√折数⌉：步长 1 而测试窗 14，相邻折重叠 13/14，
+    ##   块长须至少覆盖一个完整测试窗，否则块内仍相关、区间窄到虚假。
+    l <- min(n, max(1, if (exists("BT_BLOCK")) BT_BLOCK else ceiling(sqrt(n))))
+    k <- ceiling(n / l); set.seed(seed)
     replicate(B, { st <- sample.int(n - l + 1, k, replace = TRUE)
       mean(unlist(lapply(st, function(i) v[i:(i + l - 1)]))[seq_len(n)]) })
   }
@@ -5661,6 +5695,23 @@ kb(V, "结论裁定表｜解释：十二条裁定各自注明依据与做法　�
 轴名 `title$font$color`、刻度 `tickfont$color`、轴线 `linecolor`、网格 `gridcolor`——
 缺一即可能整条不可见；图例另有 `legend$font$color`，注记另有 `annotations[i]$font$color`。
 :::
+
+**2026-08-10 · 第二十八轮：滚动回测改为每日 · 窗口聚合器 · 有效独立折数**
+
+- **滚动回测改为每日（先生令）**：步长由 14 改为 **1 个营业日**，自可切出完整折的第一日起
+  逐日滚动至 2026-08-06，走势图上每个营业日各有一点，逐日可比。与主方案折规格自此完全一致。
+- **统计代价同时认下，不可只享其密**：步长 1 而测试窗 14，相邻两折测试窗重叠 **13/14**，
+  折级统计量高度相关。名义折数由 4 增至约 56，而独立信息量并未随之增加。故：
+  ① 一律并报**名义折数与有效独立折数**（≈ 名义 × 步长 ÷ 测试窗长 ≈ 4.0）；
+  ② 四处分块自助的块长统一改取 **⌈测试窗长 ÷ 步长⌉ = 14**，不再用 ⌈√折数⌉。
+  **不作此更正则区间凭空收窄约两倍半——那不是精度，是重复计数。**
+- **改建窗口聚合器，否则每日滚动必然 OOM**：折数十四倍，而旧式逐折 `stats::aggregate`
+  （每折九次）会把 IO 与内存同步放大。今将面板转 `data.table`、按营业日序号建键，
+  每折以二分查找取窗，一次 `by = member_id` 分组同时算出 hedge／cv／late／nip／stake／
+  net_sum／vb／dct／ws 全部所需列；训练窗、选人窗、结账窗、测试窗四处皆走此器，
+  每折九次聚合降为四次。折结构自证表的步长同步为 1。
+- **说明一处**：本轮改动**未在容器内运行验证**（无 R 环境），仅经语法与结构例检。
+  首次渲染若报错，请贴回错误，我即斧正。
 
 **2026-08-10 · 第二十七轮：金标准泄漏幅度实测 · 取数键名普查立为例检**
 
