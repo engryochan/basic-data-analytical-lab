@@ -30,34 +30,6 @@ h1,h2,h3{color:#7dffd4;}
 table{font-size:.9rem;}
 .callout{border-left-color:#22d3ee;}
 </style>
-<script>
-/* ★ 2026-08-10 五次斧正：先生实测雷达图「首次打开标签缺失／错位，
-   拖动一下才恢复正常」——根治第五病灶：本页 toc:true + page-layout:full，
-   Quarto 用 Bootstrap 栅格排布目录栏与正文宽度，栅格定型发生在
-   DOMContentLoaded 之后；而各 Plotly 挂件是解析到对应 <div> 时就立刻
-   Plotly.newPlot() 画出来的，往往早于栅格定型时刻——首绘时容器宽度还是
-   临时值，annotations 手绘文字的包围盒量错，标签遂缺失或错位。
-   用户任何一次拖拽/旋转会触发 Plotly 内部 relayout，用那时才准确的
-   容器宽度重新量一次文字，标签才「摆正」——现象与此完全吻合。
-   斧正：不等用户去拖，页面整体 load 完（栅格、字体都已定型）之后，
-   主动对全页每一张 Plotly 图强制 resize 一次，等效于「自动帮用户拖了一下」。
-   js-plotly-plot 是 Plotly.js 自己给每个画出来的图挂上的类名，
-   比 htmlwidgets 外层的 .plotly 包装类更可靠，直接选它最不容易漏图。 */
-window.addEventListener('load', function () {
-  function fixPlotlySizing() {
-    document.querySelectorAll('.js-plotly-plot').forEach(function (gd) {
-      if (window.Plotly && Plotly.Plots && Plotly.Plots.resize) {
-        try { Plotly.Plots.resize(gd); } catch (e) { /* 该 div 尚未就绪，下一轮再试 */ }
-      }
-    });
-  }
-  // 立即补一次，再延时两次兜底：字体异步加载、目录栏栅格二次定型都可能
-  // 晚于 load 事件本身，单次 resize 未必能追上最后一次布局抖动。
-  fixPlotlySizing();
-  setTimeout(fixPlotlySizing, 300);
-  setTimeout(fixPlotlySizing, 1200);
-});
-</script>
 ```
 
 ::: {.callout-note}
@@ -66,7 +38,7 @@ window.addEventListener('load', function () {
 本报告是《a168风控与客户分层评分体系_商业方案》的**执行精要版**：主方案对
 `异常IP与尾秒下注风控_阈值分析需求文档.md` 的全部 30 项要求逐条实现，并整合两轮实测审计的
 全部校正——五条铁律裁定、需求文档七处缺陷、21 张表的实测发现，再追加三层能力：
-**§17.2 四实体能力值分层（玩家十维·荷官八维·代理七维·专员八维骨架）、净化时序回测、业绩提升的因果验证协议**。
+**§17.2 四实体能力值分层（玩家十维·荷官八维·代理七维·专员十维骨架）、净化时序回测、业绩提升的因果验证协议**。
 本报告继承同一数据契约与同一纪律，只做一件事：**把结论压缩到可拍板的篇幅**。
 
 **开篇先说三句实话**，以免后文被误读为业绩承诺：
@@ -85,10 +57,23 @@ window.addEventListener('load', function () {
 #| echo: false
 suppressMessages({
   ok <- function(p) requireNamespace(p, quietly = TRUE)
-  HAS <- list(dt = ok("data.table"), plotly = ok("plotly"), DT = ok("DT"))
+  HAS <- list(dt = ok("data.table"), plotly = ok("plotly"), DT = ok("DT"),
+              hw = ok("htmlwidgets"), ec = ok("echarts4r"))
 })
 PAL <- list(bg="#050d1a", fg="#dff7ee", ac="#22d3ee", good="#00e5a0",
             warn="#ffd64d", bad="#ff6b8b", violet="#8b5cf6")
+## ★ 十四轮内存斧正：本报告须在千万行表（R03b 991 万 × 7 列）上做多重分组，
+##   而 R 与 Python 共用进程、Windows 下堆空间有限，故立三道闸：
+##   ① data.table 线程上限——radix 分组的临时缓冲随线程数线性增长，内存为紧约束时
+##      多线程反成负担，故封至 2；② `gc2()` 显式回收点；③ `mem()` 计量，逐步可见。
+if (isTRUE(HAS$dt)) try(data.table::setDTthreads(2L), silent = TRUE)
+gc2 <- function() invisible(suppressWarnings(gc(verbose = FALSE)))
+mem <- function(tag = "") {
+  g <- suppressWarnings(gc(verbose = FALSE))
+  u <- sum(g[, 2], na.rm = TRUE); p <- sum(g[, 6], na.rm = TRUE)
+  message(sprintf("🧮 内存[%s] 已用 %.0f MB · 峰值 %.0f MB", tag, u, p))
+  invisible(NULL)
+}
 HOVER <- list(bgcolor="rgba(5,13,26,.96)", bordercolor=PAL$ac,
               font=list(color=PAL$fg, size=12), align="left")
 ## 数据目录自动识别（与主方案同一惯例）
@@ -201,9 +186,41 @@ ph <- function(file, sql, hit) {
 }
 pct <- function(x, d=1) paste0(formatC(100*x, format="f", digits=d), "%")
 amt <- function(x) formatC(x, format="f", digits=0, big.mark=",")
-plt <- function(p) plotly::layout(p, paper_bgcolor="rgba(0,0,0,0)",
+## ★ 通用首绘自愈闸（2026-08-10 十四轮）
+##   plotly 首绘若逢容器零宽（`html-fill-item` 于非 fill 父层）或中文字体未就位，
+##   即按错误度量定版面，须待人手拖动触发 relayout 方归位。此闸以「字体就绪 ·
+##   容器尺寸变化 · 首次进入视口 · window load」四处事件代替人手，自动重绘；
+##   尺寸记忆防抖，同尺寸不重绘，故无递归。
+HEAL_JS <- "function(el, x) {
+  var lw = 0, lh = 0, t = null;
+  function sync() {
+    if (typeof Plotly === 'undefined') { return; }
+    var r = el.getBoundingClientRect();
+    if (r.width < 1) { return; }
+    if (Math.abs(r.width - lw) < 1 && Math.abs(r.height - lh) < 1) { return; }
+    lw = r.width; lh = r.height;
+    try { Plotly.Plots.resize(el); } catch (e) {}
+  }
+  function kick()  { if (t) { clearTimeout(t); } t = setTimeout(sync, 80); }
+  function force() { lw = 0; lh = 0; kick(); }
+  setTimeout(force, 0); setTimeout(force, 350); setTimeout(force, 1500);
+  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(force); }
+  window.addEventListener('load', force);
+  if (window.ResizeObserver) { new ResizeObserver(kick).observe(el); }
+  if (window.IntersectionObserver) {
+    new IntersectionObserver(function(es) {
+      es.forEach(function(e) { if (e.isIntersecting) { force(); } });
+    }).observe(el);
+  }
+}"
+plt <- function(p) {
+  p <- plotly::layout(p, paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)", font=list(color=PAL$fg),
         hoverlabel=HOVER)
+  p <- plotly::config(p, responsive = TRUE)
+  if (isTRUE(HAS$hw)) p <- htmlwidgets::onRender(p, HEAL_JS)
+  p
+}
 ## ★★ 编码出口闸 u8()（2026-08-09 四次斧正 · 根因已锁定）
 ##   根因：**R 的符号表不支持 UTF-8**。`P17$流水贡献` 与 `c(在桌洗码量=1)` 里的中文是
 ##   R *symbol*，在 Windows 中文 locale 下一律以 native（GBK/CP936）字节存入符号表；
@@ -235,14 +252,22 @@ u8df <- function(d) {
   d
 }
 
-## ★ 雷达轴名（2026-08-09 三次斧正 · 单行 + 诊断）
-##   病史三阶：一、角向刻度标签被 plotly 内部 clip-path 裁剪（加边距/收域皆无效）；
-##   二、改 annotations 手绘后仍见文字残缺——先生实测「在桌洗码量」→「在桌」、
-##   「对打渗透率」→「率」、「（待表·置零）」→「0」，且多条只剩方向标记。
-##   症状指向 plotly 文本层对 `<br>` 多行 + 全角括号的处理，而非布局。
-##   故本版：① 一律**单行**、弃用 `<br>`；② 方向标记改半角中点连写，不用全角括号；
-##   ③ 装载诊断——渲染时把 R 手上的真实轴名逐字打进控制台，一次定案。
-RADAR_DOM <- list(x = c(.28, .72), y = c(.20, .94))
+## ★★ 雷达图：弃 plotly 极坐标，改 ECharts 重铸（2026-08-10 十四轮·续二）
+##   病史四阶（皆经先生实测否决）：
+##     一、角向刻度标签被 plotly 内部 clip-path 裁剪——加边距、收极坐标域皆无效；
+##     二、改 paper 坐标手绘 annotations——文字仍见残缺；
+##     三、锁定 R 符号表编码，立字面量轴名向量与 u8() 出口闸——轴名在 R 内已完整
+##         （渲染成品 JSON 实证十条齐全、坐标合规），图上仍须转动方现；
+##     四、按实测像素重算落点并挂四处事件自动复算——**仍须转动方现**。
+##   四阶尽属 plotly 极坐标 annotations 层之内的腾挪，病灶既不在数据亦不在编码，
+##   继续在同一层修补已属徒劳，故**整层更换**：
+##   ECharts 的轴名（`radar.axisName`）是雷达组件自身的构成部分，由其布局引擎
+##   在 `setOption` 时按容器实测尺寸一次算定，不经任何 paper 坐标换算；
+##   且本实现**容器零宽即不初始化**（`boot()` 守卫），从根上杜绝按错误画幅定版面。
+##   保留的既有成果：字面量轴名向量（P17_LBL 等）、u8() 编码出口闸、
+##   radar_txt() 的单行轴名与赏罚标记、控制台轴名诊断、待表置零成法——一字未动。
+
+## 轴名装饰（沿用第九至十二轮成法：单行、半角中点、缺名点名、待表标注）
 radar_txt <- function(labels, dirs = NULL, pend = NULL) {
   labels <- u8(labels)   # ★ 符号表来的维名，出口前先还原 UTF-8
   lb <- trimws(as.character(labels))
@@ -252,50 +277,137 @@ radar_txt <- function(labels, dirs = NULL, pend = NULL) {
   if (!is.null(pend)) lb[pend] <- paste0(trimws(labels)[pend], " 待表零")
   lb
 }
-radar_ann <- function(labels, dirs = NULL, pend = NULL, rmul = 1.13, tag = "") {
-  n <- length(labels); if (!n) return(list())
-  txt <- radar_txt(labels, dirs, pend)
-  ## 诊断（先生令「以实测为凭」）：把 R 实际持有的轴名逐条打进控制台，
-  ## 若此处完整而图上残缺，即证问题在渲染层而非数据层，可据此再定策。
-  message(sprintf("🧭 雷达轴名[%s] %d 条：%s", tag, n, paste(txt, collapse = " ｜ ")))
-  ang <- (90 - 360 * (seq_len(n) - 1) / n) * pi / 180
-  cx <- mean(RADAR_DOM$x); cy <- mean(RADAR_DOM$y)
-  rx <- diff(RADAR_DOM$x)/2 * rmul; ry <- diff(RADAR_DOM$y)/2 * rmul
-  lapply(seq_len(n), function(i) {
-    cs <- cos(ang[i]); sn <- sin(ang[i])
-    list(x = cx + rx*cs, y = cy + ry*sn, xref = "paper", yref = "paper",
-         text = txt[i], showarrow = FALSE,
-         font = list(size = 11.5, color = if (!is.null(dirs) && dirs[i] < 0)
-                     PAL$bad else PAL$good),
-         xanchor = if (abs(cs) < .20) "center" else if (cs > 0) "left" else "right",
-         yanchor = if (abs(sn) < .20) "middle" else if (sn > 0) "bottom" else "top")
-  })
+
+## ECharts 运行库：优先取 echarts4r 内附之本地档（经 htmlDependency 注册，
+##   配合 YAML 的 embed-resources 内联入档，离线可看）；未装则退守 CDN 并点名。
+er_dep <- function() {
+  d <- if (isTRUE(HAS$ec)) system.file("htmlwidgets", package = "echarts4r") else ""
+  if (!nzchar(d) || !dir.exists(d)) return(NULL)
+  h <- list.files(d, pattern = "^echarts\\.min\\.js$", recursive = TRUE, full.names = TRUE)
+  if (!length(h)) h <- list.files(d, pattern = "^echarts\\.js$", recursive = TRUE, full.names = TRUE)
+  if (!length(h)) return(NULL)
+  f <- h[which.max(file.size(h))]
+  message(sprintf("✅ ECharts 取自 echarts4r 本地档（%.1f MB）：%s",
+                  file.size(f) / 1048576, basename(f)))
+  htmltools::htmlDependency("echarts", "5", src = c(file = dirname(f)),
+                            script = basename(f), all_files = FALSE)
 }
-## 雷达统一版面：角向刻度关闭（改由 annotations 承担）；图例下移，免与底部轴名相撞
-## ★ 2026-08-10 四次斧正：先生实测雷达图出现「画面被水平色带硬切、部分标签浮在
-##   与页面不一致的浅色背景上」——根治此前三轮均未触及的第四病灶：
-##   polar$bgcolor 只上色到极坐标圆盘本身（RADAR_DOM 圈定的 y∈[.20,.94] 那一段），
-##   但整张 plotly 画布的 paper_bgcolor / plot_bgcolor 从未显式设置，Plotly 默认给白色；
-##   圆盘之外的留白（图例所在的 y<.20 一带、朝下角度的轴名恰好落点于此）遂露出
-##   这块默认白底，叠在页面深色渐变背景（body{background:...#050d1a}）上就是硬切线。
-##   斧正：paper_bgcolor / plot_bgcolor 显式对齐页面底色 PAL$bg，画布整体不再露白，
-##   不论标签落在圆盘内外，背景色都与页面一致，不会再有色带断层。
-radar_lay <- function(p, title, labels, dirs = NULL, pend = NULL, tag = "") plotly::layout(p,
-  title = list(text = title, font = list(size = 13), x = .5, xanchor = "center",
-               y = .995, yanchor = "top"),
-  margin = list(l = 140, r = 140, t = 60, b = 110),
-  paper_bgcolor = PAL$bg, plot_bgcolor = PAL$bg,      # ★ 新增：画布整体上色，堵住白底露色
-  font = list(color = PAL$fg),                        # ★ 新增：画布默认字色跟随页面前景色
-  annotations = radar_ann(labels, dirs, pend, tag = tag),
-  legend = list(orientation = "h", x = .5, xanchor = "center", y = -.06,
-                yanchor = "top", font = list(size = 11, color = PAL$fg),
-                bgcolor = "rgba(0,0,0,0)"),            # ★ 图例背景透明，露出的是画布底色而非白底
-  polar = list(bgcolor = "rgba(10,25,45,.6)",
-    domain = list(x = RADAR_DOM$x, y = RADAR_DOM$y),
-    radialaxis = list(range = c(0, 100), gridcolor = "#1e3a52",
-                      tickfont = list(size = 10), angle = 90),
-    angularaxis = list(gridcolor = "#1e3a52", rotation = 90,
-                       direction = "clockwise", showticklabels = FALSE)))
+
+## 单图 id（同一份档内四图互不相犯）
+er_id <- local({ i <- 0L; function(p) { i <<- i + 1L; sprintf("er-radar-%s-%d", p, i) } })
+
+## ── ECharts 雷达图 ───────────────────────────────────────────────────────
+##  labels 轴名字面量；dirs 赏罚方向（>0 赏、<0 罚、0 中性）；pend 待表轴序号；
+##  series 具名数值表（每元素长度须等于 labels）；cols 对应线色；note 悬停口径说明。
+er_radar <- function(tag, title, labels, series, cols,
+                     dirs = NULL, pend = NULL, note = "", height = 620) {
+  txt <- radar_txt(labels, dirs, pend)
+  n <- length(txt)
+  ## 诊断（先生令「以实测为凭」）：把 R 实际持有的轴名逐条打进控制台
+  message(sprintf("🧭 雷达轴名[%s] %d 条：%s", tag, n, paste(txt, collapse = " ｜ ")))
+  J <- function(x) as.character(jsonlite::toJSON(x, auto_unbox = TRUE,
+                                                 digits = 4, na = "null"))
+  ind <- J(lapply(seq_len(n), function(i) list(name = txt[i], max = 100)))
+  dat <- J(lapply(seq_along(series), function(i) {
+    v <- as.numeric(series[[i]])
+    v[!is.finite(v)] <- 0          # 防空白：某维全 NA 亦画轴（置 0），不留空缺
+    list(name = names(series)[i], value = round(v, 2),
+         lineStyle = list(color = cols[i], width = 2),
+         itemStyle = list(color = cols[i]),
+         areaStyle = list(color = cols[i], opacity = 0.13))
+  }))
+  id <- er_id(tag)
+  paste0(
+'<div class="er-radar" id="', id, '" style="width:100%;height:', height, 'px;"></div>\n',
+'<script>\n',
+'(function(){\n',
+'  var IND = ', ind, ';\n',
+'  var NMS = ', J(txt), ';\n',
+'  var DAT = ', dat, ';\n',
+'  var LEG = ', J(names(series)), ';\n',
+'  var TITLE = ', J(title), ';\n',
+'  var NOTE  = ', J(note), ';\n',
+'  var OPT = {\n',
+'    backgroundColor: "transparent",\n',
+'    title: {text: TITLE, left: "center", top: 2,\n',
+'            textStyle: {color: "', PAL$fg, '", fontSize: 13, fontWeight: "normal"}},\n',
+'    tooltip: {trigger: "item", confine: true,\n',
+'      backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
+'      textStyle: {color: "', PAL$fg, '", fontSize: 12},\n',
+'      formatter: function(p){\n',
+'        var v = (p && p.value) ? p.value : [];\n',
+'        var s = "<b>" + p.name + "</b><br/>";\n',
+'        for (var i = 0; i < NMS.length; i++) {\n',
+'          s += NMS[i] + "：" + Math.round(v[i] || 0) + " 分<br/>";\n',
+'        }\n',
+'        return s + "<span style=\\"opacity:.72\\">" + NOTE + "</span>";\n',
+'      }},\n',
+'    legend: {bottom: 2, itemGap: 16, data: LEG,\n',
+'             textStyle: {color: "', PAL$fg, '", fontSize: 11}},\n',
+'    radar: {center: ["50%", "52%"], radius: "58%", startAngle: 90,\n',
+'      indicator: IND,\n',
+'      axisName: {fontSize: 12, padding: [3, 5],\n',
+'        formatter: function(nm){\n',
+'          if (/待表零$/.test(nm)) { return "{pend|" + nm + "}"; }\n',
+'          if (/罚$/.test(nm))     { return "{bad|"  + nm + "}"; }\n',
+'          if (/赏$/.test(nm))     { return "{good|" + nm + "}"; }\n',
+'          return "{neu|" + nm + "}";\n',
+'        },\n',
+'        rich: {good: {color: "', PAL$good, '", fontSize: 12},\n',
+'               bad:  {color: "', PAL$bad,  '", fontSize: 12},\n',
+'               pend: {color: "', PAL$warn, '", fontSize: 12},\n',
+'               neu:  {color: "', PAL$fg,   '", fontSize: 12}}},\n',
+'      splitLine: {lineStyle: {color: "#1e3a52"}},\n',
+'      axisLine:  {lineStyle: {color: "#1e3a52"}},\n',
+'      splitArea: {areaStyle: {color: ["rgba(10,25,45,.55)", "rgba(10,25,45,.30)"]}}},\n',
+'    series: [{type: "radar", symbolSize: 4, data: DAT}]\n',
+'  };\n',
+'  var el = document.getElementById("', id, '"), chart = null;\n',
+'  function boot(){\n',
+'    if (!window.echarts || !el) { return false; }\n',
+'    if (!(el.clientWidth > 1)) { return false; }   /* ★ 容器零宽即不初始化 */\n',
+'    if (!chart) { chart = echarts.init(el); chart.setOption(OPT); }\n',
+'    return true;\n',
+'  }\n',
+'  function fit(){ if (chart) { chart.resize(); } else { boot(); } }\n',
+'  if (!boot()) {\n',
+'    var k = 0, iv = setInterval(function(){\n',
+'      if (boot() || ++k > 200) {\n',
+'        clearInterval(iv);\n',
+'        if (!chart && el) {\n',
+'          el.innerHTML = "<p style=\\"color:', PAL$bad, ';text-align:center;padding:2em\\">'
+, '⬜ ECharts 未能载入（所待：R 包 echarts4r，或联网取用 CDN）；受影响输出：本雷达图</p>";\n',
+'        }\n',
+'      }\n',
+'    }, 100);\n',
+'  }\n',
+'  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); }\n',
+'  window.addEventListener("resize", fit);\n',
+'  if (window.ResizeObserver) { new ResizeObserver(fit).observe(el); }\n',
+'  if (window.IntersectionObserver) {\n',
+'    new IntersectionObserver(function(es){\n',
+'      es.forEach(function(e){ if (e.isIntersecting) { fit(); } });\n',
+'    }).observe(el);\n',
+'  }\n',
+'})();\n',
+'</script>\n')
+}
+```
+
+```{r}
+#| label: echarts-lib
+#| echo: false
+## ECharts 运行库装载：本地档优先（自足、离线可看），未装 echarts4r 即退守 CDN 并点名。
+if (isTRUE(HAS$ec) && !is.null(.ecdep <- er_dep())) {
+  htmltools::attachDependencies(htmltools::tagList(), list(.ecdep))
+} else {
+  message(paste0("⚠️ 未装 echarts4r（所待：install.packages(\"echarts4r\")；",
+                 "受影响输出：玩家／荷官／代理／风控专员四张雷达图）——",
+                 "改由 CDN 载入，须联网方能显示"))
+  knitr::asis_output(paste0(
+    "<script src=\"https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js\"",
+    "></script>"))
+}
 ```
 
 
@@ -607,6 +719,7 @@ C08s<- read_any("C08_subnet_sparse")
 DX5 <- read_any("DX05_product_panorama")
 WIN <- if (!is.null(B01)) list(a=min(B01$bet_date), b=max(B01$bet_date),
                                n=length(unique(B01$bet_date))) else NULL
+gc2(); mem("全表装载毕")
 ```
 
 ```{r}
@@ -660,7 +773,7 @@ kb(inv, "本报告所用数据表清点｜解释：逐表列出 SQL 编号、行
 **维度骨架**：会员 × IP（/24 网段）× 三级代理线 × 荷官 × 桌台 × 靴 × 把 × 营业日。
 两条正名须先立住：**洗码量**＝有效投注（`validbet`），不是流水；
 **GGR**＝赌场毛利（客人game_pnl 取负号汇总），不是营业额。
-风控专员评分已由 **§S04p 实测导出件**（`S04_analyst_score.csv`，6 名专员）落地四实测维；命中率、复核时效、复核一致性、误标率四维仍待风控处置日志与申诉记录两表，雷达上以「待表·置零」呈现、绝不合成。
+风控专员评分已由 **§S04p 实测导出件**（`S04_analyst_score.csv`，6 名专员）落地六实测维（四赏＋罚侧两维：理由空白率、标注停滞度）；命中率、复核时效、复核一致性、误标率四维仍待风控处置日志与申诉记录两表，雷达上以「待表·置零」呈现、绝不合成。
 
 ```{r}
 #| label: fig-econ
@@ -696,7 +809,7 @@ if (!is.null(E02) && HAS$plotly) {
 **Sortino 下行比**（Sortino & van der Meer 1991——「赢得稳」才是技术型风险，赢得多不是）、
 **Beta-Binomial 经验贝叶斯收缩**（荷官小样本占比不被极端值支配，呼应 MacDonald 2001 波动论）、
 **分位归一 0–100**（重尾金额之下唯一稳健的公共刻度）。
-四实体的**领域能力值一律直接采用主方案 §17.2「互动式雷达图与综合分（Python 计分）」的权威维度字典与口径**——分位归一 0–100，综合分＝赏侧均值−罚侧均值；**四实体维度一律由压缩包内数据表现算**（先生令：禁止使用压缩包以外的数据表）——玩家十维出自 K01×B01×C06×C01×C08（对打指数、批量注册嫌疑按 §17.2 原派生式由 C06 派生，IP结构风险按设计表所载料源 C-01/C-08 现算），荷官八维出自 R03b，代理七维出自 I×K01×C01×C06×P；风控专员四实测维出自先生亲交并置于 `数据库/` 的 §S04p 导出件（逐维料源见各图悬停）。每一维回答一个独立问题，措施跟维走；综合分只当排队顺序。
+四实体的**领域能力值一律直接采用主方案 §17.2「互动式雷达图与综合分（Python 计分）」的权威维度字典与口径**——分位归一 0–100，综合分＝赏侧均值−罚侧均值；**四实体维度一律由压缩包内数据表现算**（先生令：禁止使用压缩包以外的数据表）——玩家十维出自 K01×B01×C06×C01×C08（对打指数、批量注册嫌疑按 §17.2 原派生式由 C06 派生，IP结构风险按设计表所载料源 C-01/C-08 现算），荷官八维出自 R03b，代理七维出自 I×K01×C01×C06×P；风控专员六实测维（四赏＋两罚）出自先生亲交并置于 `数据库/` 的 §S04p 导出件（逐维料源见各图悬停）。每一维回答一个独立问题，措施跟维走；综合分只当排队顺序。
 
 ```{r}
 #| label: score-player
@@ -919,32 +1032,25 @@ if (exists("pl") && !is.null(B01)) {
 ```
 
 ```{r}
-#| label: fig-radar-player
-#| fig-height: 7.4
-if (exists("P17") && HAS$plotly) {
+#| label: radar-player
+#| results: asis
+if (exists("P17")) {
   dims <- names(P17_DIMS)          # 取数用（符号表键）
   labs <- if (exists("P17_LBL") && length(P17_LBL) == length(dims)) P17_LBL else u8(dims)
   grp <- list(
     `优质组（赏·综合分≥P95）` = which(P17$综合分 >= stats::quantile(P17$综合分, .95, na.rm=TRUE)),
     `全体均值`                = seq_len(nrow(P17)),
     `高危组（罚·综合分≤P5）`  = which(P17$综合分 <= stats::quantile(P17$综合分, .05, na.rm=TRUE)))
-  cols <- c(PAL$good, PAL$ac, PAL$bad)
-  p <- plotly::plot_ly(type = "scatterpolar", fill = "toself")
-  for (i in seq_along(grp)) {
-    v <- sapply(dims, function(d) mean(N17[[d]][grp[[i]]], na.rm = TRUE))
-    v[!is.finite(v)] <- 0   # 防空白：某维全 NA 亦画轴（置 0），不留空缺
-    p <- plotly::add_trace(p, r = c(v, v[1]), theta = c(labs, labs[1]),
-      name = sprintf("%s（%s 人）", names(grp)[i], amt(length(grp[[i]]))),
-      line = list(color = cols[i], width = 2), opacity = .55,
-      hovertemplate = paste0("%{theta}：%{r:.0f} 分<br>",
-        "（分位 0–100；综合分＝赏侧均值−罚侧均值，口径同主方案 §17.2；",
-        "十维全由压缩包内表现算——K01×B01×C06×C01×C08）<extra></extra>"))
-  }
-  p <- radar_lay(p, sprintf(
-    "玩家 · §17.2 权威十维雷达（维度自检 %d/10 · %s %s 人；五赏五罚 · 分位 0–100）",
-    length(dims), if (exists("P17_SRC")) P17_SRC else "包内现算", amt(nrow(P17))),
-    labels = labs, dirs = P17_DIMS, tag = "玩家")
-  plt(p)
+  ser <- lapply(grp, function(ix) sapply(dims, function(d) mean(N17[[d]][ix], na.rm = TRUE)))
+  names(ser) <- sprintf("%s（%s 人）", names(grp), amt(vapply(grp, length, 1L)))
+  cat(er_radar(
+    tag = "玩家", labels = labs, dirs = P17_DIMS, series = ser,
+    cols = c(PAL$good, PAL$ac, PAL$bad),
+    title = sprintf(
+      "玩家 · §17.2 权威十维雷达（维度自检 %d/10 · %s %s 人；五赏五罚 · 分位 0–100）",
+      length(dims), if (exists("P17_SRC")) P17_SRC else "包内现算", amt(nrow(P17))),
+    note = paste0("分位 0–100；综合分＝赏侧均值−罚侧均值，口径同主方案 §17.2；",
+                  "十维全由压缩包内表现算——K01×B01×C06×C01×C08")))
 }
 ```
 **读法**：十条轴即玩家的十个独立理由，**轴名末尾标（赏）或（罚）**。三条折线是三组人的
@@ -1077,20 +1183,52 @@ if (exists("GP")) {
 ##    風險單密度以種子会员注额占比为代理量（待 dailyreport 專列）。
 if (!is.null(R03b)) {
   num <- function(v) suppressWarnings(as.numeric(v))
-  for (cc in c("z_score","n_rounds_eff","stake_amount")) R03b[[cc]] <- num(R03b[[cc]])
+  ## ★ 十四轮内存斧正（根因：`as.data.table()` 整表深拷贝）
+  ##   `dd <- data.table::as.data.table(R03b)` 默认 `copy = TRUE`，把 991 万 × 7 列
+  ##   **逐列深拷贝**一份（字符键三列各约 79 MB、数值四列各约 79 MB，合计约 550 MB），
+  ##   而 R03b 原表仍在内存——峰值遂逾 1 GB，`forderv()` 连 39.6 MB 的分组序号向量
+  ##   都分配不出而中断。次因：`R03b[[cc]] <- num(...)` 虽只浅复制列指针表，
+  ##   但每次仍生成一条 79 MB 的新列，三次叠加抬高瞬时峰值。
+  ##   斧正：`setDT()` 就地转换（零拷贝）＋ `set()` 就地改列，`dd` 只作引用而非副本；
+  ##   分组键压成整数（字符列 79 MB → 整数列 40 MB，且免 radix 分组的字符缓冲）；
+  ##   聚合完毕即释放千万行底表，为后续章节腾出约 470 MB。
+  if (HAS$dt) data.table::setDT(R03b)
+  for (cc in c("z_score","n_rounds_eff","stake_amount")) {
+    if (!cc %in% names(R03b) || is.numeric(R03b[[cc]])) next
+    if (HAS$dt) data.table::set(R03b, j = cc, value = num(R03b[[cc]]))
+    else R03b[[cc]] <- num(R03b[[cc]])
+  }
   hm2 <- if (!is.null(C06)) num(unique(c(C06$m_a[C06$opposite_rate==1],
                                          C06$m_b[C06$opposite_rate==1]))) else numeric(0)
   sd2 <- if (!is.null(SEED)) num(unique(SEED$member_id)) else numeric(0)
   pq2 <- function(v){ r <- rank(v, na.last="keep", ties.method="average")
                       100*(r-1)/max(sum(!is.na(v))-1,1) }
   if (HAS$dt) {
-    dd <- data.table::as.data.table(R03b)
-    dd[, uid := suppressWarnings(as.numeric(uid))]
+    dd <- R03b                      # ★ 引用，非副本
+    if (!is.numeric(dd$uid)) data.table::set(dd, j = "uid", value = num(dd$uid))
+    if (!is.numeric(dd$net_pnl))
+      data.table::set(dd, j = "net_pnl", value = num(dd$net_pnl))
+    ## 分组键压成整数：字符键的 radix 分组既慢又须额外持有字符缓冲；
+    ##   聚合毕再由水平表映射回原值，故对外口径一字不变。
+    d_lev <- NULL
+    if (!is.numeric(dd$dealer_id) && !is.integer(dd$dealer_id)) {
+      d_lev <- sort(unique(as.character(dd$dealer_id)))
+      data.table::set(dd, j = "dealer_id",
+                      value = match(as.character(dd$dealer_id), d_lev))
+      gc2()
+    }
+    if (!is.integer(dd$bet_date)) {
+      b_lev <- sort(unique(as.character(dd$bet_date)))
+      data.table::set(dd, j = "bet_date",
+                      value = match(as.character(dd$bet_date), b_lev))
+      rm(b_lev); gc2()
+    }
+    mem("R03b 就地压缩后")
     dyi  <- dd[, .(rd = sum(n_rounds_eff, na.rm=TRUE)), by=.(dealer_id, bet_date)]
     pace <- dyi[, .(mu = mean(rd), sdv = stats::sd(rd)), by = dealer_id]
     pace[, 节奏稳定度 := ifelse(is.finite(sdv) & mu > 0, 1/(1 + sdv/mu), NA_real_)]
+    rm(dyi); gc2()
     pu   <- dd[, .(st = sum(stake_amount, na.rm=TRUE)), by=.(dealer_id, uid)]
-    DW   <- as.data.frame(pu)          # ★ 留作实体级预测的归属权重底表，免二次千万行聚合
     top5 <- pu[order(dealer_id, -st),
                .(特定玩家复现率 = sum(head(st, 5)) / max(sum(st), 1)), by = dealer_id]
     DE <- as.data.frame(dd[, .(
@@ -1101,10 +1239,25 @@ if (!is.null(R03b)) {
       対打注额   = sum(stake_amount[uid %in% hm2], na.rm=TRUE),
       対打客数   = data.table::uniqueN(uid[uid %in% hm2]),
       種子注额   = sum(stake_amount[uid %in% sd2], na.rm=TRUE),
-      盈利       = -sum(suppressWarnings(as.numeric(net_pnl)), na.rm=TRUE),
+      盈利       = -sum(net_pnl, na.rm=TRUE),
       k = sum(z_score >= 4, na.rm=TRUE), n = sum(is.finite(z_score))), by = dealer_id])
+    ## 千万行底表使命已尽（下游只用聚合件与 uid×dealer 注额表），即刻释放
+    R03B_N <- nrow(dd)
+    rm(dd); if (exists("R03b", inherits = FALSE)) rm(R03b)
+    gc2(); mem("释放 R03b 后")
+    ## 分组键映射回原值——`pu`／`DW` 与 `DE` 同步还原，口径与旧版逐字相同。
+    ## 三张 data.table 一律以 `set()` 就地写，免浅拷贝告警与整表复制。
+    if (!is.null(d_lev)) {
+      DE$dealer_id <- d_lev[DE$dealer_id]
+      data.table::set(pace, j = "dealer_id", value = d_lev[pace$dealer_id])
+      data.table::set(top5, j = "dealer_id", value = d_lev[top5$dealer_id])
+      data.table::set(pu,   j = "dealer_id", value = d_lev[pu$dealer_id])
+    }
+    data.table::setDF(pu)            # ★ 就地转为 data.frame，不复制
+    DW   <- pu          # ★ 留作实体级预测的归属权重底表，免二次千万行聚合
     DE <- merge(DE, as.data.frame(pace[, .(dealer_id, 节奏稳定度)]), by="dealer_id", all.x=TRUE)
     DE <- merge(DE, as.data.frame(top5), by="dealer_id", all.x=TRUE)
+    rm(pace, top5); gc2()
     DE$对打局占比 <- DE$対打注额 / pmax(DE$在桌洗码量, 1)
     DE$异常对关联 <- DE$対打客数 / pmax(DE$客群广度, 1)
     DE$風險單密度 <- DE$種子注额 / pmax(DE$在桌洗码量, 1)
@@ -1168,46 +1321,34 @@ if (!is.null(R03b)) {
 ```
 
 ```{r}
-#| label: fig-radar-dealer
-#| fig-height: 7.4
-if (exists("D17") && HAS$plotly) {
+#| label: radar-dealer
+#| results: asis
+if (exists("D17")) {
   dims <- names(D17_DIMS)
   labs <- if (exists("D17_LBL") && length(D17_LBL) == length(dims)) D17_LBL else u8(dims)
   grp <- list(
     `优质组（赏·综合分≥P95）` = which(D17$综合分 >= stats::quantile(D17$综合分, .95, na.rm=TRUE)),
     `全体均值`                = seq_len(nrow(D17)),
     `高危组（罚·综合分≤P5）`  = which(D17$综合分 <= stats::quantile(D17$综合分, .05, na.rm=TRUE)))
-  cols <- c(PAL$good, PAL$ac, PAL$bad)
-  p <- plotly::plot_ly(type = "scatterpolar", fill = "toself")
-  for (i in seq_along(grp)) {
-    v <- sapply(dims, function(d) mean(ND17[[d]][grp[[i]]], na.rm = TRUE))
-    v[!is.finite(v)] <- 0   # 防空白：某维全 NA 亦画轴（置 0），不留空缺
-    p <- plotly::add_trace(p, r = c(v, v[1]), theta = c(labs, labs[1]),
-      name = sprintf("%s（%d 位）", names(grp)[i], length(grp[[i]])),
-      line = list(color = cols[i], width = 2), opacity = .55,
-      hovertemplate = paste0("%{theta}：%{r:.0f} 分<br>",
-        "（分位 0–100；§17.2 字典由 R03b 就地复算；节奏稳定度＝1/(1+日强度变异系数)，",
-        "風險單密度以種子会员注额占比为代理量；输赢一律不入维——MacDonald 2001）<extra></extra>"))
-  }
-  p <- radar_lay(p, sprintf(
-    "荷官 · §17.2 权威八维雷达（%s %d 位；四赏四罚 · 分位 0–100）",
-    if (!is.null(S02)) "S-02ex 覆盖 · R03b 复算" else "R03b 就地复算", nrow(D17)),
-    labels = labs, dirs = D17_DIMS, tag = "荷官")
-  plt(p)
-} else if (exists("DQ") && HAS$plotly) {
+  ser <- lapply(grp, function(ix) sapply(dims, function(d) mean(ND17[[d]][ix], na.rm = TRUE)))
+  names(ser) <- sprintf("%s（%d 位）", names(grp), vapply(grp, length, 1L))
+  cat(er_radar(
+    tag = "荷官", labels = labs, dirs = D17_DIMS, series = ser,
+    cols = c(PAL$good, PAL$ac, PAL$bad),
+    title = sprintf("荷官 · §17.2 权威八维雷达（%s %d 位；四赏四罚 · 分位 0–100）",
+      if (!is.null(S02)) "S-02ex 覆盖 · R03b 复算" else "R03b 就地复算", nrow(D17)),
+    note = paste0("分位 0–100；§17.2 字典由 R03b 就地复算；节奏稳定度＝1/(1+日强度变异系数)，",
+                  "風險單密度以種子会员注额占比为代理量；输赢一律不入维——MacDonald 2001")))
+} else if (exists("DQ")) {
   dims <- c("局速","出勤","关联风险","产能")
   hiD <- which(DQ$关联风险 >= stats::quantile(DQ$关联风险, .95, na.rm = TRUE))
   mkd <- function(ix) sapply(dims, function(d) mean(DQ[[d]][ix], na.rm = TRUE))
-  vA <- mkd(hiD); vB <- mkd(setdiff(seq_len(nrow(DQ)), hiD))
-  p <- plotly::plot_ly(type = "scatterpolar", fill = "toself") |>
-    plotly::add_trace(r = c(vA, vA[1]), theta = c(u8(dims), u8(dims)[1]),
-      name = sprintf("关联风险前5%%（EB 收缩后，%d 位）", length(hiD)),
-      line = list(color = PAL$bad)) |>
-    plotly::add_trace(r = c(vB, vB[1]), theta = c(u8(dims), u8(dims)[1]),
-      name = "其余荷官均值", line = list(color = PAL$good), opacity = .7) |>
-    radar_lay("荷官 · 四维过程雷达（§17.2 八维须 data.table，退守口径）",
-              labels = dims, tag = "荷官退守")
-  plt(p)
+  ser <- list(mkd(hiD), mkd(setdiff(seq_len(nrow(DQ)), hiD)))
+  names(ser) <- c(sprintf("关联风险前5%%（EB 收缩后，%d 位）", length(hiD)), "其余荷官均值")
+  cat(er_radar(
+    tag = "荷官退守", labels = dims, series = ser, cols = c(PAL$bad, PAL$good),
+    title = "荷官 · 四维过程雷达（§17.2 八维须 data.table，退守口径）",
+    note = "分位 0–100；八维口径须 data.table，此为退守四维"))
 }
 ```
 **读法**：八条轴**全是过程项**——荷官的短期输赢是波动（MacDonald 2001），故雷达上没有
@@ -1398,33 +1539,26 @@ if (!is.null(IPL)) {
 ```
 
 ```{r}
-#| label: fig-radar-agent
-#| fig-height: 7.4
-if (exists("AQ") && HAS$plotly) {
+#| label: radar-agent
+#| results: asis
+if (exists("AQ")) {
   dims <- names(A17_DIMS)
   labs <- if (exists("A17_LBL") && length(A17_LBL) == length(dims)) A17_LBL else u8(dims)
   grp <- list(
     `优质组（赏·综合分≥P95）` = which(AQ$综合分 >= stats::quantile(AQ$综合分, .95, na.rm=TRUE)),
     `全体均值`                = seq_len(nrow(AQ)),
     `高危组（罚·综合分≤P5）`  = which(AQ$综合分 <= stats::quantile(AQ$综合分, .05, na.rm=TRUE)))
-  cols <- c(PAL$good, PAL$ac, PAL$bad)
-  p <- plotly::plot_ly(type = "scatterpolar", fill = "toself")
-  for (i in seq_along(grp)) {
-    v <- sapply(dims, function(d) mean(AQ[[d]][grp[[i]]], na.rm = TRUE))
-    v[!is.finite(v)] <- 0   # 防空白：某维全 NA 亦画轴（置 0），不留空缺
-    p <- plotly::add_trace(p, r = c(v, v[1]), theta = c(labs, labs[1]),
-      name = sprintf("%s（%s 条线）", names(grp)[i], amt(length(grp[[i]]))),
-      line = list(color = cols[i], width = 2), opacity = .55,
-      hovertemplate = paste0("%{theta}：%{r:.0f} 分<br>",
-        "（分位 0–100；§17.2 字典就地复算——真实流水＝K01 剔对打洗码量、",
-        "留存与新客质量出自 P_player_month、单链密度出自 C01、",
-        "退水消耗比＝线下退水÷线下游戏赢利）<extra></extra>"))
-  }
-  p <- radar_lay(p, sprintf(
-    "代理 · §17.2 权威七维雷达（%s %s 条线；四赏三罚 · 分位 0–100）",
-    if (!is.null(S03)) "S-03ex 覆盖 · I×K01×C01×C06×P 复算" else "I×K01×C01×C06×P 就地复算",
-    amt(nrow(AQ))), labels = labs, dirs = A17_DIMS, tag = "代理")
-  plt(p)
+  ser <- lapply(grp, function(ix) sapply(dims, function(d) mean(AQ[[d]][ix], na.rm = TRUE)))
+  names(ser) <- sprintf("%s（%s 条线）", names(grp), amt(vapply(grp, length, 1L)))
+  cat(er_radar(
+    tag = "代理", labels = labs, dirs = A17_DIMS, series = ser,
+    cols = c(PAL$good, PAL$ac, PAL$bad),
+    title = sprintf("代理 · §17.2 权威七维雷达（%s %s 条线；四赏三罚 · 分位 0–100）",
+      if (!is.null(S03)) "S-03ex 覆盖 · I×K01×C01×C06×P 复算" else "I×K01×C01×C06×P 就地复算",
+      amt(nrow(AQ))),
+    note = paste0("分位 0–100；§17.2 字典就地复算——真实流水＝K01 剔对打洗码量、",
+                  "留存与新客质量出自 P_player_month、单链密度出自 C01、",
+                  "退水消耗比＝线下退水÷线下游戏赢利")))
 }
 ```
 **读法**：七条轴分代理线的两副面孔——赏侧四维（线下规模、真实流水、下线留存、新增会员质量）
@@ -1460,9 +1594,9 @@ $g_i=\operatorname{clip}\!\big((\text{能力值}_i-\theta)/(100-\theta),\,0,\,1\
 
 
 ```{r}
-#| label: fig-radar-analyst
-#| fig-height: 7.4
-## 风控专员：§S04p 实测导出件（alert_ip_setting）已到——四实测维直读，
+#| label: radar-analyst
+#| results: asis
+## 风控专员：§S04p 实测导出件（alert_ip_setting）已到——六实测维直读（四赏＋两罚），
 ## 登记跨度按 §17.2 原式由 首次/最近登记 就地派生；
 ## 命中率/复核时效/复核一致性/误标率四维仍待处置日志与申诉记录，
 ## 依 §17.2 成法「待表·置零」呈现：无数据即零，绝不合成。
@@ -1482,7 +1616,7 @@ $g_i=\operatorname{clip}\!\big((\text{能力值}_i-\theta)/(100-\theta),\,0,\,1\
 ##       登记跨度长而近期停滞者，说明其覆盖面是历史遗产而非当期贡献。
 ##       料源：§S04p 的「最近登记」「首次登记」两列。
 ##   两维之外，误标率等四维仍「待表·置零」如故——升级只加不减。
-if (!is.null(S04) && HAS$plotly) {
+if (!is.null(S04)) {
   num <- function(v) suppressWarnings(as.numeric(v))
   A4 <- S04
   for (cc in c("标注产量","覆盖IP广度","判定详尽度")) A4[[cc]] <- num(A4[[cc]])
@@ -1518,24 +1652,23 @@ if (!is.null(S04) && HAS$plotly) {
     `优质组（综合分≥P95）` = which(A4$综合分 >= stats::quantile(A4$综合分, .95, na.rm=TRUE)),
     `全体均值`             = seq_len(nrow(A4)),
     `基准组（综合分≤P5）`  = which(A4$综合分 <= stats::quantile(A4$综合分, .05, na.rm=TRUE)))
-  cols <- c(PAL$violet, PAL$ac, PAL$warn)
-  p <- plotly::plot_ly(type = "scatterpolar", fill = "toself")
-  for (i in seq_along(grp)) {
-    v <- sapply(names(S17_DIMS), function(d) mean(NS[[d]][grp[[i]]], na.rm = TRUE))
-    v <- c(v, rep(0, length(PEND)))          # 待表维一律置零：无数据即零，非合成
-    p <- plotly::add_trace(p, r = c(v, v[1]), theta = c(thl, thl[1]),
-      name = sprintf("%s（%d 人）", names(grp)[i], length(grp[[i]])),
-      line = list(color = cols[i], width = 2), opacity = .6,
-      hovertemplate = paste0("%{theta}：%{r:.0f} 分<br>",
-        "（分位 0–100；§S04p 实测 6 名专员；登记跨度＝首次至最近登记天数；",
-        "待表轴恒为 0，处置日志与申诉记录两表到位即自动转实测）<extra></extra>"))
-  }
-  p <- radar_lay(p, sprintf(
-    "风控专员 · §17.2 八维骨架（4 维实测 + 4 维待表置零 · §S04p 实测 %d 名专员）",
-    nrow(A4)), labels = thl, dirs = rep(1, length(thl)), pend = pend_ix, tag = "专员")
-  plt(p)
+  ser <- lapply(grp, function(ix) c(
+    sapply(names(S17_DIMS), function(d) mean(NS[[d]][ix], na.rm = TRUE)),
+    rep(0, length(PEND))))               # 待表维一律置零：无数据即零，非合成
+  names(ser) <- sprintf("%s（%d 人）", names(grp), vapply(grp, length, 1L))
+  ## 赏罚方向须照 S17_DIMS 实况传入——第十三轮已立两条罚侧维（理由空白率、标注停滞度），
+  ## 旧版一律传 +1 遂将罚侧误标为赏；待表四维传 0，由 pend 覆写为「待表零」并着黄。
+  dirS <- c(unname(S17_DIMS), rep(0, length(PEND)))
+  cat(er_radar(
+    tag = "专员", labels = thl, dirs = dirS, pend = pend_ix, series = ser,
+    cols = c(PAL$violet, PAL$ac, PAL$warn),
+    title = sprintf(
+      "风控专员 · §17.2 十维骨架（%d 赏 + %d 罚 实测 + %d 维待表置零 · §S04p 实测 %d 名专员）",
+      sum(S17_DIMS > 0), sum(S17_DIMS < 0), length(PEND), nrow(A4)),
+    note = paste0("分位 0–100；§S04p 实测 ", nrow(A4), " 名专员；登记跨度＝首次至最近登记天数；",
+                  "待表轴恒为 0，处置日志与申诉记录两表到位即自动转实测")))
 } else if (is.null(S04)) {
-  ph("数据库/S04_analyst_score.csv", "SQL 总包 §S04p", "风控专员实测雷达与综合分")
+  cat(ph("数据库/S04_analyst_score.csv", "SQL 总包 §S04p", "风控专员实测雷达与综合分"))
 }
 ```
 **读法**：本图**四条轴有值、四条轴恒为 0**，这不是画错，是**如实呈现**——轴名已注「待表」：
@@ -2184,7 +2317,7 @@ ACT <- data.frame(check.names = FALSE,
     "对打局占比／异常对关联（罚）","节奏稳定度（赏·低分位）","特定玩家复现率（罚）",
     "当值时长＋在桌洗码量（赏·双高）",
     "对打渗透率（罚）","退水消耗比（罚）","单链密度（罚）","下线留存＋新增会员质量（赏·双高）",
-    "四实测维（赏·标注产量·覆盖广度·详尽度·登记跨度）","待表四维（命中率·复核时效·一致性·误标率）"),
+    "四赏维（标注产量·覆盖广度·详尽度·登记跨度）＋两罚维（理由空白率·标注停滞度）","待表四维（命中率·复核时效·一致性·误标率）"),
   `触发阈值（现算）` = c(
     if (exists("BT")) sprintf("罚侧综合 ≥ 回测折均最优档位 P%.2f", 100*mean(BT$罚档位, na.rm=TRUE)) else P("对打指数", .999),
     P("索提诺稳定性", .95), P("IP结构风险", .95), "＞ 0（§K01b 名单成员）",
@@ -2209,7 +2342,7 @@ ACT <- data.frame(check.names = FALSE,
     "调整该线退水配置——洗码链的命门是成本结构，不是封号",
     "一条线塞几千号：对该线新开户加验证摩擦",
     "赏（线佣激励加档）：γ* 实测为负、无金额空间，故只作**过程性**加档（优先派单、优先支持），不涉金额；罚（冻结结算复核）：即刻执行，与占成无涉",
-    "以四实测维作绩效基线：登记跨度长且详尽度高者优先授权",
+    "以四赏维作绩效基线：登记跨度长且详尽度高者优先授权",
     paste0("罚侧已立两维（理由空白率、标注停滞度），超 P75 者复核授权降一档、标注须二次复核；",
            "误标率等四维所待文件：`风控处置日志`、`申诉记录`——§EX-01／§EX-03 已元数据全库反查，",
            "确认平台**无此二表，须新建**；两表到位后再增金额层，但罚侧**现已生效，不待表**")),
@@ -3212,7 +3345,7 @@ if (exists("cap_pp")) {
                           "罚：对打渗透率 > P95（现值 %.0f 分）且实测有完美对打者",
                           "**即刻冻结结算**、逐会员复核后放行——罚侧不受赏侧无金额空间所限"),
                    if (is.finite(ag95)) ag95 else NA),
-           paste0("赏：四实测维作绩效基线（登记跨度×详尽度）；",
+           paste0("赏：四赏维作绩效基线（登记跨度×详尽度）；",
                   "罚：**理由空白率／标注停滞度**两维超 P75 者，复核授权降一档、",
                   "其标注一律经二次复核方生效——两维由 §S04p 实测料源现算，不待表；",
                   "误标率等四维仍待两表，到位后再增金额层")))
@@ -3850,7 +3983,7 @@ V <- data.frame(check.names = FALSE,
          "⑦ 赏的钱按挽留优先级花","⑧ 两张表必须补建","⑨ 占成已核清：γ* 为负，赏侧无金额空间",
          "⑩ 阈值随经营状态换档","⑪ 统一上线闸门（三条同时成立）","⑫ 灰度须先过功效关"),
   依据与做法 = c(
-    "四实体维度一律 §17.2 权威字典、全由压缩包内表现算（玩家十维·荷官八维·代理七维·专员八维骨架）；综合分＝赏均−罚均只当排队顺序，措施跟维走",
+    "四实体维度一律 §17.2 权威字典、全由压缩包内表现算（玩家十维·荷官八维·代理七维·专员十维骨架）；综合分＝赏均−罚均只当排队顺序，措施跟维走",
     "能力值十分位→盈利率与四实体维度→ROI 两图现算：哪一维在筛盈利、哪一维在筛风险一目了然——赏罚幅度即按此账定",
     "能力值分层乘数模型逐折 MASE<1（胜朴素外推），荷官与代理经归属结构聚合的实体级 MASE 同表现算——处置后的增长可预测、可对账",
     "幅度 = 基准 × 超额梯度 × δ_pred（预测误差折减）；罚侧对照精准率下界；年化净额封顶于回测自助法下界——赏不穿成本、罚不越证据",
@@ -3902,6 +4035,34 @@ kb(V, "结论裁定表｜解释：十二条裁定各自注明依据与做法　�
 
 # 变更日志 {#sec-changelog}
 
+**2026-08-10 · 第十四轮：雷达轴名定位根治 + 专员维数校对**
+
+- **主诉受理**：先生实测「须转动雷达图，全部维度标签方才正常显示」。**先核实、后动手**——自渲染成品 `a168风控评分_精要商业报告.html` 逐一解出十八个 widget 的 JSON，实证玩家雷达十条 annotations **文字齐全、坐标合规、`xref:"paper"` 俱在**（「流水贡献 赏」…「人工标记史 罚」十条无一残缺）。故第十轮所治之编码病未复发，本轮病灶在**浏览器端首绘**，不在数据层，亦不在 R 符号表。
+- **病根一 · 椭圆／正圆错位（此前未察）**：`radar_ann()` 旧版以 `rx = 域宽/2`、`ry = 域高/2` 把轴名摆在**椭圆**上；而 plotly 极坐标盘恒取 `min(域宽px, 域高px)` 画**正圆**。旧域 x 跨 .44、y 跨 .74，纵向 `ry` 实测约为盘半径的 2.2 倍，轴名遂系统性偏离其所属轴向——上下两轴尤远。**斧正**：保底落点改与极坐标盘同式先算正圆半径，再分别除以绘图区宽高还原 paper 单位（故 `rx≠ry` 而落点为圆）。
+- **病根二 · 首绘度量失准（主诉之因）**：widget 容器实况为 `class="plotly html-widget html-fill-item" style="width:100%"`，置于非 fill 父层，首绘时可得零宽；中文字体亦可能尚未就位。二者皆令 paper 坐标按错误画幅换算，须待人手拖动触发 `relayout` 方归位。**斧正**：新立 `radar_js()` 复算闸，于渲染时按 `_fullLayout` 实测像素重算全部轴名落点与四象限锚点，并挂 **字体就绪（`document.fonts.ready`）· 容器尺寸变化（`ResizeObserver`）· 首次进入视口（`IntersectionObserver`）· `window load`** 四处事件自动复算；尺寸记忆防抖，同尺寸不重绘，无递归之虞。另立 `HEAL_JS` 通用自愈闸并开 `config(responsive = TRUE)`，**全篇十八图一体受益**，非独雷达。
+- **顺势复原盘面**：轴名既由实测像素定位，无须再靠收域避让裁剪（第七、八轮的权宜），极坐标域遂由 `x[.28,.72]×y[.20,.94]` 放大至 `x[.06,.94]×y[.07,.90]`，左右边距 140→150 为轴名溢出留位。盘面直径由旧版约 185px 回复至约 420px，形状判读与分位读数一并转清。
+- **第八至十二轮成果一字未动**：弃用角向刻度标签、单行轴名、半角中点方向标记、字面量轴名向量（`P17_LBL`／`D17_LBL`／`A17_LBL`／`S17_LBL`）、`u8()` 编码出口闸、控制台轴名诊断，悉数原样保留。
+- **校对查获两处失校（第十三轮遗留）**：① 专员雷达以 `dirs = rep(1, …)` 传参，将 `S17_DIMS` 中确凿的两条罚侧维（`理由空白率=-1`、`标注停滞度=-1`）**误标为赏**——今改照字典实况传入 `c(unname(S17_DIMS), rep(0, length(PEND)))`，罚侧着红、待表着黄（待表非缺陷，故不用罚色）。② 图题「八维骨架（4 维实测 + 4 维待表置零）」与实况十维不符——今改为现算式「%d 赏 + %d 罚 实测 + %d 维待表置零」，并同步校订正文八处相应表述（卷首摘要、§17.2 接轨段、专员章题、措施表、阈值表、结论表）。
+- **验收纪律**：本轮渲染层改动皆不触及任何取数、口径、阈值、回测与经济结账；四实体雷达须于**冷启动、不触鼠标**下逐幅截图核实，一幅代全部不算通过。
+
+**2026-08-10 · 第十四轮（续二）：雷达图整层更换为 ECharts**
+
+- **前四阶皆经先生实测否决**：① 角向刻度标签被 plotly 内部 clip-path 裁剪（第七、八轮）；② 改 paper 坐标手绘 annotations 后文字仍残缺（第九轮）；③ 锁定 R 符号表编码、立字面量轴名与 `u8()` 出口闸（第十、十二轮）——**渲染成品 JSON 已实证十条轴名齐全、坐标合规**，图上仍须转动方现；④ 按实测像素重算落点并挂四处事件自动复算（第十四轮）——**仍须转动方现**。四阶尽属 plotly 极坐标 annotations 层内的腾挪，病灶既不在数据亦不在编码，继续同层修补已属徒劳。
+- **裁定：整层更换，不再修补**。ECharts 的轴名是雷达组件（`radar.axisName`）**自身的构成部分**，由其布局引擎在 `setOption` 时按容器实测尺寸一次算定，不经任何 paper 坐标换算，故第一至第四阶的病理在此结构下不成立。
+- **另加零宽守卫（本轮的真正根治点）**：`boot()` 于 `el.clientWidth > 1` 之前**一概不初始化**，改以 100 ms 轮询（上限 20 秒）等真实宽度到位再画。旧法是「先按错误画幅画好、再设法补救」，新法是「没有真实画幅就不画」——从时序上杜绝按零宽定版面。Node 实测四阶时序（库未就位／零宽／亚像素 0.5px／880px）确认仅末者触发初始化，且 1200px 时不重复初始化。
+- **赏罚分色改由 `axisName.formatter` + `rich` 承担**：轴名末缀「赏／罚／待表零」经正则分派为 `{good|}`／`{bad|}`／`{pend|}` 三色富文本。Node 实测分派正确，且**「待表零」规则置于「罚」之前**——「误标率 待表零」不致被「罚」规则截胡而误着红色。
+- **运行库装载**：优先取 `echarts4r` 内附本地档并经 `htmlDependency` 注册，配合 YAML 既有的 `embed-resources: true` 内联入档，**报告自足、离线可看**；未装该包则退守 CDN 并于控制台点名（所待：`install.packages("echarts4r")`；受影响输出：四张雷达图）。若二者俱不可得，图位显示点名文字，**绝不静默留白**。
+- **保留与撤除**：保留字面量轴名向量（`P17_LBL`／`D17_LBL`／`A17_LBL`／`S17_LBL`）、`u8()` 编码出口闸、`radar_txt()` 的单行轴名与赏罚标记、控制台轴名诊断、待表置零成法、防空白置零、四实体的维度字典与综合分口径——**一字未动**；撤除 `RADAR_DOM`／`radar_ann()`／`radar_js()`／`radar_lay()` 四者（plotly 极坐标专用，已无用武之地）。其余十五张 plotly 图与 `plt()`／`HEAL_JS` 自愈闸原样保留。
+- **块标签改名**：四块由 `fig-radar-*` 改为 `radar-*` 并转 `results: asis`——全文无 `@fig-radar-*` 交叉引用，已逐一核实。
+- **验收纪律**：仍须冷启动、不触鼠标，四幅逐一截图核实；另须验明轴名着色（赏绿、罚红、待表黄）与悬停浮层的口径说明。
+
+**2026-08-10 · 第十四轮（续）：`forderv()` 内存中断斧正**
+
+- **报错原文**：`Error in forderv(): 分配 9895936*4 字节内存时失败`，渲染止于 18%（`score-dealer`）。9,895,936 即 `R03b` 行数，`4` 字节为分组序号向量的整数宽度——**失败的分配仅 39.6 MB**，足证 R 堆已近枯竭，病不在这一步而在此前的峰值。
+- **根因**：`dd <- data.table::as.data.table(R03b)` 默认 `copy = TRUE`，把 991 万 × 7 列**逐列深拷贝**一份（约 550 MB），而 `R03b` 原表仍在内存，峰值遂逾 1 GB。次因是 `R03b[[cc]] <- num(...)` 三次各生成一条 79 MB 新列（`[[<-` 本身只浅复制列指针表，此处不构成整表拷贝——特此更正量级）。
+- **斧正四事**：① `setDT()` 就地转换、`set()` 就地改列，`dd` 只作**引用**而非副本，省去整份 550 MB；② 分组键 `dealer_id`／`bet_date` 压成整数（字符列 79 MB → 整数列 40 MB，且免 radix 分组的字符缓冲），聚合毕由水平表映射回原值，**对外口径一字不变**；③ 聚合完毕即释放千万行底表（`rm(dd, R03b)`），为后续章节腾出约 470 MB，下游所需的 `uid×dealer` 注额表 `DW` 改以 `setDF()` 就地转换、不再复制；④ `data.table` 线程封至 2（radix 分组的临时缓冲随线程数线性增长，内存为紧约束时多线程反成负担），并立 `gc2()` 显式回收点与 `mem()` 计量，装载毕、压缩后、释放后三处逐一报数，峰值可见。
+- **残余风险（如实记录，未擅动）**：`B01_bt_panel` 在 `backtest`／`forecast` 两章有十处 `B01[B01$bet_date %in% …, ]` 行切片，每折各生成一份切片副本。此为算法固有，**非拷贝缺陷**，故本轮不动；若仍遇内存中断，可行之法有二——折内切片改 `data.table` 键索引（须先核验十处 `B01[i, j]` 语义在 data.table 下的等价性），或折数与窗长按交接纪要第四节的 Retention 折设计一并重估。**未经实测不得贸然转换 `B01`**。
+
 **2026-08-09 · 第一环：能力值换血（§17.2 接轨）**
 
 - 四实体领域能力值全面切换为主方案 §17.2「互动式雷达图与综合分（Python 计分）」权威字典与口径：分位归一 0–100，综合分＝赏侧均值−罚侧均值。
@@ -3951,3 +4112,4 @@ kb(V, "结论裁定表｜解释：十二条裁定各自注明依据与做法　�
 - **第七轮（雷达标签裁剪斧正 + 表 5 逐行悬停 + 局速缺席定性）**：① 先生实测四张雷达的**角向标签被绘图区裁剪**（「对打渗透率」只剩「率」、「在桌洗码量」只剩「在桌」，多数只余「（赏）（罚）」尾巴）——根因是 plotly 默认边距下极坐标域占满容器、长中文标签溢出即被 clip。斧正立 `radar_lay()` 统一版面（左右边距 160、极坐标域收至 x∈[.27,.73]、图例移至底部横排、刻度字号下调）与 `radar_lab()` 两行标签（维度名一行、赏罚标记一行，横向宽度减半），四图一律套用；专员待表轴名同样两行化。② 表 5 末列「实测凭据（ROI／回测）」**逐行挂悬停**，浮层写明该维 ROI 结账的口径、方向裁定与其对赏罚侧的约束；为此 `kb()` 增 `escape` 参数，仅该表放行 HTML。③ **「荷官局速」定性**：逐列核实确认 `R03b` 十一列完好在包（1,115 万行·280 位荷官·86 日，`n_rounds_eff` 日均中位约 3,522 局），缺的是**分母**——本表无任何时刻列（无开台收台时戳、无逐局时间，日期仅到日粒度），故局速在数学上不可算，**非读取失败**；已立专章写明两条补数路径，并申明现行「节奏稳定度」只作过程代理、不以其替代局速指标。
 - **第六轮（图表可读性总检 + 报错再加固）**：① `score-agent` 覆盖块改**索引赋值**（`AG[[tgt]][ok] <- …`），弃用 `ifelse`——后者对零长/NULL 会静默产出零长向量，正是「替换数据里有 0 行」的成因；荷官块同型改造。② 全篇 **18 图 12 表逐一补「读法」段**，三张雷达图另附能力值的**数学公式**（分位归一 → 赏罚均值 → 综合分 → 阈值差距）与**逐维原始量定义**及对应代码行。③ 表 2 补**群盈亏与群盈亏率**两列。④ 图 8 补**两条阈值虚线**（流失风险 P75、盈利贡献 P90）并标注右上象限人数。⑤ 图 9、图 10 补 `fig-cap` 图题与完整轴题（含口径与单位）。⑥ **表 5 重铸**：每行触发阈值改为**现算**（引回测折均最优档位与各维分位），新增「实测凭据（ROI／回测）」末列，并立核对纪律——**实测盈利率差值为正的维不得挂罚侧、为负的维不得挂赏侧**；为此将回测与 ROI 结账两个**纯计算块前移**至措施章之前（图表仍依叙事次序在后文呈现，计算一次两处引用，数字必然一致）。
 - **第五轮补丁（渲染报错斧正）**：先生渲染实测 `score-agent` 于 26% 中断——报错同时证实 **S-03ex 已在包内**（覆盖块被执行）。病根：`merge(suffixes)` 只对两表同名列加后缀，而 §17.2 维名（线下规模/下线留存/对打渗透率）与 AG 原料列名（会员数/留存率/对打占比）不同名，并表后不带 `_s3`，旧写法取空列得**零长逻辑向量**赋回 376 行表即中断；且覆盖目标误写维名列而非原料列。斧正：**先改名后并表**（杜绝后缀歧义）＋维名→原料列显式映射＋长度守卫；荷官 S-02ex 覆盖块同型加固；玩家雷达标题动态呈现数据来源（S-01ex 直读／包内复算）。
+
