@@ -342,13 +342,15 @@ NEED <- list(  # 每个 label 对应缺哪份导出文件，供占位提示指�
   "荷官双轨回测"="R03b_player_dealer_daily.csv",
   ## ★ 2026-08-10 补登：第十八个标签，此前只在 ph_out() 出现而未登记，
   ##   占位表因此答不出所待文件（显示 NA）。根因已堵，自检清单同步补入。
-  "荷官局速"="R03_player_dealer.csv")
+  "荷官局速"="R03_player_dealer.csv",
+  ## ★ 2026-08-10：准实验所需的处置台账
+  "准实验"="TL10_treatment_ledger.csv")
 ## ★ 登记完备性自检：凡进入 ph_out() 的标签必须在 NEED 有登记，否则占位表说不出
 ##   所待文件。此处在渲染时立刻断言，缺登记即在控制台点名（结果表见变更日志章）。
 PH_LABELS <- c("版本ABC","最小订单数","关联数定位","IP网格","强特征","尾段网格",
                "能力值","策略性风控","团伙同桌","荷官关联","技术型","打水型",
                "赏罚经济","策略回测","五重检验","时间一致性","荷官双轨回测",
-               "荷官局速")
+               "荷官局速","准实验")
 local({
   miss <- setdiff(PH_LABELS, names(NEED))
   if (length(miss))
@@ -649,6 +651,8 @@ CONTRACT <- list(
   T03_arbitrage       = list(sql="§T03", cols=c("member_id","stake","game_pnl","net_pnl","rebate")),
   E02_segment_econ    = list(sql="§E02c",cols=c("segment","n_member","validbet","ggr","rebate","commission")),
   B01_bt_panel        = list(sql="§B01", cols=c("member_id","bet_date","stake","game_pnl","net_pnl")),
+  TL10_treatment_ledger = list(sql="§TL-10", cols=c("member_id","action_date","field_name",
+                                                    "value_before","value_after","is_baccarat_member")),
   K01_risk_feature_matrix = list(sql="§K01", cols=c("member_id")),
   C06_hedge_pairs     = list(sql="§C06fix", cols=c("bet_ip","m_a","m_b","opposite_rate")),
   ## 表行数复核底料：SQL 包 §00 COUNT 预检的导出（两列：表名 / 行数）
@@ -866,7 +870,9 @@ D <- list(recon=fetch("V_recon"), ipmatch=fetch("V_ipmatch"),
           r03=fetch("R03_player_dealer"),  daily_roi=fetch("T02_daily_roi"),
           t3=fetch("T03_arbitrage"),       seg_econ=fetch("E02_segment_econ"),
           bt_panel=fetch("B01_bt_panel"), d03s=fetch("D03S_daily_roi_diff"),
-          tblcnt=fetch("V_table_counts"), r03b=fetch("R03b_player_dealer_daily"))
+          tblcnt=fetch("V_table_counts"), r03b=fetch("R03b_player_dealer_daily"),
+          ## ★ 处置台账（§TL-10）：准实验的处置组由此而来
+          tl10=fetch("TL10_treatment_ledger"))
 invisible(gc(full = TRUE))   # 大表读完统一回收一次，为 Python 侧腾出空间
 ## 本次全部指纹落盘，供下次渲染比对「内容是否一致」
 invisible(tryCatch(saveRDS(MANIFEST_NEW, MANIFEST_PATH), error = function(e) NULL))
@@ -7812,10 +7818,349 @@ if (!length(ROSTER)) {
 release("seg_econ")
 ```
 
+# 准实验：以处置台账估处置效应 {#sec-quasi-run}
+
+处置台账既已落地（@sec-treatment-truth），本章即以其估处置效应。
+**先把话说在前头：本章所得是准实验估计，内部效度低于随机对照**，
+其正当性全系于识别假设是否成立——故每一步的假设检验与之并列，缺检验的估计不得引用。
+
+设计四步：**① 定处置组 → ② 倾向得分匹配 → ③ 事件研究式双重差分 → ④ 功效核算**。
+四步的口径**在看结果之前写定**（@sec-quasi-design 的功效纪律），此处照录，事后不改：
+
+- **处置定义**：`mem017`（`canbet`）或 `mem016`（`enable`）由 `Y` 变 `N`，即一次**收紧**；
+  处置日 $T_0$ 取该会员**首次**收紧之日。放宽（`N⇒Y`）不作处置，只作右删失点。
+- **主指标**：**缩尾会员级平台毛利率** $m_i = -\text{net\_pnl}/\text{validbet}$，
+  按 1%/99% 缩尾。取率不取额，因额的变异系数约为 8，率则量纲无关、方差小得多。
+- **协变量**（$T_0$ 前 28 日）：洗码量、毛利率、活跃日数、对打率、IP 数、注额变异系数。
+- **子群**：**只分一组**——持续期 ≥ 14 日者作主分析，其余作稳健性检验。不另分子群。
+
+```{r}
+#| label: qe-build
+#| echo: false
+## ── ① 处置组与对照候选 ───────────────────────────────────────────────
+## 内存纪律：先在**会员级**做匹配（约十二万行），匹配定案后才取那七百余人的日序列。
+QE <- NULL
+QE_WHY <- NULL
+if (!need_data(D$tl10, "准实验",
+               c("member_id","action_date","field_name","value_before","value_after"))) {
+  QE_WHY <- "处置台账未就位"
+} else if (is.null(D$bt_panel) || !is.data.frame(D$bt_panel)) {
+  QE_WHY <- "回测面板未就位（本章须置于其释放点之前）"
+} else {
+  TL <- D$tl10
+  TL$member_id <- as.character(TL$member_id)
+  ## 只取会员级风控处置两列；mem015 为 login_error、mem022 为电话，皆非处置
+  TL <- TL[TL$field_name %in% c("mem016","mem017"), , drop = FALSE]
+  if ("is_baccarat_member" %in% names(TL))
+    TL <- TL[as.character(TL$is_baccarat_member) == "1", , drop = FALSE]
+  TL$d <- as.Date(TL$action_date)
+  TL <- TL[is.finite(as.numeric(TL$d)), , drop = FALSE]
+  tight <- TL[toupper(trimws(TL$value_before)) == "Y" &
+              toupper(trimws(TL$value_after))  == "N", , drop = FALSE]
+  loose <- TL[toupper(trimws(TL$value_before)) == "N" &
+              toupper(trimws(TL$value_after))  == "Y", , drop = FALSE]
+  if (!nrow(tight)) QE_WHY <- "台账内无收紧事件" else {
+    T0 <- stats::aggregate(d ~ member_id, data = tight, FUN = min)
+    names(T0) <- c("member_id", "t0")
+    ## 解禁日：处置日之后最早的一次放宽；无则记为窗口末日（右删失）
+    P <- as.Date(D$bt_panel$bet_date); WIN_HI <- max(P, na.rm = TRUE)
+    rel <- merge(T0, loose[, c("member_id","d")], by = "member_id", all.x = TRUE)
+    rel <- rel[is.na(rel$d) | rel$d > rel$t0, , drop = FALSE]
+    rl <- stats::aggregate(d ~ member_id, data = rel[!is.na(rel$d), , drop = FALSE],
+                           FUN = min)
+    names(rl) <- c("member_id", "t_end")
+    T0 <- merge(T0, rl, by = "member_id", all.x = TRUE)
+    T0$t_end[is.na(T0$t_end)] <- WIN_HI          # 至窗末未解禁 → 右删失于窗末
+    T0$dur <- as.integer(T0$t_end - T0$t0)
+    QE <- list(T0 = T0, win_hi = WIN_HI)
+  }
+}
+if (is.null(QE)) {
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 待数据（非错误）", 本节内容 = "准实验：处置组构建",
+    未通过原因 = if (is.null(QE_WHY)) "前置未满足" else QE_WHY,
+    所待文件 = "TL10_treatment_ledger.csv（SQL 总包 §TL-10）",
+    受影响输出 = "处置组表、匹配平衡表、事件研究图、功效核算表"),
+    caption = "准实验：处置组构建")
+} else {
+  aurora_kb(tibble::tibble(
+    项 = c("收紧事件涉及会员（处置组）", "处置持续天数 中位",
+           "持续期 ≥ 14 日（主分析组）", "当日即解除", "至窗末仍收紧（右删失）"),
+    值 = c(nrow(QE$T0),
+           stats::median(QE$T0$dur, na.rm = TRUE),
+           sum(QE$T0$dur >= 14, na.rm = TRUE),
+           sum(QE$T0$dur == 0, na.rm = TRUE),
+           sum(QE$T0$t_end >= QE$win_hi, na.rm = TRUE))),
+    caption = paste0(
+      "处置组构建｜解释：处置日取首次收紧（canbet 或 enable 由 Y 变 N），",
+      "解禁日取其后最早一次放宽，无则右删失于窗末",
+      "｜本方案用途：主分析只取持续期 ≥ 14 日者，因近半数处置在三日内即解除"))
+}
+```
+
+```{r}
+#| label: qe-psm
+#| echo: false
+## ── ② 倾向得分匹配：以处置前 28 日的可观测特征配对 ──────────────────
+QE_M <- NULL
+if (!is.null(QE)) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  B <- D$bt_panel
+  B$member_id <- as.character(B$member_id)
+  B$bet_date  <- as.Date(B$bet_date)
+  keep <- c("member_id","bet_date","validbet","net_pnl","stake",
+            "hedge_rate_d","n_ip","stake_cv_d")
+  keep <- intersect(keep, names(B))
+  B <- B[, keep, drop = FALSE]
+  ## 协变量以**各自的 T0 前 28 日**算；对照组无 T0，故取处置组 T0 的中位日为其伪 T0，
+  ## 使两组的协变量窗口在日历上可比（此为匹配可比性的前提，须明写）。
+  t0_med <- stats::median(QE$T0$t0)
+  tmap <- setNames(QE$T0$t0, QE$T0$member_id)
+  B$t0 <- as.Date(unname(tmap[B$member_id])); B$t0[is.na(B$t0)] <- t0_med
+  pre <- B[B$bet_date <  B$t0 & B$bet_date >= B$t0 - 28, , drop = FALSE]
+  rm(B); invisible(gc(full = TRUE))
+  if (!nrow(pre)) QE_WHY <- "处置前 28 日窗内无面板行" else {
+    agg1 <- function(f, nm) {
+      z <- stats::aggregate(stats::as.formula(paste0(nm, " ~ member_id")),
+                            data = pre, FUN = f, na.action = stats::na.pass)
+      names(z) <- c("member_id", nm); z
+    }
+    CV <- Reduce(function(a,b) merge(a,b,by="member_id",all=TRUE), list(
+      agg1(function(x) sum(num(x), na.rm=TRUE), "validbet"),
+      agg1(function(x) sum(num(x), na.rm=TRUE), "net_pnl"),
+      if ("hedge_rate_d" %in% names(pre)) agg1(function(x) mean(num(x), na.rm=TRUE), "hedge_rate_d") else NULL,
+      if ("n_ip" %in% names(pre))         agg1(function(x) mean(num(x), na.rm=TRUE), "n_ip") else NULL,
+      if ("stake_cv_d" %in% names(pre))   agg1(function(x) mean(num(x), na.rm=TRUE), "stake_cv_d") else NULL))
+    ndays <- stats::aggregate(bet_date ~ member_id, data = pre,
+                              FUN = function(x) length(unique(x)))
+    names(ndays) <- c("member_id","n_days")
+    CV <- merge(CV, ndays, by = "member_id", all = TRUE)
+    CV$mi <- ifelse(CV$validbet > 0, -CV$net_pnl / CV$validbet, NA_real_)
+    ## 护栏：前窗活跃日不足 5 日者，协变量不可稳定估计，两组一律剔除
+    CV <- CV[is.finite(CV$n_days) & CV$n_days >= 5 & is.finite(CV$mi), , drop = FALSE]
+    CV$treat <- as.integer(CV$member_id %in% QE$T0$member_id[QE$T0$dur >= 14])
+    XS <- intersect(c("validbet","mi","n_days","hedge_rate_d","n_ip","stake_cv_d"), names(CV))
+    for (cc in XS) {
+      v <- num(CV[[cc]]); v[!is.finite(v)] <- stats::median(v, na.rm = TRUE)
+      CV[[cc]] <- v
+    }
+    CV$lvb <- log1p(pmax(CV$validbet, 0))          # 洗码量重尾，取对数入模
+    XS2 <- c("lvb", setdiff(XS, "validbet"))
+    if (sum(CV$treat) < 10) QE_WHY <- "主分析组（持续 ≥14 日）不足 10 人，不作匹配" else {
+      fml <- stats::as.formula(paste("treat ~", paste(XS2, collapse = " + ")))
+      ps  <- try(stats::glm(fml, data = CV, family = stats::binomial()), silent = TRUE)
+      if (inherits(ps, "try-error")) QE_WHY <- "倾向得分模型未收敛" else {
+        CV$ps <- stats::fitted(ps)
+        CV$lps <- stats::qlogis(pmin(pmax(CV$ps, 1e-6), 1 - 1e-6))
+        cal <- 0.2 * stats::sd(CV$lps, na.rm = TRUE)   # 卡钳：logit 分数 0.2 个标准差
+        tr  <- CV[CV$treat == 1, , drop = FALSE]
+        ct  <- CV[CV$treat == 0, , drop = FALSE]
+        set.seed(20260810)
+        pairs <- list(); used <- character(0)
+        for (i in seq_len(nrow(tr))) {           # 1:3 最近邻、无放回、带卡钳
+          dd <- abs(ct$lps - tr$lps[i])
+          ok <- which(dd <= cal & !(ct$member_id %in% used))
+          if (!length(ok)) next
+          pick <- ok[order(dd[ok])][seq_len(min(3L, length(ok)))]
+          used <- c(used, ct$member_id[pick])
+          pairs[[length(pairs)+1L]] <- data.frame(
+            treat_id = tr$member_id[i], ctrl_id = ct$member_id[pick],
+            stringsAsFactors = FALSE)
+        }
+        MP <- if (length(pairs)) do.call(rbind, pairs) else NULL
+        if (is.null(MP)) QE_WHY <- "卡钳内无可匹配对照" else {
+          smd <- function(a, b) {
+            s <- sqrt((stats::var(a, na.rm=TRUE) + stats::var(b, na.rm=TRUE)) / 2)
+            if (!is.finite(s) || s == 0) return(NA_real_)
+            (mean(a, na.rm=TRUE) - mean(b, na.rm=TRUE)) / s
+          }
+          mt <- CV[CV$member_id %in% unique(MP$treat_id), , drop = FALSE]
+          mc <- CV[CV$member_id %in% unique(MP$ctrl_id),  , drop = FALSE]
+          BAL <- data.frame(
+            协变量 = XS2,
+            匹配前SMD = vapply(XS2, function(v) smd(tr[[v]], ct[[v]]), numeric(1)),
+            匹配后SMD = vapply(XS2, function(v) smd(mt[[v]], mc[[v]]), numeric(1)),
+            stringsAsFactors = FALSE)
+          BAL$判定 <- ifelse(abs(BAL$匹配后SMD) < 0.1, "✅ 平衡", "❌ 未平衡")
+          QE_M <- list(CV = CV, MP = MP, BAL = BAL, XS = XS2)
+        }
+      }
+    }
+  }
+}
+if (is.null(QE_M)) {
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 未完成", 本节内容 = "倾向得分匹配",
+    原因 = if (is.null(QE_WHY)) "前置未满足" else QE_WHY,
+    受影响输出 = "匹配平衡表、事件研究图、功效核算表"),
+    caption = "倾向得分匹配")
+} else {
+  QE_M$BAL$匹配前SMD <- round(QE_M$BAL$匹配前SMD, 3)
+  QE_M$BAL$匹配后SMD <- round(QE_M$BAL$匹配后SMD, 3)
+  aurora_kb(QE_M$BAL, caption = paste0(
+    "匹配平衡表（1:3 最近邻 · 卡钳 0.2 个 logit 标准差 · 无放回）",
+    "｜解释：SMD 为标准化均值差，**匹配后各协变量须皆 < 0.1** 方可进入下一步",
+    "｜本方案用途：此表是条件独立假设的唯一凭据；任一项未平衡，其后的估计一律不得引用"))
+}
+```
+
+```{r}
+#| label: qe-did
+#| echo: false
+#| fig-height: 4.2
+## ── ③ 事件研究式双重差分：逐期估计，解禁日右删失 ─────────────────────
+QE_ES <- NULL
+if (!is.null(QE_M) && all(abs(QE_M$BAL$匹配后SMD) < 0.1, na.rm = TRUE)) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  ids <- unique(c(QE_M$MP$treat_id, QE_M$MP$ctrl_id))
+  B <- D$bt_panel
+  B$member_id <- as.character(B$member_id)
+  B <- B[B$member_id %in% ids, , drop = FALSE]      # 只留匹配上的七百余人
+  B$bet_date <- as.Date(B$bet_date)
+  B$vb <- num(B$validbet); B$np <- num(B$net_pnl)
+  tmap <- setNames(QE$T0$t0,    QE$T0$member_id)
+  emap <- setNames(QE$T0$t_end, QE$T0$member_id)
+  ## 对照组沿用其配对处置者的 T0，使两组的相对日在日历上对齐
+  own <- setNames(QE_M$MP$treat_id, QE_M$MP$ctrl_id)
+  B$anchor_id <- ifelse(B$member_id %in% names(tmap), B$member_id,
+                        unname(own[B$member_id]))
+  B$t0  <- as.Date(unname(tmap[B$anchor_id]))
+  B$tend<- as.Date(unname(emap[B$anchor_id]))
+  B <- B[!is.na(B$t0), , drop = FALSE]
+  B$k <- as.integer(B$bet_date - B$t0)
+  B <- B[B$k >= -14 & B$k <= 14, , drop = FALSE]
+  ## 右删失：解禁之后的日子不再属处置期，剔除（处置组与其对照同步剔，保持可比）
+  B <- B[B$bet_date <= B$tend, , drop = FALSE]
+  B$mi <- ifelse(B$vb > 0, -B$np / B$vb, NA_real_)
+  q <- stats::quantile(B$mi, c(.01, .99), na.rm = TRUE)   # 缩尾 1%/99%
+  B$y <- pmin(pmax(B$mi, q[1]), q[2])
+  B$treat <- as.integer(B$member_id %in% QE_M$MP$treat_id)
+  if (nrow(B) > 30) {
+    per <- stats::aggregate(y ~ k + treat, data = B, FUN = function(x) mean(x, na.rm=TRUE))
+    wide <- stats::reshape(per, idvar = "k", timevar = "treat", direction = "wide")
+    names(wide) <- c("k","ctrl","treat")
+    base <- wide$treat[wide$k == -1] - wide$ctrl[wide$k == -1]   # 以 k=-1 为基期
+    if (!length(base) || !is.finite(base)) base <- 0
+    wide$did <- (wide$treat - wide$ctrl) - base
+    ## 分块自助：以**会员**为块重抽（同一人的日序列相关），块即整条个体序列
+    bs <- function(Bd, K, R = 500) {
+      tid <- unique(Bd$member_id[Bd$treat == 1]); cid <- unique(Bd$member_id[Bd$treat == 0])
+      out <- matrix(NA_real_, R, length(K)); set.seed(20260810)
+      for (r in seq_len(R)) {
+        s <- Bd[Bd$member_id %in% c(sample(tid, length(tid), TRUE),
+                                    sample(cid, length(cid), TRUE)), , drop = FALSE]
+        p <- stats::aggregate(y ~ k + treat, data = s, FUN = function(x) mean(x, na.rm=TRUE))
+        w <- stats::reshape(p, idvar="k", timevar="treat", direction="wide")
+        names(w) <- c("k","c0","t1")
+        b0 <- w$t1[w$k == -1] - w$c0[w$k == -1]; if (!length(b0) || !is.finite(b0)) b0 <- 0
+        v <- (w$t1 - w$c0) - b0
+        out[r, ] <- v[match(K, w$k)]
+      }
+      out
+    }
+    BSM <- bs(B, wide$k)
+    wide$lo <- apply(BSM, 2, stats::quantile, .05, na.rm = TRUE)
+    wide$hi <- apply(BSM, 2, stats::quantile, .95, na.rm = TRUE)
+    ## 平行趋势检验：处置前各期（k = -14…-2）的系数是否可视为同时为零
+    pre_k <- wide$k >= -14 & wide$k <= -2
+    pt_stat <- mean(abs(wide$did[pre_k]), na.rm = TRUE)
+    pt_null <- apply(abs(BSM[, pre_k, drop = FALSE]), 1, mean)
+    pt_p <- mean(pt_null >= pt_stat, na.rm = TRUE)
+    QE_ES <- list(wide = wide, pt_p = pt_p,
+                  n_t = length(unique(B$member_id[B$treat==1])),
+                  n_c = length(unique(B$member_id[B$treat==0])),
+                  sd_c = stats::sd(B$y[B$treat==0], na.rm = TRUE))
+  } else QE_WHY <- "匹配后可用观测不足 30 行"
+  rm(B); invisible(gc(full = TRUE))
+} else if (!is.null(QE_M)) {
+  QE_WHY <- "匹配后仍有协变量未平衡（SMD ≥ 0.1），依纪律不进入估计"
+}
+if (is.null(QE_ES)) {
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 未完成", 本节内容 = "事件研究式双重差分",
+    原因 = if (is.null(QE_WHY)) "前置未满足" else QE_WHY,
+    受影响输出 = "事件研究图、平行趋势检验、功效核算表"),
+    caption = "事件研究式双重差分")
+} else {
+  w <- QE_ES$wide
+  ggplot(w, aes(x = k, y = did)) +
+    geom_hline(yintercept = 0, colour = "#7dffd4", linetype = "dashed") +
+    geom_vline(xintercept = -0.5, colour = "#ffd64d", linetype = "dotted") +
+    geom_ribbon(aes(ymin = lo, ymax = hi), fill = "#22d3ee", alpha = .18) +
+    geom_line(colour = "#22d3ee", linewidth = .9) +
+    geom_point(colour = "#e7fbf3", size = 1.4) +
+    labs(title = "事件研究：处置前后逐日的双重差分（以处置前一日为基期）",
+         subtitle = paste0("处置组 ", QE_ES$n_t, " 人 · 匹配对照 ", QE_ES$n_c,
+                           " 人｜带为会员级分块自助 90% 区间｜黄线右侧为处置期"),
+         x = "相对处置日（营业日）", y = "会员级平台毛利率之差（缩尾）")
+}
+```
+
+```{r}
+#| label: qe-power
+#| echo: false
+## ── ④ 功效核算：先算最小可检出效应，再谈结论 ─────────────────────────
+if (is.null(QE_ES)) {
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 未完成", 本节内容 = "功效核算",
+    原因 = if (is.null(QE_WHY)) "前置未满足" else QE_WHY,
+    受影响输出 = "最小可检出效应表"),
+    caption = "功效核算")
+} else {
+  w <- QE_ES$wide
+  post <- w$k >= 0
+  eff  <- mean(w$did[post], na.rm = TRUE)
+  lo   <- mean(w$lo[post],  na.rm = TRUE)
+  hi   <- mean(w$hi[post],  na.rm = TRUE)
+  mde  <- 2.802 * QE_ES$sd_c * sqrt(1/QE_ES$n_t + 1/QE_ES$n_c)   # α=.05 双尾 · 功效 .8
+  aurora_kb(tibble::tibble(
+    项 = c("处置组人数", "匹配对照人数", "对照组结果标准差",
+           "**最小可检出效应（MDE）**", "处置期平均双重差分", "其 90% 区间",
+           "**平行趋势检验 p 值**", "**判读**"),
+    值 = c(QE_ES$n_t, QE_ES$n_c,
+           sprintf("%.4f", QE_ES$sd_c),
+           sprintf("%.4f", mde),
+           sprintf("%.4f", eff),
+           sprintf("[%.4f, %.4f]", lo, hi),
+           sprintf("%.3f", QE_ES$pt_p),
+           if (QE_ES$pt_p < 0.10) "❌ 平行趋势不成立 → 本估计不得引用"
+           else if (abs(eff) < mde) "🟡 效应小于 MDE → **未能检出**，不等于效应为零"
+           else if (lo > 0 || hi < 0) "🟢 区间不含零 → 准实验估计检出效应，惟内部效度低于随机对照"
+           else "🟡 区间含零 → 未能检出")),
+    caption = paste0(
+      "功效核算与判读｜解释：MDE 为在 α=0.05、功效 0.8 之下本样本量所能检出的最小效应",
+      "；平行趋势检验以处置前各期的自助分布为零假设",
+      "｜本方案用途：效应小于 MDE 时只可写「未能检出」，**不得写「无效应」**——二者判然有别"))
+}
+```
+
+::: {.callout-important}
+## 本章结果的表述上限，与其三条读法
+
+**其一，平行趋势不成立即全盘作废。** 判读栏第一条即是它。
+平行趋势是双重差分的**识别假设**，不是可选的附加检验——不过此关，
+后面的数字再漂亮也只是两组本就不同的走势之差。
+
+**其二，效应小于最小可检出效应时，只可写「未能检出」，不得写「无效应」。**
+188 人的处置组、其中持续期 ≥ 14 日者仅四十组，样本量本就在临界线上；
+「未能检出」说的是**这个样本量看不见这么小的效应**，与「效应为零」判然有别。
+
+**其三，纵使区间不含零，所得仍是准实验估计。**
+处置由业务因人而异地决定，受处置者本就是当时更可疑者；
+倾向得分匹配只能平衡**可观测**的特征，平衡不了风控专员当时看到而未记录的东西。
+故对外表述的上限是——
+
+> 依处置台账与匹配对照，**准实验估计**显示处置后主指标变化为 X（90% 区间 …），
+> 平行趋势检验通过；**此为准实验估计，内部效度低于随机对照实验**。
+
+**不可写「经证实增利」。** 那一句仍须等 E5，而 E5 不是数据问题。
+:::
+
 ```{r}
 #| label: release-bt_panel
 #| include: false
 ## 用完即释放：D$bt_panel 的最后一次引用在 @sec-roster 的业绩增幅块
+
 if (!exists("WF_DAYS")) WF_DAYS <- as.Date(character(0))  # 捕获失败时的兜底
 release("bt_panel")
 ```
@@ -8184,7 +8529,7 @@ R 对不存在的列表元素返回 `NULL` **而不报错**。故凡把 `D$键�
 DK_ACTUAL <- names(D)
 DK_USED   <- c("recon","ipmatch","table_span","sec_dist","player_tail","ip_player",
                "ip_agg","combo","panel","anchor","online","r01","r02","r03",
-               "daily_roi","t3","seg_econ","bt_panel","d03s","tblcnt","r03b")
+               "daily_roi","t3","seg_econ","bt_panel","d03s","tblcnt","r03b","tl10")
 DK_BAD    <- setdiff(DK_USED, DK_ACTUAL)
 DK_UNUSED <- setdiff(DK_ACTUAL, DK_USED)
 aurora_kb(tibble::tibble(
@@ -11323,6 +11668,40 @@ $m_i$ 为负即此人在**赢平台的钱**。
 每一轮都适用，不是某一轮的临时安排。
 :::
 
+## 2026-08-10 · 准实验落地：@sec-quasi-run 四步实装
+
+处置台账既已落地，本轮把准实验由设计落为**可运行的四步**，并把 §TL-10 接入取数管路
+（CONTRACT／`D`／`NEED`／`PH_LABELS`／键名册五处同步登记）。
+
+**一、四步的口径在看结果之前写定，此处照录，事后不改。**
+处置＝`canbet` 或 `enable` 由 `Y` 变 `N`，处置日取首次收紧；主指标＝**缩尾会员级平台毛利率**
+（取率不取额——额的变异系数约为 8，率则量纲无关、方差小得多）；协变量取处置前 28 日的
+洗码量、毛利率、活跃日数、对打率、IP 数、注额变异系数；**子群只分一组**——
+持续期 ≥ 14 日者作主分析。此即功效纪律所要求的预先注册。
+
+**二、匹配：1:3 最近邻、卡钳 0.2 个 logit 标准差、无放回，并出平衡表。**
+平衡表是条件独立假设的**唯一凭据**，故代码中设了硬闸——**匹配后任一协变量的标准化均值差
+≥ 0.1，即不进入估计**，直接落「未完成」并说明原因。这一闸不可绕。
+
+**三、双重差分改为事件研究式，并以解禁日右删失。**
+缘由已在 @sec-treatment-truth 记明：处置持续中位仅 6 日，若照惯例取「处置后 14 日」，
+近半数早已解禁，所测为处置与解禁的混合。故以处置日为零点逐日估计、
+以 $k=-1$ 为基期，解禁之后的日子处置组与其对照**同步剔除**以保可比。
+区间走**以会员为块**的分块自助——同一人的日序列相关，按行重抽会把区间做窄。
+
+**四、平行趋势检验与功效核算同表并出，且判读次序写死。**
+判读第一条即平行趋势：不过此关，后面的数字再漂亮也只是两组本就不同的走势之差，
+一律不得引用。其次比效应与 MDE：**效应小于 MDE 时只可写「未能检出」，不得写「无效应」**——
+188 人、其中持续期 ≥ 14 日者仅四十组，样本量本就在临界线上，二者判然有别。
+
+**五、一处结构性失误，本轮自查自纠，记明。** 初次插入时，整章误落在
+`release-bt_panel` 代码块**内部**，两行释放代码被隔在章末——围栏计数因两侧各有 ``` 而仍为偶数，
+故围栏检查未能拦下。已搬正为「准实验章 → 释放块」，并复检依赖次序：
+`D$bt_panel` 最后一次取用（第 8021 行）确在 `release("bt_panel")`（第 8165 行）之前。
+
+**六、本章代码未在容器内运行验证**（无 R 环境），仅经语法、括号、依赖次序、
+释放次序与死链五项静态例检。首次渲染若报错，请贴回，我即斧正。
+
 ## 2026-08-10 · 列义译定：处置组真身 188 人 · E4 达成 · 处置多为短暂
 
 **一、列义一译，事件量缩水七成有余——而缩水的正是我上一轮所预警的那类误判。**
@@ -12039,6 +12418,9 @@ tibble::tribble(
   209,"**`mem024`（mem_risk）窗口内零变更——主档风险位是死字段**。与 §P0C 的 `dailyreport_member.risk` 125 人不矛盾：那是**日报表**标记，这是**主档**风险位。平台的风险标记走日报表，主档那一位形同虚设，已记入数据契约","新增","@sec-treatment-truth",
   210,"**处置多为短暂，直接改写 DID 窗口设计**：收紧 266 次、放宽 266 次几乎相等，逐会员配对得 **110 组「收紧→解除」**，**持续中位仅 6 日**（当日即解除 30 组、三日内 50 组），另 156 人次至窗末仍收紧。若照惯例取「处置后 14 日」，近半数早已解禁，所测为**处置与解禁的混合**。故 DID 改事件研究式（处置日为零点、解禁日右删失），或只取持续 ≥ 14 日的 40 组作主分析","新增","@sec-treatment-truth",
   211,"**立功效纪律：先算 MDE，再做估计**。188 人（持续 ≥14 日者仅 40 组）够不够不是感觉的事；精要报告的灰度功效章实测会员级净赢变异系数约 8，朴素口径几无功效，须同时用缩尾、CUPED 与净赢率三件。功效不足时正当做法只有如实报告 MDE 与扩样两条；**不正当的是缩小口径凑显著**。故定：主指标、处置期定义、子群划分三者须在看结果之前写定并记入日志，事后更改者一律标注为探索性分析","新增","@sec-quasi-design",
+  212,"**新增 @sec-quasi-run 准实验四步实装**：① 处置组（canbet/enable 由 Y 变 N，处置日取首次收紧，解禁日右删失）；② 倾向得分匹配（1:3 最近邻、卡钳 0.2 个 logit 标准差、无放回）并出平衡表；③ **事件研究式**双重差分（以 k=−1 为基期逐日估计，解禁后处置组与其对照同步剔除，区间走**以会员为块**的分块自助）；④ 功效核算（MDE 与平行趋势检验同表并出）。§TL-10 已接入 CONTRACT／D／NEED／PH_LABELS／键名册五处","新增","@sec-quasi-run",
+  213,"**准实验设三道硬闸，皆不可绕**：其一，匹配后任一协变量 SMD ≥ 0.1 即**不进入估计**，直接落未完成；其二，判读首条为平行趋势检验，p < 0.10 即判「本估计不得引用」；其三，效应小于 MDE 时只可写「**未能检出**」，不得写「无效应」。四步口径（处置定义、主指标、协变量、子群）已在看结果之前写定并照录入章，事后不改","新增","@sec-quasi-run",
+  214,"**自查自纠一处结构性失误**：初次插入时整章误落在 `release-bt_panel` 代码块**内部**，两行释放代码被隔在章末；因两侧各有围栏、计数仍为偶数，围栏检查未能拦下。已搬正为「准实验章 → 释放块」，并复检 `D$bt_panel` 最后取用（8021 行）确在 `release(\"bt_panel\")`（8165 行）之前","斧正","@sec-quasi-run",
   82,"★ 整数化循环用 `is.double()` 判数值列，但 `Date` 底层就是 double → `Math.Date: floor 对 Date 没有定义`：判据加 `is.null(attr(v,\"class\"))`，只认裸数值向量；并固化为可运行性纪律第 4 条","斧正","setup · fetch()",
   81,"`fetch()` 再压一层：计数类 double 列整数化（不动任何金额/比率列），内存约再省一成","升级","setup",
   78,"术语补入 purged walk-forward / CPCV 验证判别力 / 尾秒 / CGNAT 四条；学术引用（Hyndman & Koehler 2006、López de Prado）加 DOI 链接","新增","@sec-glossary",
