@@ -5124,3 +5124,241 @@ GROUP BY CASE WHEN a.age001 IS NOT NULL THEN 'in_agent_master'                  
      故 lv3 另有出处。此事不影响 γ* 的定案（κ 已由 ag012 直接得出），
      但若日后要按线核算占成金额，仍须先解此结。
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §P0C · L1a 标签时序审计与 125／251 口径结案（2026-08-10 立）
+   ---------------------------------------------------------------------------
+   缘起：`dailyreport_member.risk` 一直被当作监督学习的正例标签使用。
+   但该字段记的是「风控专员当日是否标了这一笔」，若专员系见当日异常而后标记，
+   则以当日特征预测当日 risk 即属**同日泄漏**——模型学到的是
+   「何种行为招致打标」，而非「何种行为预示未来风险」。此二者判然有别。
+
+   本节六条查明三事：① risk 的取值与业务日口径；② 125 与 251 两数各属何口径；
+   ③ 标记究竟是前瞻性判断还是事后追认。据此把该字段正名为三层：
+     · 标签甲 处置标签   —— 当日专员是否标记，供风控人员行为分析与流程稽核；
+     · 标签乙 确认结果   —— 未来 7／14／30 日内是否经复核确认，方可供预测建模；
+     · 标签丙 经济结果   —— 处置后的增量净收，须待处置日志到位方能构造。
+
+   ─── 结构探查已定的五处标识符（§P0C-00 实测，2026-08-10）───────────────
+     会员列：两表同为 `bet05`（會員編號）
+     分区列：两表同为 `dt`，类型 **DATE**，故一律不作 CAST
+     产品列：两表同为 `bet02`（遊戲編號／遊戲類別編號），百家乐取 '101'
+     风险列：`dailyreport_member.risk`，varchar 承载 tinyint(1)，1 表示風險單
+     业务日：`dailyreport_member.time`（source_type=date），与 dt 是否同日见 §P0C-01
+   ⚠ **`bet41` 两表异义，跨表取洗码量必复核**：
+       `dailyreport_member.bet41` = 有效投注（即洗码量）；
+       `bet02.bet41`              = 下注退水金額。
+       故 `bet02` 侧洗码量一律取 **`validbet`**，误用 bet41 会把退水当流水。
+
+   ─── 本节两条执行纪律（皆由实测报错反推所立）─────────────────────────
+     ⑨ **末分号之后不得再写任何注释**——Superset 会将其判为第二条空语句，
+        整条查询报 Unable to parse SQL（§P0C-05 原稿实测触发）。
+     ⑩ **注释内不得出现美元符或反斜杠**——含 LaTeX 数学式的注释会令前端
+        解析器中断（§P0C-03 原稿实测触发）。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+-- §P0C-00 · 结构探查（已执行，保留备查）
+-- ▸ 导出：不需要 —— §P0C-00 结构探查，屏幕看结果，结论已录于上方块注释。
+SELECT  TABLE_NAME,
+        ORDINAL_POSITION,
+        COLUMN_NAME,
+        DATA_TYPE,
+        COLUMN_COMMENT
+FROM    information_schema.columns
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND   TABLE_NAME IN ('ods_a168_dailyreport_member', 'ods_a168_bet02')
+ORDER BY TABLE_NAME, ORDINAL_POSITION;
+
+-- §P0C-01 · risk 取值分布，兼查分区日 dt 与业务日 time 是否同日
+-- ▸ 导出：不需要 —— §P0C-01 取值与轴向探针，屏幕看结果。
+-- 读法：① risk 若只见 0 与 1 两值，则 §P0C-02 起以 '1' 为正例即无遗漏；
+--       ② dt 与 time 若大面积不等，则本节及全包一切以 dt 为时间轴的
+--          时序判断均须改以 time 为轴，届时须整节重写，不可只改此一条。
+SELECT  CAST(risk AS STRING)                                     AS risk_取值,
+        COUNT(*)                                                 AS 行数,
+        COUNT(DISTINCT CAST(bet05 AS STRING))                    AS 会员数,
+        SUM(CASE WHEN dt =  CAST(time AS DATE) THEN 1 ELSE 0 END) AS dt等于time_行数,
+        SUM(CASE WHEN dt <> CAST(time AS DATE) THEN 1 ELSE 0 END) AS dt不等time_行数
+FROM    ods_mariadb_2b.ods_a168_dailyreport_member
+WHERE   dt >= '2026-03-21'
+  AND   dt <  '2026-08-07'
+GROUP BY 1
+ORDER BY 行数 DESC;
+
+-- §P0C-02 · 125 与 251 口径结案（百家乐／非百家乐／全产品三行并陈）
+-- ▸ 导出：需要 —— 存为「数据库/P0C02_标签口径.csv」（§P0C-02 标签口径三行对照）。
+-- 读法：假说甲——125 为去重会员数、251 为会员-日观测数，二者口径不同而非矛盾；
+--       假说乙——其一为全产品口径、其一为百家乐口径。三行一出即可定夺。
+--       定夺后须在两份报告中分别正名，不得再以「125 个正样本」一语混指两者。
+SELECT  '百家乐(101)'                                 AS 产品口径,
+        COUNT(*)                                      AS 正例观测数_会员日,
+        COUNT(DISTINCT CAST(bet05 AS STRING))         AS 正例会员数_去重,
+        COUNT(DISTINCT dt)                            AS 覆盖日数,
+        MIN(dt)                                       AS 首个正例日,
+        MAX(dt)                                       AS 末个正例日
+FROM    ods_mariadb_2b.ods_a168_dailyreport_member
+WHERE   dt >= '2026-03-21'
+  AND   dt <  '2026-08-07'
+  AND   CAST(risk AS STRING) = '1'
+  AND   CAST(bet02 AS STRING) = '101'
+UNION ALL
+SELECT  '非百家乐',
+        COUNT(*),
+        COUNT(DISTINCT CAST(bet05 AS STRING)),
+        COUNT(DISTINCT dt),
+        MIN(dt),
+        MAX(dt)
+FROM    ods_mariadb_2b.ods_a168_dailyreport_member
+WHERE   dt >= '2026-03-21'
+  AND   dt <  '2026-08-07'
+  AND   CAST(risk AS STRING) = '1'
+  AND   CAST(bet02 AS STRING) <> '101'
+UNION ALL
+SELECT  '全产品合计',
+        COUNT(*),
+        COUNT(DISTINCT CAST(bet05 AS STRING)),
+        COUNT(DISTINCT dt),
+        MIN(dt),
+        MAX(dt)
+FROM    ods_mariadb_2b.ods_a168_dailyreport_member
+WHERE   dt >= '2026-03-21'
+  AND   dt <  '2026-08-07'
+  AND   CAST(risk AS STRING) = '1';
+
+-- §P0C-03 · 每会员标记次数分布
+-- ▸ 导出：需要 —— 存为「数据库/P0C03_标记次数分布.csv」（§P0C-03 标记次数分布）。
+-- 读法：若绝大多数会员仅被标记一次，则标记为一次性事件而非持续状态，
+--       标签乙的构造须以**首次标记日**为锚，不可逐日重复计数。
+SELECT  标记次数,
+        COUNT(*)                                      AS 会员数,
+        SUM(COUNT(*)) OVER (ORDER BY 标记次数)         AS 累计会员数
+FROM (
+    SELECT  CAST(bet05 AS STRING)                     AS mem,
+            COUNT(DISTINCT dt)                        AS 标记次数
+    FROM    ods_mariadb_2b.ods_a168_dailyreport_member
+    WHERE   dt >= '2026-03-21'
+      AND   dt <  '2026-08-07'
+      AND   CAST(risk AS STRING) = '1'
+      AND   CAST(bet02 AS STRING) = '101'
+    GROUP BY 1
+) t
+GROUP BY 标记次数
+ORDER BY 标记次数;
+
+-- §P0C-04 · 同日泄漏检验（本节核心）
+-- ▸ 导出：需要 —— 存为「数据库/P0C04_同日泄漏检验.csv」（§P0C-04 同日泄漏检验）。
+-- 读法：标记日活动量若显著高于其前 30 日的日均，即专员系见当日异常而后标记；
+--       此时以当日特征预测当日 risk 属同日泄漏，该标签只能作标签甲。
+--       洗码量取 `validbet`；`bet02.bet41` 为退水金额，误用即把退水当流水。
+WITH d0 AS (
+    SELECT  CAST(bet05 AS STRING)                     AS mem,
+            MIN(dt)                                   AS mark_day
+    FROM    ods_mariadb_2b.ods_a168_dailyreport_member
+    WHERE   dt >= '2026-03-21'
+      AND   dt <  '2026-08-07'
+      AND   CAST(risk AS STRING) = '1'
+      AND   CAST(bet02 AS STRING) = '101'
+    GROUP BY 1
+),
+act AS (
+    SELECT  CAST(b.bet05 AS STRING)                   AS mem,
+            b.dt                                      AS d,
+            COUNT(*)                                  AS 注单数,
+            SUM(CAST(b.validbet AS DOUBLE))           AS 洗码量
+    FROM    ods_mariadb_2b.ods_a168_bet02 b
+    JOIN    d0 ON d0.mem = CAST(b.bet05 AS STRING)
+    WHERE   b.dt >= '2026-03-21'
+      AND   b.dt <  '2026-08-07'
+      AND   CAST(b.bet02 AS STRING) = '101'
+    GROUP BY 1, 2
+)
+SELECT  d0.mem,
+        d0.mark_day,
+        MAX(CASE WHEN act.d =  d0.mark_day THEN act.注单数 ELSE 0 END) AS 标记日_注单数,
+        MAX(CASE WHEN act.d =  d0.mark_day THEN act.洗码量 ELSE 0 END) AS 标记日_洗码量,
+        AVG(CASE WHEN act.d <  d0.mark_day THEN act.注单数 END)        AS 前30日均_注单数,
+        AVG(CASE WHEN act.d <  d0.mark_day THEN act.洗码量 END)        AS 前30日均_洗码量,
+        COUNT(DISTINCT CASE WHEN act.d < d0.mark_day THEN act.d END)   AS 前30日活跃日数
+FROM        d0
+LEFT JOIN   act
+       ON   act.mem = d0.mem
+      AND   act.d  >= DATE_SUB(d0.mark_day, INTERVAL 30 DAY)
+      AND   act.d  <= d0.mark_day
+GROUP BY d0.mem, d0.mark_day
+ORDER BY 标记日_洗码量 DESC;
+
+-- §P0C-05 · 标记时点相对会员投注生命期的定位
+-- ▸ 导出：需要 —— 存为「数据库/P0C05_标记时点定位.csv」（§P0C-05 标记时点定位）。
+-- 读法：标记日若普遍落在活跃期末端，说明多属事后追认，该字段不具前瞻性。
+SELECT  d0.mem,
+        d0.mark_day,
+        life.首投日,
+        life.末投日,
+        life.活跃日数,
+        DATEDIFF(d0.mark_day, life.首投日)             AS 标记距首投_日,
+        DATEDIFF(life.末投日, d0.mark_day)             AS 末投距标记_日,
+        CASE WHEN DATEDIFF(life.末投日, d0.mark_day) <= 0  THEN '标记后再无投注'
+             WHEN DATEDIFF(life.末投日, d0.mark_day) <= 14 THEN '标记后14日内停投'
+             ELSE '标记后仍持续投注' END               AS 时点性质
+FROM (
+    SELECT  CAST(bet05 AS STRING)                     AS mem,
+            MIN(dt)                                   AS mark_day
+    FROM    ods_mariadb_2b.ods_a168_dailyreport_member
+    WHERE   dt >= '2026-03-21'
+      AND   dt <  '2026-08-07'
+      AND   CAST(risk AS STRING) = '1'
+      AND   CAST(bet02 AS STRING) = '101'
+    GROUP BY 1
+) d0
+LEFT JOIN (
+    SELECT  CAST(bet05 AS STRING)                     AS mem,
+            MIN(dt)                                   AS 首投日,
+            MAX(dt)                                   AS 末投日,
+            COUNT(DISTINCT dt)                        AS 活跃日数
+    FROM    ods_mariadb_2b.ods_a168_bet02
+    WHERE   dt >= '2026-03-21'
+      AND   dt <  '2026-08-07'
+      AND   CAST(bet02 AS STRING) = '101'
+    GROUP BY 1
+) life ON life.mem = d0.mem
+ORDER BY 标记距首投_日;
+
+-- §P0C-06 · 标签乙骨架：特征窗为锚点前 30 日，结果窗为锚点后 1 至 14 日
+-- ▸ 导出：需要 —— 存为「数据库/P0C06_LabelB骨架.csv」（§P0C-06 标签乙骨架·正例侧）。
+-- 前置：仅当 §P0C-04 与 §P0C-05 判定标记具前瞻性时，本表方可供建模；
+--       若判为事后追认，本表只作风控人员行为分析之用。
+-- 体量：锚点已限于正例会员，负例由特征侧 §B01 全量左连补齐，本条不作笛卡尔展开。
+WITH mk AS (
+    SELECT  DISTINCT CAST(bet05 AS STRING)            AS mem,
+            dt                                        AS mark_day
+    FROM    ods_mariadb_2b.ods_a168_dailyreport_member
+    WHERE   dt >= '2026-03-21'
+      AND   dt <  '2026-08-07'
+      AND   CAST(risk AS STRING) = '1'
+      AND   CAST(bet02 AS STRING) = '101'
+),
+anchor AS (
+    SELECT  CAST(b.bet05 AS STRING)                   AS mem,
+            b.dt                                      AS anchor_day
+    FROM    ods_mariadb_2b.ods_a168_bet02 b
+    JOIN    (SELECT DISTINCT mem FROM mk) pos ON pos.mem = CAST(b.bet05 AS STRING)
+    WHERE   b.dt >= '2026-04-20'
+      AND   b.dt <  '2026-07-24'
+      AND   CAST(b.bet02 AS STRING) = '101'
+    GROUP BY 1, 2
+)
+SELECT  a.mem,
+        a.anchor_day,
+        DATE_SUB(a.anchor_day, INTERVAL 30 DAY)       AS 特征窗起,
+        a.anchor_day                                  AS 特征窗止,
+        DATE_ADD(a.anchor_day, INTERVAL 1  DAY)       AS 结果窗起,
+        DATE_ADD(a.anchor_day, INTERVAL 14 DAY)       AS 结果窗止,
+        MAX(CASE WHEN mk.mark_day >  a.anchor_day
+                  AND mk.mark_day <= DATE_ADD(a.anchor_day, INTERVAL 14 DAY)
+                 THEN 1 ELSE 0 END)                   AS label_b_未来14日被标记,
+        MAX(CASE WHEN mk.mark_day =  a.anchor_day
+                 THEN 1 ELSE 0 END)                   AS label_a_当日被标记
+FROM        anchor a
+LEFT JOIN   mk ON mk.mem = a.mem
+GROUP BY a.mem, a.anchor_day
+ORDER BY a.mem, a.anchor_day;

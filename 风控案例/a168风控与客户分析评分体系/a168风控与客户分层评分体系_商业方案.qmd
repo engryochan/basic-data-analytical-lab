@@ -7560,32 +7560,78 @@ E1 全局查询证明 `dailyreport_member` 与 `bet02` 时间窗几乎完全重�
 
 :::
 
-## 净化切分器
+## 净化切分器 {#sec-purged}
 
 ```{r}
 #| label: purged
 #| echo: false
+## ── 时间隔离的两个参数须分列，混为一谈即生死代码 ────────────────────
+##   · gap_days（前置空窗）：测试窗**之前**空出的天数。前向推进的净化回测
+##     所需者正是此项，本方案承诺 7 日。
+##   · embargo_days（后置禁运）：测试窗**之后**、特征已吸收测试期信息的样本。
+##     前向推进下训练集恒在测试之前，此项恒空，故仅在双侧取样
+##     （allow_future_train=TRUE，如 cpcv_splits）时才有实际作用。
+##   代数上：t0 <= t1 < te0 <= te1 ⇒ 「t0 > te1」恒假。故形如
+##   `t1[tr] < te0 & !(t0[tr] > te1 & t0[tr] <= te1 + embargo)` 的过滤，
+##   其第二项不可达，前置空窗实为 0 日。凭据见 wf_dead_clause_proof()，
+##   其剔除样本数恒为 0；本方案回测实取的 purged_folds() 不受此影响
+##   （其 te_beg = tr_end + embargo + 1 已在折生成层落实前置空窗）。
 purged_wf_splits <- function(panel, t0_col="t0", t1_col="t1",
-                             n_splits=6L, embargo_days=NULL){
+                             n_splits=6L, gap_days=NULL, embargo_days=NULL,
+                             allow_future_train=FALSE){
   t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
   stopifnot(all(t1 >= t0, na.rm=TRUE))
-  if (is.null(embargo_days)){
-    ## ★ embargo 由标签实现滞后的经验分布决定，不照抄文献 21 天
-    lagd <- as.numeric(difftime(t1,t0,units="days"))
-    embargo_days <- ceiling(stats::quantile(lagd[is.finite(lagd)],.95,na.rm=TRUE))
-    message(glue::glue("embargo 由经验分布定为 {embargo_days} 天（滞后 P95）"))
+  if (is.null(gap_days)){
+    if (!is.null(embargo_days)) gap_days <- embargo_days else {
+      ## ★ 空窗由标签实现滞后的经验分布决定，不照抄文献 21 天
+      lagd <- as.numeric(difftime(t1,t0,units="days"))
+      gap_days <- ceiling(stats::quantile(lagd[is.finite(lagd)],.95,na.rm=TRUE))
+      message(glue::glue("前置空窗由经验分布定为 {gap_days} 天（滞后 P95）"))
+    }
   }
+  if (is.null(embargo_days)) embargo_days <- gap_days
+  GAP <- as.difftime(as.numeric(gap_days),     units="days")
+  EMB <- as.difftime(as.numeric(embargo_days), units="days")
   ord <- order(t0); n <- length(ord)
   bd <- floor(seq(1, n+1, length.out=n_splits+1L))
   lapply(seq_len(n_splits-1L), function(k){
     tr <- ord[seq_len(bd[k+1L]-1L)]; te <- ord[bd[k+1L]:(bd[k+2L]-1L)]
     te0 <- min(t0[te],na.rm=TRUE); te1 <- max(t1[te],na.rm=TRUE)
-    keep <- t1[tr] < te0 &
-            !(t0[tr] > te1 & t0[tr] <= te1 + as.difftime(embargo_days,units="days"))
+    keep <- t1[tr] < te0 - GAP                     # 净化与前置空窗，一式两用
+    if (isTRUE(allow_future_train)) keep <- keep | (t0[tr] > te1 + EMB)
     list(fold=k, train=tr[keep], test=te, purge_rate=mean(!keep),
-         embargo_days=embargo_days, test_window=c(te0,te1))})
+         gap_days=as.numeric(gap_days), embargo_days=as.numeric(embargo_days),
+         test_window=c(te0,te1))})
 }
 
+## 死代码自证：旧式过滤的后置禁运项在前向推进下剔除样本数应恒为 0，
+##   并给出旧式实际留下的前置空窗天数。此函数存在的意义，是让「已斧正」
+##   一事留有可复算的凭据，而非口头声明。
+wf_dead_clause_proof <- function(panel, t0_col="t0", t1_col="t1",
+                                 n_splits=6L, embargo_days=7){
+  t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
+  EMB <- as.difftime(as.numeric(embargo_days), units="days")
+  ord <- order(t0); n <- length(ord)
+  bd <- floor(seq(1, n+1, length.out=n_splits+1L))
+  killed <- 0L; gaps <- numeric(0)
+  for (k in seq_len(n_splits-1L)){
+    tr <- ord[seq_len(bd[k+1L]-1L)]; te <- ord[bd[k+1L]:(bd[k+2L]-1L)]
+    te0 <- min(t0[te],na.rm=TRUE); te1 <- max(t1[te],na.rm=TRUE)
+    c1 <- t1[tr] < te0
+    c2 <- !(t0[tr] > te1 & t0[tr] <= te1 + EMB)
+    killed <- killed + sum(c1 & !c2, na.rm=TRUE)
+    if (any(c1, na.rm=TRUE))
+      gaps <- c(gaps, as.numeric(difftime(te0, max(t1[tr][c1], na.rm=TRUE),
+                                          units="days")))
+  }
+  list(killed=killed,
+       gap_min=if (length(gaps)) min(gaps) else NA_real_,
+       gap_med=if (length(gaps)) stats::median(gaps) else NA_real_)
+}
+
+## ★ 此处的 `|` 与后置禁运项**是活的**：CPCV 属双侧取样，训练块可落在测试块
+##   之后，故「t0 > te1 + embargo」确有样本命中。前向推进的 purged_wf_splits()
+##   不可照搬此式——那正是死代码之由来。
 cpcv_splits <- function(panel, N=8L, k=2L, t0_col="t0", t1_col="t1", embargo_days=21){
   t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
   ord <- order(t0); grp <- cut(seq_along(ord), breaks=N, labels=FALSE)
@@ -7598,12 +7644,50 @@ cpcv_splits <- function(panel, N=8L, k=2L, t0_col="t0", t1_col="t1", embargo_day
     list(combo=cb, train=tr[keep], test=te, purge_rate=mean(!keep))})
 }
 
-assert_no_leakage <- function(splits, panel, t0_col="t0", t1_col="t1"){
+## 泄漏断言：不止查「训练是否早于测试」，并查**实测空窗是否达到设定值**——
+##   空窗为 0 日照样满足「早于」，故只查先后次序验不出前置空窗缺位。
+assert_no_leakage <- function(splits, panel, t0_col="t0", t1_col="t1",
+                              min_gap_days=0){
   t0 <- as.POSIXct(panel[[t0_col]]); t1 <- as.POSIXct(panel[[t1_col]])
-  ok <- vapply(splits, function(s) length(s$train)==0 ||
-    max(t1[s$train],na.rm=TRUE) < min(t0[s$test],na.rm=TRUE), logical(1))
+  gap <- vapply(splits, function(s) if (!length(s$train)) NA_real_ else
+    as.numeric(difftime(min(t0[s$test],na.rm=TRUE),
+                        max(t1[s$train],na.rm=TRUE), units="days")), numeric(1))
+  ok <- is.na(gap) | gap >= min_gap_days
   list(all_pass=all(ok), failed=which(!ok),
+       min_gap=suppressWarnings(min(gap, na.rm=TRUE)),
        mean_purge=mean(vapply(splits,`[[`,0,"purge_rate")))
+}
+
+## ── 折结构体检：折是否合规，一律以实测表判定，不凭源码推断 ─────────────
+##   入参为 purged_folds() 的产出（每折 $tr = c(起,止)、$te = c(起,止)）。
+##   显示用列名走字面量向量注入，不经符号表——Windows 中文 locale 下
+##   符号表以 native 字节存名，出口即残缺（根因见 @sec-changelog）。
+WF_HEALTH_LBL <- c("折次", "训练起", "训练止", "训练日数",
+                   "实测空窗（日）", "测试起", "测试止", "测试日数")
+wf_fold_health <- function(folds){
+  if (!length(folds)) return(NULL)
+  out <- do.call(rbind, lapply(folds, function(f) data.frame(
+    fold      = f$fold,
+    train_lo  = as.character(f$tr[1]),
+    train_hi  = as.character(f$tr[2]),
+    train_len = as.integer(as.numeric(f$tr[2] - f$tr[1])) + 1L,
+    gap        = as.integer(as.numeric(f$te[1] - f$tr[2])) - 1L,
+    test_lo   = as.character(f$te[1]),
+    test_hi   = as.character(f$te[2]),
+    test_len  = as.integer(as.numeric(f$te[2] - f$te[1])) + 1L,
+    stringsAsFactors = FALSE)))
+  names(out) <- WF_HEALTH_LBL
+  out
+}
+
+## 折结构三项硬判：空窗恒达设定值、训练长度恒定、测试窗互不重叠。
+wf_fold_assert <- function(health, gap_expect = BT_PARAMS$embargo){
+  if (is.null(health) || !nrow(health))
+    return(c("空窗恒达设定值"=NA, "训练长度恒定"=NA, "测试窗互不重叠"=NA))
+  g <- health[[5]]; L <- health[[4]]; lo <- as.Date(health[[6]])
+  c("空窗恒达设定值" = all(g >= gap_expect),
+    "训练长度恒定"   = (length(unique(L)) == 1L),
+    "测试窗互不重叠" = (length(lo) < 2L) || all(diff(lo) > 0))
 }
 ```
 
@@ -7620,6 +7704,86 @@ tibble::tibble(
 
 同时必须报告：**各折净化率、有效折数、泄漏断言结果、朴素与净化的差值**。
 差值本身是结论的一部分。
+
+## 折结构体检 {#sec-wf-health}
+
+折是否合规，以**实测表**判定，不以源码推断。本方案回测所取的折由 `purged_folds()`
+按日期算术生成——训练窗末日之后空出 `embargo` 日，测试窗方始（`te_beg = tr_end + embargo + 1`），
+故前置空窗落实在折生成层，而非事后过滤。体检逐折列出训练区间、训练日数、**实测空窗**、
+测试区间与测试日数，并作三项硬判：空窗恒达设定值、训练长度恒定、测试窗互不重叠。
+
+同表另附**死代码自证**：按前向推进的代数，形如「训练结束早于测试开始」再叠加
+「训练开始晚于测试结束」的过滤，其第二项恒假。自证给出该项实际剔除的样本数——
+此数若非零，即前向推进的前提不成立，须回查折生成；若为零，则该写法在前向推进下
+不产生任何隔离效果，前置空窗只能由折生成层提供。
+
+```{r}
+#| label: wf-health
+#| echo: false
+## 折体检只需**营业日**，不需整张面板——面板逾千万行，取 unique 后仅百余日，
+## 死代码自证亦在此百余点观测上复算，内存开销可忽略。
+WF_OK <- (!is.null(D$bt_panel) && is.data.frame(D$bt_panel) &&
+          "bet_date" %in% names(D$bt_panel) && nrow(D$bt_panel) > 0)
+WF_U  <- if (WF_OK) { u <- sort(unique(as.Date(D$bt_panel$bet_date))); u[!is.na(u)] } else as.Date(character(0))
+WF_FH <- if (length(WF_U)) wf_fold_health(purged_folds(WF_U)) else NULL
+if (!is.null(WF_FH)) {
+  aurora_kb(WF_FH, caption = paste0(
+    "折结构体检（训练 ", BT_PARAMS$train, " 日 · 空窗 ", BT_PARAMS$embargo,
+    " 日 · 测试 ", BT_PARAMS$test, " 日 · 步长 ", BT_PARAMS$step,
+    " 日 · ", BT_PARAMS$mode,
+    "）｜解释：实测空窗＝测试首日与训练末日之间实际空出的天数",
+    "｜本方案用途：空窗为零日即训练与测试首尾相接，跨窗结算与延迟信息会互相污染"))
+} else if (WF_OK) {
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 时间跨度不足，切不出完整折",
+    面板营业日数 = length(WF_U),
+    最短所需 = BT_PARAMS$train + BT_PARAMS$embargo + BT_PARAMS$test),
+    caption = "折结构体检")
+} else {
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 待数据（非错误）",
+    本节内容 = "折结构体检",
+    所待文件 = "B01_bt_panel.csv（SQL 总包 §B01）",
+    契约必需列 = "bet_date",
+    受影响输出 = "折结构体检表、折结构硬判与死代码自证表"),
+    caption = "折结构体检")
+}
+```
+
+```{r}
+#| label: wf-health-assert
+#| echo: false
+if (!is.null(WF_FH)) {
+  WF_AS <- wf_fold_assert(WF_FH, gap_expect = BT_PARAMS$embargo)
+  ## 死代码自证：以点观测（t0 = t1 = 营业日）复算旧式过滤的后置禁运项剔除量
+  WF_PF <- wf_dead_clause_proof(data.frame(t0 = WF_U, t1 = WF_U),
+                                n_splits = max(3L, nrow(WF_FH)),
+                                embargo_days = BT_PARAMS$embargo)
+  aurora_kb(tibble::tibble(
+    判项 = c("空窗恒达设定值", "训练长度恒定", "测试窗互不重叠",
+             "旧式后置禁运项剔除样本数", "旧式实际留下的前置空窗（日）"),
+    结果 = c(ifelse(WF_AS[1], "✅ 通过", "❌ 未通过"),
+             ifelse(WF_AS[2], "✅ 通过", "❌ 未通过"),
+             ifelse(WF_AS[3], "✅ 通过", "❌ 未通过"),
+             format(WF_PF$killed, big.mark = ","),
+             ifelse(is.finite(WF_PF$gap_med), sprintf("%.0f", WF_PF$gap_med), "—")),
+    读法 = c(paste0("实测空窗须恒 ≥ ", BT_PARAMS$embargo, " 日"),
+             paste0("滑动定长，恒为 ", BT_PARAMS$train, " 日"),
+             "测试窗起点须严格递增",
+             "为零即证该项在前向推进下不可达",
+             "为零即证旧式过滤本身不提供任何前置空窗")),
+    caption = "折结构硬判与死代码自证")
+} else {
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 待数据（非错误）",
+    本节内容 = "折结构硬判与死代码自证",
+    所待文件 = "B01_bt_panel.csv（SQL 总包 §B01）",
+    契约必需列 = "bet_date",
+    受影响输出 = "折结构硬判与死代码自证表"),
+    caption = "折结构硬判与死代码自证")
+}
+```
+
 
 ## 评估口径
 
@@ -10203,6 +10367,55 @@ $m_i$ 为负即此人在**赢平台的钱**。
 每一轮都适用，不是某一轮的临时安排。
 :::
 
+## 2026-08-10 · 净化切分器斧正与折结构体检
+
+**一、外部复核所指的「禁运期失效」，经核实只及示范切分器，不及回测实取之折。**
+
+`purged_wf_splits()` 的过滤式为 `t1[tr] < te0 & !(t0[tr] > te1 & t0[tr] <= te1 + embargo)`。
+按前向推进的代数，`t0 <= t1 < te0 <= te1`，故第二项的 `t0 > te1` 恒假——该项不可达，
+前置空窗实为 0 日。此判成立。
+
+但该函数**全篇零调用点**（连同其邻居 `cpcv_splits()` 与 `assert_no_leakage()` 亦零调用），
+所在小节的披露表全为 `NA` 占位，属方法学示范。回测实取者为 `purged_folds()`，
+其 `te_beg = tr_end + embargo + 1` 已在**折生成层**空出 `embargo` 日，训练窗则以
+`mode = "sliding"` 保持定长。故本方案既有的 Lift、精准率、净增益、置信区间与阈值稳定性
+**无一受该缺陷波及**，不存在重跑之必要。
+
+以 `purged_folds()` 原式复算亦可互证：训练 42 日、空窗 7 日、测试 14 日、步长 7 日，
+于 2026-03-21 至 2026-08-06 之间恰得 **11 折**、首折测试起于 **2026-05-09**、实测空窗 7 日；
+若空窗为 0 则应得 12 折、首折测试起于 2026-05-02。多目标建模阶段所报折数正为 11 折，
+与含空窗之解一致。
+
+**二、定性须更正，以免同一质疑反复重启。**
+
+此缺陷的性质是「**文档承诺的测试前空窗未在该函数中落地**」，
+不是「后置禁运方向写反」。文献意义上的 embargo 本为后置禁运，隔绝的是测试窗之后、
+特征已吸收测试期信息的样本；纯前向推进下训练集恒在测试之前，后置禁运本就恒空。
+`cpcv_splits()` 同一位置用的是 `|` 而非 `&`，其后置项确有样本命中——因 CPCV 属双侧取样，
+训练块可落在测试块之后。两者并列，正可见该项的适用边界。
+
+**三、既已查明，则不止于修补，另立三重凭据。**
+
+其一，`purged_wf_splits()` 的两个时间隔离参数分列为 `gap_days`（前置空窗）与
+`embargo_days`（后置禁运），后者仅在 `allow_future_train = TRUE` 时生效；
+净化与前置空窗合于一式 `t1[tr] < te0 - GAP`。
+
+其二，`assert_no_leakage()` 由「只查训练是否早于测试」升级为「并查实测空窗是否达标」——
+空窗为 0 日照样满足先后次序，只查次序验不出空窗缺位，这正是该缺陷长期未被发现之由。
+
+其三，新增 @sec-changelog 之外可复算的**折结构体检**节：逐折列出训练区间、训练日数、
+实测空窗、测试区间与测试日数，作三项硬判，并附**死代码自证**——旧式后置禁运项实际
+剔除的样本数应恒为 0，此数即「已斧正」一事的凭据，非口头声明。
+
+**四、标签时序一案移交 SQL 总包 §P0C，本章不预判结论。**
+
+外部复核另指 `dailyreport_member.risk` 可能存在同日标签泄漏，且 125 与 251 两数口径不明。
+此事须以实测定夺，故立 §P0C 六条查明：结构探查已证会员列两表同为 `bet05`、分区列 `dt` 为
+DATE 型、`dailyreport_member` 自身亦带 `bet02` 产品列（原查询漏筛 `'101'`，此即两数分歧的
+第一嫌疑），并查获 **`bet41` 两表异义**——`dailyreport_member.bet41` 为有效投注，
+而 `bet02.bet41` 为下注退水金额，后者的洗码量须取 `validbet`。结论未出之前，
+本方案不改任何一处标签相关表述。
+
 ## 2026-08-09 · 经济验证层斧正（外部审计四项）
 
 本轮只动 @sec-uplift 一章的四处，其余各章一字未改。
@@ -10383,6 +10596,10 @@ tibble::tribble(
   155,"**新增 @sec-authbench 权威基准对标章**，把外部标准落到本平台已就位的表上：①§sec-dealer-pace 荷官局速与 Zender 50–55 局／小时基准对照，由 R03_player_dealer.csv 现算日均有效局数分位，并明示每小时局数系换算而非实测（所待数据：荷官排班表）；②§sec-ukgc-map UKGC 七类危害指标逐类可得性对照，暴露本平台两类完全无表（客服申诉记录、责任博彩工具设置）、两类仅部分覆盖（无会话切分、账户字段哨兵值）；③§sec-value-risk 就价值分与风险分是否应与综合分分立提出建议与理由，未经先生示下不擅自改动计分口径","新增","@sec-authbench",
   156,"字典补 7 条：theo、ADT、局速、七类危害指标、价值分、风险分、处置优先级分","新增","@sec-glossary",
   157,"**图内悬浮框浅底浅字致内容不可读已斧正**（先生截图为证）。根因：plotly 的 hoverlabel 默认取浅色底，而本主题全图字色为浅色 PAL$fg，两者相遇即浅底浅字。现新增全局 HOVER 配置（近乎不透明的深底 rgba(5,13,26,.96)、青色描边、浅字左对齐），R 端双轨走势图的父图与各子图、`ggplotly()` 转换的累计净增益走势图、Python 端四实体雷达图**共四处出口一律套用**，不再依赖 plotly 默认值。全篇图形出口已逐一盘点，无第五处遗漏；术语悬停浮层 `#gl-pop` 本就是深底浅字，无须改动","斧正","全篇图表",
+  158,"**净化切分器 `purged_wf_splits()` 斧正**：其过滤式的后置禁运项在前向推进下不可达（t0≤t1<te0≤te1 ⇒ t0>te1 恒假），前置空窗实为 0 日。今将两个时间隔离参数分列为 `gap_days`（前置空窗）与 `embargo_days`（后置禁运），后者仅在 `allow_future_train=TRUE`（双侧取样）时生效；净化与前置空窗合于一式 `t1[tr] < te0 - GAP`。并核实：该函数与 `cpcv_splits()`、`assert_no_leakage()` 三者**全篇零调用**，回测实取者为 `purged_folds()`，其 `te_beg = tr_end + embargo + 1` 已在折生成层落实空窗，故既有回测结果**无一受影响，不必重跑**","斧正","@sec-purged",
+  159,"**`assert_no_leakage()` 升级为空窗断言**：原只查「训练是否早于测试」，而空窗为 0 日照样满足先后次序——只查次序验不出前置空窗缺位。今加查实测空窗是否达到设定值，并回报各折最小空窗","升级","@sec-purged",
+  160,"**新增「折结构体检」节**：逐折列出训练区间、训练日数、实测空窗、测试区间与测试日数，作三项硬判（空窗恒达设定值、训练长度恒定、测试窗互不重叠），并附**死代码自证**——旧式后置禁运项实际剔除的样本数应恒为 0。折是否合规一律以实测表判定，不凭源码推断。数据未就位时按铁律点名所待文件、SQL 编号与受影响输出","新增","@sec-wf-health",
+  161,"**SQL 总包新增 §P0C 六条**（标签时序审计与 125／251 口径结案）：结构探查已定五处标识符（会员列两表同为 `bet05`、分区列 `dt` 为 DATE 型、产品列 `bet02`、风险列 `risk`、业务日 `time`），并查获 **`bet41` 两表异义**——`dailyreport_member.bet41` 为有效投注，`bet02.bet41` 为下注退水金额，后者洗码量须取 `validbet`；另查出原查询于 `dailyreport_member` 漏筛 `bet02='101'`，此即 125 与 251 两数分歧的第一嫌疑。并立两条执行纪律：末分号后不得再写注释、注释内不得出现美元符与反斜杠（二者皆经 Superset 实测触发 Unable to parse SQL）","新增","SQL 总包 §P0C",
   82,"★ 整数化循环用 `is.double()` 判数值列，但 `Date` 底层就是 double → `Math.Date: floor 对 Date 没有定义`：判据加 `is.null(attr(v,\"class\"))`，只认裸数值向量；并固化为可运行性纪律第 4 条","斧正","setup · fetch()",
   81,"`fetch()` 再压一层：计数类 double 列整数化（不动任何金额/比率列），内存约再省一成","升级","setup",
   78,"术语补入 purged walk-forward / CPCV 验证判别力 / 尾秒 / CGNAT 四条；学术引用（Hyndman & Koehler 2006、López de Prado）加 DOI 链接","新增","@sec-glossary",
