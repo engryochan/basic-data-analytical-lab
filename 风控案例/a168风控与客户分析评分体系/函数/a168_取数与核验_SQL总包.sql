@@ -5942,3 +5942,96 @@ WHERE   dt >= '2026-03-21'
   AND   dt <  '2026-08-07'
 GROUP BY dt
 ORDER BY dt;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-07 · 处置台账正主：`log_mem_change` 结构证实（2026-08-10 实测）
+   ---------------------------------------------------------------------------
+   §TL-04 一跑，胜负立判。`ods_a168_log_mem_change` 的列如下——
+
+     lmc02 ID          会员编号            ← 对谁
+     lmc04 類別        enum('add','edit','changestatus')  ← 做了哪一类
+     lmc05 內容        varchar(1000)       ← 改了什么
+     lmc06 操作者 · lmc07 操作者LV         ← 谁决定的
+     lmc08 異動時間    datetime            ← 何时
+     lmc09 SQL         varchar(1000)       ← **实际执行的语句**，由何值改为何值尽在其中
+     lmc10 IP · lmc11 操作者 utp           ← 从何处操作
+
+   **这正是处置台账所要的六问：对谁、何时、做了什么、由何值到何值、谁决定、从何处。**
+   E4 所缺者，本不在库外，而在此表——只是从未有人查过它。
+   §TL-06 实测其窗口内每日皆有行（日均数十条），量级合乎人工操作日志之常。
+
+   ⚠ 惟仍须守住一界：该表记的是**运营操作**，非**随机分配**。
+     它能把 E4 由缺位推到达成，⑬环由受阻转为可证；
+     但 **E5 随机对照依旧缺**——操作是业务因人而异地决定的，
+     受处置者与未受处置者之间必有选择效应，只能作准实验，不可充随机对照。
+
+   ─── 附：快照差分之路已实测为「通而近空」，就此收束 ────────────────────
+     §TL-03b 全窗仅抽出 **148 个变更事件**，且**全为「最大可贏」放宽**——
+     既非风控收紧，量级亦与 §TL-02 所示的 70,923 人退水变更相差五百倍。
+     二者矛盾的解释是：§TL-02 数的是**字符串层面的不同取值数**
+     （'0.00' 与 '0.0000' 即算两个），而 §TL-03b 数的是**数值层面的真变更**。
+     故 §TL-02 的 99.11% 与 1.24% 皆系**字面形态差异所致的假阳性**，
+     mem015 的高变更率由此亦得解释。
+     **结论：快照差分不可作准处置台账，此路收束；改走 §TL-07 的操作日志。**
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+-- §TL-07 · 处置日志的类别分布与内容形态
+-- ▸ 导出：需要 —— 存为「数据库/TL07_mem_change_shape.csv」（§TL-07 处置日志类别与形态）。
+-- 读法：① lmc04 三类（add / edit / changestatus）的条数与涉及会员数——
+--          `changestatus` 最可能是状态类处置（停用、冻结），`edit` 为配置修改；
+--       ② lmc05 内容与 lmc09 SQL 的平均长度与样例，判定能否从中解析出
+--          「改了哪一列、由何值到何值」；能解析即可直接落为处置事件表。
+SELECT  CAST(lmc04 AS STRING)                             AS 类别,
+        COUNT(*)                                          AS 条数,
+        COUNT(DISTINCT CAST(lmc02 AS STRING))             AS 涉及会员数,
+        COUNT(DISTINCT CAST(lmc06 AS STRING))             AS 操作者数,
+        MIN(CAST(lmc08 AS STRING))                        AS 最早异动,
+        MAX(CAST(lmc08 AS STRING))                        AS 最晚异动,
+        AVG(LENGTH(CAST(lmc05 AS STRING)))                AS 内容平均长度,
+        MAX(CAST(lmc05 AS STRING))                        AS 内容样例,
+        AVG(LENGTH(CAST(lmc09 AS STRING)))                AS SQL平均长度,
+        MAX(CAST(lmc09 AS STRING))                        AS SQL样例
+FROM    ods_mariadb_2b.ods_a168_log_mem_change
+WHERE   dt >= '2026-03-21'
+  AND   dt <  '2026-08-07'
+GROUP BY 1
+ORDER BY 条数 DESC;
+
+-- §TL-08 · 处置事件表：能否与百家乐投注会员对上
+-- ▸ 导出：需要 —— 存为「数据库/TL08_treatment_events.csv」（§TL-08 处置事件·与投注会员交集）。
+-- 读法：本条把处置日志逐条落为事件行，并标出该会员是否为窗口内的百家乐投注会员。
+--       ① 若交集甚小，则处置多施于非百家乐会员，本方案的因果链仍难闭合；
+--       ② 若交集可观，则「处置组」已然成形，可与未处置者作准实验对照（须先做倾向得分匹配）。
+--       ③ `是否在名单` 一列留待名单就位后回填，本条先不连接，以免把两件事绑死。
+WITH ev AS (
+    SELECT  CAST(lmc02 AS STRING)                         AS member_id,
+            CAST(lmc04 AS STRING)                         AS action_class,
+            SUBSTR(CAST(lmc08 AS STRING), 1, 10)          AS action_date,
+            CAST(lmc08 AS STRING)                         AS action_time,
+            CAST(lmc06 AS STRING)                         AS operator_id,
+            CAST(lmc07 AS STRING)                         AS operator_lv,
+            CAST(lmc05 AS STRING)                         AS content,
+            CAST(lmc09 AS STRING)                         AS raw_sql
+    FROM    ods_mariadb_2b.ods_a168_log_mem_change
+    WHERE   dt >= '2026-03-21'
+      AND   dt <  '2026-08-07'
+),
+bl AS (
+    SELECT  DISTINCT CAST(bet05 AS STRING)                AS member_id
+    FROM    ods_mariadb_2b.ods_a168_bet02
+    WHERE   dt >= '2026-03-21'
+      AND   dt <  '2026-08-07'
+      AND   CAST(bet02 AS STRING) = '101'
+)
+SELECT  ev.member_id,
+        ev.action_date,
+        ev.action_time,
+        ev.action_class,
+        ev.operator_id,
+        ev.operator_lv,
+        ev.content,
+        ev.raw_sql,
+        CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END  AS is_baccarat_member
+FROM        ev
+LEFT JOIN   bl ON bl.member_id = ev.member_id
+ORDER BY ev.action_time, ev.member_id;

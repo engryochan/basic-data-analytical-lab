@@ -63,6 +63,13 @@ format:
              position:relative，遂自成一层、不被绘到，只继承到透明色——于是标题里
              凡属词典条目者（E1、E2 等）整块隐形。此与 code 早已特例处理者同因，
              今推广之：标题内的行内元素一律**显式给色**，绝不靠继承。 */
+        /* ★ 长表滚动壳：表头吸顶，纵横皆可滚（先生令，2026-08-10） */
+        .aurora-scroll{background:#061627;}
+        .aurora-scroll table{margin-bottom:0!important;}
+        .aurora-scroll thead th{position:sticky;top:0;z-index:3;
+          background:#0b3d3a!important;color:#7dffd4!important;
+          -webkit-text-fill-color:#7dffd4!important;box-shadow:0 1px 0 #1e5a6b;}
+        .aurora-scroll caption{position:sticky;top:0;z-index:4;background:#061627;}
         h1 .gl-tip,h2 .gl-tip,h3 .gl-tip,h4 .gl-tip,h5 .gl-tip,h6 .gl-tip{
           -webkit-text-fill-color:#7dffd4!important;color:#7dffd4!important;
           border-bottom-color:#7dffd4!important;}
@@ -486,16 +493,32 @@ aurora_dt <- function(df, caption=NULL, len=12)  # 互动式极光桌表
     class="display aurora nowrap-off cell-border stripe")
 
 ## 静态表统一走 aurora_kb：极光渐变底 + 高对比字，杜绝灰底看不清
-aurora_kb <- function(df, caption=NULL, ...)
+## ★ 长表一律纵向滚动（先生令 2026-08-10）：行数超过 KB_SCROLL_ROWS 即自动套滚动壳，
+##   表头吸顶、纵横皆可滚，读者不必为一张长表把整页拉到底。
+##   scroll 显式传数值即以该像素高度为准；传 FALSE 即强制不滚（短表或刻意全展者）。
+KB_SCROLL_ROWS <- 12L      # 超过此行数即自动滚动
+KB_SCROLL_PX   <- 460L     # 滚动壳默认高度（像素）
+aurora_kb <- function(df, caption=NULL, scroll=NULL, ...) {
   ## caption 同样不经 Pandoc，必须一起转换，否则标题里的 ** 与反引号原样示人
-  knitr::kable(md_cols(df), caption=cap_tip(caption), format="html", escape=FALSE, ...) |>
-  kableExtra::kable_styling(
-    bootstrap_options=c("hover","condensed","responsive"),
-    full_width=TRUE, font_size=13) |>
-  kableExtra::row_spec(0, background="#0b3d3a", color="#7dffd4", bold=TRUE) |>
-  kableExtra::row_spec(seq_len(nrow(df)),
-    background="#08243c", color="#e7fbf3",
-    extra_css="border-color:#1e5a6b;-webkit-text-fill-color:#e7fbf3;")
+  tb <- knitr::kable(md_cols(df), caption=cap_tip(caption), format="html", escape=FALSE, ...) |>
+    kableExtra::kable_styling(
+      bootstrap_options=c("hover","condensed","responsive"),
+      full_width=TRUE, font_size=13) |>
+    kableExtra::row_spec(0, background="#0b3d3a", color="#7dffd4", bold=TRUE) |>
+    kableExtra::row_spec(seq_len(nrow(df)),
+      background="#08243c", color="#e7fbf3",
+      extra_css="border-color:#1e5a6b;-webkit-text-fill-color:#e7fbf3;")
+  h <- if (isFALSE(scroll)) NULL
+       else if (is.numeric(scroll)) scroll
+       else if (nrow(df) > KB_SCROLL_ROWS) KB_SCROLL_PX
+       else NULL
+  if (is.null(h)) return(tb)
+  ## 表头吸顶：kableExtra 的 scroll_box 不锁表头，故另加一层样式
+  htmltools::HTML(paste0(
+    '<div class="aurora-scroll" style="max-height:', h,
+    'px;overflow-y:auto;overflow-x:auto;border:1px solid #1e5a6b;border-radius:6px;">',
+    as.character(tb), '</div>'))
+}
 theme_set(theme_minimal(base_size=12) + theme(
   plot.background=element_rect(fill=PAL$bg,colour=NA),
   panel.background=element_rect(fill=PAL$bg,colour=NA),
@@ -817,8 +840,10 @@ fetch <- function(n) {
 ##   对策：**用完即释放**。每份大表在最后一次被引用之后立刻置 NULL 并 gc，
 ##   释放量记入 @sec-cache 的内存水位表，可审计。
 RELEASED <- new.env(parent = emptyenv()); RELEASED$rows <- list()
+RELEASED$keys <- character(0)   # ★ 已释放键名册：供 @sec-datakey 查「释放后仍取用」
 release <- function(...) {
   keys <- c(...)
+  RELEASED$keys <<- unique(c(RELEASED$keys, keys))
   for (k in keys) {
     if (!is.null(D[[k]])) {
       mb <- round(as.numeric(utils::object.size(D[[k]])) / 1024^2, 1)
@@ -4021,7 +4046,18 @@ if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","profit_amount","st
 ```{r}
 #| label: release-r03
 #| include: false
-## 用完即释放：D$r03 最后一次引用就在上一个代码块
+## ★ 跨释放点派生物（2026-08-10 立）：@sec-dealer-pace 位于本释放点之后 1,200 余行，
+##   若在彼处取 D$r03，拿到的是已释放的 NULL——症状与「文件未就位」完全相同。
+##   故在此先算出该节所需的**每荷官有效局数**（约 300 行，内存可忽略）并留存，
+##   彼处改取此派生物，不回头取大表。此为 WF_DAYS 之外的第二件跨释放点派生物。
+R03_PACE <- if (!is.null(D$r03) && is.data.frame(D$r03) &&
+                all(c("dealer_id","n_rounds_eff") %in% names(D$r03))) {
+  z <- D$r03[, c("dealer_id","n_rounds_eff")]
+  z$n_rounds_eff <- suppressWarnings(as.numeric(z$n_rounds_eff))
+  z <- z[is.finite(z$n_rounds_eff), , drop = FALSE]
+  stats::aggregate(n_rounds_eff ~ dealer_id, data = z, FUN = sum)
+} else NULL
+## 用完即释放：D$r03 最后一次引用就在本块之上
 release("r03")
 ```
 
@@ -5277,17 +5313,17 @@ Zender 为 BCLC 所作的高限百家乐评估给出行业基准：**常规发�
 ```{r}
 #| label: dealer-pace
 #| echo: false
-## ★ 键名斧正（2026-08-10）：装载表的键是 `r03`（见 setup 的 D <- list(... r03=fetch("R03_player_dealer") ...)），
-##   此处原写 `D$R03_player_dealer`——R 对不存在的列表元素返回 NULL 而**不报错**，
-##   故本表纵使 CSV 在位亦恒落占位。此类错配只能靠键名普查发现，见 @sec-datakey。
-if (!need_data(D$r03, "荷官局速", c("dealer_id","n_rounds_eff"))) {
+## ★ 两轮斧正记此（2026-08-10）：
+##   第一轮改键名——原写 `D$R03_player_dealer`，而装载键为 `r03`；
+##   第二轮改次序——`release("r03")` 位于本节之前 1,200 余行，纵然键名对了，
+##   在此取 D$r03 拿到的仍是**已释放的 NULL**，症状与「文件未就位」完全相同。
+##   故本节改取释放前留存的轻量派生物 R03_PACE（每荷官有效局数，约 300 行）。
+##   通则：**跨越释放点的后续章节，一律改用释放前留存的派生物，不得回头取大表。**
+if (is.null(R03_PACE) || !nrow(R03_PACE)) {
   ph_out("荷官局速")
 } else {
-  x  <- D$r03
-  x$n_rounds_eff <- suppressWarnings(as.numeric(x$n_rounds_eff))
-  x  <- x[is.finite(x$n_rounds_eff), , drop = FALSE]
   nd <- if (is.finite(E1_WIN$n)) E1_WIN$n else NA_real_
-  ag <- stats::aggregate(n_rounds_eff ~ dealer_id, data = x, FUN = sum)
+  ag <- R03_PACE
   ag$日均局数 <- ag$n_rounds_eff / nd
   ## 每小时局数无实测：给出两档在岗时长的换算，明示为换算口径
   q <- stats::quantile(ag$日均局数, c(.05, .25, .5, .75, .95), na.rm = TRUE)
@@ -8152,23 +8188,42 @@ DK_USED   <- c("recon","ipmatch","table_span","sec_dist","player_tail","ip_playe
 DK_BAD    <- setdiff(DK_USED, DK_ACTUAL)
 DK_UNUSED <- setdiff(DK_ACTUAL, DK_USED)
 aurora_kb(tibble::tibble(
-  判项 = c("装载表实际键数", "代码取用键数", "**错配键（取值恒为 NULL）**", "已装载而未取用者"),
+  判项 = c("装载表实际键数", "代码取用键数", "**错配键（取值恒为 NULL）**",
+           "已装载而未取用者", "**已释放键（其后再取即为 NULL）**",
+           "跨释放点派生物名册"),
   结果 = c(length(DK_ACTUAL), length(DK_USED),
            if (length(DK_BAD)) paste(DK_BAD, collapse = "、") else "✅ 无",
-           if (length(DK_UNUSED)) paste(DK_UNUSED, collapse = "、") else "无"),
+           if (length(DK_UNUSED)) paste(DK_UNUSED, collapse = "、") else "无",
+           if (length(RELEASED$keys)) paste(RELEASED$keys, collapse = "、") else "无",
+           paste(c(if (exists("WF_DAYS")) "WF_DAYS（营业日向量 → 折结构体检）",
+                   if (exists("R03_PACE")) "R03_PACE（每荷官有效局数 → 荷官局速）"),
+                 collapse = "；")),
   读法 = c("setup 的 `D <- list(...)` 所建",
            "本表所载的核对名册，新增取数点须同步登记于此",
            "**非零即有一节内容在静默落占位**，须立刻回查该节",
-           "或为预留，或为该节已停用；不影响正确性，但宜清理")),
+           "或为预留，或为该节已停用；不影响正确性，但宜清理",
+           "**释放点之后的章节若仍写 `D$该键`，取到的是 NULL——症状与「文件未就位」完全相同**",
+           "跨越释放点者一律改取此处所列的轻量派生物，不得回头取大表")),
   caption = paste0(
     "取数键名普查｜解释：R 对不存在的列表元素返回 NULL 而不报错，键名写错即静默落占位",
     "｜本方案用途：此为该类静默失效的唯一防线——围栏、括号、依赖次序三项检查皆拦不下它"))
 ```
 
-**立此例检的由来**：`@sec-dealer-pace` 荷官局速一节曾长期落占位，读者与作者都以为是
-`R03_player_dealer.csv` 未导出；实测方知文件在位，是该块把键写成了 `D$R03_player_dealer`，
-而装载表的键为 `r03`。**症状与「文件未就位」完全相同，而病因迥异**——
-故凡见占位表，第一步不是去导数据，而是先跑本表。
+**立此例检的由来，是同一节连栽两次。** `@sec-dealer-pace` 荷官局速长期落占位，
+读者与作者都以为是 `R03_player_dealer.csv` 未导出。
+
+**第一次查**：文件在位（体检显示 563,244 行 × 15 列），是该块把键写成了 `D$R03_player_dealer`，
+而装载表的键为 `r03`——键名错配，取值恒为 NULL。
+
+**第二次查**：键名改对之后仍落占位。根因是 `release("r03")` 位于本节之前一千二百余行，
+**纵然键名对了，在此取到的仍是已释放的 NULL**。
+
+**两次的症状完全相同——都显示「数据对象为 NULL（文件未就位）」——而病因迥异，
+且都与「文件未就位」无关。** 故本表加查第三项：**已释放键**。
+凡见占位表，第一步不是去导数据，而是先跑本表；三项皆过，才轮到怀疑数据。
+
+斧正之法亦已成通则：**跨越释放点的后续章节，一律改取释放前留存的轻量派生物**
+（现有 `WF_DAYS` 与 `R03_PACE` 两件，皆百余至三百行，内存可忽略），不得回头取大表。
 
 ## 泄漏矩阵：逐环判定，只认四种结论 {#sec-leak-matrix}
 
@@ -8210,8 +8265,8 @@ tibble::tribble(
   "⑫ 经济参数","回收率、流失系数、γ* 未由全样本结果反向选择",
     "见下节参数时序归属逐项登记","✅ 通过（惟三者为外生假设，非估计值）","—",
   "⑬ 处置执行","名单上的动作确曾执行",
-    "无处置日志（§EX-01）。惟 `member_dtl` 带日分区且含处置全部落点，配置跳变或可还原为准处置事件——§TL 三条待跑",
-    "🟡 **待验**（原判受阻）","§TL-01/02/03 三条；三前提皆过即转为部分可证",
+    "`log_mem_change` 结构已证实为处置日志（对谁/何时/何类/改了什么/谁决定/原始 SQL 俱全），§TL-06 实测每日皆有行",
+    "🟡 **可达**（原判受阻）","跑 §TL-07/08 落为事件表，并与百家乐投注会员求交集",
   "⑭ 反事实对照","有同风险层的随机对照组","无","⛔ **受阻**","玩家级随机灰度，须平台配合",
   "⑮ 增量净收","增量净收由实际处置与对照实测得出","现为情景会计，非实测","⛔ **受阻**","⑬⑭ 到位后方可闭合"
 ) |> aurora_kb(caption = paste0(
@@ -8299,8 +8354,8 @@ tibble::tribble(
   "E3 情景经济模型","可有，但不得当事实",
     "净增益＝0.60×追回 − 0.15×误伤×误判率，两系数皆外生；报告已明写其为情景参数","✅ 已达且已正名",
   "E4 处置台账","必须",
-    "无处置日志（§EX-01）。**惟查得 `member_dtl` 带日分区且含处置全部落点**（退水/最大押分/限额/可赢可输），若为逐日快照则配置跳变即处置事件——§TL 三条正在证伪或坐实",
-    "🟡 待验：可能可重建为**准**处置台账",
+    "**已找到正主**：`log_mem_change` 逐条记会员编号、类别（add/edit/changestatus）、内容、操作者、异动时间与**实际执行的 SQL**——处置六问一问不缺。§TL-06 实测窗口内每日皆有行。快照差分之路已实测为空（§TL-03b 仅 148 事件且全为放宽），就此收束",
+    "🟡 **由缺位改判为可达**：待 §TL-07/08 落为事件表",
   "E5 随机或准实验对照","报增利之必要条件","**缺**——无对照组，灰度功效已算但未执行","⛔ 未达",
   "E6 增量 NGR 财务口径可复核","必须","**缺**——现为回测会计，非账上可解释的增量","⛔ 未达",
   "E7 持续监控与回撤","生产后","上线八闸与月度复检已设计，尚未进入生产","⬜ 未到"
@@ -8394,15 +8449,34 @@ E4–E6 之缺不是开发进度问题，而是数据资产不存在（见 @sec-
 真正可用的信号是**退水 `mem003` 的 1.24%（70,923 人）**——降返水正是处置动作，
 其量级亦合常理。此数若经 §TL-03b 定日成功，即是准处置台账的第一批货。
 
-**其四，另有两张表名字就叫变更日志，此前从未查过。** §TL-00 扫描列出
-`ods_a168_log_mem_change`（会员变更日志）与 `ods_a168_change_log`（14 列中 **5 列**属处置类，
-为全库第十）。**若其中任一记的是会员配置的变更流水，则准处置台账无须由快照差分推断，
-可直接取用**——此路胜过差分远矣，且能一并解决断崖问题（日志按事件记，不受快照覆盖所限）。
-§TL-04 看结构，§TL-06 看内容。
+**其四，处置台账的正主已找到——`log_mem_change` 就是。** §TL-04 一跑，胜负立判：
+
+| 列 | 含义 | 答的是哪一问 |
+|---|---|---|
+| `lmc02` | 会员编号 | **对谁** |
+| `lmc04` | 类别 `enum('add','edit','changestatus')` | **做了哪一类** |
+| `lmc05` | 内容 `varchar(1000)` | **改了什么** |
+| `lmc06` / `lmc07` | 操作者 / 操作者层级 | **谁决定的** |
+| `lmc08` | 异动时间 | **何时** |
+| `lmc09` | **SQL** `varchar(1000)` | **由何值改为何值**——实际执行的语句尽在其中 |
+| `lmc10` / `lmc11` | IP / 操作者类型 | 从何处操作 |
+
+**这正是处置台账所要的六问，一问不缺。** §TL-06 实测其窗口内每日皆有行、日均数十条，
+量级合乎人工操作日志之常。**E4 所缺者，本不在库外，而在此表——只是从未有人查过它。**
+§TL-07 探其类别与内容形态，§TL-08 落为事件表并与百家乐投注会员求交集。
+
+**其五，快照差分之路实测为「通而近空」，就此收束。** §TL-03b 全窗仅抽出 **148 个变更事件**，
+且**全为「最大可贏」放宽**——既非风控收紧，量级亦与 §TL-02 所示的 70,923 人退水变更
+相差五百倍。二者矛盾的解释已查明：**§TL-02 数的是字符串层面的不同取值数**
+（`'0.00'` 与 `'0.0000'` 即算两个），**而 §TL-03b 数的是数值层面的真变更**。
+故 §TL-02 的 99.11% 与 1.24% **皆系字面形态差异所致的假阳性**，
+`mem015` 的高变更率由此亦得解释——**它根本没怎么变，是它的写法在变**。
+
+此路既已探明为空，即行收束，改走 §TL-07 的操作日志。**探明一条路走不通，
+与走通一条路同样有价值**——前提是把它记下来，别让下一轮再走一遍。
 
 ::: {.callout-important}
 ## §K01c 顺带查出标签侧泄漏的一项铁证
-
 人工关注 IP 名单实测为 **18 条**，而非本方案一直所载的 17 条。差额来源已查明——
 新增的一条是 `seed_id = 142`（IP `8.217.176.31`，登记人 `livegame`），
 其登记时间为 **2026-08-09 20:48:43**。
@@ -11115,6 +11189,39 @@ $m_i$ 为负即此人在**赢平台的钱**。
 每一轮都适用，不是某一轮的临时安排。
 :::
 
+## 2026-08-10 · 处置台账正主已找到 · 荷官局速二度斧正 · 长表一律滚动
+
+**一、E4 由「缺位」改判为「可达」——处置日志本不在库外，只是从未有人查过它。**
+
+§TL-04 一跑，胜负立判：`ods_a168_log_mem_change` 逐列答尽处置六问——
+`lmc02` 会员编号（对谁）、`lmc04` 类别 `enum('add','edit','changestatus')`（做了哪一类）、
+`lmc05` 内容（改了什么）、`lmc06`/`lmc07` 操作者与其层级（谁决定的）、`lmc08` 异动时间（何时）、
+**`lmc09` 实际执行的 SQL（由何值改为何值）**、`lmc10`/`lmc11` IP 与操作者类型（从何处操作）。
+§TL-06 实测窗口内每日皆有行、日均数十条，量级合乎人工操作日志之常。
+新增 §TL-07 探其类别与内容形态、§TL-08 落为事件表并与百家乐投注会员求交集。
+
+**二、快照差分之路实测为空，就此收束——并查明其与 §TL-02 矛盾之由。**
+§TL-03b 全窗仅抽出 **148 个变更事件**，且全为「最大可贏」放宽，与 §TL-02 所示的
+70,923 人退水变更相差五百倍。矛盾之解：**§TL-02 数的是字符串层面的不同取值数**
+（`'0.00'` 与 `'0.0000'` 即算两个），**§TL-03b 数的是数值层面的真变更**。
+故 §TL-02 的 99.11% 与 1.24% 皆系**字面形态差异所致的假阳性**，
+`mem015` 的高变更率由此亦得解释——它根本没怎么变，是它的写法在变。
+另：§TL-05 实测 `mem002` 的取值为 301／101／111／108 等三位数，**根本没有 '1'**，
+故 §TL-03 初版写死 `mem002='1'` 得零行，与其说是缺陷，不如说是必然。
+
+**三、荷官局速二度斧正——同一节连栽两次，症状全同而病因迥异。**
+第一次是**键名错配**（`D$R03_player_dealer` 而装载键为 `r03`）；改对之后仍落占位，
+第二次查得是**释放次序**：`release("r03")` 位于本节之前一千二百余行，
+纵然键名对了，在此取到的仍是**已释放的 NULL**。
+先生所问「数据库明明有此表、也有所需维度，为何读不到」——答案在此，
+且两次都与「文件未就位」无关，而占位表恰恰只会显示「文件未就位」。
+斧正取通则：释放前留存轻量派生物 `R03_PACE`（每荷官有效局数，约 300 行），本节改取之。
+@sec-datakey 例检随之加查第三项——**已释放键**，并列出跨释放点派生物名册。
+
+**四、长表一律纵向滚动（先生令）。** `aurora_kb()` 增 `scroll` 参数：
+行数超过 12 行即自动套滚动壳（默认 460 像素），表头吸顶、纵横皆可滚；
+显式传数值即以该像素为准，传 `FALSE` 即强制全展。配套 CSS 已入主题。
+
 ## 2026-08-10 · §TL 实测：路通而未达 · 人工单泄漏见实例 · 本方一处查询之误
 
 **一、准处置台账之路确实通，但尚未走到。** §TL-01 证实 `member_dtl` 为逐日快照
@@ -11699,7 +11806,7 @@ tibble::tribble(
   178,"**新增 @sec-field-contract 字段数据契约（十列）**：表 / 列 / 业务名 / 语义 / 单位 / 粒度 / 符号 / 值域 / 来源 / 版本，共 29 行，两处同名异义（`bet41` 两表异义、`bet31` 跨表异义）置于表首。立此表的理由是这类错误不报错、不被断言拦下，所得数字仍是一个数，只能靠契约登记来防","新增","@sec-field-contract",
   179,"**新增 @sec-param-lineage 参数时序归属**：逐项登记可见范围与是否由结果反选，现存参数中**无一由测试期成绩反选**。并澄清一处易混——m／ρ／κ／γ* 确由全窗算出，但属经营场所的结构常数，与名单、阈值、模型无涉，取值不因回测成绩而变，**全窗可见不等于泄漏，由结果反选才是**","新增","@sec-param-lineage",
   180,"**新增 @sec-treatment-ledger 处置台账最小契约**：四层账（风险 / 处置 / 结果 / 因果）各答一问，并立三条先于建表而立的纪律——组别须在处置发生**之前**写入不得事后补填（事后补填的对照组是筛选结果）、处置账与风险账须以 model_version 相连、未执行也须记一行（否则样本有选择偏差）","新增","@sec-treatment-ledger",
-  181,"**荷官局速一节恒落占位，根因是取数键名错配**（先生实测所指）。装载表的键为 `r03`，而该块写作 `D$R03_player_dealer`；R 对不存在的列表元素返回 NULL **而不报错**，故本表纵使 CSV 在位亦永远落占位，症状与「文件未就位」完全相同而病因迥异。已斧正为 `D$r03`，并补上「荷官局速」在 NEED 名册与 PH_LABELS 自检清单的登记缺漏","斧正","@sec-dealer-pace",
+  181,"**荷官局速一节恒落占位，根因是取数键名错配**（先生实测所指）。装载表的键为 `r03`，而该块写作 `D$R03_player_dealer`；R 对不存在的列表元素返回 NULL **而不报错**，故本表纵使 CSV 在位亦永远落占位，症状与「文件未就位」完全相同而病因迥异。已斧正键名，并补上「荷官局速」在 NEED 名册与 PH_LABELS 自检清单的登记缺漏（惟此轮尚未查释放次序，故未根治，见第 200 条）","斧正","@sec-dealer-pace",
   182,"**新增 @sec-datakey 取数键名普查（常设例检）**：把装载表实际键与代码取用键逐一比对，不符即满幅点名。立此例检的理由是——此类错配不报错、不中断渲染，围栏、括号、依赖次序三项检查皆拦不下它，唯一防线是逐键比对。全篇普查已跑过，除荷官局速一处外无第二处错配","新增","@sec-datakey",
   183,"**新增 @sec-truth-lineage 金标准时序：泄漏幅度已实测**。按 §C06fix 口径对齐得对打侧金标准 1,182 人；逐折清点得**折均 42.2%（甲）/ 45.0%（乙）的金标准成员在该折训练时证据尚未成立**，首折 **64.7%**、末折 19.5%，随折次单调收敛。故早折的模型轨成绩最不可信，折均单值已不足以描述；泄漏矩阵⑦由「不通过」升格为「不通过·幅度已量化」","新增","@sec-truth-lineage",
   184,"**记明本方之误：§C06d 初版门槛与 §C06fix 不一**。初版 HAVING 为 `COUNT(*) >= 20 AND opposite_rate >= 0.9`，而 §C06fix 为 `COUNT(*) >= 30`，故原称「与 §C06fix 逐行可比」不成立。实测差额：全量 1,574 对、对齐后 1,096 对、仅因 20 ≤ n < 30 多出 339 对。门槛已改回 30，@sec-truth-lineage 全部数字按对齐口径算得；旧版导出仍可用惟下游须加 n_same_round ≥ 30 过滤","斧正","SQL 总包 §C06d",
@@ -11716,6 +11823,11 @@ tibble::tribble(
   195,"**mem015 的 99.11% 变更率判为不可采信**：九成九会员同窗口内改过限额不合经营常理；该列为 varchar(300)「新版限額」，极可能是序列化限额表、字面随重算而变。新增 §TL-05 探其形态，未明之前一律不计入处置事件","新增","SQL 总包 §TL-05",
   196,"**新增 §TL-04 与 §TL-06 查两张变更日志表**：`ods_a168_log_mem_change` 与 `ods_a168_change_log`（14 列中 5 列属处置类，全库第十），此前从未查过。若其中任一记的是配置变更流水，则准处置台账**无须由快照差分推断可直接取用**，且能一并解决断崖问题——日志按事件记，不受快照覆盖所限","新增","SQL 总包 §TL-04 / §TL-06",
   197,"**§K01c 实测查出标签侧泄漏铁证，⑧环由「未证」改判为「不通过·已见实例」**：人工关注 IP 名单现存 **18 条**而非既载 17 条，新增者 seed_id=142 登记于 **2026-08-09**——晚于分析窗末日 2026-08-06。此非记录错误，是**金标准会随时间增长**的直接体现。全篇「17 个人工关注 IP」改述为「窗口内 17 条、现存 18 条」；原载六位专员分布得印证——livegame 由 2 条增为 3 条，增的正是第 18 条","斧正","@sec-tl-findings",
+  198,"**E4 由「缺位」改判为「可达」：处置台账正主已找到**。§TL-04 证实 `ods_a168_log_mem_change` 逐列答尽处置六问——lmc02 会员编号、lmc04 类别 enum(add/edit/changestatus)、lmc05 内容、lmc06/07 操作者与层级、lmc08 异动时间、**lmc09 实际执行的 SQL**、lmc10/11 IP 与操作者类型。§TL-06 实测窗口内每日皆有行、日均数十条。新增 §TL-07 探类别与形态、§TL-08 落事件表并与百家乐投注会员求交集。泄漏矩阵⑬环由「受阻」改判为「可达」","新增","SQL 总包 §TL-07 / §TL-08",
+  199,"**快照差分之路实测为空，就此收束**：§TL-03b 全窗仅 148 个变更事件且全为「最大可贏」放宽，与 §TL-02 的 70,923 人相差五百倍。矛盾之解已查明——**§TL-02 数的是字符串层面的不同取值数**（'0.00' 与 '0.0000' 算两个），§TL-03b 数的是**数值层面的真变更**，故 §TL-02 的 99.11% 与 1.24% 皆为字面形态假阳性。另 §TL-05 实测 mem002 取值为 301/101/111 等三位数、**根本没有 '1'**，§TL-03 初版写死 '1' 得零行乃是必然","斧正","@sec-tl-findings",
+  200,"**荷官局速二度斧正：释放次序**（先生截图质问所指）。第一次斧正键名后仍落占位，根因是 `release(\"r03\")` 位于本节之前一千二百余行，**纵然键名对了取到的仍是已释放的 NULL**。两次症状全同（皆显示「文件未就位」）而病因迥异，且都与文件无关。斧正取通则：释放前留存 `R03_PACE`（每荷官有效局数约 300 行），本节改取之。`release()` 同步记已释放键名册","斧正","@sec-dealer-pace",
+  201,"**@sec-datakey 例检加查第三项「已释放键」**，并列出跨释放点派生物名册（WF_DAYS、R03_PACE）。至此该表三查：键名错配、已装载未取用、**释放后仍取用**——三者皆不报错、不中断渲染，只静默把一节换成占位表，围栏与括号检查一概拦不下","升级","@sec-datakey",
+  202,"**长表一律纵向滚动（先生令）**：`aurora_kb()` 增 `scroll` 参数——行数超过 12 行自动套滚动壳（默认 460 像素），表头吸顶、纵横皆可滚；显式传数值以该像素为准，传 FALSE 强制全展。配套 `.aurora-scroll` CSS 已入主题（thead 与 caption 皆 sticky）","升级","全篇",
   82,"★ 整数化循环用 `is.double()` 判数值列，但 `Date` 底层就是 double → `Math.Date: floor 对 Date 没有定义`：判据加 `is.null(attr(v,\"class\"))`，只认裸数值向量；并固化为可运行性纪律第 4 条","斧正","setup · fetch()",
   81,"`fetch()` 再压一层：计数类 double 列整数化（不动任何金额/比率列），内存约再省一成","升级","setup",
   78,"术语补入 purged walk-forward / CPCV 验证判别力 / 尾秒 / CGNAT 四条；学术引用（Hyndman & Koehler 2006、López de Prado）加 DOI 链接","新增","@sec-glossary",
