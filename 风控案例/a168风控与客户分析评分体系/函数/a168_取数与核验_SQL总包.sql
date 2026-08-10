@@ -5388,10 +5388,12 @@ WHERE   dt >= '2026-03-21'
    §P0C-01 至 §P0C-06 六条已跑毕，六条定论如下。谨记其始末，以免重启同一路径。
 
    ─── 一、粒度对照：三数同源 ────────────────────────────────────────────
-     125 名去重会员 ＝ 251 个会员-月观测（S05 面板粒度）＝ 1,344 个会员-日观测。
+     125 名去重会员 ＝ 约 252 个会员-月观测 ＝ 1,344 个会员-日观测。
      此后引用一律标明粒度，不得再以「125 个正样本」混指三者。
-     ★ 251 之粒度系由 S05 面板（278,729 行、正样本 251）与本次实测互证推得，
-       §P0C-07 为其直接计数，跑毕即闭合。
+     ⚠ **未闭合其一**：§P0C-07 直接计数得会员-月 **252**，而 S05 面板所载正例为 **251**，
+       相差其一。可能系 S05 的窗口端点、产品筛选或正例定义与本条不同。
+       所待：S05 面板的构造 SQL 与其正例定义。在厘清之前，
+       **对外一律引用会员粒度的 125**，会员-月标注「约 252（与 S05 之 251 差一，待厘清）」。
 
    ─── 二、risk 只存在于百家乐 ───────────────────────────────────────────
      §P0C-02 实测：百家乐 1,344 行 / 125 人；**非百家乐 0 行 / 0 人**。
@@ -5412,9 +5414,17 @@ WHERE   dt >= '2026-03-21'
        【层二 · 标记日零投注者 n = 20（16.0%）】其标记**不可能**由当日投注触发，
          另有来源（累积证据、名单比对、外部举报等），标签由此呈**异质**。
        【层三 · 前 30 日无活跃者 n = 4】不可比较。
-     ⚠ 尚待安慰剂坐实：该比的分母为**稀疏活跃日均值**（活跃日数中位仅 4），
-       其零假设中位未必为 1。投注日额右偏，偏度方向意味着该偏误**压低**而非抬高比值，
-       故效应方向稳健；但幅度须由 §P0C-09 的非标记日对照定夺。
+     ─── 三之二、安慰剂已坐实（§P0C-09 跑毕，2026-08-10）────────────────
+       经验零假设（同批会员的**非标记活跃日**按同式计比）：
+         注单数比 中位 **0.70**（自助 95% 区间 [0.67, 0.73]）；
+         洗码量比 中位 **0.53**（区间 [0.50, 0.56]）。
+       皆显著低于 1，与「投注日额右偏、单日对均值之比的中位本在 1 以下」之推断吻合；
+       与标记日（1.78 / 1.79）两组区间**毫无交叠**。
+       改以**人内配对**（各人以其自身安慰剂中位为基准）重估：
+         注单数 倍数中位 **2.37**（区间 [1.53, 2.91]），Wilcoxon z=4.066、p=4.8e-05，正向 72/100；
+         洗码量 倍数中位 **2.51**（区间 [2.00, 3.24]），Wilcoxon z=4.351、p=1.4e-05，正向 73/100。
+       两项经 Bonferroni 后仍显著、区间皆不含 1。**同日泄漏坐实**，
+       且真实效应**大于**以 1 为零假设所得之初估——naive 比法系统性低估了效应。
      【操作结论】`X_t → risk_t` 一律**不得**用于宣称预测能力——
        模型学到的至少有一部分是「何种行为招致打标」。须改走标签乙（§P0C-06）。
 
@@ -5485,3 +5495,98 @@ WHERE   mk.mem IS NULL
 GROUP BY a.mem, a.d, a.注单数, a.洗码量
 HAVING  COUNT(DISTINCT p.d) > 0
 ORDER BY a.mem, a.d;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §C06d · 对打对（带时点）—— 使折内金标准可算
+   ---------------------------------------------------------------------------
+   缘起：§C06fix 的产出**无任何时点列**（bet_ip, m_a, m_b, n_same_round,
+   n_opposite_round, opposite_rate, hedge_coverage 共七列）。两份报告的金标准
+   TRUTH ＝ 全窗完全反向对打成员 ∪ 人工风险单，其成员资格由**全窗**证据判定，
+   却在净化滚动回测的**每一折训练标签**中直接使用。若某会员的完全反向行为
+   发生在该折的测试窗内，其 y=1 仍进入训练——未来信息遂经由**标签**入模。
+   此非特征侧泄漏（特征确实只取训练窗），而是**标签侧泄漏**，两者须分别审。
+
+   本条与 §C06fix **同式同过滤**，只多产出三列时点，供构造折内金标准：
+     first_opposite_dt  该对首次出现完全反向的营业日
+     last_opposite_dt   该对最末一次
+     n_opposite_days    出现完全反向的营业日数
+   有此三列，折内金标准即可定义为
+     TRUTH_tr(f) ＝ { m : first_opposite_dt(m) < 该折训练窗末日 } ∪ 人工风险单
+   并可算出「仅由测试窗证据而入选者」占比——该数即标签侧泄漏的直接度量。
+
+   ★ 人工风险单侧（K01b / SEED）亦须同样处置：其登记时点已在 §K01b 产出，
+     折内金标准应只纳入登记日早于训练窗末日者。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+-- §C06d · 同 IP 对打对（带首末时点）
+-- ▸ 导出：需要 —— 存为「数据库/C06d_hedge_pairs_dated.csv」（§C06d 对打对·带时点）。
+-- 读法：与 §C06fix 逐行可比（同 bet_ip + m_a + m_b 即同一对），多出三列时点。
+--       凡 first_opposite_dt 落在某折测试窗内者，该对成员在该折**不得**计入训练标签。
+WITH ta AS (
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet09,
+         b.bet11, b.bet13, b.bet18, b.bet19, b.bet20,
+         b.bet21, b.bet22, b.bet38, b.bet39, b.category,
+         b.eid, b.ip,
+         ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.bet05 AS member_id, v.ip AS bet_ip, v.bet09 AS bet_side, v.dt AS bet_date,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake
+  FROM vd v
+),
+side AS (
+  SELECT bet_ip, round_key, member_id, MIN(bet_date) AS round_date,
+         SUM(CASE WHEN TRIM(bet_side) = 'Banker' THEN stake
+                  WHEN TRIM(bet_side) = 'Player' THEN -stake
+                  ELSE 0 END) AS dir_stake
+  FROM bs WHERE NULLIF(TRIM(bet_ip),'') IS NOT NULL
+  GROUP BY bet_ip, round_key, member_id
+  HAVING ABS(SUM(CASE WHEN TRIM(bet_side) = 'Banker' THEN stake
+                      WHEN TRIM(bet_side) = 'Player' THEN -stake
+                      ELSE 0 END)) > 0
+)
+SELECT  a.bet_ip,
+        a.member_id                                   AS m_a,
+        b.member_id                                   AS m_b,
+        COUNT(*)                                      AS n_same_round,
+        SUM(CASE WHEN a.dir_stake*b.dir_stake < 0 THEN 1 ELSE 0 END) AS n_opposite_round,
+        SUM(CASE WHEN a.dir_stake*b.dir_stake < 0 THEN 1 ELSE 0 END)
+          * 1.0 / COUNT(*)                            AS opposite_rate,
+        MIN(CASE WHEN a.dir_stake*b.dir_stake < 0 THEN a.round_date END) AS first_opposite_dt,
+        MAX(CASE WHEN a.dir_stake*b.dir_stake < 0 THEN a.round_date END) AS last_opposite_dt,
+        COUNT(DISTINCT CASE WHEN a.dir_stake*b.dir_stake < 0 THEN a.round_date END)
+                                                      AS n_opposite_days
+FROM        side a
+JOIN        side b
+       ON   a.bet_ip = b.bet_ip
+      AND   a.round_key = b.round_key
+      AND   a.member_id < b.member_id
+GROUP BY a.bet_ip, a.member_id, b.member_id
+HAVING  COUNT(*) >= 20
+   AND  SUM(CASE WHEN a.dir_stake*b.dir_stake < 0 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) >= 0.9
+ORDER BY opposite_rate DESC, n_opposite_round DESC;
