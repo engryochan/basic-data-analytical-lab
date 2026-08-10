@@ -12,7 +12,9 @@ format:
     embed-resources: true
     page-layout: full
     code-fold: true
+    code-tools: true
     code-summary: "查看计算代码（全部数字由此现算）"
+    toc-location: left
 execute:
   echo: false
   warning: false
@@ -36,11 +38,23 @@ table{font-size:.9rem;}
 .tbl-scroll thead th{position:sticky;top:0;z-index:3;
             background:#0b1f33;color:#7dffd4;box-shadow:inset 0 -1px 0 #1e3a52;}
 .tbl-scroll caption{position:sticky;left:0;background:transparent;
-            text-align:left;padding:.45rem .6rem;color:#dff7ee;}
+            text-align:center;padding:.5rem .6rem;color:#dff7ee;}
+/* ★ 十八轮：图表与桌表的主副标题一律**居其上方正中**，不偏左右。
+   桌表标题由 <caption> 承载，Quarto 与 darkly 主题预设左对齐，故在此覆写；
+   图注（figcaption）与其编号一并居中；ECharts 由 title.left="center" 承担，
+   plotly 由 ttl2() 的 x=.5 / xanchor="center" 承担。 */
+table caption, caption{text-align:center !important;
+            caption-side:top;font-weight:600;line-height:1.5;}
+table caption .gl-tip{font-weight:600;}
+figure>figcaption, .quarto-figure figcaption, .figure-caption{
+            text-align:center !important;}
+.cell-output-display>table{margin-left:auto;margin-right:auto;}
 table b{color:#7dffd4;font-weight:700;}
 /* ★ 十七轮：粗体分两种观感——内含术语者由 .gl-tip 自带虚线下划线（可悬停），
    纯修辞强调者只着色不划线，读者一眼即知哪一处点得开 */
 b, strong{color:#9dffe0;}
+/* 术语型悬停用虚线下划，强调型用点线——读者一眼即知点开后见到的是释义还是原句 */
+.gl-em{border-bottom:1px dotted rgba(157,255,224,.55);cursor:help;}
 b .gl-tip, strong .gl-tip{color:#7dffd4;}
 table code{background:rgba(34,211,238,.12);padding:0 .25em;border-radius:3px;}
 </style>
@@ -177,9 +191,21 @@ cap_tip <- function(caption) {
   tip   <- gsub("<", "&lt;",  tip, fixed = TRUE)
   tip   <- gsub(">", "&gt;",  tip, fixed = TRUE)
   tip   <- gsub('"', "&quot;", tip, fixed = TRUE)
-  htmltools::HTML(paste0(head0,
+  ## ★ 十八轮：表题亦分主副——于首个「：」或「——」处切分，
+  ##   主标题居中大字，副标题另起一行、小字浅色；释义仍收进 ⓘ 悬停浮层。
+  pos <- regexpr("：|——", head0)
+  if (pos > 0) {
+    cut  <- attr(pos, "match.length")
+    main <- substr(head0, 1, pos - 1)
+    sub  <- substring(head0, pos + cut)
+  } else { main <- head0; sub <- "" }
+  htmltools::HTML(paste0(
+    '<span class="cap-main" style="display:block;font-size:1.02em;">', main,
     ' <span class="gl-tip" data-tip="解释：', tip,
-    '" style="font-weight:600">ⓘ</span>'))
+    '" style="font-weight:600">ⓘ</span></span>',
+    if (nzchar(sub)) paste0(
+      '<span class="cap-sub" style="display:block;font-size:.86em;',
+      'font-weight:400;opacity:.78;margin-top:.15rem;">', sub, '</span>') else ''))
 }
 ## 统一出表：表题一律过 cap_tip
 ## ★ 十六轮两项斧正：
@@ -513,7 +539,22 @@ er_ttl <- function(title, width = 40) {
   } else list(main = w_(title, width, "\n"), sub = "")
 }
 ## 类目轴标签折行：ECharts 的 axisLabel.formatter 认 \n
-EWRAP_JS <- 'function(v){ var s=String(v), o="", n=0, r=""; for (var i=0;i<s.length;i++){ var w=/[\u2e80-\u9fff\uff00-\uffef\u3000-\u303f]/.test(s[i])?2:1; if(n+w>12){o+=r+"\n"; r=""; n=0;} r+=s[i]; n+=w; } return o+r; }' 
+## ★★ 十八轮斧正（先生实测「一片乌黑」之根因）：
+##   旧版此串写作 R 单引号字面量，内含 "\n" 与 \u2e80 两类转义——
+##   **R 在解析期即把它们兑现**：JS 遂收到一个**真换行符**落在字符串字面量之内，
+##   `o += r + "` ⏎ `";` 立成 SyntaxError，`setOption` 整个抛错，
+##   图遂一格未画、只剩深色底，即先生所见之「一片乌黑」。
+##   斧正：改用 R 4.0 起的**原样字符串** r"(...)"，其内转义一概不兑现，
+##   JS 拿到的 `\n` 与 `\u2e80` 皆为其字面形态。
+EWRAP_JS <- r"(function(v){ var s = String(v), o = "", r = "", n = 0;
+  for (var i = 0; i < s.length; i++) {
+    var w = /[\u2e80-\u9fff\uff00-\uffef\u3000-\u303f]/.test(s[i]) ? 2 : 1;
+    if (n + w > 12 && r) { o += r + "\n"; r = ""; n = 0; }
+    r += s[i]; n += w;
+  }
+  return o + r;
+})"
+
 ## 统一的挂载脚本：OPT 已在外层备妥，此处只管初始化与自愈
 er_mount <- function(id, opt_js, height) paste0(
 '<div class="er-chart" id="', id, '" style="width:100%;height:', height, 'px;"></div>\n',
@@ -624,7 +665,7 @@ er_waterfall <- function(tag, title, steps, unit = "%", note = "", height = 420)
 '    axisLabel: {color: "', PAL$fg, '", fontSize: 11, interval: 0,\n',
 '                formatter: ', EWRAP_JS, '},\n',
 '    axisLine: {lineStyle: {color: "#1e3a52"}}},\n',
-'  yAxis: {type: "value", name: "', unit, '",\n',
+'  yAxis: {type: "value", name: "百分比（', unit, '）",\n',
 '    nameTextStyle: {color: "', PAL$fg, '"},\n',
 '    axisLabel: {color: "', PAL$fg, '", fontSize: 11},\n',
 '    splitLine: {lineStyle: {color: "#1e3a52"}}},\n',
@@ -731,10 +772,14 @@ er_panel <- function(tag, title, dates, panes, marks = NULL, note = "",
     axisLine = list(lineStyle = list(color = "#1e3a52")),
     axisLabel = list(show = i == np, color = PAL$fg, fontSize = 10),
     axisPointer = list(label = list(show = i == np))))
+  ## ★ 十九轮：四格纵轴各自具名并标明单位，名称置于轴端上方、留足间距，
+  ##   免与刻度数字叠印；刻度以千分位缩写，长数字不再撑破格宽。
   ys <- lapply(seq_len(np), function(i) list(
     type = "value", gridIndex = i - 1, scale = TRUE,
-    name = panes[[i]]$name, nameTextStyle = list(color = PAL$fg, fontSize = 11),
+    name = panes[[i]]$name, nameLocation = "end", nameGap = 12,
+    nameTextStyle = list(color = PAL$fg, fontSize = 11, align = "left"),
     axisLabel = list(color = PAL$fg, fontSize = 10),
+    axisLine = list(show = TRUE, lineStyle = list(color = "#1e3a52")),
     splitLine = list(lineStyle = list(color = "#132a3f"))))
   ser <- list()
   for (i in seq_len(np)) for (s in panes[[i]]$series) {
@@ -764,7 +809,8 @@ er_panel <- function(tag, title, dates, panes, marks = NULL, note = "",
 '    backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
 '    textStyle: {color: "', PAL$fg, '", fontSize: 12}},\n',
 '  axisPointer: {link: [{xAxisIndex: "all"}]},\n',
-'  legend: {top: 26, textStyle: {color: "', PAL$fg, '", fontSize: 11}},\n',
+'  legend: {top: 26, type: "scroll", textStyle: {color: "', PAL$fg, '", fontSize: 11},\n',
+'           pageTextStyle: {color: "', PAL$fg, '"}, pageIconColor: "', PAL$ac, '"},\n',
 '  toolbox: {right: 12, top: 2, iconStyle: {borderColor: "', PAL$ac, '"},\n',
 '            feature: {dataZoom: {yAxisIndex: "none"}, restore: {}}},\n',
 '  dataZoom: [{type: "inside", xAxisIndex: ', EJ(seq_len(np) - 1), ', start: 0, end: 100},\n',
@@ -812,8 +858,9 @@ er_xyline <- function(tag, title, xcat, series, xlab = "", ylab = "",
 '    nameTextStyle: {color: "', PAL$fg, '"},\n',
 '    axisLabel: {color: "', PAL$fg, '", fontSize: 10},\n',
 '    axisLine: {lineStyle: {color: "#1e3a52"}}},\n',
-'  yAxis: {type: "value", scale: true, name: ', EJ(ylab), ',\n',
-'    nameTextStyle: {color: "', PAL$fg, '"},\n',
+'  yAxis: {type: "value", scale: true, name: ', EJ(w_(ylab, 22, "\n")), ',\n',
+'    nameLocation: "end", nameGap: 14,\n',
+'    nameTextStyle: {color: "', PAL$fg, '", align: "left", lineHeight: 15},\n',
 '    axisLabel: {color: "', PAL$fg, '", fontSize: 10',
       if (ypct) ', formatter: function(v){ return (v*100).toFixed(1) + "%"; }' else '',
 '},\n    splitLine: {lineStyle: {color: "#132a3f"}}},\n',
@@ -1152,6 +1199,49 @@ JS_B <- ';
       });
       }catch(e){ /* 单节容错：某一节出错不影响其余各节与浮层 */ }
     });
+    /* ★★ 十八轮：粗体全数挂悬停（先生令）。
+       分两类处置，绝不臆造释义：
+         甲、粗体内含术语者——上一环节已由术语加注器挂上释义，此处不动；
+         乙、粗体不含任何术语者（多为结论性强调）——挂一条**据实可查**的浮层：
+             写明「本处为结论性强调」，并附其所在整句原文，
+             以便读者在滚动表格或窄栏内也能读到被截断的完整表述。
+             此为事实性元信息，非编造的业务释义。 */
+    try{
+      const bolds = scope.querySelectorAll("b, strong");
+      bolds.forEach(function(el){
+        if(el.querySelector(".gl-tip")) return;          /* 甲类：已有释义 */
+        if(el.classList.contains("gl-tip")) return;
+        if(el.closest(".gl-tip")) return;
+        const self = (el.textContent || "").trim();
+        if(!self) return;
+        /* 取其所在整句：自最近的块级祖先取文本，按中文句读切出含本段者 */
+        let host = el.parentNode;
+        while(host && host.nodeType === 1 &&
+              getComputedStyle(host).display === "inline") host = host.parentNode;
+        let sent = "";
+        if(host && host.textContent){
+          /* 空白归一：此处刻意不写正则的空白类转义——本段是 R 单引号字符串，
+             R 视其为非法转义、整块解析即报错（先生渲染实测所得）。
+             改以 split/join 归一空白，全程不含任何反斜杠。 */
+          const WS = [" ", String.fromCharCode(9), String.fromCharCode(10),
+                      String.fromCharCode(13), String.fromCharCode(12288)];
+          let full = host.textContent;
+          WS.forEach(function(w){ full = full.split(w).join(" "); });
+          while(full.indexOf("  ") >= 0) full = full.split("  ").join(" ");
+          full = full.trim();
+          const parts = full.split(/(?<=[。；！？])/);
+          for(let i = 0; i < parts.length; i++){
+            if(parts[i].indexOf(self) >= 0){ sent = parts[i].trim(); break; }
+          }
+          if(!sent) sent = full;
+        }
+        if(sent.length > 190) sent = sent.slice(0, 190) + "…";
+        el.classList.add("gl-tip", "gl-em");
+        el.setAttribute("data-tip",
+          "强调项：" + self + "　▸ 本处为结论性强调，其依据见本节正文。原句：" + sent);
+      });
+    }catch(e){ /* 容错：加注失败不影响正文与其余浮层 */ }
+
     /* ★ 单一 body 级浮层：位置由 JS 计算并四向夹在视口内。
        这样无论术语落在表格滚动区、callout 还是窄栏里，浮层都完整可见。 */
     const pop = pop0;
@@ -1317,7 +1407,11 @@ if (!is.null(E02) && HAS$plotly) {
     plotly::layout(barmode = "group",
       title = list(text = "客户分层经济账 · 洗码量前 12 层（§E02c；**占比口径**）",
                    font=list(size=14)),
-      xaxis = list(title = "占全体之比", tickformat = ".1%"), yaxis = list(title = ""))
+      xaxis = list(title = list(text = "占全体之比（洗码量占比／GGR 占比）"),
+                   tickformat = ".1%", automargin = TRUE),
+      yaxis = list(title = list(text = "客户分层（按洗码量降序取前 12 层）"),
+                   automargin = TRUE, tickfont = list(size = 11)),
+      margin = list(l = 178, r = 40, t = 84, b = 62))
   plt(p)
 }
 ```
@@ -2386,7 +2480,7 @@ if (exists("dd") && HAS$plotly) {
   p <- plotly::layout(p,
     title = list(text = sprintf("经营状态三态解码：%s（139 个营业日）", REG_SRC),
                  font = list(size = 13.5)),
-    xaxis = list(title = "营业日"), yaxis = list(title = "日 GGR", tickformat = ","))
+    xaxis = list(title = "营业日"), yaxis = list(title = list(text = "日 GGR（平台毛利，金额）"), automargin = TRUE, tickformat = ","))
   plt(p)
 }
 ```
@@ -3367,38 +3461,53 @@ if (exists("FC_ROI") && HAS$plotly) {
 
 ```{r}
 #| label: fig-roi-dims
-#| fig-height: 9
+#| fig-height: 12
 if (exists("ROID") && HAS$plotly) {
-  ## ★ 十七轮斧正（先生实测指正）：纵轴标签形如「玩家·投注产品结构熵（赏）」，
-  ##   最长逾二十个中日韩字符，旧版既未开 automargin 亦未换行，遂被绘图区裁去半截。
-  ##   今三管齐下：① 标签按显示宽度折行（实体·方向另起一行，维名独占一行，一眼可辨）；
-  ##   ② 纵轴 automargin 自行撑出留白；③ 图高随维数动态伸缩，条目再多亦不挤压。
+  ## ★★ 十九轮斧正（先生实测截图为证）：旧版把「实体·赏罚侧」另起一行作小字，
+  ##   而维名又经 w_() 按宽度折行——每格遂占两至三行，行高却只有约 20 像素，
+  ##   标签彼此压叠，读者无从分辨哪一行对应哪一根柱。
+  ##   今改三事：① 标签**一律单行**「实体｜维名（赏/罚侧）」，不折行、不叠行；
+  ##   ② 实体另以**颜色与图例**分辨，三色一目了然，不必再靠文字重复交代；
+  ##   ③ 图高**按维数动态计算**（每维 34 像素），维数增减皆不挤压。
   ROID <- ROID[order(ROID$实体, ROID$差值), ]
-  ROID$标 <- paste0(w_(u8(ROID$维度), 12),
-                    "<br><span style=\"font-size:10px;opacity:.72\">",
-                    u8(ROID$实体), " · ", u8(ROID$方向), "侧</span>")
-  ROID$标 <- factor(ROID$标, levels = unique(ROID$标))
+  ROID$标 <- sprintf("%s｜%s（%s侧）", u8(ROID$实体), u8(ROID$维度), u8(ROID$方向))
+  ## 同名维度若跨实体重复，逐一编号，免其在同一条类目轴上并柱
+  if (any(duplicated(ROID$标)))
+    ROID$标 <- make.unique(ROID$标, sep = " #")
+  ROID$标 <- factor(ROID$标, levels = ROID$标)
   colmap <- c(玩家 = PAL$ac, 荷官 = PAL$violet, 代理 = PAL$warn)
-  p <- plotly::plot_ly(ROID, y = ~标, x = ~差值, type = "bar",
-    orientation = "h", marker = list(color = colmap[ROID$实体]),
-    hovertemplate = paste0(u8(ROID$实体), " · ", u8(ROID$维度),
-      "（", u8(ROID$方向), "侧）<br>该维 ≥P90 组盈利率 ",
-      sprintf("%.2f%%", 100*ROID$高组盈利率), "　vs 全体 ",
-      sprintf("%.2f%%", 100*ROID$全体盈利率),
-      "<br>差值 %{x:.2%}<br>高组盈利 ", sapply(ROID$高组盈利, amt),
-      "／洗码 ", sapply(ROID$高组洗码, amt),
-      "<br>（盈利率＝Σ盈利÷Σ洗码量；正差值＝该维在筛盈利，只可挂赏侧；",
-      "负差值＝该维在筛风险或成本，只可挂罚侧）<extra></extra>")) |>
-    plotly::layout(
-      title = ttl2("四实体维度 → ROI 结账",
-        "各维高分位组（≥P90）的盈利率相对全体的差值；正＝筛盈利，负＝筛风险或成本",
-        size = 14),
-      xaxis = list(title = list(text = "盈利率差值（＝该维高分位组盈利率 − 全体盈利率）"),
-                   tickformat = ".1%", zeroline = TRUE,
-                   zerolinecolor = "rgba(255,214,77,.55)", zerolinewidth = 1.5),
-      yaxis = list(title = list(text = ""), automargin = TRUE,
-                   tickfont = list(size = 11)),
-      margin = list(l = 168, r = 40, t = 78, b = 62))
+  hgt <- max(460L, 34L * nrow(ROID) + 190L)
+  p <- plotly::plot_ly()
+  for (en in intersect(names(colmap), unique(u8(ROID$实体)))) {
+    d <- ROID[u8(ROID$实体) == en, , drop = FALSE]
+    p <- plotly::add_trace(p, data = d, y = ~标, x = ~差值, type = "bar",
+      orientation = "h", name = sprintf("%s（%d 维）", en, nrow(d)),
+      marker = list(color = colmap[[en]],
+                    line = list(color = "rgba(5,13,26,.85)", width = .6)),
+      hovertemplate = paste0(en, " · ", u8(d$维度), "（", u8(d$方向), "侧）",
+        "<br>该维 ≥P90 高分位组盈利率 ", sprintf("%.2f%%", 100*d$高组盈利率),
+        "　vs 全体 ", sprintf("%.2f%%", 100*d$全体盈利率),
+        "<br>差值 %{x:.2%}",
+        "<br>高分位组盈利 ", sapply(d$高组盈利, amt),
+        "／洗码量 ", sapply(d$高组洗码, amt),
+        "<br>（盈利率＝Σ盈利 ÷ Σ洗码量，主语为平台；",
+        "正差值＝该维在筛盈利，只可挂赏侧；负差值＝该维在筛风险或成本，只可挂罚侧）",
+        "<extra></extra>"))
+  }
+  p <- plotly::layout(p, height = hgt, bargap = .32,
+    title = ttl2("四实体维度 → ROI 结账",
+      "各维高分位组（≥P90）的盈利率相对全体的差值；正＝筛盈利，负＝筛风险或成本",
+      size = 14),
+    xaxis = list(title = list(text = "盈利率差值（＝该维高分位组盈利率 − 全体盈利率）"),
+                 tickformat = ".1%", zeroline = TRUE, automargin = TRUE,
+                 zerolinecolor = "rgba(255,214,77,.6)", zerolinewidth = 1.6,
+                 gridcolor = "#132a3f"),
+    yaxis = list(title = list(text = ""), automargin = TRUE,
+                 tickfont = list(size = 11), ticklabelposition = "outside",
+                 showgrid = FALSE, autorange = "reversed"),
+    legend = list(orientation = "h", y = 1.02, yanchor = "bottom",
+                  x = .5, xanchor = "center", font = list(size = 11)),
+    margin = list(l = 200, r = 46, t = 104, b = 68))
   plt(p)
 }
 ```
@@ -3693,7 +3802,7 @@ if (exists("BT") && HAS$plotly) {
       title = list(text = "盈利视角：每折净增益相当于该测试窗盈利的百分之几（悬停见占比）",
                    font = list(size = 13.5)),
       xaxis = list(title = "测试窗结束日"),
-      yaxis = list(title = "金额", tickformat = ","))
+      yaxis = list(title = list(text = "金额（平台毛利与净增益，同一币种）"), automargin = TRUE, tickformat = ","))
   plt(p)
 }
 ```
@@ -3726,7 +3835,7 @@ if (exists("BT") && HAS$plotly && any(is.finite(BT$盈利比下界))) {
         "赏罚后盈利比带（逐折）：真实落点随赏侧发放率在带内移动；",
         "带体在零线之上即「赏罚全开仍净赚」"), font = list(size = 13.5)),
       xaxis = list(title = "测试窗结束日"),
-      yaxis = list(title = "净增益 ÷ 全池盈利", tickformat = ".1%"))
+      yaxis = list(title = list(text = "净增益 ÷ 全池盈利（比值；正即该折为正贡献）"), automargin = TRUE, tickformat = ".1%"))
   plt(p)
 }
 ```
@@ -3776,7 +3885,8 @@ if (exists("BT") && HAS$plotly) {
         "实际误判远低于平衡线即「误判成本有界」——罚只追缴净赢者，错了也追不到无辜者的钱"),
         font=list(size=13)),
       xaxis=list(title="测试窗结束日"),
-      yaxis=list(title="比率", tickformat=".0%", range=c(0, 1.05)))
+      yaxis=list(title=list(text="比率（误判率与盈亏平衡误判率，同轴对读）"),
+                 tickformat=".0%", range=c(0, 1.05), automargin=TRUE))
   plt(p)
 }
 ```
@@ -3965,7 +4075,8 @@ if (exists("BT") && HAS$plotly) {
         "名单质量三把尺：经济命中率（真尺）· 赢额覆盖率（钱的尺）· ",
         "金标准命中率（严重低估的尺，须与基率并读）"), font=list(size=13.5)),
       xaxis = list(title = "测试窗结束日"),
-      yaxis = list(title = "比率", tickformat = ".0%", rangemode = "tozero"))
+      yaxis = list(title = list(text = "比率（名单质量三尺：命中率 · 赢额覆盖率 · 名单占比）"),
+                   tickformat = ".0%", rangemode = "tozero", automargin = TRUE))
   plt(p)
 }
 ```
@@ -4184,10 +4295,14 @@ if (exists("BT") && !is.null(B01) && all(c("名单洗码","名单日均活跃","
     s
   }
   PANES <- list(
-    list(name = "营业额", series = mkser(DAY$洗码, cf$洗码, NULL, "营业额")),
-    list(name = "活跃会员", series = mkser(DAY$活跃, cf$活跃, NULL, "活跃会员")),
-    list(name = "盈利GGR", series = mkser(DAY$盈利, cf$盈利上, cf$盈利下, "盈利")),
-    list(name = "返水",   series = mkser(DAY$返水, cf$返水, NULL, "返水")))
+    list(name = "① 营业额（日洗码量 · 金额）",
+         series = mkser(DAY$洗码, cf$洗码, NULL, "营业额")),
+    list(name = "② 活跃会员数（当日有投注者 · 人）",
+         series = mkser(DAY$活跃, cf$活跃, NULL, "活跃会员")),
+    list(name = "③ 盈利（日 GGR · 平台毛利 · 金额）",
+         series = mkser(DAY$盈利, cf$盈利上, cf$盈利下, "盈利")),
+    list(name = "④ 返水支出（＝日洗码量 × ρ 0.349% · 金额）",
+         series = mkser(DAY$返水, cf$返水, NULL, "返水")))
   TRK_STAT <- list(
     d0 = min(DAY$bet_date), d1 = max(DAY$bet_date), n = n8,
     folds = nrow(BT),
@@ -4765,8 +4880,10 @@ kb(KPI, paste0("两层验收指标分立表：风控层 vs 经济层",
 要由下层五项回答，而下层目前无一项完成。本报告一切「增利」表述，请一律按下层状态读作
 **潜在、待验证**。
 
-::: {.callout-note}
 ## 增利证据阶梯：从「名单准」到「真钱多」还差五级 {#sec-ladder}
+
+::: {.callout-note}
+## 五级最低条件与当前位置
 
 外部审计所列的最低条件，本报告照录并逐级标注当前位置：
 
@@ -4849,7 +4966,7 @@ if (exists("MB") && nrow(MB) > 100) {
               粗 = TRUE, 填 = TRUE),
          list(名称 = "完全均等参照线", 值 = round(xs, 5), 色 = PAL$ac, 型 = "dashed")),
     xlab = "会员累计人数占比（按贡献升序：左端为赢走平台钱的人）",
-    ylab = "累计 GGR 占比", ypct = TRUE))
+    ylab = "累计 GGR 占比（平台毛利之累计占比）", ypct = TRUE))
 }
 ```
 **读法**：**绿线在虚线下方凹得越深，钱越集中在少数人身上。** 横轴是会员按贡献从少到多排序的
@@ -4881,7 +4998,7 @@ if (exists("DAY") && nrow(DAY) > 20) {
     100*mu, 100*lcl, 100*ucl),
     as.character(DAY$bet_date),
     list(list(名称 = "日毛利率（实测）", 值 = round(hold, 6), 色 = PAL$ac, 粗 = TRUE)),
-    xlab = "营业日", ylab = "毛利率", ypct = TRUE,
+    xlab = "营业日", ylab = "日平台毛利率 Hold%（＝当日 GGR ÷ 当日洗码量）", ypct = TRUE,
     mlines = list(
       list(yAxis = round(mu, 6),  name = "均值",
            lineStyle = list(color = PAL$good, type = "solid", width = 1.4)),
@@ -5348,6 +5465,82 @@ kb(V, "结论裁定表｜解释：十二条裁定各自注明依据与做法　�
 :::
 
 # 变更日志 {#sec-changelog}
+
+**2026-08-10 · 第十九轮：图 7 纵轴标签压叠根治 · 全篇纵轴普查具名**
+
+**一、图 7 纵轴标签互相压叠（先生实测截图为证）**
+
+**根因**：十七轮为求「一眼可辨归属」，把「实体·赏罚侧」另起一行作小字，而维名又先经 `w_()` 按宽度折行——**每格遂占两至三行**，而该图约二十六维、行高仅约二十像素，标签彼此压叠，读者无从分辨哪一行对应哪一根柱。此为**过度设计**：在有限行高内塞入多行，反不如单行清楚。
+
+**斧正三事**：① 标签**一律单行**「实体｜维名（赏/罚侧）」，不折行、不叠行；② 实体另以**颜色与图例**分辨（玩家青、荷官紫、代理黄），三色一目了然，不必再靠文字重复交代；③ 图高**按维数动态计算**（每维 34 像素 ＋ 190 像素页眉页脚），维数增减皆不挤压。另加两道守卫：同名维度若跨实体重复即逐一编号（免其在同一条类目轴上并柱），左边距设 200 像素并开 `automargin` 兜底。
+
+**二、全篇纵轴普查（先生令）**
+
+十四张 plotly 图逐张核对：`automargin` 已由 `plt()` 总闸统一开启（十七轮所立），故无裁切之虞；**问题在轴名过于笼统**——「金额」「比率」之属，读者无从知其为何物之金额、何物之比率。逐一具名如下：
+
+| 图 | 原轴名 | 今改为 |
+|---|---|---|
+| 图 1 分层经济账 | （空） | 客户分层（按洗码量降序取前 12 层） |
+| 图 3 GGR 状态 | 日 GGR | 日 GGR（平台毛利，金额） |
+| 图 10 盈利比带 | 金额 | 金额（平台毛利与净增益，同一币种） |
+| 图 11 净增益带 | 净增益 ÷ 全池盈利 | 净增益 ÷ 全池盈利（比值；正即该折为正贡献） |
+| 图 12 误判走势 | 比率 | 比率（误判率与盈亏平衡误判率，同轴对读） |
+| 图 14 名单质量 | 比率 | 比率（名单质量三尺：命中率 · 赢额覆盖率 · 名单占比） |
+
+**三、ECharts 侧同步**
+
+- **三情景面板**：四格纵轴各自具名并标明单位（① 营业额 · 日洗码量 · 金额；② 活跃会员数 · 当日有投注者 · 人；③ 盈利 · 日 GGR · 平台毛利 · 金额；④ 返水支出 ＝ 日洗码量 × ρ 0.349% · 金额），名称置于轴端上方、留足 12 像素间距，免与刻度数字叠印；图例改**可滚**（四格合计逾十条，原式易溢出）。
+- **折线图**：纵轴名按宽度折行并左对齐，两处调用的轴名补实——「累计 GGR 占比（平台毛利之累计占比）」「日平台毛利率 Hold%（＝当日 GGR ÷ 当日洗码量）」。
+- **另查获一处隐患并即时拆除**：曾试以 `htmlwidgets::JS()` 传入轴标签格式化函数，但本包的 ECharts 选项由 `jsonlite::toJSON` 序列化，`JS()` 对象会被序列化成**字符串**而非函数，图必不显——该处本为无实效的恒等函数，遂整体拆除。
+
+**四、例检**
+
+R 块 68 块零不平衡、R 块内非法转义零、ECharts 七件 JS 六件通过（`er_xyline` 之 `ypct` 三元插值为既知的检查器误报，两分支此前已分别验过）、UTF-8 合法无 BOM。先生手改的三处（`code-tools`、`toc-location: left`、瀑布图纵轴名「百分比（%）」）已悉数保留。
+
+
+**2026-08-10 · 第十八轮（续）：两处渲染中断斧正**
+
+**一、`glossary` 块解析失败：`'\s' is an unrecognized escape`**
+
+本轮新增的粗体加注 JS 内写有 `replace(/\s+/g, " ")`，而该段 JS 嵌于 `JS_B` 这个 **R 单引号字符串**之内——R 视 `\s` 为非法转义，整块解析即报错。**此为我的过失**：上一版我以工具输出判读反斜杠个数，而输出经 JSON 编码后转义层次叠加，误判为已转义；今改以逐字符计数定谳，确认只有一个反斜杠。
+
+**斧正取根治之法**：不再依赖转义，改以 `String.fromCharCode` 列出空白字符、`split/join` 归一——该段**全程不含任何反斜杠**，日后无论嵌于何种引号皆不生此患。并作全段排查：`JS_A`／`JS_B` 两段共 180 行 JS，非法转义仅此一处，斧正后复检归零（连注释文字里的 `\s` 二字亦一并去除，因其同在 R 字符串之内）。
+
+**二、`@sec-ladder` 交叉引用无法解析**
+
+根因：锚点 `{#sec-ladder}` 落在 `::: {.callout-note}` **之内**，Quarto 不将 callout 内的标题登记为可引用章节。斧正：把带锚的二级标题提到 callout **之外**，callout 内另立一个不带锚的小标题。并复查全篇 **21 个章节锚点，位于 callout 内者已归零**；3 个 `@sec-` 引用皆有对应锚点。
+
+---
+
+**2026-08-10 · 第十八轮：瀑布图「一片乌黑」根治 · 主副标题居中 · 粗体全数悬停**
+
+**一、单位经济学瀑布图整幅不显（先生实测指正）——根因已确证，非猜测**
+
+`EWRAP_JS`（类目轴折行器）旧版写作 R **单引号字面量**，其内含 `"\n"` 与 `\u2e80` 两类转义。**R 在解析期即把它们兑现**：JS 因而收到一个**真换行符**落在字符串字面量之内——`o += r + "` ⏎ `";`——立成 `SyntaxError`，`setOption` 整个抛错，图遂一格未画，只剩深色底，即先生所见之「一片乌黑」。
+
+**对照实证**（Node 实跑）：旧版经 R 兑现转义后报 `SyntaxError: Invalid or unexpected token`；新版语法通过且折行正确（「玩家·投注产品结构熵」→ 两行，「庄家毛利率 m」保持单行）。**斧正**：改用 R 4.0 起的**原样字符串** `r"(…)"`，其内转义一概不兑现，JS 拿到的 `\n` 与 `\u2e80` 皆为字面形态。
+
+**并作全篇同型排查**：扫出 8 处 `"\n"`，逐一核实后确认其余 7 处皆为 **R 侧本就该换行**者（`paste(collapse="\n")`、`w_()` 的分隔符参数），非缺陷；缺陷仅此一处。七件 ECharts 生成器在真实 `EWRAP_JS` 下复验，`er_waterfall` 由失败转为通过。
+
+**二、主副标题一律居其上方正中**
+
+- **桌表**：标题由 `<caption>` 承载，Quarto 与 darkly 主题预设左对齐，今以 `text-align:center !important` 覆写，并令 `caption-side:top`；`cap_tip()` 同步升级为**分主副**——于首个「：」或「——」处切分，主标题居中大字、副标题另起一行小字浅色，释义仍收进 ⓘ 悬停浮层。
+- **图注**：`figcaption` 与 `.figure-caption` 一并居中。
+- **plotly**：由 `ttl2()` 的 `x = .5` 与 `xanchor = "center"` 承担（第十七轮已立）。
+- **ECharts**：由 `title.left = "center"` 与 `textAlign = "center"` 承担（第十七轮已立）。
+
+**三、粗体全数挂悬停——分两类，仍不臆造释义**
+
+- **甲类 · 粗体内含术语**：由既有的术语加注器挂上释义，本轮不动。
+- **乙类 · 粗体不含任何术语**（多为结论性强调）：新增一道 JS 加注，挂**据实可查**的浮层——写明「本处为结论性强调，其依据见本节正文」，并附其**所在整句原文**（按中文句读切分，逾 190 字截断）。此为事实性元信息，非编造的业务释义；对滚动表格与窄栏内被截断的表述尤其有用，鼠标停留即见全句。
+- **观感分明**：术语型悬停用虚线下划，强调型用点线（`.gl-em`），读者一眼即知点开后见到的是释义还是原句。
+
+句读切分经 Node 实测：强调「剩下的是负数」正确取出其所在整句；不匹配时退回整段，不致空白。
+
+**四、例检**
+
+R 块 68 块零不平衡（括号扫描器已加原样字符串 `r"(…)"` 识别，免其内容被误判）、七件生成器 JS 逐一复验、`EWRAP_JS` 新旧对照实跑、粗体加注 JS 语法与句读切分实测、UTF-8 合法无 BOM。
+
 
 **2026-08-10 · 第十七轮：版面中枢三件——标签折行 · 标题分主副 · 悬停全覆盖**
 
