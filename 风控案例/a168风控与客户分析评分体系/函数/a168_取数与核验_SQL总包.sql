@@ -5596,3 +5596,207 @@ JOIN        side b
 GROUP BY a.bet_ip, a.member_id, b.member_id
 HAVING  COUNT(*) >= 30
 ORDER BY opposite_rate DESC, n_opposite_round DESC;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL · 准处置台账重建：能否由配置变更史还原「做过什么」（2026-08-10 立）
+   ---------------------------------------------------------------------------
+   缘起：泄漏矩阵⑬⑭⑮三环受阻于「平台无处置日志」。此判成立于 §EX-01——
+   彼时所查的是**有没有一张名为处置日志的表**。今复核 `ods_a168_member_dtl` 结构，
+   发现另一条可能的路：该表带**日分区列 dt**，且其列含风控处置的全部落点——
+
+     mem003 退水 · mem016 電投退水      ← 降返水
+     mem009 / mem010 最大押分 · mem015 新版限額  ← 限红
+     mem012 最大可贏金額 · mem014 最大可輸金額   ← 可赢可输上限
+     mem013 可贏可輸起算時間點                   ← 带时间戳的起算点
+
+   **若该表为逐日快照，则同一会员的配置在 dt 轴上的跳变，即是一次处置事件。**
+   处置日志不存在，不等于处置事实不可还原——**配置变更史是处置的影子**。
+
+   ★ 但此路成立与否，须先证伪三个前提，缺一即断：
+     ① 该表确为**逐日快照**（每个 dt 皆有全量会员行），而非只存最新一版；
+     ② 配置值**确有跳变**（若全窗恒定，则窗口内无任何处置发生，此路无货）；
+     ③ 跳变**可定日**（跳变日即处置日，误差不超过一日）。
+   §TL-01 至 §TL-03 依次查此三事。三者皆过，方可进 §TL-04 抽取事件表。
+
+   ⚠ 纵使三者皆过，所得仍是**准处置台账**而非处置台账：
+     它记得「配置何时变了」，记不得「为何而变、由谁决定、是否属实验组」。
+     故它能把证据等级从 E4 缺位推到 **E4 部分达成**，
+     但 **E5（随机对照）仍缺**——配置变更是业务自行发生的，非随机分配，
+     只能作**准实验**（如断点回归、双重差分），不能充随机对照。此界须守住。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+-- §TL-00 · 全库表清单与列义扫描：找出所有可能承载处置痕迹的表
+-- ▸ 导出：需要 —— 存为「数据库/TL00_table_inventory.csv」（§TL-00 全库表与列义清单）。
+-- 读法：COLUMN_COMMENT 里带「限額/限紅/退水/凍結/停用/狀態/審核/處理/備註/操作」等字样者，
+--       皆为处置痕迹的候选；带「時間/日期/addtime/updatetime」者，为其定日的依据。
+--       两类同时出现于一表，即该表有可能重建为准处置台账。
+SELECT  c.TABLE_NAME,
+        COUNT(*)                                                   AS 列数,
+        SUM(CASE WHEN c.DATA_TYPE IN ('date','datetime') THEN 1 ELSE 0 END) AS 时间列数,
+        SUM(CASE WHEN c.COLUMN_COMMENT LIKE '%限額%'
+                   OR c.COLUMN_COMMENT LIKE '%限红%'
+                   OR c.COLUMN_COMMENT LIKE '%限紅%'
+                   OR c.COLUMN_COMMENT LIKE '%退水%'
+                   OR c.COLUMN_COMMENT LIKE '%凍結%'
+                   OR c.COLUMN_COMMENT LIKE '%冻结%'
+                   OR c.COLUMN_COMMENT LIKE '%停用%'
+                   OR c.COLUMN_COMMENT LIKE '%狀態%'
+                   OR c.COLUMN_COMMENT LIKE '%状态%'
+                   OR c.COLUMN_COMMENT LIKE '%審核%'
+                   OR c.COLUMN_COMMENT LIKE '%审核%'
+                   OR c.COLUMN_COMMENT LIKE '%處理%'
+                   OR c.COLUMN_COMMENT LIKE '%处理%'
+                   OR c.COLUMN_COMMENT LIKE '%操作%'
+                   OR c.COLUMN_COMMENT LIKE '%備註%'
+                   OR c.COLUMN_COMMENT LIKE '%备注%'
+                 THEN 1 ELSE 0 END)                                AS 处置类列数,
+        SUM(CASE WHEN c.COLUMN_COMMENT LIKE '%時間%'
+                   OR c.COLUMN_COMMENT LIKE '%时间%'
+                   OR c.COLUMN_COMMENT LIKE '%日期%'
+                   OR c.COLUMN_NAME   LIKE '%time%'
+                   OR c.COLUMN_NAME   LIKE '%date%'
+                 THEN 1 ELSE 0 END)                                AS 定日类列数
+FROM    information_schema.columns c
+WHERE   c.TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND   c.TABLE_NAME LIKE 'ods_a168_%'
+GROUP BY c.TABLE_NAME
+HAVING  SUM(CASE WHEN c.COLUMN_COMMENT LIKE '%限額%'
+                   OR c.COLUMN_COMMENT LIKE '%限红%'
+                   OR c.COLUMN_COMMENT LIKE '%限紅%'
+                   OR c.COLUMN_COMMENT LIKE '%退水%'
+                   OR c.COLUMN_COMMENT LIKE '%凍結%'
+                   OR c.COLUMN_COMMENT LIKE '%冻结%'
+                   OR c.COLUMN_COMMENT LIKE '%停用%'
+                   OR c.COLUMN_COMMENT LIKE '%狀態%'
+                   OR c.COLUMN_COMMENT LIKE '%状态%'
+                   OR c.COLUMN_COMMENT LIKE '%審核%'
+                   OR c.COLUMN_COMMENT LIKE '%审核%'
+                   OR c.COLUMN_COMMENT LIKE '%處理%'
+                   OR c.COLUMN_COMMENT LIKE '%处理%'
+                   OR c.COLUMN_COMMENT LIKE '%操作%'
+                   OR c.COLUMN_COMMENT LIKE '%備註%'
+                   OR c.COLUMN_COMMENT LIKE '%备注%'
+                 THEN 1 ELSE 0 END) > 0
+ORDER BY 处置类列数 DESC, 定日类列数 DESC, c.TABLE_NAME;
+
+-- §TL-01 · member_dtl 是否逐日快照（前提①）
+-- ▸ 导出：不需要 —— §TL-01 快照粒度探针，屏幕看结果。
+-- 读法：① 若「日均会员行数」在各 dt 上大致相等且与在册会员数同量级 → 逐日快照，前提①成立；
+--       ② 若只有寥寥几个 dt 有行 → 非逐日快照，本路即断，须改由源库取变更流水；
+--       ③ 「每会员每日行数」若 > 1，说明按类别（mem002）分行，抽取变更时须先固定类别。
+SELECT  dt,
+        COUNT(*)                                          AS 行数,
+        COUNT(DISTINCT CAST(mem001 AS STRING))            AS 会员数,
+        COUNT(*) * 1.0 / COUNT(DISTINCT CAST(mem001 AS STRING)) AS 每会员行数,
+        COUNT(DISTINCT CAST(mem002 AS STRING))            AS 类别数
+FROM    ods_mariadb_2b.ods_a168_member_dtl
+WHERE   dt >= '2026-03-21'
+  AND   dt <  '2026-08-07'
+GROUP BY dt
+ORDER BY dt;
+
+-- §TL-02 · 配置值是否有跳变（前提②③）
+-- ▸ 导出：需要 —— 存为「数据库/TL02_config_change.csv」（§TL-02 配置变更计数）。
+-- 读法：逐会员统计各配置列在窗口内的**不同取值个数**；> 1 即该会员发生过配置变更。
+--       变更会员数若为 0 → 窗口内无任何处置发生，准处置台账无货，此路虽通而空；
+--       若为数千 → 处置确在发生，只是从未被记成日志，§TL-04 即可抽出事件表。
+SELECT  变更列,
+        SUM(CASE WHEN 取值数 > 1 THEN 1 ELSE 0 END)        AS 发生变更的会员数,
+        COUNT(*)                                          AS 在册会员数,
+        SUM(CASE WHEN 取值数 > 1 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS 变更率
+FROM (
+    SELECT  '退水 mem003' AS 变更列, CAST(mem001 AS STRING) AS mem,
+            COUNT(DISTINCT CAST(mem003 AS STRING)) AS 取值数
+    FROM ods_mariadb_2b.ods_a168_member_dtl
+    WHERE dt >= '2026-03-21' AND dt < '2026-08-07' GROUP BY 1, 2
+    UNION ALL
+    SELECT  '最大押分 mem009', CAST(mem001 AS STRING),
+            COUNT(DISTINCT CAST(mem009 AS STRING))
+    FROM ods_mariadb_2b.ods_a168_member_dtl
+    WHERE dt >= '2026-03-21' AND dt < '2026-08-07' GROUP BY 1, 2
+    UNION ALL
+    SELECT  '新版限額 mem015', CAST(mem001 AS STRING),
+            COUNT(DISTINCT CAST(mem015 AS STRING))
+    FROM ods_mariadb_2b.ods_a168_member_dtl
+    WHERE dt >= '2026-03-21' AND dt < '2026-08-07' GROUP BY 1, 2
+    UNION ALL
+    SELECT  '最大可贏 mem012', CAST(mem001 AS STRING),
+            COUNT(DISTINCT CAST(mem012 AS STRING))
+    FROM ods_mariadb_2b.ods_a168_member_dtl
+    WHERE dt >= '2026-03-21' AND dt < '2026-08-07' GROUP BY 1, 2
+    UNION ALL
+    SELECT  '可贏可輸起算 mem013', CAST(mem001 AS STRING),
+            COUNT(DISTINCT CAST(mem013 AS STRING))
+    FROM ods_mariadb_2b.ods_a168_member_dtl
+    WHERE dt >= '2026-03-21' AND dt < '2026-08-07' GROUP BY 1, 2
+) t
+GROUP BY 变更列
+ORDER BY 发生变更的会员数 DESC;
+
+-- §TL-03 · 变更事件抽取：准处置台账（前提①②③皆过后方跑）
+-- ▸ 导出：需要 —— 存为「数据库/TL03_pseudo_treatment.csv」（§TL-03 准处置台账·配置变更事件）。
+-- 读法：每行一次配置跳变——谁、哪一日、哪一项、由何值变为何值、方向（收紧/放宽）。
+--       此即 E4 所缺的处置账之影子：它记得做过什么、何时做的，
+--       但记不得为何而做、由谁决定、是否属实验组，故只可作准实验，不可充随机对照。
+WITH snap AS (
+    SELECT  CAST(mem001 AS STRING)                        AS member_id,
+            dt,
+            CAST(NULLIF(TRIM(mem003), '') AS DOUBLE)      AS rebate,
+            CAST(NULLIF(TRIM(mem009), '') AS DOUBLE)      AS maxbet,
+            CAST(NULLIF(TRIM(mem012), '') AS DOUBLE)      AS maxwin,
+            CAST(NULLIF(TRIM(mem014), '') AS DOUBLE)      AS maxloss
+    FROM    ods_mariadb_2b.ods_a168_member_dtl
+    WHERE   dt >= '2026-03-21'
+      AND   dt <  '2026-08-07'
+      AND   CAST(mem002 AS STRING) = '1'
+),
+lagged AS (
+    SELECT  member_id, dt, rebate, maxbet, maxwin, maxloss,
+            LAG(rebate)  OVER (PARTITION BY member_id ORDER BY dt) AS rebate_prev,
+            LAG(maxbet)  OVER (PARTITION BY member_id ORDER BY dt) AS maxbet_prev,
+            LAG(maxwin)  OVER (PARTITION BY member_id ORDER BY dt) AS maxwin_prev,
+            LAG(maxloss) OVER (PARTITION BY member_id ORDER BY dt) AS maxloss_prev
+    FROM    snap
+)
+SELECT  member_id,
+        dt                                                AS change_date,
+        CASE WHEN rebate <> rebate_prev THEN '退水'
+             WHEN maxbet <> maxbet_prev THEN '最大押分'
+             WHEN maxwin <> maxwin_prev THEN '最大可贏'
+             ELSE '最大可輸' END                           AS action_type,
+        CASE WHEN rebate <> rebate_prev THEN rebate_prev
+             WHEN maxbet <> maxbet_prev THEN maxbet_prev
+             WHEN maxwin <> maxwin_prev THEN maxwin_prev
+             ELSE maxloss_prev END                         AS value_before,
+        CASE WHEN rebate <> rebate_prev THEN rebate
+             WHEN maxbet <> maxbet_prev THEN maxbet
+             WHEN maxwin <> maxwin_prev THEN maxwin
+             ELSE maxloss END                              AS value_after,
+        CASE WHEN rebate <> rebate_prev THEN
+                  CASE WHEN rebate < rebate_prev THEN '收紧' ELSE '放宽' END
+             WHEN maxbet <> maxbet_prev THEN
+                  CASE WHEN maxbet < maxbet_prev THEN '收紧' ELSE '放宽' END
+             WHEN maxwin <> maxwin_prev THEN
+                  CASE WHEN maxwin < maxwin_prev THEN '收紧' ELSE '放宽' END
+             ELSE CASE WHEN maxloss < maxloss_prev THEN '收紧' ELSE '放宽' END
+        END                                                AS direction
+FROM    lagged
+WHERE   rebate_prev IS NOT NULL
+  AND   (rebate  <> rebate_prev
+     OR  maxbet  <> maxbet_prev
+     OR  maxwin  <> maxwin_prev
+     OR  maxloss <> maxloss_prev)
+ORDER BY member_id, change_date;
+
+-- §K01c · 人工关注 IP 名单的登记时点（闭合泄漏矩阵第⑧环）
+-- ▸ 导出：需要 —— 存为「数据库/K01c_seed_dated.csv」（§K01c 人工单登记时点）。
+-- 读法：`addtime` 即登记时间，`creator` 为登记人。折内金标准的人工单侧须以此过滤——
+--       只纳入登记日早于该折训练窗末日者，与对打侧的 first_opposite_dt 同理。
+SELECT  CAST(id AS STRING)                                AS seed_id,
+        TRIM(ip)                                          AS seed_ip,
+        TRIM(creator)                                     AS creator,
+        CAST(addtime AS STRING)                           AS addtime,
+        SUBSTR(CAST(addtime AS STRING), 1, 10)            AS add_date,
+        TRIM(remarks)                                     AS remarks
+FROM    ods_mariadb_2b.ods_a168_alert_ip_setting
+ORDER BY addtime;
