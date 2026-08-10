@@ -6035,3 +6035,106 @@ SELECT  ev.member_id,
 FROM        ev
 LEFT JOIN   bl ON bl.member_id = ev.member_id
 ORDER BY ev.action_time, ev.member_id;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-09 / §TL-10 · 处置台账落地：最后一里是列义翻译（2026-08-10 实测）
+   ---------------------------------------------------------------------------
+   §TL-07 / §TL-08 已跑毕，三项实测坐实处置台账可用：
+
+     【量】8,707 条事件、2,948 名会员；其中**百家乐投注会员 661 名、事件 3,155 条**。
+     【时】逐月 200 / 625 / 668 / 798 / 732 / 132，**覆盖全窗且无断崖**——
+           与 member_dtl 快照止于 2026-07-18 迥异，日志按事件记，不受快照覆盖所限。
+     【形】`content` 完全结构化：`mem015:1=>0;mem017:N=>Y;`——
+           **列名、旧值、新值三者俱在**，正则即可解析；`lmc09` 另存原始 UPDATE 语句可交叉核对。
+
+   三类事件的分布亦合乎常理：
+     `edit`         4,784 条（其中百家乐 2,623）——配置修改，处置的主体
+     `changestatus` 2,151 条（其中百家乐   532）——状态变更，最像风控停用类处置
+     `add`          1,772 条（**百家乐 0**）——新增账户，与会员处置无涉，应予剔除
+
+   ⚠ 最后一里：`content` 里的 `memNNN` 是 **`member` 表的列**，不是 `member_dtl` 的列
+     （由 `lmc09` 的 `UPDATE member SET mem016 = N WHERE mem001 = …` 可证）。
+     两表列名同形而异义，若照 `member_dtl` 的列义去读，必然全盘误判——
+     此与 `bet41` 同名异义同类，且更隐蔽。故 §TL-09 先取 `member` 的列义字典，
+     译出 mem015 / mem013 / mem012 / mem017 / mem014 / mem003 / mem022 / mem016
+     八列究竟为何物，方可判定哪些跳变属**风控处置**、哪些只是日常运营。
+     **列义未译之前，处置事件表不得投入使用。**
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+-- §TL-09 · member 表列义字典（译出处置日志所改的八列）
+-- ▸ 导出：需要 —— 存为「数据库/TL09_member_schema.csv」（§TL-09 member 表列义）。
+-- 读法：只看 COLUMN_COMMENT。八列中凡译出为限额、退水、状态、停用、权限者，即属处置；
+--       译为昵称、语言、渠道者，即属日常运营，须自处置事件表剔除。
+SELECT  ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT
+FROM    information_schema.columns
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND   TABLE_NAME   = 'ods_a168_member'
+ORDER BY ORDINAL_POSITION;
+
+-- §TL-10 · 处置事件规范表：一次跳变一行（列义译定后方可投用）
+-- ▸ 导出：需要 —— 存为「数据库/TL10_treatment_ledger.csv」（§TL-10 处置台账·规范事件表）。
+-- 做法：content 形如「列:旧值=>新值;」可含多段，以 SPLIT 逐段拆开再逐段解析。
+--       剔除 add 类（实测百家乐会员零命中，属新增账户而非处置）。
+-- 读法：每行一次跳变——对谁、何时、哪一列、由何值到何值、谁操作、其层级、是否百家乐会员。
+--       此表即 E4 所要的处置账；惟仍非随机分配，只可作准实验，不可充随机对照。
+WITH ev AS (
+    SELECT  CAST(lmc02 AS STRING)                         AS member_id,
+            CAST(lmc04 AS STRING)                         AS action_class,
+            SUBSTR(CAST(lmc08 AS STRING), 1, 10)          AS action_date,
+            CAST(lmc08 AS STRING)                         AS action_time,
+            CAST(lmc06 AS STRING)                         AS operator_id,
+            CAST(lmc07 AS STRING)                         AS operator_lv,
+            CAST(lmc05 AS STRING)                         AS content
+    FROM    ods_mariadb_2b.ods_a168_log_mem_change
+    WHERE   dt >= '2026-03-21'
+      AND   dt <  '2026-08-07'
+      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')
+),
+seg AS (
+    SELECT  e.member_id, e.action_class, e.action_date, e.action_time,
+            e.operator_id, e.operator_lv,
+            TRIM(s.piece)                                 AS piece
+    FROM    ev e, unnest(split(e.content, ';')) AS s(piece)
+),
+parsed AS (
+    SELECT  member_id, action_class, action_date, action_time,
+            operator_id, operator_lv, piece,
+            TRIM(SPLIT_PART(piece, ':', 1))               AS field_name,
+            TRIM(SPLIT_PART(SPLIT_PART(piece, ':', 2), '=>', 1)) AS value_before,
+            TRIM(SPLIT_PART(SPLIT_PART(piece, ':', 2), '=>', 2)) AS value_after
+    FROM    seg
+    WHERE   piece LIKE '%=>%'
+      AND   piece LIKE '%:%'
+),
+guarded AS (
+    -- 护栏：另有一类 edit 内容形如「skyname=>…, Gateway_url=>https://…」，
+    -- 其 URL 里的冒号会骗过上面的两个 LIKE，解析出一整串垃圾作列名。
+    -- 故加数道限制——列名须短、须无空格、须不含箭头与斜杠；实测所见列名皆形如 memNNN 或 tip。
+    SELECT  *
+    FROM    parsed
+    WHERE   LENGTH(field_name) BETWEEN 2 AND 12
+      AND   field_name NOT LIKE '% %'
+      AND   field_name NOT LIKE '%=>%'
+      AND   field_name NOT LIKE '%/%'
+      AND   value_after NOT LIKE '%//%'
+),
+bl AS (
+    SELECT  DISTINCT CAST(bet05 AS STRING)                AS member_id
+    FROM    ods_mariadb_2b.ods_a168_bet02
+    WHERE   dt >= '2026-03-21'
+      AND   dt <  '2026-08-07'
+      AND   CAST(bet02 AS STRING) = '101'
+)
+SELECT  p.member_id,
+        p.action_date,
+        p.action_time,
+        p.action_class,
+        p.field_name,
+        p.value_before,
+        p.value_after,
+        p.operator_id,
+        p.operator_lv,
+        CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END  AS is_baccarat_member
+FROM        guarded p
+LEFT JOIN   bl ON bl.member_id = p.member_id
+ORDER BY p.action_time, p.member_id, p.field_name;
