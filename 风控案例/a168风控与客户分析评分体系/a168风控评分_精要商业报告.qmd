@@ -12,7 +12,11 @@ format:
     embed-resources: true
     page-layout: full
     code-fold: true
+    code-tools: true
     code-summary: "查看计算代码（全部数字由此现算）"
+    toc-location: left
+    toc-expand: 3            # ★ 目录默认展开三级，避免看起来「只到 19.2」
+    df-print: paged
 execute:
   echo: false
   warning: false
