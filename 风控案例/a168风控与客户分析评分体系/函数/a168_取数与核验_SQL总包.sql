@@ -2646,8 +2646,8 @@ ORDER BY n_rounds DESC;                                                         
      用 bet03+bet04 统计关联有效局数，修正同局拆多单造成的 Z-score 放大。
    ★ 2026-08-11 增·哨兵剔除：eid 取 -1／0 者非真实荷官（转播位／系统位），
      曾凭样本量优势窜居 Z 榜前列，属铁证级假阳性——自源头逐出检验总体。
-     同一过滤同步进 S-02／§DX-05／§EX-05 三处荷官键查询；四件涉荷官导出
-     **均须重导**；报告 R 侧另有防御性剔除，旧档在重导前仍可安全使用
+     同一过滤同步进 S-02／§R03b／§EX-05 三处荷官键查询（§DX-05 无荷官键，未动）；
+     四件涉荷官导出**均须重导**；报告 R 侧另有防御性剔除，旧档在重导前仍可安全使用
      （多重比较校正见报告 @sec-r03-fdr）。
    输出列：uid, dealer_id, stake_amount, profit_amount, net_pnl, win_rate,
            n_related_orders, n_rounds_eff, p_base_mix, z_score,
@@ -2696,14 +2696,23 @@ side_base AS (      -- ★ 玩法基准胜率：Banker/Player/Tie/Big/Small 各�
            / NULLIF(SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END), 0) AS p_base                    -- 除法或乘法计算：汇总，取用 game_pnl（游戏净输赢），产出「p_base」
   FROM ord GROUP BY bet_side                                                                        -- 取数来源：取自本条自建的中间结果集 ord
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
+ordb AS (             -- ★ 2026-08-11 增：注单层挂上各自产品的基准，供下方按注额加权
+  SELECT o.member_id, o.dealer_id, o.round_key, o.bet_side,                                         -- 取列：起始取列子句，透传注单四键，涉 round_key（局键）、bet_side（玩法）
+         o.stake, o.game_pnl, o.net_pnl, s.p_base AS p_side                                         -- 续行：并取三项金额与该注自身产品的基准胜率，产出「p_side」
+  FROM      ord o                                                                                   -- 取数来源：取自本条自建的中间结果集 ord
+  LEFT JOIN side_base s ON s.bet_side = o.bet_side                                                  -- 左连接：取自本条自建的中间结果集 side_base，基准未定义者留空——不以 0.5 顶替
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
 pr AS (             -- ★ 局级去重：同局多单折成一局，Z-score 才不被 √k 倍放大
   SELECT member_id, dealer_id, round_key,                                                           -- 取列：起始取列子句，本行先列 member_id, dealer_id, round_key，涉 round_key（局键）、member_id（会员号）、dealer_id（荷官工号）
          SUM(stake)    AS stake,                                                                    -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
          SUM(game_pnl) AS game_pnl,                                                                 -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「game_pnl」
          SUM(net_pnl)  AS net_pnl,                                                                  -- 汇总表达式：取用 net_pnl（会员净输赢），产出「net_pnl」
          COUNT(*)      AS n_orders_in_round,                                                        -- 计数表达式：产出「n_orders_in_round」
-         MAX(bet_side) AS main_side                                                                 -- 取最大值表达式：产出「main_side」
-  FROM ord GROUP BY member_id, dealer_id, round_key                                                 -- 取数来源：取自本条自建的中间结果集 ord
+         SUM(stake * p_side)                                                                        -- 汇总表达式：注额加权基准起算——★ 2026-08-11 斧正，旧法 MAX(bet_side) 取字母序最大而非主注
+           / NULLIF(SUM(CASE WHEN p_side IS NOT NULL THEN stake ELSE 0 END), 0)                     -- 除法或乘法计算：除以有基准之注的注额合计，权重口径与分子对齐
+                       AS p_base_round,                                                             -- 续行：产出「p_base_round」——该局的注额加权基准；全注皆无基准则留空
+         MAX(bet_side) AS main_side                                                                 -- 取最大值表达式：字母序最大注项，**仅备查、不参与计算**（旧版据此取基准，已废）
+  FROM ordb GROUP BY member_id, dealer_id, round_key                                                -- 取数来源：取自本条自建的中间结果集 ordb（已挂基准）
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
 player_all AS (     -- 需求条件：用户整体盈利
   SELECT member_id,                                                                                 -- 取列：起始取列子句，本行先列 member_id，涉 member_id（会员号）
@@ -2723,9 +2732,9 @@ pd AS (                                                                         
          SUM(p.net_pnl)                                    AS net_pnl,                              -- 汇总表达式：取用 net_pnl（会员净输赢），产出「net_pnl」
          SUM(CASE WHEN p.game_pnl >  0 THEN 1 ELSE 0 END)  AS n_win,                                -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「n_win」
          SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END)  AS n_dec,                                -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「n_dec」
-         AVG(COALESCE(s.p_base, 0.5))                      AS p_base_mix                            -- 求均值表达式：产出「p_base_mix」
+         AVG(p.p_base_round)                               AS p_base_mix                            -- 汇总表达式：对各局的注额加权基准取均值——★ 斧正：旧法以 0.5 顶替未定义基准，今删兜底
   FROM pr p                                                                                         -- 取数来源：取自本条自建的中间结果集 pr
-  LEFT JOIN side_base s ON s.bet_side = p.main_side                                                 -- 左连接：取自本条自建的中间结果集 side_base，连接键为 s.bet_side = p.main_side
+  -- （已废）旧版在此按 main_side 连 side_base 取基准，2026-08-11 改为注单层注额加权                                       -- 注：连接已移至 ordb，本处不再取基准
   GROUP BY p.member_id, p.dealer_id                                                                 -- 分组：按 p.member_id, p.dealer_id 汇总
 )                                                                                                   -- 续行：收束上方的子查询或函数括号（§R03）
 SELECT                                                                                              -- 续行：接续上一取列子句，续列 SELECT
@@ -2750,6 +2759,61 @@ ORDER BY z_score DESC, profit_amount DESC;                                      
    但**不加** win_rate>0.70 / net_pnl_all>0：四条规则对照表（@sec-r03 的 r03-dual）
    需要在同一份底料上比较需求原口径与修正口径，加了就比不了。 */
 
+
+
+/* ───────────────────────────────────────────────────────────────────────────
+   §R03-chk · 结算形态实测：庄闲是否 Draw No Bet、各投注产品的两套基准各是多少
+   对应报告：@sec-settle
+   缘起：报告的 Z 分数分母写作「决胜局」（game_pnl <> 0），而此前正文把含和局的
+   无条件概率 45.86% 称作 Z 分数基准——两者不同基。本探针以数据一举定谳。
+   ⚠ 转义纪律：'TIP\_1\_%' 的反斜杠为**单层**——LIKE 语义下 \_ 方为字面下划线，
+     写成 \\_ 则表示字面反斜杠，该条排除将**静默失效**（本方 2026-08-11 曾一犯，
+     系脚本写入时多转义一层所致，已根治）。凡程序化写入 SQL，此处务必复验。
+   判读（一句话）：Banker 的 push_rate 若约 9.5%、p_base_dnb 若约 50.7%，
+   则 Draw No Bet 坐实，现行分母无误；若 push_rate 近 0，则本平台和局按输结算，
+   那是另一桩更大的事——全篇基准须重议，且须先改 SQL 再改报告。
+   ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/R03chk_settlement_form.csv」（§R03-chk 结算形态·逐产品两套基准）。
+WITH ranked AS (                                                                                    -- 公共表表达式：开启中间结果集 ranked——口径与 §R03 逐字一致，便于对照（§R03-chk）
+  SELECT b.bet01, b.bet03, b.bet04, b.bet39, b.bet05, b.bet09,                                      -- 取列：起始取列子句，涉 bet03（靴号）、bet04（局内序号）、bet39（桌号）、bet05（会员号）、bet09（玩法）
+         b.bet11, b.bet13, b.bet14, b.bet38, b.eid,                                                 -- 续行：接续上一取列子句，涉 bet11（汇率）、bet13（下注金额）、bet14（派彩金额）、bet38（测试标识）
+         ROW_NUMBER() OVER (                                                                        -- 行号窗口表达式：以行号窗口取每注最终态，免修订滞后造成重复
+           PARTITION BY b.bet01                                                                     -- 窗口分区：按 b.bet01 分组开窗，组内各自编号
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                           -- 排序：取最新一版，产出「rn」
+  FROM ods_mariadb_2b.ods_a168_bet02 b                                                              -- 取数来源：取自注单明细表（金额与行为口径的第一料源）
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+    AND b.bet02 = '101' AND b.category = '1'                                                        -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03-chk）
+base AS (                                                                                           -- 公共表表达式：开启中间结果集 base——有效注单，与 §R03 同口径（§R03-chk）
+  SELECT r.bet05 AS member_id, r.eid AS dealer_id, r.bet09 AS bet_side,                             -- 取列：起始取列子句，涉 bet05（会员号）、eid（荷官工号）、bet09（玩法）
+         CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,                                    -- 取值表达式：三键拼物理局键，产出「round_key」
+         (CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4))                                           -- 取值表达式：派彩额起算，涉 bet14（派彩金额）
+          - CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)))                                        -- 续行：减投注额得游戏净输赢，涉 bet13（下注金额）
+          / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS game_pnl                             -- 续行：折汇率归一，产出「game_pnl」——恰为 0 即退还局
+  FROM ranked r                                                                                     -- 取数来源：取自本条自建的中间结果集 ranked
+  WHERE r.rn = 1                                                                                    -- 过滤条件：限定 r.rn等于 1，只取每注最终态
+    AND UPPER(TRIM(r.bet38)) = 'N'                                                                  -- 并列条件：剔除测试注单，涉 bet38（测试标识）
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                                -- 并列条件：剔除无效会员号，涉 bet05（会员号）
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：汇率须为正，涉 bet11（汇率）
+    AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\_1\_%'                                                 -- 并列条件：排除小费单，涉 bet09（玩法）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03-chk）
+pr AS (                                                                                             -- 公共表表达式：开启中间结果集 pr——同局拆单先折叠，与 §R03 同法（§R03-chk）
+  SELECT member_id, dealer_id, bet_side, round_key,                                                 -- 取列：起始取列子句，本行先列四键
+         SUM(game_pnl) AS game_pnl                                                                  -- 聚合：局内合计游戏净输赢，产出「game_pnl」
+  FROM base GROUP BY member_id, dealer_id, bet_side, round_key                                      -- 分组：按会员×荷官×玩法×物理局汇总
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§R03-chk）
+SELECT  UPPER(TRIM(bet_side))                          AS bet_side,                                 -- 取列：起始取列子句，本行先取「bet_side」——逐投注产品分列
+        COUNT(*)                                       AS n_rounds,                                 -- 聚合：该产品的总局数，产出「n_rounds」
+        SUM(CASE WHEN game_pnl = 0 THEN 1 ELSE 0 END)  AS n_push,                                   -- 聚合：退还局数（game_pnl 恰为 0），产出「n_push」——DNB 的直接证据
+        SUM(CASE WHEN game_pnl = 0 THEN 1 ELSE 0 END) * 1.0                                         -- 除法或乘法计算：退还局占比起算
+          / NULLIF(COUNT(*), 0)                        AS push_rate,                                -- 续行：除以总局数，产出「push_rate」——庄闲应约 9.5%，押和与边注应近 0
+        SUM(CASE WHEN game_pnl > 0 THEN 1 ELSE 0 END) * 1.0                                         -- 除法或乘法计算：决胜局基准起算
+          / NULLIF(SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END), 0) AS p_base_dnb,                -- 续行：分母取决胜局，产出「p_base_dnb」——报告 Z 分数所用之基，庄应约 50.7%
+        SUM(CASE WHEN game_pnl > 0 THEN 1 ELSE 0 END) * 1.0                                         -- 除法或乘法计算：无条件基准起算
+          / NULLIF(COUNT(*), 0)                        AS p_base_incl                               -- 续行：分母取全部局，产出「p_base_incl」——庄家优势所用之基，庄应约 45.9%
+FROM    pr                                                                                          -- 取数来源：取自本条自建的中间结果集 pr
+GROUP BY UPPER(TRIM(bet_side))                                                                      -- 分组：按投注产品汇总——23 种各出一行
+ORDER BY n_rounds DESC;                                                                             -- 排序：按局数降序，主线三门居前
 
 /* ───────────────────────────────────────────────────────────────────────────
    §T02 · T02_daily_roi.csv
@@ -3743,11 +3807,21 @@ side_base AS (                                                                  
            / NULLIF(SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END), 0) AS p_base                    -- 除法或乘法计算：汇总，取用 game_pnl（游戏净输赢），产出「p_base」
   FROM ord GROUP BY bet_side                                                                        -- 取数来源：取自本条自建的中间结果集 ord
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03b）
+ordb AS (             -- ★ 2026-08-11 增：注单层挂上各自产品的基准，供下方按注额加权
+  SELECT o.member_id, o.dealer_id, o.bet_date, o.round_key, o.bet_side,                             -- 取列：起始取列子句，透传注单五键，涉 bet_date（营业日）、round_key（局键）
+         o.stake, o.game_pnl, o.net_pnl, s.p_base AS p_side                                         -- 续行：并取三项金额与该注自身产品的基准胜率，产出「p_side」
+  FROM      ord o                                                                                   -- 取数来源：取自本条自建的中间结果集 ord
+  LEFT JOIN side_base s ON s.bet_side = o.bet_side                                                  -- 左连接：取自本条自建的中间结果集 side_base，基准未定义者留空——不以 0.5 顶替
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03b）
 pr AS (   -- 局级去重：同一物理局折成一局，避免 Z-score 被 sqrt(k) 放大
   SELECT member_id, dealer_id, bet_date, round_key,                                                 -- 取列：起始取列子句，本行先列 member_id, dealer_id, bet_date, round_key，涉 round_key（局键）、member_id（会员号）、dealer_id（荷官工号）
          SUM(stake) AS stake, SUM(game_pnl) AS game_pnl, SUM(net_pnl) AS net_pnl,                   -- 汇总表达式：取用 stake（下注额（经汇率归一化））、net_pnl（会员净输赢）、game_pnl（游戏净输赢），产出「net_pnl」
-         COUNT(*) AS n_orders_in_round, MAX(bet_side) AS main_side                                  -- 计数表达式：取最大值，产出「main_side」
-  FROM ord GROUP BY member_id, dealer_id, bet_date, round_key                                       -- 取数来源：取自本条自建的中间结果集 ord
+         COUNT(*) AS n_orders_in_round,                                                             -- 计数表达式：产出「n_orders_in_round」
+         SUM(stake * p_side)                                                                        -- 汇总表达式：注额加权基准起算——★ 斧正，旧法 MAX(bet_side) 取字母序最大而非主注
+           / NULLIF(SUM(CASE WHEN p_side IS NOT NULL THEN stake ELSE 0 END), 0)                     -- 除法或乘法计算：除以有基准之注的注额合计
+                       AS p_base_round,                                                             -- 续行：产出「p_base_round」——该局的注额加权基准
+         MAX(bet_side) AS main_side                                                                 -- 取最大值表达式：字母序最大注项，**仅备查、不参与计算**
+  FROM ordb GROUP BY member_id, dealer_id, bet_date, round_key                                      -- 取数来源：取自本条自建的中间结果集 ordb（已挂基准）
 )                                                                                                   -- 续行：收束上方的子查询或函数括号（§R03b）
 SELECT p.bet_date, p.member_id AS uid, p.dealer_id,                                                 -- 取列：起始取列子句，本行先取「uid」，涉 member_id（会员号）、uid（会员号）、dealer_id（荷官工号）
        SUM(p.stake)                                        AS stake_amount,                         -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake_amount」
@@ -3757,14 +3831,14 @@ SELECT p.bet_date, p.member_id AS uid, p.dealer_id,                             
          / NULLIF(SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END), 0) AS win_rate,                 -- 除法或乘法计算：汇总，取用 game_pnl（游戏净输赢），产出「win_rate」
        SUM(p.n_orders_in_round)                            AS n_related_orders,                     -- 汇总表达式：产出「n_related_orders」
        COUNT(*)                                            AS n_rounds_eff,                         -- 计数表达式：取用 n_rounds_eff（有效局数），产出「n_rounds_eff」
-       AVG(COALESCE(s.p_base, 0.5))                        AS p_base_mix,                           -- 求均值表达式：产出「p_base_mix」
+       AVG(p.p_base_round)                                 AS p_base_mix,                            -- 汇总表达式：对各局的注额加权基准取均值——★ 2026-08-11 斧正，旧法以 0.5 顶替未定义基准
        (SUM(CASE WHEN p.game_pnl > 0 THEN 1 ELSE 0 END)                                             -- 续行：汇总，取用 game_pnl（游戏净输赢）
-        - SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END) * AVG(COALESCE(s.p_base,0.5)))           -- 加减计算：汇总后取负号——会员净输赢取负即平台毛利（GGR）
+        - SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END) * AVG(p.p_base_round))           -- 加减计算：汇总后取负号——会员净输赢取负即平台毛利（GGR）
          / NULLIF(SQRT(SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END)                             -- 除法或乘法计算：汇总，取用 game_pnl（游戏净输赢）
-                       * AVG(COALESCE(s.p_base,0.5))                                                -- 除法或乘法计算：求均值
-                       * (1 - AVG(COALESCE(s.p_base,0.5)))), 0)        AS z_score                   -- 除法或乘法计算：求均值，取用 z_score（标准化偏离度），产出「z_score」
+                       * AVG(p.p_base_round)                                                -- 除法或乘法计算：求均值
+                       * (1 - AVG(p.p_base_round))), 0)        AS z_score                   -- 除法或乘法计算：求均值，取用 z_score（标准化偏离度），产出「z_score」
 FROM pr p                                                                                           -- 取数来源：取自本条自建的中间结果集 pr
-LEFT JOIN side_base s ON s.bet_side = p.main_side                                                   -- 左连接：取自本条自建的中间结果集 side_base，连接键为 s.bet_side = p.main_side
+-- （已废）旧版在此按 main_side 连 side_base 取基准，2026-08-11 改注单层注额加权                                          -- 注：连接已移至 ordb，本处不再取基准
 GROUP BY p.bet_date, p.member_id, p.dealer_id                                                       -- 分组：按 p.bet_date, p.member_id, p.dealer_id 汇总
 ORDER BY p.bet_date, z_score DESC;                                                                  -- 排序：按 p.bet_date, z_score（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
 /* ⚠️ 日粒度下单日有效局数天然偏少，Z-score 噪声比全窗口版大得多。
