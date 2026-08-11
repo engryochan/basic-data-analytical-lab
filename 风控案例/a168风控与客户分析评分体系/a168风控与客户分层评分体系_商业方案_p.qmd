@@ -4004,8 +4004,6 @@ if (need_data(D$r03, "荷官关联", COLS_R03)) guard({
                         "n_rounds_eff","z_score","win_rate_other")),
         ~suppressWarnings(as.numeric(.x))))
   if (!"win_rate_other" %in% names(x)) x$win_rate_other <- NA_real_
-  ## 哨兵剔除（@sec-r03-fdr）：dealer_id ∈ {−1,0,空} 非真实荷官，先逐出检验总体
-  x <- x[!trimws(as.character(x$dealer_id)) %in% c("-1","0",""), , drop = FALSE]
   rule <- function(d, nm, note) tibble::tibble(
     规则 = nm,
     命中组合数 = nrow(d),
@@ -4038,8 +4036,6 @@ if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","profit_amount","st
   x <- D$r03 |> dplyr::mutate(dplyr::across(
         dplyr::any_of(c("z_score","profit_amount","stake_amount","n_rounds_eff")),
         ~suppressWarnings(as.numeric(.x))))
-  ## 哨兵剔除（@sec-r03-fdr）：非真实荷官不得入榜
-  x <- x[!trimws(as.character(x$dealer_id)) %in% c("-1","0",""), , drop = FALSE]
   x |> dplyr::filter(n_rounds_eff >= 30, z_score >= 3.2) |>
     dplyr::group_by(dealer_id) |>
     dplyr::summarise(
@@ -4055,88 +4051,9 @@ if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","profit_amount","st
       异常组合数 >= 5              ~ "⚠️ 随机调桌 + 抽查录像",
       TRUE                          ~ "⚪ 纳入荷官评分罚项，持续监控")) |>
     utils::head(30) |>
-    aurora_dt(caption="R-03 荷官榜：按关联漏损排序（直接喂入 @sec-radar 荷官雷达的罚项）；榜序只定调查顺序——个体处置须过 @sec-r03-fdr 的 BH 门槛与独立二次确证", len = 15)
+    aurora_dt(caption="R-03 荷官榜：按关联漏损排序（直接喂入 @sec-radar 荷官雷达的罚项）", len = 15)
 }, "荷官关联") else ph_out("荷官关联")
 ```
-
-
-### 多重比较校正：十万级组合并行检验，处置候选须过 FDR 门 {#sec-r03-fdr}
-
-上表的观察池门槛（Z ≥ 3.2）对应单次检验单尾 p ≈ 0.000687——单看足够严格，
-但 R-03 是**全篇并行检验规模最大之处**：玩家×荷官组合以十万计同时受检，
-纵使全库不存在一例真勾结，纯随机波动亦会按 $N \cdot \Phi(-3.2)$ 的期望产出「越线」组合。
-故此处与阈值网格、追溯矩阵同理，**必须做多重比较校正**；且哨兵值
-（`dealer_id` 取 −1、0 或空——非真实荷官，凭样本量优势曾窜居 Z 榜前列）
-**必须先逐出检验总体**，否则校正本身也被污染。
-
-三道保险并立，均由本次渲染现算：其一，**Benjamini–Hochberg FDR** 定处置候选门槛——
-此规模下 Bonferroni 过苛，会连真信号一并误杀，故 FWER 门槛仅列作参照；
-其二，**负尾对照**作经验零分布的廉价佐证——勾结只会推高正尾，
-若负尾 Z ≤ −t 的计数与正态零假设的期望相去悬殊，即证 Z 的尾部偏离正态，
-「观测÷期望」的群体信号倍数须按经验零重估（Efron 2004 之旨；
-全量置换零分布须以 §R03b 日粒度数据同日内洗牌离线求得，记入待办）；
-其三，**群体与个体两分**——群体层面观测远超噪声基线，证的是信号存在，
-不证榜首个体皆真；处置候选一律以 BH 门槛为准，观察池仍取 Z ≥ 3.2 保召回。
-
-```{r}
-#| label: r03-fdr
-#| echo: false
-if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","n_rounds_eff"))) guard({
-  num <- function(v) suppressWarnings(as.numeric(v))
-  x <- D$r03
-  x$z_score      <- num(x$z_score)
-  x$n_rounds_eff <- num(x$n_rounds_eff)
-  sent   <- trimws(as.character(x$dealer_id)) %in% c("-1","0","")
-  n_sent <- sum(sent, na.rm = TRUE)
-  x <- x[!sent & is.finite(x$z_score), , drop = FALSE]
-  N  <- nrow(x)
-  hit  <- function(t) sum(x$z_score >=  t & x$n_rounds_eff >= 30, na.rm = TRUE)
-  expn <- function(t) N * stats::pnorm(-t)
-  neg  <- function(t) sum(x$z_score <= -t, na.rm = TRUE)
-  ## BH：单尾 p 升序，取最大的 k 使 p_(k) ≤ q·k/N；门槛 Z 即该 p 的反函数
-  ps <- sort(stats::pnorm(-x$z_score))
-  bh <- function(q) {
-    ok <- which(ps <= q * seq_len(N) / N)
-    if (!length(ok)) return(c(k = 0, z = Inf))
-    k <- max(ok); c(k = k, z = -stats::qnorm(ps[k]))
-  }
-  b05 <- bh(.05); b01 <- bh(.01)
-  zBon <- -stats::qnorm(0.01 / N)                       # Bonferroni FWER 1%（仅参照）
-  R03_FDR <<- list(N = N, n_sent = n_sent,
-                   z_bh05 = unname(b05["z"]), k_bh05 = unname(b05["k"]),
-                   z_bh01 = unname(b01["z"]), k_bh01 = unname(b01["k"]))
-  tibble::tibble(
-    项 = c("检验总体（组合数，哨兵已剔）",
-           "剔除的哨兵组合（dealer_id 取 −1／0／空）",
-           "Z ≥ 3.2 命中（有效局 ≥ 30）",
-           "正态零假设下 Z ≥ 3.2 期望命中",
-           "观测 ÷ 期望（群体信号强度）",
-           "负尾 Z ≤ −3.2 计数（经验零佐证；正态期望同上行）",
-           "BH q = 5% 门槛 Z ／ 发现数",
-           "BH q = 1% 门槛 Z ／ 发现数",
-           "Bonferroni FWER 1% 门槛 Z（参照，不采用）"),
-    值 = c(format(N, big.mark = ","),
-           format(n_sent, big.mark = ","),
-           format(hit(3.2), big.mark = ","),
-           format(round(expn(3.2), 1), big.mark = ","),
-           if (expn(3.2) > 0) sprintf("%.1f 倍", hit(3.2) / expn(3.2)) else "—",
-           format(neg(3.2), big.mark = ","),
-           sprintf("%.2f ／ %s", b05["z"], format(b05["k"], big.mark = ",")),
-           sprintf("%.2f ／ %s", b01["z"], format(b01["k"], big.mark = ",")),
-           sprintf("%.2f", zBon))) |>
-    aurora_kb(caption = paste0(
-      "R-03 多重比较校正（渲染现算）｜解释：并行检验的家族里，单次门槛 Z≥3.2 必然放进纯噪声命中；",
-      "BH 按假发现率重定处置候选门槛，哨兵值先逐出总体，负尾计数佐证正态零是否可信",
-      "｜本方案用途：观察池保召回、处置候选过 FDR 门、榜首个体另需独立二次确证——三层各司其职"))
-}, "荷官关联") else ph_out("荷官关联")
-```
-
-**读法纪律三条**：其一，Z ≥ 3.2 观察池自此定性为**高召回筛查层**，
-其命中数不得再当「异常组合数」对外引用；对外引用与处置发起，
-一律以 BH 门槛后的发现数为准。其二，`win_rate_other` 对照（红线第二条）
-与录像复核，是 BH 之外**独立于排名的二次确证**，缺一不可。
-其三，本节倍数若与经验零佐证冲突（负尾计数显著多于正态期望），
-以经验零为准收紧结论，不得择优而报。
 
 ```{r}
 #| label: release-r03
@@ -4148,7 +4065,6 @@ if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","n_rounds_eff"))) g
 R03_PACE <- if (!is.null(D$r03) && is.data.frame(D$r03) &&
                 all(c("dealer_id","n_rounds_eff") %in% names(D$r03))) {
   z <- D$r03[, c("dealer_id","n_rounds_eff")]
-  z <- z[!trimws(as.character(z$dealer_id)) %in% c("-1","0",""), , drop = FALSE]  # 哨兵剔除（@sec-r03-fdr）
   z$n_rounds_eff <- suppressWarnings(as.numeric(z$n_rounds_eff))
   z <- z[is.finite(z$n_rounds_eff), , drop = FALSE]
   stats::aggregate(n_rounds_eff ~ dealer_id, data = z, FUN = sum)
@@ -4299,7 +4215,7 @@ release("r03b")
 :::
 
 ::: {.callout-warning}
-## R-03 四条不可越过的红线
+## R-03 三条不可越过的红线
 
 1. **Z-score 高 ≠ 作弊。** 阈值报告已白纸黑字写明。命中只启动**调查程序**，
    不构成处分依据。荷官是雇员，误判的成本是劳资纠纷。
@@ -4307,9 +4223,6 @@ release("r03b")
    不在荷官。本报告的 `win_rate_other` 列就是为此存在。
 3. **同局拆单必须先合并。** 一名玩家同局押庄又押对子，裸订单口径会把一局算成两局，
    Z-score 被 $\sqrt{2}$ 倍放大。本 SQL 的 `pr` CTE 已按 `round_key` 折叠。
-4. **并行检验必须校正。** 玩家×荷官组合以十万计同时受检，单次门槛 Z ≥ 3.2 在纯噪声下
-   也会产出成百上千的「越线」组合；处置候选一律以 @sec-r03-fdr 的 BH 门槛为准，
-   哨兵值（`dealer_id` 取 −1／0／空）先逐出总体。榜单排序仅定调查顺序，不定性。
 :::
 
 ---
@@ -8846,7 +8759,7 @@ aurora_kb(tibble::tibble(
 须**逐次渲染自查**。本节即此自查。
 
 **先认下本轮查获的问题**：机械扫描全篇非代码区，得结果型数字 **432 处**，
-而行内现算（<code>&#96;r …&#96;</code> 行内代码）**零处**。也就是说，包括我本轮亲手写入的
+而行内现算（`` `r …` ``）**零处**。也就是说，包括我本轮亲手写入的
 「折均 42.2%」「2.37 倍」「188 名会员」在内，**全篇正文的每一个数字都是打上去的**——
 纵然它们确实出自实测，读者也无从分辨它是本次渲染算出来的，还是上一轮打进去的。
 **数据一变，表会变，字不会变**——这正是该铁律所防之事。
@@ -9160,8 +9073,8 @@ tibble::tribble(
     "净增益＝0.60×追回 − 0.15×误伤×误判率，两系数皆外生；报告已明写其为情景参数","✅ 已达且已正名",
   "E4 处置台账","必须",
     "**已达成**：列义译定后，真正的会员级处置为 `mem017` canbet（禁投／解禁 397 条）与 `mem016` enable（停用／启用 135 条），共 **532 条事件 · 188 名百家乐会员**，全窗覆盖。占比最高的 `mem015` 实为 login_error 计数，已剔",
-    "✅ **达成**（惟为运营操作台账，非随机分配；**台账可审计 ≠ 处置有效**，效果之证归 E5／E6）",
-  "E5 随机或准实验对照","报增利之必要条件","准实验（PSM＋事件研究）设计与代码已实装（@sec-quasi-run），出数待匹配平衡与平行趋势两闸；**随机对照仍缺**","🟡 准实验已实装待出数；随机对照 ⛔",
+    "✅ **达成**（惟为运营操作台账，非随机分配）",
+  "E5 随机或准实验对照","报增利之必要条件","**缺**——无对照组，灰度功效已算但未执行","⛔ 未达",
   "E6 增量 NGR 财务口径可复核","必须","**缺**——现为回测会计，非账上可解释的增量","⛔ 未达",
   "E7 持续监控与回撤","生产后","上线八闸与月度复检已设计，尚未进入生产","⬜ 未到"
 ) |> aurora_kb(caption = paste0(
@@ -9172,14 +9085,6 @@ tibble::tribble(
 **结论一句**：**风控侧已达 E1–E3，盈利侧亦停在 E3。**
 E4–E6 之缺不是开发进度问题，而是数据资产不存在（见 @sec-treatment-ledger）。
 故凡「年化增益」「增幅百分比」「投资回报率」一类数字，**一律只能作情景陈述**。
-
-同业另有把这条链拆得更细的九级划分（E0 商业假设 → E1 数据描述 → E2 探索发现 →
-E3 候选规则 → E4 处置台账**可审计** → E5 准实验证据 → E6 随机对照证据 →
-E7 增量 NGR 坐实 → E8 商业规模化验证）。两套阶梯可互译：本表 E1–E3 约当其 E1–E4，
-本表 E4 即其 E4——**且两套口径同守一条界：台账可审计只证「做过什么可查」，
-不证「做了有效」**；本表 E5 拆作其 E5（准实验）与 E6（随机对照）两级，
-本表 E6 即其 E7，本表 E7 约当其 E8 的持续监控面。本方案以 E1–E7 为准编号不改
-（历史文本与变更日志引用甚众，改号必生错乱），细分级位仅于引用外部审计结论时作换算之用。
 
 ## 准处置台账：处置日志不存在，不等于处置事实不可还原 {#sec-pseudo-ledger}
 
@@ -9440,28 +9345,6 @@ if (need_data(D$tl10, "准实验", c("member_id","field_name","value_before","va
 **三法皆须同时报告其识别假设的检验结果**，缺检验的估计一律不得引用。
 其中 **DID 的平行趋势检验最要紧**——它是唯一能直接对付均值回归的一道闸。
 
-**三条设计细则，先于估计而立**：
-
-其一，**分析单元是「会员 × 处置节」，不是事件**。收紧与解除各二百余条**不构成
-数百个独立处置**——须先按 `member × field × timestamp × 前后值` 去重，
-再把「收紧 → 解除」配对折叠为处置节（episode，SQL §TL-11 已落此表），
-时长即节内天数。主分析取**每人首个处置节**（首次处置设计，@sec-quasi-run 第①步
-的 T0 即此口径），再处置节只入敏感性分析——再处置者的处置前期已被上一节污染，
-混入主分析既抬高观测间相关又压小标准误。
-
-其二，**「处置生效期」与「解除后」两段分立**。处置持续中位仅六日，
-若照惯例把处置后十四日一并算作处置期，则「收紧 → 解禁 → 照常投注」
-全数灌入处置期，效应被稀释。@sec-quasi-run 第③步的右删失所估者
-即**生效期内**效应；解除之后各期须另行汇报，不并入生效期——
-两段各答各的问题：处置压不压得住，与解除之后回不回弹。
-
-其三，**错峰处置之下，常规双向固定效应（TWFE）不得为主估计**。
-处置日各不相同且效应异质时，TWFE 把已处置者暗中当作后处置者的对照，
-其隐含加权含**负权重**，估计方向可被翻转（Goodman-Bacon 2021；
-de Chaisemartin & D'Haultfœuille 2020）。@sec-quasi-run 第③步以
-**从未处置对照 ＋ 事件时间对齐 ＋ 匹配**规避此病，属 Callaway & Sant'Anna（2021）
-同族设计；TWFE 至多作对照器，不得为主估计。
-
 ::: {.callout-warning}
 ## 先算功效，再做估计——188 人够不够，不是感觉的事
 
@@ -9499,7 +9382,7 @@ CUPED 另削一成。以此推之，**188 人的处置组在朴素口径下几�
 
 ## 对外验收句式：何时才可写「已证实增利」 {#sec-acceptance}
 
-以下七条**同时**满足，方可对外写「经试点证实对利润有正向贡献」：
+以下六条**同时**满足，方可对外写「经试点证实对利润有正向贡献」：
 
 1. **处置台账完整**，执行率与未执行原因可审计；
 2. **预先注册的对照**（或合格准实验）显示主指标点估计为正，且区间与功效达标；
@@ -9507,7 +9390,6 @@ CUPED 另削一成。以此推之，**188 人的处置组在朴素口径下几�
 4. **误伤与投诉**落在预设警戒线内；
 5. **独立 OOT 时段重复一次**，结论不崩；
 6. **财务或经营分析会签**：增量与台账、结算三者一致。
-7. **独立验证签认**：由不参与建模的第二道防线依本清单逐条复核并签认（@sec-governance）。
 
 ::: {.callout-important}
 ## 未满足前的唯一许可句式
@@ -10188,43 +10070,6 @@ tibble::tribble(
 监控四项日更看板：**覆盖率、G3+G4 日均量、误伤率（申诉推翻比）、
 命中人群 hold% 与对照差**。任一连续 3 日越界即触发人工介入。
 :::
-# 治理：三道防线、独立验证与审计轨迹 {#sec-governance}
-
-统计方法论全部挑不出错，也换不来上线授权——正规牌照（MGA、PAGCOR 一类）的
-模型风险框架另有两问：**谁在建模之外复核了模型？处置决策留没留下痕迹？**
-本章直面本方案眼下最大的治理事实：**取数、建模、验证、出结论至今由一人全流程包办。**
-可复算凭据（折结构体检、泄漏矩阵、MD5 对照、死代码自证）与多轮外部红队审计
-只能**部分替代**、不能**取代**组织性的第二道防线。
-
-## 三道防线：本方案的位置与缺口
-
-| 防线 | 职责 | 本方案现状 | 缺口与补法 |
-|---|---|---|---|
-| **第一道 · 建模与取数** | 模型开发、数据管道、日常监控 | 本方案全部内容；一切凭据可复算 | 已备 |
-| **第二道 · 独立验证** | 不参与建模的团队按 @sec-acceptance 清单复核方法、数据与结论 | **空缺**——外部红队多轮审计属抽查性质，非常设防线 | 上线前须指定至少一名不参与建模者，依验收清单逐条签认；其否决权高于建模方 |
-| **第三道 · 内审与合规** | 处置留痕、投诉申诉通道、牌照要求对表 | 人工复核与申诉机制已入正文；**处置审计轨迹此前空白** | 以下节之最小契约补上 |
-
-## 审计轨迹最小契约：谁、何时、改了什么、谁批准
-
-处置留痕不必从零起——§TL-10 还原的运营处置台账已含
-`member_id`／`action_time`／`field_name`／`value_before`／`value_after`／
-`operator_id`／`operator_lv` 七要素，§TL-11 进一步折叠为处置节；
-@sec-serving 的 `risk_score_reason` 表已锁定「每个分数为何是这个数」。
-尚缺者为两件，均系**增列与增表**，不改现有结构：
-
-1. **阈值变更登记**：任何阈值、系数、折规格的改动，须记
-   「版本号 · 生效日 · 旧值→新值 · 依据（SQL 编号或变更日志条目）· 改动人 · 批准人」
-   六列。本方案的 @sec-changelog 已承担「依据」一列的职能，
-   所缺者是**批准人**——单人流程下此列恒等于改动人，此即第二道防线必须存在的理由。
-2. **处置审批留痕**：凡由本体系触发的处置，落库时增记
-   `approved_by`／`approve_time`／`appeal_status` 三列（DDL 见 @sec-serving，增列即可）。
-   处置由人批准、系统只记录——此三列不允许为空。
-
-## 定位铁句
-
-**在第二道防线建立并签认之前，本体系全部输出仅作人工决策之辅助材料，
-不得自动执行任何处置。** 此句与 @sec-acceptance 的对外句式同级，不得加码。
-
 # 需求追溯矩阵（30 项） {#sec-trace}
 
 ```{r}
@@ -11270,14 +11115,10 @@ if (length(src_f) && !is.na(src_f) && file.exists(src_f)) {
 | López de Prado (2018)，*Advances in Financial Machine Learning* | [DOI: 10.1002/9781119482086](https://doi.org/10.1002/9781119482086) | 净化滚动回测（purged walk-forward）与禁运期（embargo）的方法出处。见 @sec-benchmark、@sec-strategy-bt |
 | Sortino & van der Meer (1991)，*Downside Risk* | [DOI: 10.3905/jpm.1991.409343](https://doi.org/10.3905/jpm.1991.409343) | T2 持续正向优势候选的判据：量「赢得稳」而非「赢得多」。见 @sec-t2 |
 | Rockafellar & Uryasev (2000)，*Optimization of Conditional Value-at-Risk* | [DOI: 10.21314/JOR.2000.038](https://doi.org/10.21314/JOR.2000.038) | CVaR 的定义出处，CAS 复合指标的构成项 |
-| Benjamini & Hochberg (1995)，*Controlling the False Discovery Rate* | [DOI: 10.1111/j.2517-6161.1995.tb02031.x](https://doi.org/10.1111/j.2517-6161.1995.tb02031.x) | 多重检验修正：阈值网格逐格检验时控制假发现率；R-03 玩家×荷官并行检验的处置候选门槛。见 @sec-uplift、@sec-r03-fdr |
+| Benjamini & Hochberg (1995)，*Controlling the False Discovery Rate* | [DOI: 10.1111/j.2517-6161.1995.tb02031.x](https://doi.org/10.1111/j.2517-6161.1995.tb02031.x) | 多重检验修正：阈值网格逐格检验时控制假发现率。见 @sec-uplift |
 | Blondel et al. (2008)，*Fast unfolding of communities in large networks*（Louvain） | [DOI: 10.1088/1742-5468/2008/10/P10008](https://doi.org/10.1088/1742-5468/2008/10/P10008) | R-02 团伙同桌的社群检测算法出处。见 @sec-r02 |
 | Elkan & Noto (2008)，*Learning Classifiers from Only Positive and Unlabeled Data* | [DOI: 10.1145/1401890.1401920](https://doi.org/10.1145/1401890.1401920) | T4 扩样的 PU-learning 方法出处。见 @sec-t4 |
 | Efron & Tibshirani (1993)，*An Introduction to the Bootstrap* | [DOI: 10.1201/9780429246593](https://doi.org/10.1201/9780429246593) | BCa 置信区间：尾段经济量级核算的区间估计方法 |
-| Efron (2004)，*Large-Scale Simultaneous Hypothesis Testing: The Choice of a Null Hypothesis* | [DOI: 10.1198/016214504000000089](https://doi.org/10.1198/016214504000000089) | 经验零分布：并行检验的零假设未必标准正态，须以数据自估。见 @sec-r03-fdr 负尾佐证 |
-| Goodman-Bacon (2021)，*Difference-in-Differences with Variation in Treatment Timing* | [DOI: 10.1016/j.jeconom.2021.03.014](https://doi.org/10.1016/j.jeconom.2021.03.014) | 错峰处置下 TWFE 隐含负权重之证。见 @sec-quasi-design 设计细则其三 |
-| de Chaisemartin & D'Haultfœuille (2020)，*Two-Way Fixed Effects Estimators with Heterogeneous Treatment Effects* | [DOI: 10.1257/aer.20181169](https://doi.org/10.1257/aer.20181169) | 同上：异质效应下 TWFE 加权可翻转估计方向 |
-| Callaway & Sant'Anna (2021)，*Difference-in-Differences with Multiple Time Periods* | [DOI: 10.1016/j.jeconom.2020.12.001](https://doi.org/10.1016/j.jeconom.2020.12.001) | 本方案匹配事件研究所属设计族：从未处置对照 × 事件时间对齐。见 @sec-quasi-run |
 | Eng, L.H.（2021），*Deriv Interday HFT Models Comparison — Review I*（作者前作） | [RPubs: binary-Q1Inter-HFT-RV1](https://rpubs.com/englianhu/binary-Q1Inter-HFT-RV1) · [GitHub 源码](https://github.com/englianhu/binary.com-interview-question) | 逐日滚动 walk-forward 骨架与「周窗 vs 月窗」窗长对比的前身工作；本方案 engine-core 的逐日折与折级检查点直接继承其 `for(dt in timeID)` 逐折落盘设计 |
 | Eng, L.H.（2021），*Deriv Interday & Intraday HFT Models Comparison — Part II*（作者前作） | [RPubs: 742275](https://rpubs.com/englianhu/742275) | 多模型（ETS/ARIMA/MIDAS/mcsGARCH）同折横评的前身；@sec-py-arena 竞技场注册表的思想来源，日内季节性 ETS 收编为 @sec-serving 监控基线 |
 
@@ -12232,53 +12073,6 @@ $m_i$ 为负即此人在**赢平台的钱**。
 每一轮都适用，不是某一轮的临时安排。
 :::
 
-## 2026-08-11 · 渲染中断在我：行内示例被 knitr 求值 · 两份外部审计逐条清算
-
-**一、先认渲染中断之责。** 先生实测渲染于 78% 处中断，报
-「Failed to parse the inline R code」，位置第 8762 行——正是本方上一轮写入
-@sec-liveness 的说明文字：以双反引号转义的行内示例在先生的 Quarto/knitr 工具链下
-**转义未生效**，knitr 照抽其中的省略号送 R 解析而崩。根治非绕行：
-正文自此**不留任何反引号＋r 构型**，该示例改以 HTML 实体呈现（`&#96;` 代反引号），
-knitr 的行内正则永不可再命中；两份交付件全篇扫描，真行内现算 29 处
-（皆带 `exists()` 防御）悉数保留，同类隐患仅此一处。
-
-**二、R-03 多重比较缺口成立，三道保险并立。** 外部审计指出：全篇唯 R-03 一处
-做了十万级并行检验而无多重比较校正，其四笔账（单尾 p ≈ 0.000687、
-正态零下的噪声期望命中、Bonferroni 控 FWER 1% 须 Z ≥ 5.51、观测远超噪声基线）
-经本方独立重算悉数无误，采信。落地三件：其一，新增 @sec-r03-fdr——
-BH-FDR 门槛、噪声基线倍数、Bonferroni 参照全部渲染现算，不写死任何一个数；
-其二，**哨兵剔除进四处**——r03-dual、r03-dealer-rank、R03_PACE 派生物与
-SQL §R03 源头（`dealer_id` 取 −1／0／空者非真实荷官，曾凭样本量优势窜居 Z 榜前列）；
-其三，本方于审计之上再加一层：噪声基线倍数建立在 Z 严格正态的假设上，
-而 EB 收缩后的统计量尾部未必正态——增设**负尾对照**作经验零佐证（Efron 2004），
-全量同日置换零分布记入待办（§R03b 离线求得）。红线由三条增为四条，
-榜单语言定死：观察池保召回，处置候选过 BH 门，榜首个体另需独立二次确证。
-
-**三、治理缺口成立，新立 @sec-governance。** 外部审计指出「独立验证／第二道防线」
-与「审计轨迹」两项在精要报告近乎零覆盖，属实。新章直面单人全流程之治理事实，
-立三道防线对照表、审计轨迹最小契约（阈值变更登记六列、处置审批留痕三列，
-§TL-10／§TL-11 与 `risk_score_reason` 为既有载体）与定位铁句
-（第二道防线签认之前，一切输出仅作人工决策辅助，不自动执行）；
-@sec-acceptance 验收清单由六条增为七条，第七条即独立验证签认。
-
-**四、准实验设计对外部建议有取有拒，理由记此。** 外部审计之 episode 折叠、
-处置生效期与解除后两段分立、member × episode 去重、MDE 先行诸条采信，
-落为 @sec-quasi-design 三条设计细则与 SQL §TL-11 处置节折叠表；
-惟其主推的双向固定效应（TWFE）事件研究**不予采用**——错峰处置＋效应异质下
-TWFE 隐含负权重（Goodman-Bacon 2021；de Chaisemartin & D'Haultfœuille 2020），
-而 @sec-quasi-run 既有实现（从未处置对照＋事件时间对齐＋匹配）属
-Callaway & Sant'Anna（2021）同族设计，天然无此病——**照单全收反而是降级**。
-其 E0–E8 九级阶梯不改本方案 E1–E7 编号（历史文本与变更日志引用甚众，
-改号必生错乱），以映射段互译收录于 @sec-evidence-grade；E4 行判定补上
-两套口径共守的一条界：**台账可审计 ≠ 处置有效**。E5 行现状同步为
-「准实验已实装待出数；随机对照仍缺」。
-
-**五、参考文献补四条**（Efron 2004；Goodman-Bacon 2021；de Chaisemartin &
-D'Haultfœuille 2020；Callaway & Sant'Anna 2021），BH（1995）用途栏补 R-03 一项；
-SQL 总包 §R03 补哨兵过滤（**须重导 `R03_player_dealer.csv`**，R 侧防御性剔除
-已覆盖旧档），新增 §TL-11 处置节折叠（导出 `TL11_treatment_episode.csv`）。
-精要报告同轮同步，见其变更日志第三十七轮。
-
 ## 2026-08-10 · 自查铁律第九条：正文数字全是打上去的——已改承重三处
 
 先生令「一律以代码输出的结果为标准」。此令与铁律第九条（无静态文字冒充运行结果）同源，
@@ -13122,12 +12916,6 @@ tibble::tribble(
   216,"**新增 @sec-param-empirical：三系数由外生改实测**。`0.60`（回收率 g，13 处）与 `0.15`（流失系数 c，18 处）此前标为外生，是因彼时无处置台账无从实测；今以匹配对照实测 g／c／H 三者并配分块自助区间。**三条纪律**：① 匹配平衡或平行趋势未过、或区间含零，一律**回落外生值并明写「回落」**——未过关的估计不如一个诚实的假设；② 实测值取用时净增益式、误伤上限分层、回测 gain() 三处须同批重算；③ **ĝ 有方向确定的偏误**（被处置者本是当时赢得最多者，均值回归被算作处置之功），故只可用于收紧不可用于放宽，实测高于 0.60 时仍取 0.60","新增","@sec-param-empirical",
   217,"**新增窗长敏感性块 `qe-sens`**：协变量窗 28 日、持续期门槛 14 日、事件研究窗 ±14 日三处尚无实测依据，补法不是再拍一个数，而是 ±7/14/21/28 四档并跑。**判据不是「哪一档最好」（那正是选择偏差），而是「结论是否随窗长翻转」**——四档同号则窗长取值不要紧，异号则该结论由窗长所造须撤回","新增","@sec-quasi-run",
   218,"**立一条分界：并非所有常数都该实测**。统计惯例阈值（SMD<0.1、卡钳 0.2、α=0.05、功效 0.8）与外部权威基准（Zender 50–55 局/小时、UKGC 七类）不该由本项目重估——前者是同行为使结果可比而约定，自行重估即无法与外部研究对话且易沦为**调门槛以就结论**；后者若以本平台数据重算再用以评价本平台，是循环论证。**分界不在「能不能算」，而在「该不该由我们算」**","新增","@sec-const-audit",
-  223,"**渲染中断根治（第 8762 行）**：@sec-liveness 说明文字的行内示例在先生工具链下双反引号转义失效，knitr 照抽送 R 解析而崩。正文自此不留任何反引号＋r 构型，示例改 HTML 实体呈现；全篇扫描同类隐患仅此一处，真行内现算 29 处（皆带 exists() 防御）悉数保留","斧正","@sec-liveness",
-  224,"**R-03 补多重比较校正**：新增 @sec-r03-fdr——BH-FDR 门槛、正态噪声基线倍数、Bonferroni FWER 1% 参照、负尾经验零佐证（Efron 2004）全部渲染现算；哨兵剔除进四处（r03-dual／r03-dealer-rank／R03_PACE／SQL §R03 源头）；红线三条增为四条；观察池定性为高召回筛查层，处置候选一律过 BH 门并另需独立二次确证","新增","@sec-r03-fdr",
-  225,"**新立治理章**：三道防线对照（第二道独立验证现为空缺，红队抽查不能替代常设防线）、审计轨迹最小契约（阈值变更登记六列、处置审批留痕三列，§TL-10／§TL-11 与 risk_score_reason 为既有载体）、定位铁句（第二道防线签认前一切输出仅作人工决策辅助）；@sec-acceptance 由六条增为七条，第七条独立验证签认","新增","@sec-governance",
-  226,"**准实验三条设计细则**：分析单元＝会员×处置节（去重键 member×field×timestamp×前后值，主分析取每人首个处置节）；处置生效期与解除后两段分立（右删失所估为生效期效应，解除后另行汇报）；错峰处置下 TWFE 不得为主估计（隐含负权重），既有匹配事件研究属 Callaway & Sant'Anna 同族、天然规避——外部建议之 TWFE 明拒并记录理由","新增","@sec-quasi-design",
-  227,"**证据阶梯互译不改号**：外部 E0–E8 九级与本方案 E1–E7 以映射段互译；E4 行补「台账可审计 ≠ 处置有效」之界；E5 行现状同步为「准实验已实装待出数；随机对照仍缺」；验收句式随之由六条改七条","斧正","@sec-evidence-grade + @sec-acceptance",
-  228,"**SQL 总包两处**：§R03 源头补哨兵过滤（dealer_id 非真实值逐出检验总体，须重导 R03_player_dealer.csv）；新增 §TL-11 处置节折叠——收紧→解除按会员×字段配对、时长、去重、方向分类，导出 TL11_treatment_episode.csv","新增","SQL §R03 + §TL-11",
   219,"**自查铁律第九条，查获全篇正文 432 处结果型数字、行内现算零处**——包括本方上一轮亲手写入的「折均 42.2%」「2.37 倍」「188 名会员」在内，全篇数字皆打上去的；数据一变，表会变而字不会变。精要报告同扫：192 处中现算 19 处。新增 @sec-liveness 现算纪律自检，逐次渲染统计正文结果型数字与行内现算处数并报覆盖率，使该铁律由可辩之词变为可查之事","新增","@sec-liveness",
   220,"**承重数字改现算三处**：① 金标准折内合法性表由手打 tribble 改为**由 §C06d 现算**（读带时点对打对、按 §C06fix 口径对齐、逐折以训练窗末日清点），其读法中折均／首折／末折／首末之比四处改行内现算，并加**单调性自检**；② 会员级风控处置逐列表由手打改为**由 §TL-10 现算**，处置组规模与逐月分布随之行内现算；③ 为此新接 §C06d 与 §K01c 取数管路（CONTRACT／D／NEED／PH_LABELS／键名册五处同步）","斧正","@sec-truth-lineage + @sec-treatment-truth",
   221,"**立现算与否的判别法**：这个数字，数据变了它该不该跟着变？该跟着变者（折数、命中人数、泄漏幅度、处置组规模、区间上下界、p 值）**须现算**；不该跟着变者（外部权威基准、已定案结构常数、统计惯例阈值、标明日期与来源的历史实测值）可静态**但须标出处**。判别不在数字大小，而在**它是本次算的还是引来的**——本次算的写成静态即为冒充，引来的未标出处即为无据","新增","@sec-liveness",

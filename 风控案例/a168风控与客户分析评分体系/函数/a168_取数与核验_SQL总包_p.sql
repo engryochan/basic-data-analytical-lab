@@ -1364,7 +1364,6 @@ bs AS (                  -- 金额正名（只保留本查询实际使用的量�
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl                            -- 除法或乘法计算：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「game_pnl」
   FROM vd v                                                                                         -- 取数来源：取自本条自建的中间结果集 vd
   WHERE NULLIF(TRIM(v.eid),'') IS NOT NULL   -- 空荷官行本就不进任何输出组，前置过滤不改输出
-    AND TRIM(v.eid) NOT IN ('-1', '0')       -- 哨兵荷官号一并剔除：-1／0 非真实荷官，不得入评分（2026-08-11 增）
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（交付件 S02_dealer_score.csv）
 bd AS (                  -- ★ 一次坍缩：荷官×桌×会员×局。bs 全文只被此处引用一次
   SELECT dealer_id, table_id, member_id, round_key,                                                 -- 取列：起始取列子句，本行先列 dealer_id, table_id, member_id, round_key，涉 round_key（局键）、member_id（会员号）、dealer_id（荷官工号）
@@ -2644,11 +2643,6 @@ ORDER BY n_rounds DESC;                                                         
    对应报告：@sec-r03
    ★ 已实现《荷官作弊风控阈值分析报告》自列的必补检查：
      用 bet03+bet04 统计关联有效局数，修正同局拆多单造成的 Z-score 放大。
-   ★ 2026-08-11 增·哨兵剔除：eid 取 -1／0 者非真实荷官（转播位／系统位），
-     曾凭样本量优势窜居 Z 榜前列，属铁证级假阳性——自源头逐出检验总体。
-     同一过滤同步进 S-02／§DX-05／§EX-05 三处荷官键查询；四件涉荷官导出
-     **均须重导**；报告 R 侧另有防御性剔除，旧档在重导前仍可安全使用
-     （多重比较校正见报告 @sec-r03-fdr）。
    输出列：uid, dealer_id, stake_amount, profit_amount, net_pnl, win_rate,
            n_related_orders, n_rounds_eff, p_base_mix, z_score,
            net_pnl_all, game_pnl_all, stake_all, win_rate_all, win_rate_other
@@ -2680,7 +2674,6 @@ base AS (                                                                       
     AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                                -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT)大于 0，涉 bet05（会员号）
     AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))大于 0，涉 bet11（汇率）
     AND NULLIF(TRIM(r.eid),'') IS NOT NULL                                                          -- 并列条件：限定该值非空，涉 eid（荷官工号）
-    AND TRIM(r.eid) NOT IN ('-1', '0')                                                              -- 并列条件：剔除哨兵荷官号——-1／0 非真实荷官，入检即污染榜单与多重比较总体（2026-08-11 增）
     AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\_1\_%'      -- 阈值报告：排除小费单
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
 ord AS (                                                                                            -- 公共表表达式：开启中间结果集 ord，其后各行为其定义体（§R03）
@@ -3727,7 +3720,6 @@ base AS (                                                                       
     AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                                -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT)大于 0，涉 bet05（会员号）
     AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))大于 0，涉 bet11（汇率）
     AND NULLIF(TRIM(r.eid),'') IS NOT NULL                                                          -- 并列条件：限定该值非空，涉 eid（荷官工号）
-    AND TRIM(r.eid) NOT IN ('-1', '0')                                                              -- 并列条件：剔除哨兵荷官号——-1／0 非真实荷官，入检即污染榜单与多重比较总体（2026-08-11 增）
     AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\_1\_%'                                                   -- 并列条件：限定不匹配所给模式，涉 bet09（玩法）
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03b）
 ord AS (                                                                                            -- 公共表表达式：开启中间结果集 ord，其后各行为其定义体（§R03b）
@@ -3909,7 +3901,6 @@ vd AS (                                                                         
     AND NULLIF(TRIM(r.bet08),'') IS NOT NULL                                                        -- 并列条件：限定该值非空，涉 bet08（下注时间）
     AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL                                    -- 并列条件：限定该值为空——本包以左连接加空值判定替代 EXISTS，因 StarRocks 不支持 EXISTS 配多列 IN
     AND NULLIF(TRIM(r.eid),'') IS NOT NULL                                                          -- 并列条件：限定该值非空，涉 eid（荷官工号）
-    AND TRIM(r.eid) NOT IN ('-1', '0')                                                              -- 并列条件：剔除哨兵荷官号——-1／0 非真实荷官，入检即污染榜单与多重比较总体（2026-08-11 增）
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§EX-05）
 dtc AS (                     -- 荷官×桌的注单行数（与 §S-02 的权重同源）
   SELECT eid AS dealer_id, bet39 AS table_id, COUNT(*) AS n_rows                                    -- 取列：计数，取用 bet39（桌号）、eid（荷官工号）、dealer_id（荷官工号），产出「n_rows」
@@ -6147,105 +6138,3 @@ SELECT  p.member_id,
 FROM        guarded p
 LEFT JOIN   bl ON bl.member_id = p.member_id
 ORDER BY p.action_time, p.member_id, p.field_name;
-
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   §TL-11 · 处置节折叠：收紧→解除配对成节（episode），准实验的分析单元
-   ---------------------------------------------------------------------------
-   缘起：§TL-10 以「一次跳变一行」为粒度——收紧与解除各二百余条**不构成
-   数百个独立处置**。准实验的分析单元是「会员 × 处置节」：同一会员同一字段上的
-   「收紧 → 其后首个解除」折叠为一节，时长即节内天数；解除缺席者右删失于窗末。
-   此为报告 @sec-quasi-design 设计细则其一的 SQL 侧落地，与 @sec-quasi-run
-   第①步的 R 侧口径对齐（T0 取首次收紧、t_end 取其后首个解除）。
-   口径三则：
-     ① 只认两枚已译定的处置字段：mem017（canbet 下注权限）、mem016（enable 账户
-        启停）；mem015（login_error 计数）等日常运营列一概不入（列义见 §TL-09）。
-     ② 方向按 value_after 判：N／0 为收紧（TIGHTEN），Y／1 为解除（RELEASE），
-        其余记 OTHER 且不入节——宁缺毋滥，不为不明取值编造方向。
-     ③ 去重键 member × field × action_time × 前后值：同刻重复写入只计一次。
-   读法：每行一节——谁、何字段、何时收紧、由谁操作、何时解除（或右删失）、
-   持续几日、是其第几节。主分析取 episode_seq = 1（首次处置设计），
-   再处置节只入敏感性分析。连续两次收紧共享其后首个解除，属同一逻辑节之延续。
-   此表同时是治理章审计轨迹的节级视图：operator 列即「谁做的」，
-   所缺的「谁批准的」须待 DDL 增列（见报告 @sec-governance）。
-   ═══════════════════════════════════════════════════════════════════════════ */
--- §TL-11 · 处置节折叠表（准实验分析单元；审计轨迹之节级视图）
--- ▸ 导出：需要 —— 存为「数据库/TL11_treatment_episode.csv」（§TL-11 处置节·收紧→解除配对）。
-WITH ev AS (                                                                                        -- 公共表表达式：开启中间结果集 ev——变更日志原始事件，口径与 §TL-10 一致（§TL-11）
-    SELECT  CAST(lmc02 AS STRING)                         AS member_id,                             -- 取值表达式：取用 lmc02（被改会员号），产出「member_id」
-            SUBSTR(CAST(lmc08 AS STRING), 1, 10)          AS action_date,                           -- 取值表达式：取用 lmc08（操作时间）之日期段，产出「action_date」
-            CAST(lmc08 AS STRING)                         AS action_time,                           -- 取值表达式：取用 lmc08（操作时间），产出「action_time」
-            CAST(lmc06 AS STRING)                         AS operator_id,                           -- 取值表达式：取用 lmc06（操作人账号），产出「operator_id」——审计轨迹之「谁」
-            CAST(lmc07 AS STRING)                         AS operator_lv,                           -- 取值表达式：取用 lmc07（操作人层级），产出「operator_lv」
-            CAST(lmc05 AS STRING)                         AS content                                -- 取值表达式：取用 lmc05（变更内容「列:旧=>新;」串），产出「content」
-    FROM    ods_mariadb_2b.ods_a168_log_mem_change                                                  -- 取数来源：取自会员变更日志表（处置痕迹的正主，§TL-04～§TL-08 已验）
-    WHERE   dt >= '2026-03-21'                                                                      -- 过滤条件：限定 dt不少于 '2026-03-21'，涉 dt（营业日）——E1 全局窗起点
-      AND   dt <  '2026-08-07'                                                                      -- 并列条件：限定 dt小于 '2026-08-07'——E1 全局窗终点（冻结字面量）
-      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')                                       -- 并列条件：只留配置修改与状态变更；add 系新增账户与处置无涉（§TL-08 实测百家乐零命中）
-),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-seg AS (                                                                                            -- 公共表表达式：开启中间结果集 seg——把多段 content 逐段拆开（§TL-11）
-    SELECT  e.member_id, e.action_date, e.action_time,                                              -- 取列：起始取列子句，本行先列 member_id, action_date, action_time
-            e.operator_id, e.operator_lv,                                                           -- 续行：接续上一取列子句，续列 operator_id, operator_lv
-            TRIM(s.piece)                                 AS piece                                  -- 取值表达式：逐段去空白，产出「piece」
-    FROM ev e, unnest(split(e.content, ';')) AS s(piece)                                            -- 行展开：以 unnest(split(…)) 把分号分隔的多段变更逐段成行（StarRocks 已验语法）
-),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-parsed AS (                                                                                         -- 公共表表达式：开启中间结果集 parsed——解析「列:旧值=>新值」三元组（§TL-11）
-    SELECT  member_id, action_date, action_time, operator_id, operator_lv,                          -- 取列：起始取列子句，透传六要素之五
-            TRIM(SPLIT_PART(piece, ':', 1))               AS field_name,                            -- 取值表达式：冒号前段为列名，产出「field_name」
-            TRIM(SPLIT_PART(SPLIT_PART(piece, ':', 2), '=>', 1)) AS value_before,                   -- 取值表达式：箭头前段为旧值，产出「value_before」
-            TRIM(SPLIT_PART(SPLIT_PART(piece, ':', 2), '=>', 2)) AS value_after                     -- 取值表达式：箭头后段为新值，产出「value_after」
-    FROM    seg                                                                                     -- 取数来源：取自本条自建的中间结果集 seg
-    WHERE   piece LIKE '%=>%'                                                                       -- 过滤条件：须含箭头方为有效变更段
-      AND   piece LIKE '%:%'                                                                        -- 并列条件：须含冒号方能解析出列名
-),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-enf AS (                                                                                            -- 公共表表达式：开启中间结果集 enf——只留两枚处置字段并判方向（§TL-11）
-    SELECT  member_id, field_name, action_date, action_time,                                        -- 取列：起始取列子句，透传节要素之前四
-            value_before, value_after, operator_id, operator_lv,                                    -- 续行：接续上一取列子句，续列前后值与操作人
-            CASE WHEN TRIM(value_after) IN ('N', '0') THEN 'TIGHTEN'                                -- 取值表达式：新值为 N／0 判收紧——canbet 禁投或账户停用
-                 WHEN TRIM(value_after) IN ('Y', '1') THEN 'RELEASE'                                -- 续行：新值为 Y／1 判解除——恢复下注或重新启用
-                 ELSE 'OTHER' END                     AS direction                                  -- 续行：其余取值不明记 OTHER，后续不入节（宁缺毋滥），产出「direction」
-    FROM    parsed                                                                                  -- 取数来源：取自本条自建的中间结果集 parsed
-    WHERE   field_name IN ('mem016', 'mem017')                                                      -- 过滤条件：只认已译定的处置字段——mem017（canbet）与 mem016（enable），列义见 §TL-09
-),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-dedup AS (                                                                                          -- 公共表表达式：开启中间结果集 dedup——同刻重复写入只计一次（§TL-11 口径③）
-    SELECT  *,                                                                                      -- 取列：整体承接上游结果集的全部字段，不再逐列列举
-            ROW_NUMBER() OVER (PARTITION BY member_id, field_name, action_time,                     -- 行号窗口表达式：按去重键 member×field×时刻×前后值 分组编号
-                               value_before, value_after ORDER BY operator_id) AS rn                -- 续行：键内任取其一（按操作人序），产出「rn」
-    FROM    enf                                                                                     -- 取数来源：取自本条自建的中间结果集 enf
-    WHERE   direction <> 'OTHER'                                                                    -- 过滤条件：方向不明者不入节
-),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-tight AS (                                                                                          -- 公共表表达式：开启中间结果集 tight——全部收紧事件，每行是一节的起点（§TL-11）
-    SELECT * FROM dedup WHERE rn = 1 AND direction = 'TIGHTEN'                                      -- 取数来源：去重后的收紧事件
-),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-rel AS (                                                                                            -- 公共表表达式：开启中间结果集 rel——全部解除事件，用以为每节寻其后首个解除（§TL-11）
-    SELECT * FROM dedup WHERE rn = 1 AND direction = 'RELEASE'                                      -- 取数来源：去重后的解除事件
-),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-ep AS (                                                                                             -- 公共表表达式：开启中间结果集 ep——为每次收紧配其后首个解除（§TL-11）
-    SELECT  t.member_id, t.field_name, t.action_date, t.action_time,                                -- 取列：起始取列子句，节起点要素之前四
-            t.value_before, t.value_after, t.operator_id, t.operator_lv,                            -- 续行：接续上一取列子句，续列前后值与操作人
-            MIN(r.action_time)                            AS release_time                           -- 聚合：其后（同人同字段）首个解除时刻，无则 NULL，产出「release_time」
-    FROM        tight t                                                                             -- 取数来源：取自本条自建的中间结果集 tight
-    LEFT JOIN   rel   r                                                                             -- 左连接：取自本条自建的中间结果集 rel——解除可缺席（右删失），故用左连接
-           ON   r.member_id  = t.member_id                                                          -- 连接键：同一会员
-          AND   r.field_name = t.field_name                                                         -- 并列键：同一处置字段——canbet 之节不由 enable 之解除关闭
-          AND   r.action_time > t.action_time                                                       -- 并列键：解除须晚于收紧——只认其后者
-    GROUP BY t.member_id, t.field_name, t.action_date, t.action_time,                               -- 分组：按节起点全键汇总，使 MIN 取到「首个」解除
-             t.value_before, t.value_after, t.operator_id, t.operator_lv                            -- 续行：分组键补齐
-)                                                                                                   -- 续行：收束上方的子查询或函数括号（§TL-11）
-SELECT  member_id,                                                                                  -- 取列：起始取列子句，本行先取「member_id」——节属谁
-        field_name,                                                                                 -- 取值表达式：处置字段——mem017（canbet）或 mem016（enable）
-        CONCAT_WS('#', member_id, field_name, action_time) AS episode_id,                           -- 取值表达式：三键拼节号，产出「episode_id」——审计轨迹与准实验共用的主键
-        action_date                                   AS start_date,                                -- 取值表达式：节起日，产出「start_date」
-        action_time                                   AS start_time,                                -- 取值表达式：节起时刻，产出「start_time」
-        value_before,                                                                               -- 取值表达式：收紧前取值——留痕以备申诉复核
-        value_after,                                                                                -- 取值表达式：收紧后取值
-        operator_id                                   AS start_operator,                            -- 取值表达式：收紧操作人，产出「start_operator」——审计轨迹之「谁」
-        operator_lv                                   AS start_operator_lv,                         -- 取值表达式：操作人层级，产出「start_operator_lv」
-        COALESCE(SUBSTR(release_time, 1, 10), '2026-08-07')   AS release_date,                      -- 取值表达式：解除日；缺席者以窗末顶替（配合下行 censored 判读），产出「release_date」
-        CASE WHEN release_time IS NULL THEN 1 ELSE 0 END      AS censored,                          -- 取值表达式：右删失标志——1 谓至窗末仍收紧，产出「censored」
-        DATEDIFF(CAST(COALESCE(SUBSTR(release_time, 1, 10), '2026-08-07') AS DATE),                 -- 取值表达式：节时长起算——解除日（或窗末）
-                 CAST(action_date AS DATE))           AS duration_days,                             -- 续行：减节起日得持续天数，产出「duration_days」——中位 6 日之实测即此口径
-        ROW_NUMBER() OVER (PARTITION BY member_id                                                   -- 行号窗口表达式：按会员为其节编序
-                           ORDER BY action_time)      AS episode_seq                                -- 续行：产出「episode_seq」——主分析取 1（首次处置设计），其余入敏感性
-FROM    ep                                                                                          -- 取数来源：取自本条自建的中间结果集 ep
-ORDER BY member_id, action_time;                                                                    -- 排序：按会员与节起时刻升序——逐人可读其处置史；导出必带排序，分页方有稳定序
