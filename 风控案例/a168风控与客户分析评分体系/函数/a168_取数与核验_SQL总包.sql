@@ -2644,6 +2644,20 @@ ORDER BY n_rounds DESC;                                                         
    对应报告：@sec-r03
    ★ 已实现《荷官作弊风控阈值分析报告》自列的必补检查：
      用 bet03+bet04 统计关联有效局数，修正同局拆多单造成的 Z-score 放大。
+   ★ 2026-08-11 增·估计量元数据（外部审计第七条：不得再有 magic number）：
+     · 估计量：p_base 为**极大似然估计**，$\hat p = x / n$，其中 x = 该投注产品赢的决胜局数、
+       n = 该产品决胜局数（game_pnl <> 0；退还局不入分母，见报告结算形态节）。
+     · 先验／平滑：**无**。不作 Laplace（α=1）亦不作 Jeffreys（α=0.5）平滑——
+       主线产品 n 逾千万，平滑影响小于 1e-7，徒增不可审计的自由度。
+     · 零处理：n = 0 者 p_base 为**空**（NULL），并沿 ordb→pr→pd 一路传播，
+       其 p_base_mix 与 z_score 亦为空。★ 旧版写 COALESCE(s.p_base, 0.5)，
+       **以 0.5 顶替缺失基准**——此 0.5 既非先验亦非连续性校正，只是一个凭空的常数，
+       对真实胜率或仅 2% 的边注而言荒谬。今删。实测七种产品各只 1 局且该局即退还，
+       决胜局为零，正属此类（皆无法通过 n_rounds_eff >= 30 之闸，故旧版实际未致误判）。
+     · 局级基准：p_base_round 为该局各注 p_side 的**注额加权平均**，权重为各注注额；
+       无基准之注不入分子亦不入分母（非以 0 计），全注皆无基准则该局基准为空。
+     · 连续性校正：**未施**。判定门槛 n_rounds_eff >= 30，正态近似之误差远小于
+       基准本身的不确定性；若日后放宽有效局数门槛，须重估此项。
    ★ 2026-08-11 增·哨兵剔除：eid 取 -1／0 者非真实荷官（转播位／系统位），
      曾凭样本量优势窜居 Z 榜前列，属铁证级假阳性——自源头逐出检验总体。
      同一过滤同步进 S-02／§R03b／§EX-05 三处荷官键查询（§DX-05 无荷官键，未动）；
@@ -6317,9 +6331,12 @@ bl AS (                                                                         
     WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
       AND   CAST(bet02 AS STRING) = '101'                                                           -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-la AS (                                                                                             -- 公共表表达式：开启中间结果集 la——每会员在窗内的最末一次任何变更，供删失成因分类（§TL-11）
-    SELECT  member_id, MAX(action_time)                   AS last_seen                              -- 聚合：该会员最末一次出现于变更日志的时刻，产出「last_seen」
-    FROM    norm GROUP BY member_id                                                                 -- 取数来源：取自本条自建的中间结果集 norm；按会员汇总
+la AS (                                                                                             -- 公共表表达式：开启中间结果集 la——每会员窗内最末一次**投注**，供删失成因分类（§TL-11）
+    SELECT  CAST(bet05 AS STRING)                         AS member_id,                             -- 取值表达式：取用 bet05（会员号），产出「member_id」
+            MAX(dt)                                       AS last_bet_date                          -- 聚合：该会员窗内最末一次投注之营业日，产出「last_bet_date」
+    FROM    ods_mariadb_2b.ods_a168_bet02                                                           -- 取数来源：取自注单明细表——★ 2026-08-11 斧正：旧版以「最末一次出现于变更日志」为凭
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗——而变更日志之缺席只说明未再改配置，不说明人已不在
+    GROUP BY CAST(bet05 AS STRING)                                                                  -- 分组：按会员汇总——投注活动方是「仍在观察」的正当凭据
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
 ep AS (                                                                                             -- 公共表表达式：开启中间结果集 ep——为每次收紧配其后首个解除（§TL-11）
     SELECT  t.member_id, t.field_name, t.business_field, t.enforcement_type,                        -- 取列：起始取列子句，节起点要素与两枚新增类别列
@@ -6352,16 +6369,16 @@ SELECT  p.member_id,                                                            
         COALESCE(SUBSTR(p.release_time, 1, 10), '2026-08-07') AS release_date,                      -- 取值表达式：解除日；缺席者以窗末顶替（配合下行 censored 判读），产出「release_date」
         CASE WHEN p.release_time IS NULL THEN 1 ELSE 0 END    AS censored,                          -- 取值表达式：右删失标志——1 谓至窗末仍收紧，产出「censored」
         CASE WHEN p.release_time IS NOT NULL THEN 'NOT_CENSORED'                                    -- 取值表达式：删失成因分类起算——★ 补列，KM 无偏性之前提
-             WHEN SUBSTR(la.last_seen, 1, 10) >= '2026-08-05' THEN 'WINDOW_END'                     -- 续行：至窗末仍有活动痕迹 → 真窗口右删失
-             WHEN la.last_seen IS NULL THEN 'UNKNOWN'                                               -- 续行：无任何活动痕迹 → 成因不明
-             ELSE 'MEMBER_DATA_END' END                        AS censor_reason,                    -- 续行：活动痕迹早于窗末即止 → 疑为资料终止型假删失，产出「censor_reason」
+             WHEN la.last_bet_date >= '2026-07-31' THEN 'WINDOW_END'                                -- 续行：窗末前七日内仍有投注 → 人尚在、处置尚在，属真窗口右删失
+             WHEN la.last_bet_date IS NULL THEN 'NO_BET_ACTIVITY'                                   -- 续行：窗内全无投注 → 无从判其去留，须另据会员表核实
+             ELSE 'INACTIVE_BEFORE_END' END                    AS censor_reason,                    -- 续行：投注早于窗末即止 → 疑为流失或账户终止型**假删失**，产出「censor_reason」
         DATEDIFF(CAST(COALESCE(SUBSTR(p.release_time, 1, 10), '2026-08-07') AS DATE),               -- 取值表达式：节时长起算——解除日（或窗末）
                  CAST(p.action_date AS DATE))         AS duration_days,                             -- 续行：减节起日得持续天数，产出「duration_days」——生存分析之时间轴
         ROW_NUMBER() OVER (PARTITION BY p.member_id                                                 -- 行号窗口表达式：按会员为其节编序
                            ORDER BY p.action_time)    AS episode_seq                                -- 续行：产出「episode_seq」——主分析取 1（首次处置设计），其余入敏感性
 FROM        ep p                                                                                    -- 取数来源：取自本条自建的中间结果集 ep
 LEFT JOIN   bl ON bl.member_id = p.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）——标注百家乐口径
-LEFT JOIN   la ON la.member_id = p.member_id                                                        -- 左连接：取自本条自建的中间结果集 la，连接键为 member_id（会员号）——供删失成因分类
+LEFT JOIN   la ON la.member_id = p.member_id                                                        -- 左连接：取自本条自建的中间结果集 la（末次投注日），连接键为 member_id（会员号）
 ORDER BY p.member_id, p.action_time;                                                                -- 排序：按会员与节起时刻升序——逐人可读其处置史；导出必带排序，分页方有稳定序
 
 
@@ -6387,21 +6404,30 @@ seg AS (                                                                        
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11b）
 cls AS (                                                                                            -- 公共表表达式：开启中间结果集 cls——为每一片段判其去向（§TL-11b）
     SELECT  piece,                                                                                  -- 取列：起始取列子句，本行先取「piece」
-            CASE WHEN piece = '' THEN 'DROPPED_EMPTY'                                               -- 取值表达式：去向分类起算——空片段
+            CASE WHEN piece = '' THEN 'DROPPED_EMPTY'                                               -- 取值表达式：**解析**状态分类起算（第一层）——空片段
                  WHEN piece NOT LIKE '%=>%' THEN 'DROPPED_NO_ARROW'                                 -- 续行：无箭头者非变更段，正当丢弃
                  WHEN piece LIKE '%//%' THEN 'DROPPED_URL_LIKE'                                     -- 续行：含双斜杠者疑为网址，正当丢弃（沿 §TL-10 护栏）
                  WHEN piece LIKE 'mem016%' OR piece LIKE 'mem017%' THEN 'KEPT_ENFORCEMENT'          -- 续行：两枚已译定的处置字段——本方案所取者
                  WHEN piece LIKE '%:%' THEN 'PARSED_COLON_OTHERFIELD'                               -- 续行：冒号式但非处置字段——解析得出，按业务分类排除
-                 ELSE 'PARSED_SPACE_OTHERFIELD' END              AS disposition                     -- 续行：空格式且非处置字段——★ 旧版在此静默丢弃，今已收编，产出「disposition」
+                 ELSE 'PARSED_SPACE_OTHERFIELD' END              AS parse_status,                   -- 续行：空格式且非处置字段——★ 旧版在此静默丢弃，今已收编，产出「parse_status」
+            CASE WHEN piece LIKE 'mem016%' OR piece LIKE 'mem017%'                                  -- 取值表达式：**语义**状态分类起算（第二层，外部审计第二条）
+                 THEN 'CONFIRMED_BY_DICTIONARY'                                                     -- 续行：§TL-09 列义字典已译定（enable／canbet），语义确认
+                 WHEN piece LIKE 'mem015%' THEN 'CONFIRMED_NOT_ENFORCEMENT'                         -- 续行：已译定为 login_error，确认**非**处置，封案
+                 WHEN piece LIKE '%=>%' THEN 'UNKNOWN_PENDING_DICTIONARY'                           -- 续行：解析得出而列义未证——如 mem020、101-mem015
+                 ELSE 'NOT_APPLICABLE' END                       AS semantic_status,                -- 续行：非变更段，无语义可言，产出「semantic_status」
+            CASE WHEN piece LIKE 'mem016%' OR piece LIKE 'mem017%' THEN 'ENFORCEMENT'               -- 取值表达式：**处置**状态分类起算（第三层）
+                 WHEN piece LIKE 'mem015%' THEN 'NOT_ENFORCEMENT'                                   -- 续行：运营追踪事件，明确排除
+                 WHEN piece LIKE '%=>%' THEN 'PENDING'                                              -- 续行：语义未证者一律待定——**解析成功 ≠ 业务语义确认**，不得径入处置总体
+                 ELSE 'NOT_APPLICABLE' END                       AS enforcement_status              -- 续行：产出「enforcement_status」
     FROM    seg                                                                                     -- 取数来源：取自本条自建的中间结果集 seg
 )                                                                                                   -- 续行：收束上方的子查询或函数括号（§TL-11b）
-SELECT  disposition,                                                                                -- 取列：起始取列子句，本行先取「disposition」——去向类别
+SELECT  parse_status, semantic_status, enforcement_status,                                          -- 取列：起始取列子句，三状态并列——解析成功、语义确认、处置认定，三者彻底分离
         COUNT(*)                                      AS n_pieces,                                  -- 计数表达式：该类片段条数，产出「n_pieces」
         COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()        AS share,                                     -- 除法或乘法计算：占全部片段之比，产出「share」
         MIN(piece)                                    AS sample_min,                                -- 取最小值表达式：字母序最小之样例，产出「sample_min」——供人工目检
         MAX(piece)                                    AS sample_max                                 -- 取最大值表达式：字母序最大之样例，产出「sample_max」
 FROM    cls                                                                                         -- 取数来源：取自本条自建的中间结果集 cls
-GROUP BY disposition                                                                                -- 分组：按去向类别汇总
+GROUP BY parse_status, semantic_status, enforcement_status                                          -- 分组：按三状态组合汇总——每格皆须有明确取值
 ORDER BY n_pieces DESC;                                                                             -- 排序：按条数降序——大宗去向居前
 
 
@@ -6476,3 +6502,80 @@ WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                         
      OR COLUMN_COMMENT LIKE '%最高投注%'                                                                -- 续行：最高投注
      OR COLUMN_COMMENT LIKE '%最低投注%' )                                                              -- 续行：最低投注——并收束整个候选条件组
 ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-11c · 最终处置总体对账表：Raw → Event → Episode → Member 四级逐级核对
+   ---------------------------------------------------------------------------
+   缘起：同一批处置在不同口径下数出不同的数（原始片段／解析事件／处置节／唯一会员），
+   四者并不矛盾，却极易被混作同一个「样本量」。外部审计（2026-08-11 二次红队第一条）
+   要求此表**由 SQL 自动生成，不得手工填写**——本条即此。
+   读法：逐级递减须解释得通。凡上下两级之差无法由本表的定义栏说明者，即有解析或口径缺陷。
+   ⚠ 此表是**处置总体冻结**（Treatment Population Freeze）的前置凭据：
+     四级对得上、且 semantic_status 与 censor_reason 皆无 UNKNOWN 之遗漏，方可冻结。
+     冻结之前，PSM 与事件研究一律不得开跑。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：需要 —— 存为「数据库/TL11c_population_reconcile.csv」（§TL-11c 处置总体四级对账）。
+WITH ev AS (                                                                                        -- 公共表表达式：开启中间结果集 ev——与 §TL-11 同源同窗（§TL-11c）
+    SELECT  CAST(lmc02 AS STRING) AS member_id, CAST(lmc05 AS STRING) AS content                    -- 取值表达式：取用 lmc02（被改会员号）与 lmc05（变更内容串）
+    FROM    ods_mariadb_2b.ods_a168_log_mem_change                                                  -- 取数来源：取自会员变更日志表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')                                       -- 并列条件：只留配置修改与状态变更两类
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11c）
+pieces AS (                                                                                         -- 公共表表达式：开启中间结果集 pieces——第一级：原始片段（§TL-11c）
+    SELECT  e.member_id, TRIM(s.piece) AS piece                                                     -- 取值表达式：逐段去空白，产出「piece」
+    FROM ev e, unnest(split(e.content, ';')) AS s(piece)                                            -- 行展开：以 unnest(split(…)) 把分号分隔的多段逐段成行
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11c）
+enf AS (                                                                                            -- 公共表表达式：开启中间结果集 enf——第二级：已确认处置的解析事件（§TL-11c）
+    SELECT  member_id, piece,                                                                       -- 取列：起始取列子句，本行先列 member_id, piece
+            CASE WHEN TRIM(SPLIT_PART(piece, '=>', 2)) IN ('N','0') THEN 'TIGHTEN'                  -- 取值表达式：方向判定起算——新值 N／0 为收紧
+                 WHEN TRIM(SPLIT_PART(piece, '=>', 2)) IN ('Y','1') THEN 'RELEASE'                  -- 续行：新值 Y／1 为解除
+                 ELSE 'OTHER' END                          AS direction                             -- 续行：产出「direction」
+    FROM    pieces                                                                                  -- 取数来源：取自本条自建的中间结果集 pieces
+    WHERE   piece LIKE '%=>%'                                                                       -- 过滤条件：须含箭头方为有效变更段
+      AND ( piece LIKE 'mem016%' OR piece LIKE 'mem017%' )                                          -- 并列条件：只认语义已确认的两枚处置字段（mem015 已证非处置，封案）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11c）
+bl AS (                                                                                             -- 公共表表达式：开启中间结果集 bl——本方案口径的百家乐投注会员名单（§TL-11c）
+    SELECT  DISTINCT CAST(bet05 AS STRING) AS member_id                                             -- 取值表达式：取用 bet05（会员号）去重，产出「member_id」
+    FROM    ods_mariadb_2b.ods_a168_bet02                                                           -- 取数来源：取自注单明细表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(bet02 AS STRING) = '101'                                                           -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§TL-11c）
+SELECT  1 AS lvl, '① 原始片段（raw mutation pieces）' AS level_name,                                      -- 取值表达式：第一级序号与名称，产出「lvl」「level_name」
+        COUNT(*) AS n_all,                                                                          -- 计数表达式：全体计数，产出「n_all」
+        SUM(CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END) AS n_baccarat,                        -- 聚合：其中百家乐会员之计数，产出「n_baccarat」
+        COUNT(DISTINCT p.member_id) AS n_member_all,                                                -- 计数表达式：涉及会员数（去重），产出「n_member_all」
+        COUNT(DISTINCT CASE WHEN bl.member_id IS NOT NULL THEN p.member_id END) AS n_member_bac,    -- 计数表达式：其中百家乐会员数，产出「n_member_bac」
+        '变更日志 content 按分号拆开后的每一段' AS definition                                                     -- 取值表达式：本级定义，产出「definition」——逐级递减须由定义解释得通
+FROM        pieces p                                                                                -- 取数来源：取自本条自建的中间结果集 pieces
+LEFT JOIN   bl ON bl.member_id = p.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一级
+SELECT  2, '② 处置事件（enforcement events）',                                                            -- 取值表达式：第二级序号与名称
+        COUNT(*),                                                                                   -- 计数表达式：全体计数
+        SUM(CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END),                                      -- 聚合：其中百家乐会员之计数
+        COUNT(DISTINCT e.member_id),                                                                -- 计数表达式：涉及会员数（去重）
+        COUNT(DISTINCT CASE WHEN bl.member_id IS NOT NULL THEN e.member_id END),                    -- 计数表达式：其中百家乐会员数
+        '解析成功且语义经字典确认为处置者（mem016／mem017），含收紧与解除两向'                                                  -- 取值表达式：本级定义
+FROM        enf e                                                                                   -- 取数来源：取自本条自建的中间结果集 enf
+LEFT JOIN   bl ON bl.member_id = e.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一级
+SELECT  3, '③ 收紧事件（episode starts）',                                                                -- 取值表达式：第三级序号与名称
+        COUNT(*),                                                                                   -- 计数表达式：全体计数
+        SUM(CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END),                                      -- 聚合：其中百家乐会员之计数
+        COUNT(DISTINCT e.member_id),                                                                -- 计数表达式：涉及会员数（去重）
+        COUNT(DISTINCT CASE WHEN bl.member_id IS NOT NULL THEN e.member_id END),                    -- 计数表达式：其中百家乐会员数——★ 此即处置节口径的唯一处置会员数
+        '处置事件中方向为收紧者；每一条起一个处置节，故其数即处置节数'                                                            -- 取值表达式：本级定义
+FROM        enf e                                                                                   -- 取数来源：取自本条自建的中间结果集 enf
+LEFT JOIN   bl ON bl.member_id = e.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+WHERE   e.direction = 'TIGHTEN'                                                                     -- 过滤条件：只留收紧方向
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一级
+SELECT  4, '④ 解除事件（episode ends）',                                                                  -- 取值表达式：第四级序号与名称
+        COUNT(*),                                                                                   -- 计数表达式：全体计数
+        SUM(CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END),                                      -- 聚合：其中百家乐会员之计数
+        COUNT(DISTINCT e.member_id),                                                                -- 计数表达式：涉及会员数（去重）
+        COUNT(DISTINCT CASE WHEN bl.member_id IS NOT NULL THEN e.member_id END),                    -- 计数表达式：其中百家乐会员数
+        '处置事件中方向为解除者；未必与收紧一一对应，故删失由此而生'                                                             -- 取值表达式：本级定义
+FROM        enf e                                                                                   -- 取数来源：取自本条自建的中间结果集 enf
+LEFT JOIN   bl ON bl.member_id = e.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+WHERE   e.direction = 'RELEASE'                                                                     -- 过滤条件：只留解除方向
+ORDER BY lvl;                                                                                       -- 排序：按级序升序——逐级递减一目了然
