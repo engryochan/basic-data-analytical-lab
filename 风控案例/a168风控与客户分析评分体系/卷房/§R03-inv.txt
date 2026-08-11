@@ -1,0 +1,76 @@
+-- ▸ 导出：不需要 —— §R03-inv 体量盘点，屏幕看结果。
+WITH ranked AS (                                                                                    -- 公共表表达式：开启中间结果集 ranked——口径与 §R03 一字不差（§R03-inv）
+  SELECT b.bet01, b.bet03, b.bet04, b.bet39, b.bet05, b.bet09, b.bet11,                             -- 取列：起始取列子句，涉 bet03（靴号）、bet04（局内序号）、bet39（桌号）、bet05（会员号）
+         b.bet13, b.bet14, b.bet38, b.eid,                                                          -- 续行：接续上一取列子句，涉 bet13（下注金额）、bet14（派彩金额）、bet38（测试标识）
+         ROW_NUMBER() OVER (PARTITION BY b.bet01                                                    -- 行号窗口表达式：按注单号开窗取最终态
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                           -- 排序：取最新一版，产出「rn」
+  FROM ods_mariadb_2b.ods_a168_bet02 b                                                              -- 取数来源：取自注单明细表
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+    AND b.bet02 = '101' AND b.category = '1'                                                        -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03-inv）
+base AS (                                                                                           -- 公共表表达式：开启中间结果集 base——有效注单，哨兵**标注不删**（§R03-inv）
+  SELECT r.bet05 AS member_id, r.eid AS dealer_id,                                                  -- 取列：起始取列子句，涉 bet05（会员号）、eid（荷官工号）
+         CASE WHEN TRIM(r.eid) IN ('-1','0') THEN 1 ELSE 0 END AS is_sentinel_dealer,               -- 取值表达式：哨兵标记，产出「is_sentinel_dealer」
+         CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,                                    -- 取值表达式：三键拼物理局键，产出「round_key」
+         (CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4))                                           -- 取值表达式：派彩额起算，涉 bet14（派彩金额）
+          - CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)))                                        -- 续行：减投注额得游戏净输赢，涉 bet13（下注金额）
+          / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS game_pnl                             -- 续行：折汇率归一，产出「game_pnl」
+  FROM ranked r                                                                                     -- 取数来源：取自本条自建的中间结果集 ranked
+  WHERE r.rn = 1 AND UPPER(TRIM(r.bet38)) = 'N'                                                     -- 过滤条件：只取每注最终态且非测试单，涉 bet38（测试标识）
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                                -- 并列条件：剔除无效会员号，涉 bet05（会员号）
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：汇率须为正，涉 bet11（汇率）
+    AND NULLIF(TRIM(r.eid),'') IS NOT NULL                                                          -- 并列条件：荷官号非空——空号无从归属，不构成关系
+    AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\\_1\\_%'                                                 -- 并列条件：排除小费单，涉 bet09（玩法）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03-inv）
+pr AS (                                                                                             -- 公共表表达式：开启中间结果集 pr——同局多注折成一局（§R03-inv）
+  SELECT member_id, dealer_id, is_sentinel_dealer, round_key,                                       -- 取列：起始取列子句，本行先列四键
+         SUM(game_pnl) AS game_pnl                                                                  -- 聚合：局内合计游戏净输赢，产出「game_pnl」
+  FROM base GROUP BY member_id, dealer_id, is_sentinel_dealer, round_key                            -- 分组：按会员×荷官×哨兵标记×物理局汇总
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03-inv）
+pd AS (                                                                                             -- 公共表表达式：开启中间结果集 pd——玩家×荷官关系级（§R03-inv）
+  SELECT member_id, dealer_id, is_sentinel_dealer,                                                  -- 取列：起始取列子句，本行先列三键
+         COUNT(*)                                          AS n_rounds_eff,                         -- 计数表达式：有效局数，产出「n_rounds_eff」
+         SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END)    AS n_dec                                 -- 聚合：决胜局数（退还局不入），产出「n_dec」
+  FROM pr GROUP BY member_id, dealer_id, is_sentinel_dealer                                         -- 分组：按会员×荷官×哨兵标记汇总
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§R03-inv）
+SELECT  CASE WHEN is_sentinel_dealer = 1 THEN 'SENTINEL_DEALER'                                     -- 取值表达式：资格分档起算——与 §R03 的 eligibility_status 逐字同口径
+             WHEN n_dec = 0              THEN 'NO_DECISIVE_ROUND'                                   -- 续行：全为退还局
+             WHEN n_rounds_eff < 30      THEN 'INSUFFICIENT_N'                                      -- 续行：局数不足 30
+             ELSE 'ELIGIBLE' END                           AS eligibility_status,                   -- 续行：产出「eligibility_status」
+        CASE WHEN n_rounds_eff = 1 THEN '01_n=1'                                                    -- 取值表达式：稀疏分层起算——长尾的形状此前被 WHERE 藏起，今逐层点清
+             WHEN n_rounds_eff <= 2  THEN '02_n=2'                                                  -- 续行：n 等于 2
+             WHEN n_rounds_eff <= 5  THEN '03_n=3~5'                                                -- 续行：n 介于 3 至 5
+             WHEN n_rounds_eff <= 10 THEN '04_n=6~10'                                               -- 续行：n 介于 6 至 10
+             WHEN n_rounds_eff <= 29 THEN '05_n=11~29'                                              -- 续行：n 介于 11 至 29
+             WHEN n_rounds_eff <= 100 THEN '06_n=30~100'                                            -- 续行：n 介于 30 至 100
+             ELSE '07_n>100' END                           AS n_bucket,                             -- 续行：产出「n_bucket」
+        COUNT(*)                                          AS n_pairs,                               -- 计数表达式：该格的玩家×荷官关系数，产出「n_pairs」
+        COUNT(DISTINCT member_id)                         AS n_members,                             -- 计数表达式：涉及会员数（去重），产出「n_members」
+        COUNT(DISTINCT dealer_id)                         AS n_dealers,                             -- 计数表达式：涉及荷官数（去重），产出「n_dealers」
+        SUM(n_rounds_eff)                                 AS n_rounds_total                         -- 聚合：该格的有效局合计，产出「n_rounds_total」
+FROM    pd                                                                                          -- 取数来源：取自本条自建的中间结果集 pd
+GROUP BY 1, 2                                                                                       -- 分组：按资格分档与稀疏分层汇总
+ORDER BY 1, 2;                                                                                      -- 排序：按资格与分层升序——长尾形状一目了然
+
+00:00:07.572
+
+eligibility_status	n_bucket	n_pairs	n_members	n_dealers	n_rounds_total
+ELIGIBLE	06_n=30~100	431627	29324	288	21637820
+ELIGIBLE	07_n>100	85901	4567	254	16727590
+INSUFFICIENT_N	01_n=1	2030907	487348	297	2030907
+INSUFFICIENT_N	02_n=2	1153017	327656	293	2306034
+INSUFFICIENT_N	03_n=3~5	1674282	332503	291	6356458
+INSUFFICIENT_N	04_n=6~10	1151881	211432	290	8810879
+INSUFFICIENT_N	05_n=11~29	1131920	132502	290	19420983
+NO_DECISIVE_ROUND	01_n=1	150581	99633	292	150581
+NO_DECISIVE_ROUND	02_n=2	8173	7800	280	16346
+NO_DECISIVE_ROUND	03_n=3~5	640	613	187	2031
+NO_DECISIVE_ROUND	04_n=6~10	18	13	17	123
+NO_DECISIVE_ROUND	05_n=11~29	2	2	2	33
+SENTINEL_DEALER	01_n=1	56316	56316	1	56316
+SENTINEL_DEALER	02_n=2	29670	29670	1	59340
+SENTINEL_DEALER	03_n=3~5	44078	44078	1	167356
+SENTINEL_DEALER	04_n=6~10	31185	31185	1	239158
+SENTINEL_DEALER	05_n=11~29	36060	36060	1	636991
+SENTINEL_DEALER	06_n=30~100	26239	26239	1	1477506
+SENTINEL_DEALER	07_n>100	19477	19477	1	11516749

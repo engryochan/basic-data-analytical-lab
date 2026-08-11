@@ -1,0 +1,121 @@
+-- ▸ 导出：不需要 —— §TL-13 限额组字典搜寻，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( LOWER(TABLE_NAME) LIKE '%limit%'                                                            -- 并列条件：表名候选起算——limit 类
+     OR LOWER(TABLE_NAME) LIKE '%bet_level%'                                                        -- 续行：投注层级类
+     OR LOWER(TABLE_NAME) LIKE '%betlimit%'                                                         -- 续行：投注限额连写
+     OR LOWER(TABLE_NAME) LIKE '%odds_limit%'                                                       -- 续行：赔率限额类
+     OR LOWER(TABLE_NAME) LIKE '%group%'                                                            -- 续行：分组类（限额组多以 group 命名）
+     OR COLUMN_COMMENT LIKE '%限額%'                                                                  -- 续行：列义候选起算——繁体限额
+     OR COLUMN_COMMENT LIKE '%限额%'                                                                  -- 续行：简体限额
+     OR COLUMN_COMMENT LIKE '%限紅%'                                                                  -- 续行：繁体限红
+     OR COLUMN_COMMENT LIKE '%限红%'                                                                  -- 续行：简体限红
+     OR COLUMN_COMMENT LIKE '%注額上限%'                                                                -- 续行：注额上限
+     OR COLUMN_COMMENT LIKE '%最高投注%'                                                                -- 续行：最高投注
+     OR COLUMN_COMMENT LIKE '%最低投注%' )                                                              -- 续行：最低投注——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+00:00:00.462
+
+TABLE_NAME	ORDINAL_POSITION	COLUMN_NAME	DATA_TYPE	COLUMN_COMMENT
+ods_a168_agent_dtl	15	ag013	varchar	source_type=int(11); 選則限紅（BIT）
+ods_a168_agent_dtl	16	ag014	varchar	source_type=varchar(300); 新版限額
+ods_a168_agent_dtl_test	15	ag013	varchar	source_type=int(11); 選則限紅（BIT）
+ods_a168_agent_dtl_test	16	ag014	varchar	source_type=varchar(300); 新版限額
+ods_a168_bet_limit_default	1	__source_pk	varchar	源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_bet_limit_default	2	dt	date	StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_bet_limit_default	3	id	varchar	source_type=int(11); 
+ods_a168_bet_limit_default	4	gtype	varchar	source_type=int(11); 
+ods_a168_bet_limit_default	5	set01	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	6	set02	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	7	set03	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	8	set04	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	9	set05	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	10	set06	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	11	set07	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	12	set08	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	13	set09	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	14	set10	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	15	set11	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	16	set12	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	17	set13	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	18	set14	varchar	source_type=varchar(20); 
+ods_a168_bet_limit_default	19	status	varchar	source_type=int(11); 
+ods_a168_bet_limit_default	20	sort	varchar	source_type=int(11); 排序
+ods_a168_bet_limit_default	21	source_db	varchar	来源库
+ods_a168_bet_limit_default	22	source_table	varchar	来源表
+ods_a168_bet_limit_default	23	ods_table_name	varchar	ODS表名
+ods_a168_bet_limit_default	24	sync_time	datetime	同步时间
+ods_a168_category	9	in_single_mix	varchar	source_type=decimal(16,4); 單筆最低存款限額, 0為不限制
+ods_a168_category	10	in_single_max	varchar	source_type=decimal(16,4); 單筆最高存款限額, 0為不限制
+ods_a168_category	12	out_single_mix	varchar	source_type=decimal(16,4); 單筆最低提款限額, 0為不限制
+ods_a168_category	13	out_single_max	varchar	source_type=decimal(16,4); 單筆最高提款限額, 0為不限制
+ods_a168_categoryLevel	8	depositLimitMin	varchar	source_type=decimal(16,4); 最低存款限額, 0為不限制
+ods_a168_categoryLevel	9	depositLimitMax	varchar	source_type=decimal(16,4); 最高存款限額, 0為不限制
+ods_a168_categoryLevel	10	withdrawLimitMin	varchar	source_type=decimal(16,4); 最低提款限額, 0為不限制
+ods_a168_categoryLevel	11	withdrawLimitMax	varchar	source_type=decimal(16,4); 最高提款限額, 0為不限制
+ods_a168_member_dtl	17	mem015	varchar	source_type=varchar(300); 新版限額
+ods_a168_permissionsgroup	1	__source_pk	varchar	源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_permissionsgroup	2	dt	date	StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_permissionsgroup	3	id	varchar	source_type=int(11); 
+ods_a168_permissionsgroup	4	name	varchar	source_type=varchar(50); 權限群組名稱
+ods_a168_permissionsgroup	5	status	varchar	source_type=int(11); 是否啟用 0:禁止;1:啟用
+ods_a168_permissionsgroup	6	displayname	varchar	source_type=varchar(50); 顯示權限群組名稱
+ods_a168_permissionsgroup	7	ordered	varchar	source_type=int(11); 排序
+ods_a168_permissionsgroup	8	lastmodifytime	varchar	source_type=timestamp; 
+ods_a168_permissionsgroup	9	icon	varchar	source_type=varchar(30); 圖示
+ods_a168_permissionsgroup	10	source_db	varchar	来源库
+ods_a168_permissionsgroup	11	source_table	varchar	来源表
+ods_a168_permissionsgroup	12	ods_table_name	varchar	ODS表名
+ods_a168_permissionsgroup	13	sync_time	datetime	同步时间
+ods_a168_tablelimit	1	__source_pk	varchar	源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_tablelimit	2	dt	date	StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_tablelimit	3	sn	varchar	source_type=int(5); 
+ods_a168_tablelimit	4	gid	varchar	source_type=int(3); 
+ods_a168_tablelimit	5	tableid	varchar	source_type=int(3); 
+ods_a168_tablelimit	6	netgroupname	varchar	source_type=varchar(50); 
+ods_a168_tablelimit	7	telgroupname	varchar	source_type=varchar(50); 
+ods_a168_tablelimit	8	tablename	varchar	source_type=varchar(50); 
+ods_a168_tablelimit	9	setvalue	varchar	source_type=int(25); 
+ods_a168_tablelimit	10	alertvalue	varchar	source_type=int(25); 告警數值
+ods_a168_tablelimit	11	minbet	varchar	source_type=int(11); 最小下注(電投用)
+ods_a168_tablelimit	12	maxbet	varchar	source_type=int(11); 最大下注(電投用)
+ods_a168_tablelimit	13	tieminbet	varchar	source_type=int(11); 
+ods_a168_tablelimit	14	tiemaxbet	varchar	source_type=int(11); 
+ods_a168_tablelimit	15	pairminbet	varchar	source_type=int(11); 
+ods_a168_tablelimit	16	pairmaxbet	varchar	source_type=int(11); 
+ods_a168_tablelimit	17	modifyname	varchar	source_type=varchar(25); 
+ods_a168_tablelimit	18	modifydate	varchar	source_type=datetime; 
+ods_a168_tablelimit	19	tabletype	varchar	source_type=int(3); 桌子類型
+ods_a168_tablelimit	20	bettime	varchar	source_type=int(3); 下注時間
+ods_a168_tablelimit	21	stinttime	varchar	source_type=int(3); 限制時間
+ods_a168_tablelimit	22	status	varchar	source_type=int(1); 状态.0暂停,1正常
+ods_a168_tablelimit	23	status_lock	varchar	source_type=tinyint(1); 開關鎖
+ods_a168_tablelimit	24	nettype	varchar	source_type=int(3); 0關1不可下2可下
+ods_a168_tablelimit	25	teltype	varchar	source_type=int(3); 0關1不可下2可下
+ods_a168_tablelimit	26	sort	varchar	source_type=int(3); 
+ods_a168_tablelimit	27	sort2	varchar	source_type=int(3); 
+ods_a168_tablelimit	28	source_db	varchar	来源库
+ods_a168_tablelimit	29	source_table	varchar	来源表
+ods_a168_tablelimit	30	ods_table_name	varchar	ODS表名
+ods_a168_tablelimit	31	sync_time	datetime	同步时间
+ods_a168_tablelimit_third	1	__source_pk	varchar	源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_tablelimit_third	2	dt	date	StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_tablelimit_third	3	id	varchar	source_type=int(5); 
+ods_a168_tablelimit_third	4	gid	varchar	source_type=int(3); 遊戲編號
+ods_a168_tablelimit_third	5	tableid	varchar	source_type=int(3); wm桌號
+ods_a168_tablelimit_third	6	name_third	varchar	source_type=varchar(32); 第三方桌台號/名稱
+ods_a168_tablelimit_third	7	vendor	varchar	source_type=varchar(16); 廠商
+ods_a168_tablelimit_third	8	tableid_third	varchar	source_type=varchar(32); 第三方桌號
+ods_a168_tablelimit_third	9	status	varchar	source_type=int(1); 第三方狀態
+ods_a168_tablelimit_third	10	is_open	varchar	source_type=tinyint(1); 是否已開桌
+ods_a168_tablelimit_third	11	stream_url	varchar	source_type=text; 串流網址
+ods_a168_tablelimit_third	12	dealer_name	varchar	source_type=varchar(32); 荷官名字
+ods_a168_tablelimit_third	13	dealer_image	varchar	source_type=text; 荷官圖片
+ods_a168_tablelimit_third	14	create_at	varchar	source_type=datetime; 建立時間
+ods_a168_tablelimit_third	15	update_at	varchar	source_type=datetime; 更新時間
+ods_a168_tablelimit_third	16	source_db	varchar	来源库
+ods_a168_tablelimit_third	17	source_table	varchar	来源表
+ods_a168_tablelimit_third	18	ods_table_name	varchar	ODS表名
+ods_a168_tablelimit_third	19	sync_time	datetime	同步时间

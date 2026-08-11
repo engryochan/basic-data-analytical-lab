@@ -1,0 +1,98 @@
+-- ▸ 导出：不需要 —— §RC-00 关系普查计数层，屏幕看结果。
+WITH ranked AS (                                                                                    -- 公共表表达式：开启中间结果集 ranked——口径与 §R03 一致（§RC-00）
+  SELECT b.bet01, b.bet03, b.bet04, b.bet39, b.bet05, b.bet09, b.bet11,                             -- 取列：起始取列子句，涉 bet03（靴号）、bet04（局内序号）、bet39（桌号）、bet05（会员号）、bet09（玩法）
+         b.bet13, b.bet38, b.eid, b.ip, b.bet18, b.bet19, b.bet20,                                  -- 续行：接续上一取列子句，涉 bet38（测试标识）、eid（荷官工号）、ip（下注 IP）、bet18~20（代理线）
+         ROW_NUMBER() OVER (PARTITION BY b.bet01                                                    -- 行号窗口表达式：按注单号开窗取最终态
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                           -- 排序：取最新一版，产出「rn」
+  FROM ods_mariadb_2b.ods_a168_bet02 b                                                              -- 取数来源：取自注单明细表
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+    AND b.bet02 = '101' AND b.category = '1'                                                        -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§RC-00）
+base AS (                                                                                           -- 公共表表达式：开启中间结果集 base——有效注单，哨兵标注不删（§RC-00）
+  SELECT r.bet05 AS player_id, r.eid AS dealer_id, r.bet09 AS product_id,                           -- 取列：起始取列子句，三轴，涉 bet05（会员号）、eid（荷官工号）、bet09（玩法）
+         r.bet39 AS table_id, r.ip AS ip_id, r.bet18 AS agent_lv1,                                  -- 续行：另三轴，涉 bet39（桌号）、ip（下注 IP）、bet18（一级代理线）
+         CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key                                     -- 取值表达式：三键拼物理局键，产出「round_key」
+  FROM ranked r                                                                                     -- 取数来源：取自本条自建的中间结果集 ranked
+  WHERE r.rn = 1 AND UPPER(TRIM(r.bet38)) = 'N'                                                     -- 过滤条件：只取每注最终态且非测试单，涉 bet38（测试标识）
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                                -- 并列条件：剔除无效会员号，涉 bet05（会员号）
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：汇率须为正，涉 bet11（汇率）
+    AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\\_1\\_%'                                                 -- 并列条件：排除小费单，涉 bet09（玩法）
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§RC-00）
+SELECT '玩家×荷官' AS edge_type,                                                                        -- 取值表达式：边类型，产出「edge_type」
+       COUNT(*)                                  AS n_edges,                                        -- 计数表达式：可观测边数（非笛卡尔上界），产出「n_edges」
+       SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END)  AS n_edges_ge30,                                   -- 聚合：够格进统计之边数，产出「n_edges_ge30」
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END)    AS n_edges_n1,                                     -- 聚合：只出现一次之边——稀疏长尾之头，产出「n_edges_n1」
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END)   AS n_edges_le5,                                    -- 聚合：n≤5 之边，产出「n_edges_le5」——P(n≤5) 之分子
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END)  AS n_edges_le10,                                   -- 聚合：n≤10 之边，产出「n_edges_le10」
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END)  AS n_edges_lt30,                                   -- 聚合：n<30 之边，产出「n_edges_lt30」——与 n_edges_ge30 互补，二者之和即 n_edges
+       SUM(n)                                    AS n_bets_total                                    -- 聚合：该层注单合计，产出「n_bets_total」
+FROM ( SELECT player_id, dealer_id, COUNT(*) AS n FROM base                                         -- 取数来源：玩家×荷官投影
+       GROUP BY player_id, dealer_id ) t1                                                           -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '玩家×产品', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                 -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT player_id, product_id, COUNT(*) AS n FROM base                                        -- 取数来源：玩家×产品投影
+       GROUP BY player_id, product_id ) t2                                                          -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '玩家×桌', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                  -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT player_id, table_id, COUNT(*) AS n FROM base                                          -- 取数来源：玩家×桌投影
+       GROUP BY player_id, table_id ) t3                                                            -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '玩家×IP', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                 -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT player_id, ip_id, COUNT(*) AS n FROM base                                             -- 取数来源：玩家×IP 投影
+       GROUP BY player_id, ip_id ) t4                                                               -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '荷官×产品', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                 -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT dealer_id, product_id, COUNT(*) AS n FROM base                                        -- 取数来源：荷官×产品投影
+       GROUP BY dealer_id, product_id ) t5                                                          -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '荷官×桌', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                  -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT dealer_id, table_id, COUNT(*) AS n FROM base                                          -- 取数来源：荷官×桌投影
+       GROUP BY dealer_id, table_id ) t6                                                            -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT 'IP×代理线', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT ip_id, agent_lv1, COUNT(*) AS n FROM base                                             -- 取数来源：IP×一级代理线投影——跨代理共用 IP 是团伙的强结构证据
+       GROUP BY ip_id, agent_lv1 ) t7                                                               -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '玩家×荷官×产品（三元）', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                          -- 取值表达式：三元投影——用以实测「每细分一层，格内样本塌陷多少」
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT player_id, dealer_id, product_id, COUNT(*) AS n FROM base                             -- 取数来源：玩家×荷官×产品投影
+       GROUP BY player_id, dealer_id, product_id ) t8                                               -- 分组：按三轴汇总得边
+ORDER BY n_edges DESC;                                                                              -- 排序：按边数降序——体量与稀疏形状一目了然
+
+00:00:06.881
+edge_type	n_edges	n_edges_ge30	n_edges_n1	n_edges_le5	n_edges_le10	n_edges_lt30	n_bets_total
+玩家×荷官×产品（三元）	17437251	640705	6000636	12750059	15015448	16796546	124725280
+玩家×荷官	8061974	835985	2030883	4774624	5950563	7225989	124725280
+玩家×桌	3982411	599669	991196	2242764	2798269	3382742	124725280
+玩家×IP	3040257	696429	510027	1322724	1742519	2343828	124725280
+IP×代理线	1861069	622590	221524	623961	858815	1238479	124725280
+玩家×产品	1786861	309524	456483	1011162	1232354	1477337	124725280
+荷官×产品	4616	3957	57	204	336	659	124725280
+荷官×桌	1622	1535	16	51	66	87	124725280

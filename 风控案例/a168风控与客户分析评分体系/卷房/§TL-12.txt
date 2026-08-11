@@ -1,0 +1,35 @@
+-- ▸ 导出：不需要 —— §TL-12 设备字段发现，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( LOWER(COLUMN_NAME) LIKE '%device%'                                                          -- 并列条件：英文候选起算——device 类
+     OR LOWER(COLUMN_NAME) LIKE '%fingerprint%'                                                     -- 续行：指纹类
+     OR LOWER(COLUMN_NAME) LIKE '%imei%'                                                            -- 续行：手机设备串号
+     OR LOWER(COLUMN_NAME) LIKE '%idfa%'                                                            -- 续行：iOS 广告标识
+     OR LOWER(COLUMN_NAME) LIKE '%android%'                                                         -- 续行：Android 标识
+     OR LOWER(COLUMN_NAME) LIKE '%hardware%'                                                        -- 续行：硬件标识
+     OR LOWER(COLUMN_NAME) LIKE '%terminal%'                                                        -- 续行：终端标识
+     OR LOWER(COLUMN_NAME) LIKE '%browser%'                                                         -- 续行：浏览器标识
+     OR LOWER(COLUMN_NAME) LIKE '%client%'                                                          -- 续行：客户端标识（⚠ 或指业务侧客户，须回查列义）
+     OR LOWER(COLUMN_NAME) LIKE '%user_agent%'                                                      -- 续行：UA 全称
+     OR LOWER(COLUMN_NAME) LIKE '%useragent%'                                                       -- 续行：UA 连写
+     OR LOWER(COLUMN_NAME) = 'ua'                                                                   -- 续行：UA 简称——须精确匹配，免误中含 ua 二字之列名
+     OR LOWER(COLUMN_NAME) LIKE '%app_version%'                                                     -- 续行：应用版本
+     OR LOWER(COLUMN_NAME) LIKE '%os_%'                                                             -- 续行：操作系统类
+     OR COLUMN_COMMENT LIKE '%设备%'                                                                  -- 续行：中文候选起算——设备
+     OR COLUMN_COMMENT LIKE '%终端%'                                                                  -- 续行：终端
+     OR COLUMN_COMMENT LIKE '%客户端%'                                                                 -- 续行：客户端
+     OR COLUMN_COMMENT LIKE '%浏览器%'                                                                 -- 续行：浏览器
+     OR COLUMN_COMMENT LIKE '%指纹%'                                                                  -- 续行：指纹
+     OR COLUMN_COMMENT LIKE '%机器码%'                                                                 -- 续行：机器码
+     OR COLUMN_COMMENT LIKE '%型号%' )                                                                -- 续行：设备型号——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+00:00:00.432
+
+TABLE_NAME	ORDINAL_POSITION	COLUMN_NAME	DATA_TYPE	COLUMN_COMMENT
+ods_a168_categoryLevel	8	depositLimitMin	varchar	source_type=decimal(16,4); 最低存款限額, 0為不限制
+ods_a168_categoryLevel	9	depositLimitMax	varchar	source_type=decimal(16,4); 最高存款限額, 0為不限制
+ods_a168_game_log	5	user_agent	varchar	source_type=text; 
+ods_a168_member	48	winlossprompt	varchar	source_type=enum(''0'',''1''); 最大可輸可贏提示
+ods_a168_payment_method	8	device	varchar	source_type=enum(''web'',''mobile'',''all''); 裝置

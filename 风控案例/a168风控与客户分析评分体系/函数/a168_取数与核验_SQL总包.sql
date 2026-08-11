@@ -2801,6 +2801,8 @@ SELECT                                                                          
        ELSE 'ELIGIBLE' END                   AS eligibility_status,                                 -- 续行：产出「eligibility_status」——分析层据此筛选，规则显式可追踪
   30                                         AS eligibility_min_n,                                  -- 取值表达式：本次所用的最小有效局数——显式化，改阈只改此处并记入变更日志
   'n_rounds_eff >= 30 且基准非空且非哨兵'      AS eligibility_rule,                                           -- 取值表达式：资格规则之明文，随行落档，免日后追问「当时筛的是什么」
+  'L1_ELIGIBILITY'                           AS filter_stage,                                       -- 取值表达式：过滤所处之层——★ L0 事实层不删行，此处只标注其在 L1 资格层的去留
+  'v2026-08-11'                              AS filter_rule_version                                 -- 取值表达式：资格规则版本号——改规则须改版本号并记入变更日志，免「同名不同义」
   'R03_20260811_FULL_v1'                     AS comparison_id,                                      -- 取值表达式：比较批次号——★ 两臂须同批次方可比；口径见下五列，随行落档
   '2026-03-21..2026-08-06'                   AS cmp_time_window,                                    -- 取值表达式：时间窗，产出「cmp_time_window」——两臂必同
   'baccarat_bet02_101_all_pairs_incl_sentinel' AS cmp_population,                                   -- 取值表达式：总体定义（含哨兵之全量对），产出「cmp_population」——两臂必同
@@ -4148,6 +4150,8 @@ SELECT p.bet_date, p.member_id AS uid, p.dealer_id, p.is_sentinel_dealer,       
             WHEN SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END) = 0 THEN 'NO_DECISIVE_ROUND'      -- 续行：全为退还局，无胜负可判
             ELSE 'ELIGIBLE' END                                 AS eligibility_status,               -- 续行：产出「eligibility_status」——日粒度不设局数下限，下限由分析层施加
        'R03b_20260811_FULL_v1'                              AS comparison_id,                       -- 取值表达式：比较批次号——与 §R03 同规格，两臂须同批次方可比
+       'L1_ELIGIBILITY'                           AS filter_stage,                                  -- 取值表达式：过滤所处之层——★ L0 事实层不删行，此处只标注其在 L1 资格层的去留
+       'v2026-08-11'                              AS filter_rule_version                            -- 取值表达式：资格规则版本号——改规则须改版本号并记入变更日志，免「同名不同义」
        '2026-03-21..2026-08-06'                             AS cmp_time_window,                     -- 取值表达式：时间窗，产出「cmp_time_window」
        'baccarat_bet02_101_all_pairs_incl_sentinel'         AS cmp_population,                      -- 取值表达式：总体定义（含哨兵之全量对）
        'round_win = game_pnl > 0 (decisive only)'           AS cmp_label,                           -- 取值表达式：标签定义

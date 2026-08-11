@@ -1,0 +1,199 @@
+-- ▸ 导出：不需要 —— §BZ-00 经营指标可得性普查，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( TABLE_NAME IN ('ods_a168_dailyreport_member',                                               -- 并列条件：候选承载表起算——会员日报
+                       'ods_a168_log_age_cash_change',                                              -- 续行：代理资金变动日志
+                       'ods_a168_conversion',                                                       -- 续行：转换记录
+                       'ods_a168_member_dtl',                                                       -- 续行：会员主档明细
+                       'ods_a168_tablelimit')                                                       -- 续行：桌台限额表——★ 兼答 §TL-13 之问
+     OR LOWER(COLUMN_NAME) LIKE '%deposit%'                                                         -- 并列条件：列名候选起算——充值
+     OR LOWER(COLUMN_NAME) LIKE '%withdraw%'                                                        -- 续行：提款
+     OR LOWER(COLUMN_NAME) LIKE '%recharge%'                                                        -- 续行：充值别名
+     OR LOWER(COLUMN_NAME) LIKE '%regist%'                                                          -- 续行：注册
+     OR LOWER(COLUMN_NAME) LIKE '%signup%'                                                          -- 续行：注册别名
+     OR LOWER(COLUMN_NAME) LIKE '%visit%'                                                           -- 续行：访问——预判查无，查无即定案
+     OR LOWER(COLUMN_NAME) LIKE '%session%'                                                         -- 续行：会话
+     OR LOWER(COLUMN_NAME) LIKE '%pageview%'                                                        -- 续行：页面浏览
+     OR COLUMN_COMMENT LIKE '%充值%'                                                                  -- 并列条件：中文列义候选起算——充值
+     OR COLUMN_COMMENT LIKE '%存款%'                                                                  -- 续行：存款
+     OR COLUMN_COMMENT LIKE '%提款%'                                                                  -- 续行：提款
+     OR COLUMN_COMMENT LIKE '%上分%'                                                                  -- 续行：上分
+     OR COLUMN_COMMENT LIKE '%下分%'                                                                  -- 续行：下分
+     OR COLUMN_COMMENT LIKE '%注册%'                                                                  -- 续行：注册
+     OR COLUMN_COMMENT LIKE '%開戶%'                                                                  -- 续行：繁体开户
+     OR COLUMN_COMMENT LIKE '%开户%'                                                                  -- 续行：简体开户
+     OR COLUMN_COMMENT LIKE '%訪問%'                                                                  -- 续行：繁体访问
+     OR COLUMN_COMMENT LIKE '%登入%'                                                                  -- 续行：登入——退而求其次的活跃代理量，惟不得顶替「新浏览」
+     OR COLUMN_COMMENT LIKE '%限額%'                                                                  -- 续行：繁体限额——兼答限额字典之问
+     OR LOWER(COLUMN_NAME) LIKE '%bonus%'                                                           -- 并列条件：红利／彩金——★ NGR 之构件，查其有无以定 NGR 可算与否
+     OR LOWER(COLUMN_NAME) LIKE '%promo%'                                                           -- 续行：活动／推广成本
+     OR LOWER(COLUMN_NAME) LIKE '%coupon%'                                                          -- 续行：优惠券
+     OR COLUMN_COMMENT LIKE '%紅利%'                                                                  -- 续行：繁体红利
+     OR COLUMN_COMMENT LIKE '%红利%'                                                                  -- 续行：简体红利
+     OR COLUMN_COMMENT LIKE '%優惠%'                                                                  -- 续行：繁体优惠
+     OR COLUMN_COMMENT LIKE '%优惠%'                                                                  -- 续行：简体优惠
+     OR COLUMN_COMMENT LIKE '%活動%'                                                                  -- 续行：繁体活动
+     OR COLUMN_COMMENT LIKE '%活动%'                                                                  -- 续行：简体活动——以上七项决定 NGR 能否全口径计算
+     OR COLUMN_COMMENT LIKE '%限额%' )                                                                -- 续行：简体限额——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+00:00:01.096
+
+TABLE_NAME	ORDINAL_POSITION	COLUMN_NAME	DATA_TYPE	COLUMN_COMMENT
+ods_a168_RedPacketSetup	5	status	varchar	source_type=tinyint(1); 活动状态:0:关闭,1:开启
+ods_a168_RedPacketSetup	6	start_time	varchar	source_type=datetime; 開始活动时间
+ods_a168_RedPacketSetup	7	end_time	varchar	source_type=datetime; 結束活动时间
+ods_a168_RedPacketSetup	16	need_valid	varchar	source_type=tinyint(1); 活動獎金是否需要打碼
+ods_a168_RedPacketSetup	18	rules	varchar	source_type=text; 活動規則
+ods_a168_agent	42	promotecode	varchar	source_type=char(6); 推廣代碼
+ods_a168_agent_bak20250610	42	promotecode	varchar	source_type=char(6); 推廣代碼
+ods_a168_agent_dtl	16	ag014	varchar	source_type=varchar(300); 新版限額
+ods_a168_agent_dtl_test	16	ag014	varchar	source_type=varchar(300); 新版限額
+ods_a168_agent_test	40	promotecode	varchar	source_type=char(6); 推廣代碼
+ods_a168_category	9	in_single_mix	varchar	source_type=decimal(16,4); 單筆最低存款限額, 0為不限制
+ods_a168_category	10	in_single_max	varchar	source_type=decimal(16,4); 單筆最高存款限額, 0為不限制
+ods_a168_category	11	singleday_in_times	varchar	source_type=int(11); 單日最高存款次數, 0為不限制
+ods_a168_category	12	out_single_mix	varchar	source_type=decimal(16,4); 單筆最低提款限額, 0為不限制
+ods_a168_category	13	out_single_max	varchar	source_type=decimal(16,4); 單筆最高提款限額, 0為不限制
+ods_a168_category	14	out_singleday_max	varchar	source_type=decimal(16,4); 單日最高提款總額, 0為不限制
+ods_a168_category	15	singleday_out_times	varchar	source_type=decimal(16,4); 單日最高提款次數, 0為不限制
+ods_a168_category	16	out_platform_fee_rate	varchar	source_type=decimal(15,4); 提款平台處理費%
+ods_a168_category	17	out_fee_times	varchar	source_type=tinyint(1); 提款手續費免費次數
+ods_a168_category	18	out_fee_rate	varchar	source_type=decimal(15,4); 提款手續費%
+ods_a168_categoryLevel	8	depositLimitMin	varchar	source_type=decimal(16,4); 最低存款限額, 0為不限制
+ods_a168_categoryLevel	9	depositLimitMax	varchar	source_type=decimal(16,4); 最高存款限額, 0為不限制
+ods_a168_categoryLevel	10	withdrawLimitMin	varchar	source_type=decimal(16,4); 最低提款限額, 0為不限制
+ods_a168_categoryLevel	11	withdrawLimitMax	varchar	source_type=decimal(16,4); 最高提款限額, 0為不限制
+ods_a168_conversion	1	__source_pk	varchar	源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_conversion	2	dt	date	StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_conversion	3	id	varchar	source_type=int(11); 
+ods_a168_conversion	4	mid	varchar	source_type=int(11); 
+ods_a168_conversion	5	type	varchar	source_type=int(11); 0:出碼，1:轉碼
+ods_a168_conversion	6	money	varchar	source_type=decimal(10,4); 金額
+ods_a168_conversion	7	curmoney	varchar	source_type=decimal(10,4); 當前額度
+ods_a168_conversion	8	etype	varchar	source_type=int(11); 1:帳房提出2:接線員提出
+ods_a168_conversion	9	employee1	varchar	source_type=int(11); 碼房人員
+ods_a168_conversion	10	employee1name	varchar	source_type=varchar(20); 
+ods_a168_conversion	11	employee2	varchar	source_type=int(11); 接線人員
+ods_a168_conversion	12	employee2name	varchar	source_type=varchar(20); 
+ods_a168_conversion	13	updatetime	varchar	source_type=datetime; 
+ods_a168_conversion	14	addtime	varchar	source_type=datetime; 
+ods_a168_conversion	15	status	varchar	source_type=int(11); 1:申請,2:完成,9:失敗
+ods_a168_conversion	16	iom_id	varchar	source_type=int(11); 
+ods_a168_conversion	17	phonenumber	varchar	source_type=varchar(20); 
+ods_a168_conversion	18	source_db	varchar	来源库
+ods_a168_conversion	19	source_table	varchar	来源表
+ods_a168_conversion	20	ods_table_name	varchar	ODS表名
+ods_a168_conversion	21	sync_time	datetime	同步时间
+ods_a168_dailyreport_member	1	__source_pk	varchar	源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_dailyreport_member	2	dt	date	StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_dailyreport_member	3	id	varchar	source_type=bigint(20); 
+ods_a168_dailyreport_member	4	time	varchar	source_type=date; 日期
+ods_a168_dailyreport_member	5	bet02	varchar	source_type=int(11); 遊戲編號
+ods_a168_dailyreport_member	6	bet05	varchar	source_type=int(11); 會員編號
+ods_a168_dailyreport_member	7	bet13	varchar	source_type=decimal(16,4); 下注金額
+ods_a168_dailyreport_member	8	bet14	varchar	source_type=decimal(16,4); 派彩金額
+ods_a168_dailyreport_member	9	bet15	varchar	source_type=decimal(16,4); 會員退水%數
+ods_a168_dailyreport_member	10	bet41	varchar	source_type=decimal(16,4); 有效投注
+ods_a168_dailyreport_member	11	bet18	varchar	source_type=int(11); LV1ID
+ods_a168_dailyreport_member	12	bet19	varchar	source_type=int(11); LV2ID
+ods_a168_dailyreport_member	13	bet20	varchar	source_type=int(11); LV3ID
+ods_a168_dailyreport_member	14	bet21	varchar	source_type=int(11); LV4ID
+ods_a168_dailyreport_member	15	bet22	varchar	source_type=int(11); LV5ID
+ods_a168_dailyreport_member	16	bet23	varchar	source_type=decimal(16,4); LV1占成
+ods_a168_dailyreport_member	17	bet24	varchar	source_type=decimal(16,4); LV2占成
+ods_a168_dailyreport_member	18	bet25	varchar	source_type=decimal(16,4); LV3占成
+ods_a168_dailyreport_member	19	bet26	varchar	source_type=decimal(16,4); LV4占成
+ods_a168_dailyreport_member	20	bet27	varchar	source_type=decimal(16,4); LV5占成
+ods_a168_dailyreport_member	21	bet28	varchar	source_type=decimal(16,4); LV1退水
+ods_a168_dailyreport_member	22	bet29	varchar	source_type=decimal(16,4); LV2退水
+ods_a168_dailyreport_member	23	bet30	varchar	source_type=decimal(16,4); LV3退水
+ods_a168_dailyreport_member	24	bet31	varchar	source_type=decimal(16,4); LV4退水
+ods_a168_dailyreport_member	25	bet32	varchar	source_type=decimal(16,4); LV5退水
+ods_a168_dailyreport_member	26	bet10	varchar	source_type=int(11); 幣別
+ods_a168_dailyreport_member	27	bet11	varchar	source_type=decimal(16,4); 匯率
+ods_a168_dailyreport_member	28	category	varchar	source_type=int(11); 1:一般,2:小費
+ods_a168_dailyreport_member	29	count	varchar	source_type=int(11); 筆數
+ods_a168_dailyreport_member	30	risk	varchar	source_type=tinyint(1); 風險單 1:是
+ods_a168_dailyreport_member	31	orders	varchar	source_type=tinyint(1); 劃單 1:是
+ods_a168_dailyreport_member	32	source_db	varchar	来源库
+ods_a168_dailyreport_member	33	source_table	varchar	来源表
+ods_a168_dailyreport_member	34	ods_table_name	varchar	ODS表名
+ods_a168_dailyreport_member	35	sync_time	datetime	同步时间
+ods_a168_game_log	18	ip	varchar	source_type=varchar(100); 登入IP
+ods_a168_log_age_cash_change	1	__source_pk	varchar	源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_log_age_cash_change	2	dt	date	StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_log_age_cash_change	3	lacc01	varchar	source_type=int(11); 
+ods_a168_log_age_cash_change	4	lacc02	varchar	source_type=int(11); LV
+ods_a168_log_age_cash_change	5	lacc03	varchar	source_type=int(11); ID
+ods_a168_log_age_cash_change	6	op_utp	varchar	source_type=char(1); 操作者類型
+ods_a168_log_age_cash_change	7	lacc04	varchar	source_type=int(11); OPLV
+ods_a168_log_age_cash_change	8	lacc05	varchar	source_type=int(11); OPID
+ods_a168_log_age_cash_change	9	lacc06	varchar	source_type=decimal(15,4); 異動金額
+ods_a168_log_age_cash_change	10	lacc07	varchar	source_type=datetime; 操作時間
+ods_a168_log_age_cash_change	11	lacc08	varchar	source_type=varchar(20); 備註
+ods_a168_log_age_cash_change	12	lacc09	varchar	source_type=decimal(15,4); 異動前金額
+ods_a168_log_age_cash_change	13	lacc10	varchar	source_type=int(11); upid
+ods_a168_log_age_cash_change	14	lacc11	varchar	source_type=decimal(15,4); 上層異動前金額
+ods_a168_log_age_cash_change	15	pointtype	varchar	source_type=int(11); 0:現金;1:信用;
+ods_a168_log_age_cash_change	16	source_db	varchar	来源库
+ods_a168_log_age_cash_change	17	source_table	varchar	来源表
+ods_a168_log_age_cash_change	18	ods_table_name	varchar	ODS表名
+ods_a168_log_age_cash_change	19	sync_time	datetime	同步时间
+ods_a168_member_dtl	1	__source_pk	varchar	源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_member_dtl	2	dt	date	StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_member_dtl	3	mem001	varchar	source_type=int(11); mid
+ods_a168_member_dtl	4	mem002	varchar	source_type=int(11); 類別
+ods_a168_member_dtl	5	mem003	varchar	source_type=decimal(16,2); 退水
+ods_a168_member_dtl	6	mem004	varchar	source_type=int(11); LV1ID
+ods_a168_member_dtl	7	mem005	varchar	source_type=int(11); LV2ID
+ods_a168_member_dtl	8	mem006	varchar	source_type=int(11); LV3ID
+ods_a168_member_dtl	9	mem007	varchar	source_type=int(11); LV4ID
+ods_a168_member_dtl	10	mem008	varchar	source_type=int(11); LV5ID
+ods_a168_member_dtl	11	mem009	varchar	source_type=int(11); 最大押分05
+ods_a168_member_dtl	12	mem010	varchar	source_type=int(11); 最大押分06
+ods_a168_member_dtl	13	mem011	varchar	source_type=int(11); 
+ods_a168_member_dtl	14	mem012	varchar	source_type=int(11); 最大可贏金額
+ods_a168_member_dtl	15	mem013	varchar	source_type=datetime; 可贏可輸起算時間點
+ods_a168_member_dtl	16	mem014	varchar	source_type=int(11); 最大可輸金額
+ods_a168_member_dtl	17	mem015	varchar	source_type=varchar(300); 新版限額
+ods_a168_member_dtl	18	mem016	varchar	source_type=decimal(16,2); 電投退水
+ods_a168_member_dtl	19	source_db	varchar	来源库
+ods_a168_member_dtl	20	source_table	varchar	来源表
+ods_a168_member_dtl	21	ods_table_name	varchar	ODS表名
+ods_a168_member_dtl	22	sync_time	datetime	同步时间
+ods_a168_realtimebet	9	rtb07	varchar	source_type=datetime; 登入時間
+ods_a168_realtimelobby	5	rtl03	varchar	source_type=datetime; 登入時間
+ods_a168_tablelimit	1	__source_pk	varchar	源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_tablelimit	2	dt	date	StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_tablelimit	3	sn	varchar	source_type=int(5); 
+ods_a168_tablelimit	4	gid	varchar	source_type=int(3); 
+ods_a168_tablelimit	5	tableid	varchar	source_type=int(3); 
+ods_a168_tablelimit	6	netgroupname	varchar	source_type=varchar(50); 
+ods_a168_tablelimit	7	telgroupname	varchar	source_type=varchar(50); 
+ods_a168_tablelimit	8	tablename	varchar	source_type=varchar(50); 
+ods_a168_tablelimit	9	setvalue	varchar	source_type=int(25); 
+ods_a168_tablelimit	10	alertvalue	varchar	source_type=int(25); 告警數值
+ods_a168_tablelimit	11	minbet	varchar	source_type=int(11); 最小下注(電投用)
+ods_a168_tablelimit	12	maxbet	varchar	source_type=int(11); 最大下注(電投用)
+ods_a168_tablelimit	13	tieminbet	varchar	source_type=int(11); 
+ods_a168_tablelimit	14	tiemaxbet	varchar	source_type=int(11); 
+ods_a168_tablelimit	15	pairminbet	varchar	source_type=int(11); 
+ods_a168_tablelimit	16	pairmaxbet	varchar	source_type=int(11); 
+ods_a168_tablelimit	17	modifyname	varchar	source_type=varchar(25); 
+ods_a168_tablelimit	18	modifydate	varchar	source_type=datetime; 
+ods_a168_tablelimit	19	tabletype	varchar	source_type=int(3); 桌子類型
+ods_a168_tablelimit	20	bettime	varchar	source_type=int(3); 下注時間
+ods_a168_tablelimit	21	stinttime	varchar	source_type=int(3); 限制時間
+ods_a168_tablelimit	22	status	varchar	source_type=int(1); 状态.0暂停,1正常
+ods_a168_tablelimit	23	status_lock	varchar	source_type=tinyint(1); 開關鎖
+ods_a168_tablelimit	24	nettype	varchar	source_type=int(3); 0關1不可下2可下
+ods_a168_tablelimit	25	teltype	varchar	source_type=int(3); 0關1不可下2可下
+ods_a168_tablelimit	26	sort	varchar	source_type=int(3); 
+ods_a168_tablelimit	27	sort2	varchar	source_type=int(3); 
+ods_a168_tablelimit	28	source_db	varchar	来源库
+ods_a168_tablelimit	29	source_table	varchar	来源表
+ods_a168_tablelimit	30	ods_table_name	varchar	ODS表名
+ods_a168_tablelimit	31	sync_time	datetime	同步时间
+ods_a168_urllist	16	register	varchar	source_type=int(1); 
