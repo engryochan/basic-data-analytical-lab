@@ -24,6 +24,10 @@
      ④ 导出必带 ORDER BY —— 分页无稳定排序曾致 36.49% 重复行；
      ⑤ 导出上限 1,000 行时只承认排序头部结论，「未出现」类判断一律无效；
      ⑥ 超过 10 万行者先跑 COUNT 预检，按会员号区间切分，**不要用 OFFSET 翻页**；
+        ★ 2026-08-11 补：翻页一律取**唯一键**为序（如 §R03 的 member_id+dealer_id），
+          不得以 z_score 一类**有并列值**的量为序——实测 517,528 行中 z_score 并列
+          103,510 组、连次级键都分不开者 452 行，OFFSET 翻页必致重漏；
+          且含全局 CTE 之段落，切点须在最外层（见 §99 之界）。
      ⑦ 导出编码选 CSV(UTF-8)，全部存入报告同级「数据库/」目录，
         文件名一字不可错 —— 错名不报错，只让图表静默空白，是最坑的失败方式；
      ⑧ 每个 Superset 会话开跑前先逐条执行：
@@ -2810,7 +2814,38 @@ SELECT                                                                          
   'COMPATIBILITY_ONLY_NOT_PRODUCTION'        AS z_score_alias_status                                -- 取值表达式：★ `z_score` 系兼容别名之状态标记——**禁止作任何模型／排序／阈值／能力值／处置之输入**
 FROM pd                                                                                             -- 取数来源：取自本条自建的中间结果集 pd
 JOIN player_all pa ON pa.member_id = pd.member_id                                                   -- 连接：取自本条自建的中间结果集 player_all，连接键为 member_id（会员号）
-ORDER BY z_score DESC, profit_amount DESC;                                                          -- 排序：按 z_score（降序）, profit_amount（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
+ORDER BY pd.member_id, pd.dealer_id;                                                                -- 排序：★ 2026-08-11 改——按**唯一键**升序，不再按 z_score 排；分页铁律①：排序键须唯一
+/* ★★ 分页与提速（2026-08-11 立，因先生实测第五批由 18 秒跳至 5 分钟未出）★★
+   ── 病因两条，其一慢、其二错 ──
+   ① 慢：OFFSET 深翻页。引擎须先排出 OFFSET+LIMIT 那么多行再丢掉前面的，
+      堆随偏移增大，逾门槛即由 Top-N 退化为全量排序＋落盘溢写——耗时**跳变**而非渐增。
+   ② 错：旧版 ORDER BY z_score DESC, profit_amount DESC **排序键不唯一**——
+      实测 517,528 行中 z_score 并列 103,510 组，连次级键都分不开者 452 行。
+      以 OFFSET 翻页取之，这 452 行可能重复、可能漏掉，与当年 36.49% 重复率同一病根。
+   ── 今改 ORDER BY 为 (member_id, dealer_id)：实测该组合**零重复**，可作游标键。
+      屏读若需按 Z 排序，在 Superset 或报告侧排即可，**不必在导出时排**。
+   ── 分批下载：一律游标翻页，**禁用 OFFSET** ────────────────────────────────
+   第 1 批：在最外层 SELECT 之后加
+       LIMIT 100000
+   第 k+1 批：取上一批**末行**的 (member_id, dealer_id)，记作 (M, D)，加
+       WHERE (CAST(pd.member_id AS BIGINT), CAST(pd.dealer_id AS BIGINT)) > (M, D)
+       ORDER BY pd.member_id, pd.dealer_id
+       LIMIT 100000
+     若引擎不支持行值比较，等价写法：
+       WHERE CAST(pd.member_id AS BIGINT) > M
+          OR ( CAST(pd.member_id AS BIGINT) = M
+               AND CAST(pd.dealer_id AS BIGINT) > D )
+   ⚠ 该 WHERE 须加在**最外层**（对 pd 而非对 ranked/base）——
+     §99 的哈希切分模板把切点放在上游，那对 T02／B01／K01 安全，
+     **对 §R03 不安全**：本段有全局 CTE side_base（各投注产品基准胜率），
+     上游切片会令每片各估一套基准，十片十个基准，z_score 彼此不可比。
+   ── 预期规模与耗时（§R03-inv 实测为据）────────────────────────────────────
+     L0 全量 8,061,974 行 ÷ 每批 10 万 = **81 批**；
+     若取 n>=2 则 6,031,067 行 = 61 批；若仍取 n>=30 则 517,528 行 = 6 批。
+     游标翻页每批同价：单批 18 秒 → 约 24 分钟；60 秒 → 约 1.4 小时；180 秒 → 约 4 小时。
+     （18 秒极可能是缓存命中价；本段须对 1.247 亿注单开窗去重，冷启单批更可能 60~180 秒。）
+   ── 自验：ELIGIBLE 应恰 517,528 行、SENTINEL_DEALER 应 243,025 行，对不上即回查。
+   ═══════════════════════════════════════════════════════════════════════════ */                                                          -- 排序：按 z_score（降序）, profit_amount（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
 /* ⚠️ 此处保留 n_rounds_eff>=30（阈值报告已论证 30 以下噪声主导），
    但**不加** win_rate>0.70 / net_pnl_all>0：四条规则对照表（@sec-r03 的 r03-dual）
    需要在同一份底料上比较需求原口径与修正口径，加了就比不了。 */
@@ -4016,6 +4051,11 @@ ORDER BY opposite_rate DESC, n_opposite_round DESC;                             
    ★ 绝对不要用 OFFSET 翻页 —— 277 批数据 36.49% 重复的根因就是分页无稳定排序。
    正确做法：按 bet05 的哈希或数值区间切成 N 份，每份独立跑、独立导。
    ─────────────────────────────────────────────────────────────────────────── */
+-- ⚠★ 2026-08-11 补一条界：**本模板并非对每一段都安全**。
+--   凡该段含**全局 CTE**（如 §R03／§R03b 的 side_base 各投注产品基准胜率）者，
+--   在上游 CTE 切片会令每片各估一套基准——十片十个基准，其 Z 分数彼此不可比。
+--   此类段落的切点**必须放在最外层**（对最终 SELECT 的键取模或用游标翻页），
+--   代价是每片仍须全量计算一次。安全适用者：T02／B01／K01 等纯会员级聚合。
 -- 第 k 份（k = 0..9，共 10 份）：在最外层 SELECT 之前的 ord/rk CTE 里加这一行
 --   AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) % 10 = 0     -- ← 改 0,1,2,...,9
 -- 导出 10 份后在 R 侧 rbind 即可；因为切分键是会员号，各份之间天然不重叠。
@@ -4229,6 +4269,20 @@ ORDER BY 行数 DESC;                                                           
          n_related_orders, n_rounds_eff, p_base_mix_w, z_score
    ─────────────────────────────────────────────────────────────────────────── */
 -- ▸ 导出：需要 —— 存为「数据库/R03b_player_dealer_daily.csv」（§R03b 玩家×荷官·日粒度）。
+-- ★★ 2026-08-11 斧正·排序键与分页（与 §R03 同治）★★
+--   本件为全包**行数之最**（旧版实测 1,814 万行），最须分批下载，故此病在此处最烈。
+--   ① 旧版 `ORDER BY p.bet_date, z_score DESC` **排序键不唯一**——同日内 z_score
+--      大量并列，OFFSET 翻页必致重复或漏行（与当年 36.49% 重复率同一病根）。
+--   ② 今改 `ORDER BY p.bet_date, p.member_id, p.dealer_id`——三键即本件之主键，
+--      天然唯一（pd 层即按此三键分组），可作游标键。
+--   ③ 分批一律**游标翻页，禁用 OFFSET**：
+--        第 1 批：末尾加  LIMIT 100000
+--        第 k+1 批：取上批末行三键 (T, M, D)，在 ORDER BY 之前加
+--          WHERE (p.bet_date, CAST(p.member_id AS BIGINT), CAST(p.dealer_id AS BIGINT))
+--                > (T, M, D)
+--        引擎若不支持行值比较，改写为三段 OR 的等价式（见 §R03 段末模板）。
+--   ④ 亦**不得**照 §99 在上游 CTE 取模切片——本段同样有全局 CTE `side_base`，
+--      上游切片会令每片自成基准，各片 z 分数不可比。切点只能在最外层。
 WITH ranked AS (                                                                                    -- 公共表表达式：开启中间结果集 ranked，其后各行为其定义体（§R03b）
   SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,                                         -- 取列：起始取列子句，本行先列 b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02，涉 bet02（游戏类别）、dt（营业日）
          b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,                                               -- 续行：接续上一取列子句，续列 b.bet03, b.bet04, b.bet05, b.bet09, b.bet11，涉 bet03（靴号）、bet04（局内序号）、bet05（会员号）
@@ -4328,7 +4382,15 @@ SELECT p.bet_date, p.member_id AS uid, p.dealer_id, p.is_sentinel_dealer,       
 FROM pr p                                                                                           -- 取数来源：取自本条自建的中间结果集 pr
 -- （已废）旧版在此按 main_side 连 side_base 取基准，2026-08-11 改注单层注额加权                                          -- 注：连接已移至 ordb，本处不再取基准
 GROUP BY p.bet_date, p.member_id, p.dealer_id, p.is_sentinel_dealer                                 -- 分组：按营业日×会员×荷官×哨兵标记汇总
-ORDER BY p.bet_date, z_score DESC;                                                                  -- 排序：按 p.bet_date, z_score（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
+ORDER BY p.bet_date, p.member_id, p.dealer_id;                                                      -- 排序：★ 2026-08-11 改——按**唯一键**（日×会员×荷官）升序；分页铁律①：排序键须唯一
+/* ★★ 分页（2026-08-11 立，与 §R03 同一纪律）★★
+   旧版 ORDER BY p.bet_date, z_score DESC 之次级键 z_score **不唯一**，
+   分批下载会重、会漏。今改 (bet_date, member_id, dealer_id) —— 三者合成唯一。
+   游标翻页：取上批末行 (BD, M, D)，加
+       WHERE (p.bet_date, CAST(p.member_id AS BIGINT), CAST(p.dealer_id AS BIGINT)) > (BD, M, D)
+   ⚠ 切点同须在**最外层**：本段亦有全局 CTE side_base，上游切片会令基准失真。
+   ⚠ 本段为日粒度，行数远大于 §R03（旧版即 1,814 万行），分批数须按实际先跑 COUNT 预检。
+   ═══════════════════════════════════════════════════════════════════════════ */                                                                  -- 排序：按 p.bet_date, z_score（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
 /* ⚠️ 日粒度下单日有效局数天然偏少，Z-score 噪声比全窗口版大得多。
    本导出**只用于时序对照与趋势观察**，处置判定一律仍以 §R03 全窗口版为准。 */
 
