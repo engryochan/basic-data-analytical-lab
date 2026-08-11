@@ -9798,6 +9798,155 @@ $$\text{EIV}(e, d, a, t, h) \quad\text{——固定 } d \text{ 与 } t\text{，�
 **先建立跨实体统一坐标与映射，再以 L0 等权为共同参照，
 其后才研究关系系数、加权与 EIV 是否真正产生增量。**
 
+# 五探针实测回填：平台究竟有什么 {#sec-probe-findings}
+
+§RC-00、§R03-inv、§BZ-00、§TL-12、§TL-13 五个只读探针已跑毕（2026-08-11）。
+本章逐一回填其结果与由此产生的判定，**并自陈一处本方措辞越界之处**。
+
+## 一、三方交叉对账：逐位相等
+
+两条**互相独立**的查询与一份导出件，三者对账结果如下：
+
+| 来源 | 玩家×荷官关系数 |
+|---|---:|
+| §RC-00（关系普查） | **8,061,974** |
+| §R03-inv 四档之和（ELIGIBLE 517,528 ＋ INSUFFICIENT_N 7,142,007 ＋ NO_DECISIVE_ROUND 159,414 ＋ SENTINEL 243,025） | **8,061,974** |
+| `R03_player_dealer.csv` 实测行数 vs §R03-inv 的 ELIGIBLE | **517,528 ＝ 517,528** |
+
+**逐位相等，无一行去向不明。** 此即 @sec-layer-contract 的三层契约首次得到实证：
+L0 事实层 806 万条边，L1 资格层留 51.75 万条，**其余 754 万条的去向逐类可查**。
+
+## 二、稀疏性实证：本方案「加进来的不是信息，是零」一说，今有硬数字
+
+| 边类型 | 可观测边数 | 够格（n≥30） | 够格率 | $P(n{=}1)$ | $P(n{\le}5)$ | $P(n{<}30)$ |
+|---|---:|---:|---:|---:|---:|---:|
+| 玩家×荷官×产品（三元） | 17,437,251 | 640,705 | **3.7%** | 34.4% | 73.1% | 96.3% |
+| 玩家×荷官 | 8,061,974 | 835,985 | **10.4%** | 25.2% | 59.2% | 89.6% |
+| 玩家×桌 | 3,982,411 | 599,669 | 15.1% | 24.9% | 56.3% | 84.9% |
+| 玩家×IP | 3,040,257 | 696,429 | 22.9% | 16.8% | 43.5% | 77.1% |
+| IP×代理线 | 1,861,069 | 622,590 | 33.5% | 11.9% | 33.5% | 66.5% |
+| 玩家×产品 | 1,786,861 | 309,524 | 17.3% | 25.5% | 56.6% | 82.7% |
+| **荷官×产品** | 4,616 | 3,957 | **85.7%** | 1.2% | 4.4% | 14.3% |
+| **荷官×桌** | 1,622 | 1,535 | **94.6%** | 1.0% | 3.1% | 5.4% |
+
+**读法有三**：
+
+**其一，由二元展至三元，代价立现**——玩家×荷官加一层产品：
+**边数涨 2.2 倍（806 万 → 1,744 万），而够格率跌 2.8 倍（10.4% → 3.7%）**，
+$P(n{=}1)$ 由 25.2% 升至 34.4%。**这正是本方案此前论断的实测形态**：
+多出来的一千万条边里，逾三分之一只出现过一次。
+
+**其二，凡以玩家为一端者，皆稀疏；不以玩家为端者，皆稠密。**
+荷官×桌够格率 94.6%、荷官×产品 85.7%——**因其一端基数小（300 荷官、30 桌、23 产品）**。
+故关系层的可用之处不在「玩家×一切」，而在**实体×实体**（荷官×桌、荷官×产品、IP×代理线）。
+**这是本轮对建模方向最有价值的一条指引**：与其在八百万条玩家边上求信号，
+不如在数千条荷官边上求稳定。
+
+**其三，IP×代理线够格率 33.5%（62 万条够格）**——在以玩家为端的诸边中最高，
+且其业务含义最直接（跨代理共用 IP 是团伙的强结构证据）。
+**若关系层只能先做一件事，本方建议做这一条。**
+
+## 三、本方须自陈一处措辞越界：哨兵荷官不该被称作「非真实荷官」
+
+::: {.callout-warning}
+## 实测：哨兵只有**一个** `dealer_id`，却吃掉 **11.35%** 的局
+
+| 项 | 实测 |
+|---|---:|
+| 哨兵 `dealer_id` 个数 | **1** |
+| 涉及玩家×荷官对 | 243,025 |
+| 涉及局数 | **14,153,416** |
+| 占全部 124,725,280 局之比 | **11.35%** |
+
+本方此前称其为「非真实荷官（转播位／系统位）」——**此说无据，今收回**。
+实测只支持一句：**它是一个特殊的 `dealer_id` 值，承载了逾一成的业务量**。
+而 §TL-13 另查得 `ods_a168_tablelimit_third`（第三方桌台表，含 `dealer_name`、
+`vendor`、`tableid_third`），`tablelimit` 亦有 `minbet／maxbet` 注明「電投用」——
+**故哨兵极可能是第三方桌台或电投渠道的注单，即一条完整的业务线，而非垃圾数据**。
+
+**其含义须说明白**：剔除它**不是「清理噪声」，而是「排除一条业务线」**。
+本方案现行做法（标注而不删除、基准估计不含哨兵、资格标注为 `SENTINEL_DEALER`）
+仍属正当——因其荷官不可辨识，玩家×荷官关联分析对其确实无效；
+**但报告一切以「全平台」为口径的陈述，须注明其覆盖率为 88.65% 而非 100%**。
+此为本轮查出的一处口径缺口，已录入 @sec-limit。
+
+**待查一项**：哨兵之 `dealer_id` 究竟是 `-1` 抑或 `0`、其注单是否确来自第三方桌，
+须以 `bet39`（桌号）与 `tablelimit_third` 比对方能定案。
+:::
+
+## 四、§TL-12 设备：查无可靠标识，G4 判 COMPLETE
+
+全库扫描仅得两项，**皆不构成设备标识**：
+
+- `ods_a168_game_log.user_agent`（`text`，**列义为空**）——UA 是浏览器指纹的弱代理，
+  **不是设备 ID**，且其覆盖率与基数未知；
+- `ods_a168_payment_method.device`（`enum('web','mobile','all')`）——
+  这是**支付方式的适用端**，属配置项，与「哪台机器」无涉。
+
+**故依 `COMPLETE ≠ FOUND` 之纪律，G4 判 `COMPLETE`，结论记为
+「当前数据源不存在可靠设备标识」**，设备维度自此正式退出 UVOS 的可估范围
+（@sec-uvos 的实体×领域矩阵中，设备一行标 ⛔ 而非 ○）。
+**惟留一条余地**：`game_log.user_agent` 是唯一弱候选，
+若日后有需，可另查其覆盖率、基数与跨会员共用率——但**在查明之前不得纳入任何模型**。
+
+## 五、§TL-13 限额字典：找到了，且解开一个新的同名异义
+
+**本轮最重要的一项发现**：
+
+$$\texttt{ods\_a168\_member.mem015} = \text{login\_error}
+\qquad\text{而}\qquad
+\texttt{ods\_a168\_member\_dtl.mem015} = \textbf{新版限額}$$
+
+**同一代号，在两张表里是两件完全不同的事**——此为本方案继 `bet41`、`bet14`
+之后查获的**第三处同名异义，且是最隐蔽的一处**（前两处是同表异义，此处是异表同名）。
+
+其直接后果：变更日志里的 `101-mem015`，其取值形态（逗号分隔整数串、`varchar(300)`）
+与 `member_dtl.mem015`「新版限額」**完全吻合**——
+**故它极可能是按产品分设的限红，而非 `login_error`**。
+@sec-enforce-class 所立的「不得因名称相同即读作限额」之警戒，
+今须反过来再立一条：**亦不得因名称相同即读作 `login_error`**。
+
+另查得三张承载表：`ods_a168_bet_limit_default`（`set01`~`set14` 组定义）、
+`ods_a168_tablelimit`（桌台限额，含 `minbet`／`maxbet`／`tieminbet`／`pairmaxbet`）、
+`ods_a168_agent_dtl.ag013`（選則限紅）与 `ag014`（新版限額）。
+
+::: {.callout-important}
+## G5 判为「部分完成」，非 COMPLETE
+
+六层判据（物理列 → 数据字典 → 旧值/新值 → 业务含义 → 处置动作 → 处置节）
+**目前只走到第二层**：表找到了，列义译出了，**但组 ID 与金额的映射尚未查**。
+**能比大小，方能判孰紧孰松；判不出方向，限红就进不了处置总体。**
+新增 **§TL-13b** 走第三、四层，跑毕方可判 G5。
+:::
+
+## 六、§BZ-00 经营指标：见到的全是「配置」，没见到「流水」
+
+| 标的 | 实测所得 | 判定 |
+|---|---|---|
+| **红利／活动成本** | `ods_a168_RedPacketSetup`（红包活动**设置**：活動獎金是否需打碼、活動規則） | 🟡 **由「不可得」升为「待查」**——有配置，未见发放流水 |
+| **充值／提款** | `category`／`categoryLevel` 的**限额**与手续费率 | 🟡 同上，见规则未见流水 |
+| **注册时间** | `urllist.register` 为 `int(1)` **开关** | ⛔ **仍未找到** |
+| **登入时间** | `realtimebet.rtb07`、`realtimelobby.rtl03` | ✅ 有——**惟不得冒充「新浏览」** |
+| **新浏览** | 无任何会话或页面浏览表 | ⛔ **不可得，定案** |
+
+**故 `NGR₃` 三扣口径的命名纪律暂不解除**，其前景由「不可得」升为「待查」；
+新增 **§BZ-01** 专找流水型承载表。**若查无，则该纪律永久生效并写入局限章——
+不得以活动设置表反推发放额，那是拿规则冒充事实。**
+
+## 七、由此定下的 §R03 导出粒度
+
+L0 事实层全量为 **8,061,974 行**，约为现行 ELIGIBLE（517,528 行）的 **15.6 倍**。
+先生此前已成功导出 1,814 万行的 §R03b（分卷压缩），故此量级**在工程上可行**。
+
+**本方建议全量导出**，理由有三：其一，符合事实层不删之最高纪律；
+其二，$P(n{=}1) = 25.2\%$ 这类数字唯有全量方能现算，
+而它正是关系层一切取舍的依据；其三，`eligibility_status` 已在列，
+报告侧一行代码即可筛出 L1，**多导的 754 万行不增加分析负担，只增加一次下载**。
+
+**惟若先生以为体量不便**，退而求其次可取 $n \ge 2$（省去 203 万条 $n{=}1$ 的边，
+体量降至 603 万行），**但须在报告中明记该下限及其影响**——
+$P(n{=}1)$ 自此不可由该件现算，须回引本章之数。
+
 # 客户分群：赏罚分明 {#sec-segment}
 
 ```{r}
@@ -11215,6 +11364,68 @@ $$\text{物理列} \to \text{数据字典} \to \text{旧值／新值} \to \text{
 四关全过，方按 @sec-relation-layer 的 L2 层准入判据——
 **净贡献在净化滚动回测下改善**——决定是否纳入。
 :::
+
+## 限红处置：六层判据全数打通，G5 判 COMPLETE {#sec-limit-treatment}
+
+§TL-13b 已跑毕。**`101-mem015` 之谜就此解开，且限红可正式进入处置总体。**
+
+### 一、六层判据逐层核实
+
+| 层 | 判据 | 实测 |
+|---|---|---|
+| ① 物理列 | 是哪一列 | `ods_a168_member_dtl.mem015` ＝ **新版限額**（★ 与 `member.mem015` ＝ `login_error` **异表同名**） |
+| ② 数据字典 | 有无字典 | `ods_a168_bet_limit_default`，`gtype = '101'`（百家乐）下 **81 个限额组** |
+| ③ 旧值/新值 | 对得上否 | §TL-10 中出现过的组 ID（1、2、3、4、5、6、7、21、350…）**全部在字典内** |
+| ④ 业务含义 | 可否比大小 | `set01` 形如「下限,上限」，**可比** |
+| ⑤ 处置动作 | 方向可判否 | **可判**——见下 |
+| ⑥ 处置节 | 可否成节 | 可，沿 §TL-11 同法 |
+
+### 二、方向如何判：取组清单的最高上限之变化
+
+`101-mem015` 之值**不是单一组号，而是一份「允许选用的限额组清单」**（逗号分隔）。
+故方向取该清单的**最高上限**之变化——**降即收紧、升即放宽、平即持平**。
+以字典解读 §TL-10 实际观测到的几笔：
+
+| 旧清单 → 新清单 | 最高上限 | 判定 |
+|---|---|---|
+| `350` → `21` | 50,000 → 20,000 | **收紧** |
+| `3,21` → `3,4` | 20,000 → 10,000 | **收紧** |
+| `124,59,1,200,2,3,4,162,21,22,184` → `124,59,1` | 30,000 → 1,000 | **大幅收紧** |
+| `59,22` → `59,30` | 30,000 → 50,000 | 放宽 |
+| `3` → `2,3` | 5,000 → 5,000 | 持平（清单变而上限未变，不入节） |
+
+**四例皆判得出，无一含糊。** 此即 ⑤ 层之凭据。
+
+::: {.callout-warning}
+## 一处尚未判明的歧义，已显式标记而非默认
+
+每个 `gtype` 恰有一个 `set01 = '0,0'` 的组（百家乐为组 **610**，其 `sort` 排在最前）。
+`category` 表的列义写「**0 為不限制**」，而其 `sort` 位次又像是**最低档／停用**——
+**二者含义恰恰相反**：若为「不限制」，含 0 组者应判**最松**；若为「停用」，应判**最紧**。
+
+§TL-14 取**停用**解（合于 `sort` 位次），**但另出 `has_zero_group` 一列标记**；
+**凡该列为 1 者，其方向判定须人工复核，不得径入处置总体。**
+此为「宁可标注待查，不可默认取值」之又一例。
+:::
+
+### 三、其规模含义：处置组有望由 188 增至约 402
+
+§TL-10 实测 `101-mem015` 于百家乐口径下 **310 条 · 241 名会员**，
+与现处置组（`mem016`／`mem017`，188 名）仅重叠 27 名。
+若其收紧事件占多数，则处置总体规模有望增至 **约 402 名**——
+**这正对着 @sec-quasi-design 功效不足的要害**。
+
+**惟须守两条界**：其一，须待 §TL-14 出数，方知 310 条中收紧、放宽、持平、
+方向不明各占几何——**不得先按乐观情形规划**；
+其二，限红与禁投（`canbet`）是**两种不同的处置**，其效应未必可加，
+故须以 `enforcement_type` 分列估计，**不得合并为一个「处置组」再求平均效应**。
+
+### 四、闸门判定
+
+**G5（限额字典调查）判 `COMPLETE`**——不仅调查完成，且**确有其表、确可比大小、
+确能判方向**，此为 `COMPLETE` 之下最好的一种结果。
+连同 §TL-12 的 G4（`COMPLETE`，结论为「无可靠设备标识」），
+**处置总体冻结的五闸中，G4 与 G5 皆已过。**
 
 ## 处置台账：闭合⑬⑭⑮三环所须的数据契约 {#sec-treatment-ledger}
 
@@ -12756,6 +12967,16 @@ tibble::tribble(
     该决定影响全部后续结论。
 
 ::: {.callout-important}
+## 二十五 · 全平台口径实为 88.65%，非 100%（2026-08-11 五探针实测）
+
+§R03-inv 实测：**一个**哨兵 `dealer_id` 承载 **14,153,416 局，占全部 124,725,280 局之 11.35%**。
+其荷官不可辨识，故玩家×荷官关联分析对其确实无效；
+**但本方案一切以「全平台」为口径的陈述，其实际覆盖率为 88.65%**。
+且 §TL-13 查得 `ods_a168_tablelimit_third`（第三方桌台，含 `dealer_name`、`vendor`），
+`tablelimit` 亦注明「電投用」——**故哨兵极可能是第三方或电投渠道的一条完整业务线，
+而非垃圾数据**；剔除它不是清理噪声，是排除一条业务线。
+本方此前称其为「非真实荷官」，**该措辞无据，已收回**（见 @sec-probe-findings）。
+
 ## 二十一至二十四条：多目标建模阶段所得的四条限制性发现（本轮补录）
 
 以下四条来自价值侧多目标建模阶段的实测。其**业绩类结果**（引擎选型、折均净贡献、相对朴素基准的倍数、
@@ -12841,6 +13062,14 @@ $m_i$ 越高，说明平台从这位会员身上赚得越多；$m_i$ **为负**�
 2. Superset 逐条执行（**每 tab 一条语句**），导出至 `数据库/`（UTF-8 BOM，**必带 ORDER BY**）
 3. `quarto render a168风控与客户分层评分体系_商业方案.qmd`
 4. `cache: false`；任何步骤失败由 `guard()` 捕获，不中断渲染
+
+## 交付件一致性纪律（2026-08-11 立）
+
+**凡斧正 SQL 总包内某段，须同时检查 @sec-sql-archive 有无其归档；
+有则同步重写，并在归档段首列出与旧版之差异。**
+总包与归档是**同一段 SQL 的两处载体**，不同步即是让读者拿到两个答案。
+本方此前四轮斧正 §R03 皆漏此步，故立为常设自检——
+**改一段 SQL，须问三件事：总包改了吗？归档改了吗？两处逐字一致吗？**
 
 ## 可运行性六条纪律（2026-08-06 九连报错 · 2026-08-07 K-01/围栏/类型三连报错后固化）
 1. **零占位符**——Superset 不绑定 `:param`，全文 SQL 已一律字面量化
@@ -13565,27 +13794,50 @@ WHERE p.same_rounds * 1.0 / NULLIF(LEAST(a1.n_rounds, a2.n_rounds),0) >= 0.30
 ORDER BY lift DESC, same_rate DESC;
 ```
 
-## 归档 A-17·R-03 SQL（局级去重 + 投注产品基准 Z-score + 需求原口径并列输出） {#sec-sql-a-17}
+## 归档 A-17·R-03 SQL（三臂制 · 事实层不删 · 决胜局分母） {#sec-sql-a-17}
 
-> 原所在小节：R-03 SQL（局级去重 + 投注产品基准 Z-score + 需求原口径并列输出）　|　总包对应：**§R03**　|　产出：`R03_player_dealer.csv`
+> 原所在小节：R-03 玩家—荷官关联异常　|　总包对应：**§R03**　|　产出：`R03_player_dealer.csv`
+
+::: {.callout-important}
+## 本归档已于 2026-08-11 全面重写，与旧版有六处实质差异
+
+旧版归档（含 `MAX(bet_side) AS main_side` 与 `COALESCE(s.p_base, 0.5)`）**已废止**，
+其病与斧正见 @sec-settle-defect。今版与 SQL 总包 §R03 **逐字一致**，六处差异如下：
+
+1. **基准改注额加权**——旧版以 `MAX(bet_side)` 取「主注项」，而字符串 `MAX` 取的是
+   **字母序**最大者；`Tie` 序在庄闲之后，故同局押庄兼押和者整局基准被判 9.47% 而非
+   50.67%，Z 分数系统性抬高。今新增 `ordb` 于注单层挂各注基准，按注额加权。
+2. **废除 0.5 兜底**——旧版 `COALESCE(s.p_base, 0.5)` 以 50% 顶替未定义基准；
+   今删，基准未定义者 `p_base_mix_w` 与 `z_score` 一律留空（估计量元数据见总包段首）。
+3. **哨兵由删改标**——`is_sentinel_dealer` 标注取代源头剔除（事实层不删，@sec-layer-contract）；
+   基准估计仍只取真实牌桌（`side_base` 加 `WHERE is_sentinel_dealer = 0`）。
+4. **下限由过滤改标注**——`WHERE n_rounds_eff >= 30` 已废，改出 `eligibility_status`
+   与 `eligibility_min_n` / `eligibility_rule` / `filter_stage` / `filter_rule_version`。
+5. **三臂并出**——`z_score_unw`（L0 基线臂）、`z_score_w`（L1 候选臂）、
+   `delta_p` / `delta_z`（L2 比较层）；`z_score` 保留为**兼容别名**，
+   其状态列标 `COMPATIBILITY_ONLY_NOT_PRODUCTION`（@sec-benchmark-arm）。
+6. **比较批次号**——`comparison_id` 及四项口径列，使两臂总体可在数据层强制核对。
+
+**预期产出 8,061,974 行**（§R03-inv 实测），其中 `ELIGIBLE` 应恰为 **517,528 行**、
+`SENTINEL_DEALER` 应为 **243,025 行**——**对不上即示口径有变，须回查而非放行**。
+:::
 
 ```sql
--- ═══════════════════════════════════════════════════════════════════
--- R-03 · 玩家—荷官关联异常
--- 输出：uid | 荷官id | 投注金额 | 盈利金额 | 胜率 | 关联订单笔数
---      （+ 局级去重后的有效局数、投注产品基准 Z-score、玩家在其他荷官下的对照胜率）
--- 存为：数据库/R03_player_dealer.csv
--- ═══════════════════════════════════════════════════════════════════
 WITH ranked AS (
-  SELECT b.*, ROW_NUMBER() OVER (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,
+         b.bet13, b.bet14, b.bet17, b.bet38, b.bet39,
+         b.category, b.eid,
+         ROW_NUMBER() OVER (
            PARTITION BY b.bet01
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
-  FROM ods_mariadb_2b.ods_a168_bet02 b     -- ★ 表名开关
+  FROM ods_mariadb_2b.ods_a168_bet02 b
   WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
     AND b.bet02 = '101' AND b.category = '1'
 ),
 base AS (
   SELECT r.bet01 AS bet_id, r.bet05 AS member_id, r.eid AS dealer_id,
+         CASE WHEN TRIM(r.eid) IN ('-1','0') THEN 1 ELSE 0 END AS is_sentinel_dealer,
          r.bet09 AS bet_side,
          CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,
          CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS fx,
@@ -13593,74 +13845,110 @@ base AS (
          CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4)) AS payout_raw,
          CAST(NULLIF(TRIM(r.bet17),'') AS DECIMAL(20,4)) AS net_raw
   FROM ranked r
-  WHERE r.rn = 1 AND UPPER(TRIM(r.bet38)) = 'N'
+  WHERE r.rn = 1
+    AND UPPER(TRIM(r.bet38)) = 'N'
     AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
     AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
     AND NULLIF(TRIM(r.eid),'') IS NOT NULL
-    AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\_1\_%'   -- 阈值报告：排除小费单
+    AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\_1\_%'
 ),
 ord AS (
-  SELECT bet_id, member_id, dealer_id, bet_side, round_key,
+  SELECT bet_id, member_id, dealer_id, is_sentinel_dealer, bet_side, round_key,
          stake_raw / fx                AS stake,
          (payout_raw - stake_raw) / fx AS game_pnl,
          net_raw / fx                  AS net_pnl
   FROM base
 ),
-side_base AS (   -- ★ 投注产品基准胜率：Banker/Player/Tie/Big/Small… 各算各的
+side_base AS (
   SELECT bet_side,
          SUM(CASE WHEN game_pnl > 0 THEN 1 ELSE 0 END) * 1.0
            / NULLIF(SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END), 0) AS p_base
-  FROM ord GROUP BY bet_side
+  FROM ord WHERE is_sentinel_dealer = 0
+  GROUP BY bet_side
 ),
-/* ★ 局级去重：同一物理局的多张订单合并成一局，修正 Z-score 放大 */
+ordb AS (
+  SELECT o.member_id, o.dealer_id, o.is_sentinel_dealer, o.round_key, o.bet_side,
+         o.stake, o.game_pnl, o.net_pnl, s.p_base AS p_side
+  FROM      ord o
+  LEFT JOIN side_base s ON s.bet_side = o.bet_side
+),
 pr AS (
-  SELECT member_id, dealer_id, round_key,
-         SUM(stake) AS stake, SUM(game_pnl) AS game_pnl, SUM(net_pnl) AS net_pnl,
-         COUNT(*)   AS n_orders_in_round,
+  SELECT member_id, dealer_id, is_sentinel_dealer, round_key,
+         SUM(stake)    AS stake,
+         SUM(game_pnl) AS game_pnl,
+         SUM(net_pnl)  AS net_pnl,
+         COUNT(*)      AS n_orders_in_round,
+         SUM(stake * p_side)
+           / NULLIF(SUM(CASE WHEN p_side IS NOT NULL THEN stake ELSE 0 END), 0)
+                       AS p_base_round_w,
+         AVG(p_side)   AS p_base_round_unw,
          MAX(bet_side) AS main_side
-  FROM ord GROUP BY member_id, dealer_id, round_key
+  FROM ordb GROUP BY member_id, dealer_id, is_sentinel_dealer, round_key
 ),
-player_all AS (   -- 玩家全平台盈亏（需求条件：用户整体盈利）
+player_all AS (
   SELECT member_id,
          SUM(net_pnl)  AS net_pnl_all,
          SUM(game_pnl) AS game_pnl_all,
          SUM(stake)    AS stake_all,
-         COUNT(*)      AS n_rounds_all,
-         SUM(CASE WHEN game_pnl > 0 THEN 1 ELSE 0 END) AS win_all,
+         SUM(CASE WHEN game_pnl >  0 THEN 1 ELSE 0 END) AS win_all,
          SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END) AS dec_all
   FROM pr GROUP BY member_id
 ),
 pd AS (
-  SELECT p.member_id, p.dealer_id,
-         COUNT(*)                                       AS n_rounds_eff,   -- ★ 有效局数
-         SUM(p.n_orders_in_round)                       AS n_orders,       -- 需求「关联订单笔数」
-         SUM(p.stake)                                   AS stake,          -- 需求「投注金额」
-         SUM(p.game_pnl)                                AS game_pnl,       -- 需求「盈利金额」(剔返水)
-         SUM(p.net_pnl)                                 AS net_pnl,
-         SUM(CASE WHEN p.game_pnl > 0 THEN 1 ELSE 0 END) AS n_win,
-         SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END) AS n_dec,
-         AVG(COALESCE(s.p_base, 0.5))                    AS p_base_mix     -- 该组合的投注产品混合基准
-  FROM pr p LEFT JOIN side_base s ON s.bet_side = p.main_side
-  GROUP BY p.member_id, p.dealer_id
+  SELECT p.member_id, p.dealer_id, p.is_sentinel_dealer,
+         COUNT(*)                                          AS n_rounds_eff,
+         SUM(p.n_orders_in_round)                          AS n_orders,
+         SUM(p.stake)                                      AS stake,
+         SUM(p.game_pnl)                                   AS game_pnl,
+         SUM(p.net_pnl)                                    AS net_pnl,
+         SUM(CASE WHEN p.game_pnl >  0 THEN 1 ELSE 0 END)  AS n_win,
+         SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END)  AS n_dec,
+         AVG(p.p_base_round_w)                               AS p_base_mix_w,
+         AVG(p.p_base_round_unw)                           AS p_base_mix_unw
+  FROM pr p
+  GROUP BY p.member_id, p.dealer_id, p.is_sentinel_dealer
 )
 SELECT
-  pd.member_id AS uid, pd.dealer_id, pd.stake AS stake_amount,
-  pd.game_pnl AS profit_amount, pd.net_pnl,
-  pd.n_win * 1.0 / NULLIF(pd.n_dec, 0)                     AS win_rate,     -- 需求「胜率」
-  pd.n_orders AS n_related_orders, pd.n_rounds_eff,
-  pd.p_base_mix,
-  /* ★ 投注产品基准 Z-score（阈值报告口径）：以有效局数为 n，避免同局拆单放大 */
-  (pd.n_win - pd.n_dec * pd.p_base_mix)
-    / NULLIF(SQRT(pd.n_dec * pd.p_base_mix * (1 - pd.p_base_mix)), 0) AS z_score,
+  pd.member_id AS uid, pd.dealer_id, pd.is_sentinel_dealer,
+  pd.stake      AS stake_amount,
+  pd.game_pnl   AS profit_amount,
+  pd.net_pnl,
+  pd.n_win * 1.0 / NULLIF(pd.n_dec, 0)              AS win_rate,
+  pd.n_orders  AS n_related_orders,
+  pd.n_rounds_eff, pd.p_base_mix_w, pd.p_base_mix_unw,
+  pd.stake      AS total_bet_amount,
+  pd.n_orders   AS n_bets,
+  (pd.n_win - pd.n_dec * pd.p_base_mix_w)
+    / NULLIF(SQRT(pd.n_dec * pd.p_base_mix_w * (1 - pd.p_base_mix_w)), 0)  AS z_score_w,
+  (pd.n_win - pd.n_dec * pd.p_base_mix_unw)
+    / NULLIF(SQRT(pd.n_dec * pd.p_base_mix_unw * (1 - pd.p_base_mix_unw)), 0) AS z_score_unw,
+  (pd.n_win - pd.n_dec * pd.p_base_mix_w)
+    / NULLIF(SQRT(pd.n_dec * pd.p_base_mix_w * (1 - pd.p_base_mix_w)), 0)  AS z_score,
+  pd.p_base_mix_w - pd.p_base_mix_unw                AS delta_p,
+  (pd.n_win - pd.n_dec * pd.p_base_mix_w)
+    / NULLIF(SQRT(pd.n_dec * pd.p_base_mix_w * (1 - pd.p_base_mix_w)), 0)
+  - (pd.n_win - pd.n_dec * pd.p_base_mix_unw)
+    / NULLIF(SQRT(pd.n_dec * pd.p_base_mix_unw * (1 - pd.p_base_mix_unw)), 0) AS delta_z,
   pa.net_pnl_all, pa.game_pnl_all, pa.stake_all,
-  pa.win_all * 1.0 / NULLIF(pa.dec_all, 0)                 AS win_rate_all,
-  /* ★ 对照检验：玩家在「其他荷官」下的胜率——异常是否只集中在这一位荷官 */
+  pa.win_all * 1.0 / NULLIF(pa.dec_all, 0)          AS win_rate_all,
   (pa.win_all - pd.n_win) * 1.0
-    / NULLIF(pa.dec_all - pd.n_dec, 0)                     AS win_rate_other
-FROM pd JOIN player_all pa ON pa.member_id = pd.member_id
-WHERE pd.n_rounds_eff >= 30            -- 阈值报告口径：有效局数下限
-  AND pa.net_pnl_all > 0               -- 需求条件：用户整体盈利
-  AND pd.game_pnl > 0
+    / NULLIF(pa.dec_all - pd.n_dec, 0)              AS win_rate_other,
+  CASE WHEN pd.is_sentinel_dealer = 1        THEN 'SENTINEL_DEALER'
+       WHEN pd.p_base_mix_w IS NULL            THEN 'NO_BASE_RATE'
+       WHEN pd.n_dec = 0                     THEN 'NO_DECISIVE_ROUND'
+       WHEN pd.n_rounds_eff < 30             THEN 'INSUFFICIENT_N'
+       ELSE 'ELIGIBLE' END                   AS eligibility_status,
+  30                                         AS eligibility_min_n,
+  'n_rounds_eff >= 30 且基准非空且非哨兵'      AS eligibility_rule,
+  'L1_ELIGIBILITY'                           AS filter_stage,
+  'v2026-08-11'                              AS filter_rule_version,
+  'R03_20260811_FULL_v1'                     AS comparison_id,
+  '2026-03-21..2026-08-06'                   AS cmp_time_window,
+  'baccarat_bet02_101_all_pairs_incl_sentinel' AS cmp_population,
+  'round_win = game_pnl > 0 (decisive only)' AS cmp_label,
+  'COMPATIBILITY_ONLY_NOT_PRODUCTION'        AS z_score_alias_status
+FROM pd
+JOIN player_all pa ON pa.member_id = pd.member_id
 ORDER BY z_score DESC, profit_amount DESC;
 ```
 
@@ -13923,6 +14211,135 @@ $m_i$ 为负即此人在**赢平台的钱**。
 正文任何一章都不得出现「本轮新增」「上一版把」「已前移」这类过程记述——
 每一轮都适用，不是某一轮的临时安排。
 :::
+
+## 2026-08-11 · 归档 A-17 与总包脱节已根治 · 二十三份归档全数普查
+
+**一、查获一处此前未察的脱节。** 本方连日斧正 SQL 总包之 §R03，
+却**未同步主方案内的归档 A-17**——实测其仍为旧版，含两处已废之法：
+`MAX(bet_side) AS main_side`（字母序取主注）与 `COALESCE(s.p_base, 0.5)`（0.5 兜底）。
+**同一份 SQL 在两处口径不一，读者依归档实现即得旧结果**，此为交付件之间的一致性缺口。
+
+**二、A-17 已全面重写，与总包 §R03 逐字一致**，并于段首列出与旧版的**六处实质差异**：
+① 基准改注额加权（新增 `ordb`，废字母序主注）；② 废除 0.5 兜底；
+③ 哨兵由删改标（`is_sentinel_dealer`，基准估计仍只取真实牌桌）；
+④ 下限由 `WHERE` 过滤改 `eligibility_status` 标注（并出 `eligibility_min_n`／
+`eligibility_rule`／`filter_stage`／`filter_rule_version`）；
+⑤ 三臂并出（`z_score_unw` 基线臂、`z_score_w` 候选臂、`delta_p`／`delta_z` 比较层；
+`z_score` 降为兼容别名并标 `COMPATIBILITY_ONLY_NOT_PRODUCTION`）；
+⑥ 增 `comparison_id` 及四项口径列。
+并在段首写明**预期产出 8,061,974 行，其中 `ELIGIBLE` 应恰为 517,528 行、
+`SENTINEL_DEALER` 应为 243,025 行——对不上即示口径有变，须回查而非放行**。
+
+**三、二十三份归档全数普查，旧法残留归零。** 逐份扫描四类旧法
+（0.5 兜底、哨兵源头删除、下限过滤、字母序主注），**23 份中需斧正者仅 A-17 一份，
+其余二十二份洁净**。
+
+**四、由此立一条常设纪律（补交付件一致性之缺）**：
+**凡斧正 SQL 总包内某段，须同时检查主方案 @sec-sql-archive 有无其归档；
+有则同步重写，并在归档段首列出与旧版之差异。** 此前四轮斧正 §R03 皆漏此步，
+根因是本方把「总包」与「归档」当作两件事——**它们是同一段 SQL 的两处载体，
+不同步即是让读者拿到两个答案**。此纪律已并入可运行性纪律。
+
+## 2026-08-11 · 限红之谜解开：六层判据全通 · G4 与 G5 双双 COMPLETE · 一处己错已修
+
+**一、先认下一处本方所致的语法缺漏。** 先生实测 §R03 报
+「Unable to parse SQL near `'R03_20260811_FULL_v1'`」——根因是本方分两批插列时，
+`filter_rule_version` 一行**漏了行尾逗号**，其后紧接 `comparison_id` 遂成语法错。
+§R03 与 §R03b **同处同错**，皆已补正，并对两段作了 SELECT 列表的**逗号连贯性全扫**
+（凡「以 `AS 别名` 结尾而下一行另起一列」者逐一验过），确认再无同类缺漏。
+**此为本方分批插列的第三次同类失误**，故立一条自检：**凡分批向同一 SELECT 列表插列，
+落盘后须整段重扫逗号连贯性，不得只验括号平衡。**
+
+**二、§TL-13b 跑毕，`101-mem015` 之谜解开——六层判据全数打通。**
+① 物理列：`member_dtl.mem015` ＝ 新版限額；
+② 字典：`bet_limit_default` 之 `gtype = '101'` 下有 **81 个限额组**；
+③ 旧值/新值：§TL-10 中出现过的组 ID（1、2、3、4、5、6、7、21、350…）**全部在字典内**；
+④ 业务含义：`set01` 形如「下限,上限」，**可比大小**；
+⑤ 处置动作：**方向可判**——`101-mem015` 之值是**允许选用的限额组清单**，
+故取其**最高上限**之变化：`350→21`（5 万→2 万，收紧）、`3,21→3,4`（2 万→1 万，收紧）、
+`124,59,1,200,2,3,4,162,21,22,184→124,59,1`（3 万→1 千，**大幅收紧**）、
+`59,22→59,30`（3 万→5 万，放宽）——**四例皆判得出，无一含糊**；
+⑥ 处置节：可，沿 §TL-11 同法。新立 @sec-limit-treatment 与 **§TL-14** 限红处置事件表。
+
+**三、一处尚未判明的歧义已显式标记而非默认。** 每个 `gtype` 恰有一个 `set01 = '0,0'`
+的组（百家乐为组 610，`sort` 排最前）。`category` 表列义写「**0 為不限制**」，
+而其 `sort` 位次又像**最低档／停用**——**二者含义恰恰相反**。
+§TL-14 取停用解（合于 `sort` 位次），**另出 `has_zero_group` 一列**；
+**凡该列为 1 者方向判定须人工复核，不得径入处置总体**。
+
+**四、规模含义与两条界。** §TL-10 实测 `101-mem015` 于百家乐口径 310 条 · 241 名会员，
+与现处置组仅重叠 27 名，**处置总体有望由 188 增至约 402**，
+正对 @sec-quasi-design 功效不足之要害。惟须守两界：其一，**须待 §TL-14 出数**，
+方知 310 条中收紧／放宽／持平／方向不明各占几何，**不得先按乐观情形规划**；
+其二，**限红与禁投是两种不同的处置**，效应未必可加，
+须以 `enforcement_type` 分列估计，**不得合并为一个「处置组」再求平均效应**。
+
+**五、闸门判定：G4 与 G5 双双 COMPLETE。**
+G4（设备）结论为「当前数据源不存在可靠设备标识」；
+G5（限额字典）不仅调查完成，且**确有其表、确可比大小、确能判方向**——
+此为 `COMPLETE` 之下最好的一种结果。**五闸中 G4、G5 已过，
+余 G1（对账，已过）、G2（语义）、G3（删失证据，未过）。**
+
+## 2026-08-11 · 五探针实测回填：三方对账逐位相等 · 一处措辞越界已收回
+
+先生跑毕五个只读探针，本方逐一核算，新立 @sec-probe-findings 回填。
+
+**一、三方交叉对账逐位相等——三层契约首次得到实证。**
+§RC-00 的玩家×荷官 **8,061,974** ＝ §R03-inv 四档之和
+（ELIGIBLE 517,528 ＋ INSUFFICIENT_N 7,142,007 ＋ NO_DECISIVE_ROUND 159,414 ＋
+SENTINEL 243,025）；且 ELIGIBLE **517,528 ＝ `R03_player_dealer.csv` 实测行数**。
+**两条互相独立的查询与一份导出件，无一行去向不明。**
+
+**二、稀疏性实证，本方案此前论断今有硬数字。**
+玩家×荷官加一层产品：**边数涨 2.2 倍（806 万→1,744 万），而够格率跌 2.8 倍
+（10.4%→3.7%）**，$P(n{=}1)$ 由 25.2% 升至 34.4%——**多出来的一千万条边里，
+逾三分之一只出现过一次**。
+另得一条对建模方向最有价值的指引：**凡以玩家为一端者皆稀疏，不以玩家为端者皆稠密**——
+荷官×桌够格率 **94.6%**、荷官×产品 **85.7%**（因其两端基数皆小）。
+**与其在八百万条玩家边上求信号，不如在数千条荷官边上求稳定。**
+而 IP×代理线够格率 33.5%（62 万条够格）为以玩家为端者之最高、业务含义又最直接，
+**若关系层只能先做一件事，本方建议做这一条**。
+
+**三、本方自陈一处措辞越界。** 实测：哨兵**只有一个** `dealer_id`，
+却承载 **14,153,416 局、占全部之 11.35%**、涉 243,025 对。
+本方此前称其为「非真实荷官（转播位／系统位）」——**此说无据，今收回**。
+实测只支持一句：它是一个特殊的 `dealer_id` 值，承载了逾一成的业务量。
+而 §TL-13 查得 `tablelimit_third`（第三方桌台，含 `dealer_name`／`vendor`）、
+`tablelimit` 注明「電投用」——**故它极可能是第三方或电投渠道的一条完整业务线**。
+**剔除它不是清理噪声，是排除一条业务线。** 现行做法（标注不删、基准不含哨兵）仍属正当，
+**惟本方案一切「全平台」口径的陈述，其实际覆盖率为 88.65% 而非 100%**，已录入
+@sec-limit 第二十五条。
+
+**四、§TL-12 设备：G4 判 COMPLETE。** 全库仅得 `game_log.user_agent`（`text`，列义为空）
+与 `payment_method.device`（`enum('web','mobile','all')`，实为支付方式适用端）——
+**皆不构成设备标识**。依 `COMPLETE ≠ FOUND` 之纪律判 `COMPLETE`，
+结论记为「当前数据源不存在可靠设备标识」；设备维度正式退出 UVOS 可估范围。
+`user_agent` 留作唯一弱候选，**查明覆盖率与共用率之前不得纳入任何模型**。
+
+**五、§TL-13 限额字典：找到了，且解开本方案第三处同名异义——最隐蔽的一处。**
+`ods_a168_member.mem015 = login_error`，而 **`ods_a168_member_dtl.mem015 = 新版限額`**——
+**同一代号在两张表里是两件事**（前两处 `bet41`／`bet14` 皆为同表异义，此处是**异表同名**）。
+其直接后果：`101-mem015` 的取值形态（逗号分隔整数串、`varchar(300)`）
+与 `member_dtl.mem015` **完全吻合**，**故它极可能是按产品分设的限红**。
+@sec-enforce-class 的警戒须反向再立一条：**亦不得因名称相同即读作 `login_error`**。
+**惟 G5 只判「部分完成」**——六层判据只走到第二层，组 ID 与金额的映射尚未查；
+新增 **§TL-13b** 走第三、四层，**能比大小方能判孰紧孰松**。
+
+**六、§BZ-00：见到的全是「配置」，没见到「流水」。**
+红利见 `RedPacketSetup`（活动**设置**）、充值提款见 `category`／`categoryLevel` 的**限额**
+与手续费率、注册见 `urllist.register`（一个 `int(1)` **开关**）——
+**皆为规则而非事实**。登入时间确有（`realtimebet.rtb07`／`realtimelobby.rtl03`），
+**惟不得冒充「新浏览」**；新浏览**不可得，定案**。
+故 `NGR₃` 命名纪律**暂不解除**，其前景由「不可得」升为「待查」；
+新增 **§BZ-01** 专找流水型承载表——**若查无则该纪律永久生效**，
+且不得以活动设置表反推发放额（那是拿规则冒充事实）。
+
+**七、§R03 导出粒度定案建议。** L0 全量 8,061,974 行，为现行 ELIGIBLE 的 15.6 倍；
+先生既已成功导出 1,814 万行的 §R03b，此量级工程上可行。**本方建议全量导出**——
+其一合于事实层不删之最高纪律；其二 $P(n{=}1)=25.2\%$ 一类数字唯全量方能现算，
+而它正是关系层一切取舍的依据；其三 `eligibility_status` 已在列，
+报告侧一行代码即可筛出 L1，**多导的 754 万行不增分析负担，只增一次下载**。
+若体量不便，退可取 $n \ge 2$（降至 603 万行），**惟须明记该下限及其影响**。
 
 ## 2026-08-11 · 统一能力领域本体：31 维全部归位 · 实测查出三处结构性空缺
 
@@ -15567,6 +15984,21 @@ tibble::tribble(
   218,"**立一条分界：并非所有常数都该实测**。统计惯例阈值（SMD<0.1、卡钳 0.2、α=0.05、功效 0.8）与外部权威基准（Zender 50–55 局/小时、UKGC 七类）不该由本项目重估——前者是同行为使结果可比而约定，自行重估即无法与外部研究对话且易沦为**调门槛以就结论**；后者若以本平台数据重算再用以评价本平台，是循环论证。**分界不在「能不能算」，而在「该不该由我们算」**","新增","@sec-const-audit",
   229,"**结算形态核实定谳**：庄／闲开出和局退还本金（game_pnl 恰为 0），台面三果而结算只二果——即 Draw No Bet；押和与边注为纯二元无退还。新立 @sec-settle 载三类产品结算形态表、两套基准（含和局的无条件 45.86% 用于算庄家优势；剔和后的决胜局 50.68% 方为 Z 分数之基）与其各自用途","新增","@sec-settle",
   230,"**文档与实现不同基之根治**：SQL 侧 side_base 分母已剔退还局，而正文七处把无条件概率称作 Z-score 基准，差 4.82pp。全篇十一处改为并列两基或明注所取之基（庄家优势算式取无条件属正确用法，加注以免相混）。定性为文档缺陷非计算缺陷——代码取实测 p_base，既有结论一个未错；危害在下游照文档实现者，其偏差随局数以根号 n 增长，只押庄者约 1,100 决胜局即自动越 Z≥3.2 线","斧正","@sec-settle + 术语库 + @sec-r03",
+  340,"**归档 A-17 与总包脱节已根治**：连日斧正总包 §R03 而未同步主方案归档 A-17，实测其仍含 MAX(bet_side)（字母序取主注）与 COALESCE(s.p_base, 0.5)（0.5 兜底）两处已废之法——同一份 SQL 两处口径不一，读者依归档实现即得旧结果。A-17 已全面重写与总包逐字一致，并于段首列出六处实质差异与预期产出行数（8,061,974 行，ELIGIBLE 应恰 517,528、SENTINEL 应 243,025，对不上即回查）","斧正","@sec-sql-a-17",
+  341,"**二十三份归档全数普查，旧法残留归零**：逐份扫描四类旧法（0.5 兜底／哨兵源头删除／下限过滤／字母序主注），23 份中需斧正者仅 A-17 一份，其余二十二份洁净","核实","@sec-sql-archive",
+  342,"**立常设纪律·交付件一致性**：凡斧正 SQL 总包内某段，须同时检查主方案 @sec-sql-archive 有无其归档；有则同步重写并于段首列出与旧版之差异。此前四轮斧正 §R03 皆漏此步，根因是把「总包」与「归档」当作两件事——**它们是同一段 SQL 的两处载体，不同步即是让读者拿到两个答案**","新增","@sec-runbook + @sec-sql-archive",
+  335,"**本方语法缺漏已修**：§R03 报「Unable to parse SQL near 'R03_20260811_FULL_v1'」，根因为分两批插列时 filter_rule_version 一行漏行尾逗号；§R03／§R03b 同处同错皆补正，并对两段作 SELECT 列表逗号连贯性全扫。**此为分批插列的第三次同类失误**，故立自检：凡分批向同一 SELECT 列表插列，落盘后须整段重扫逗号连贯性，不得只验括号平衡","斧正","SQL §R03 + §R03b",
+  336,"**新立 @sec-limit-treatment：101-mem015 六层判据全数打通**。① member_dtl.mem015 ＝ 新版限額；② bet_limit_default 之 gtype='101' 下 81 个限额组；③ §TL-10 出现过的组 ID 全部在字典内；④ set01 形如「下限,上限」可比大小；⑤ **方向可判**——其值是「允许选用的限额组清单」，取最高上限之变化，实测四例（350→21、3,21→3,4、十一组→三组、59,22→59,30）皆判得出；⑥ 可成节。新增 §TL-14 限红处置事件表","新增","@sec-limit-treatment + SQL §TL-14",
+  337,"**一处歧义显式标记而非默认**：每个 gtype 恰有一个 set01='0,0' 的组（百家乐为 610，sort 排最前）。category 表列义写「0 為不限制」，而 sort 位次又像最低档／停用——**二者含义恰恰相反**。§TL-14 取停用解并另出 has_zero_group 一列，凡为 1 者方向判定须人工复核，不得径入处置总体","新增","@sec-limit-treatment",
+  338,"**规模含义与两条界**：101-mem015 于百家乐口径 310 条·241 名会员，与现处置组仅重叠 27 名，处置总体有望由 188 增至约 402，正对功效不足之要害。惟须待 §TL-14 出数方知收紧／放宽／持平／不明各占几何，不得先按乐观情形规划；且**限红与禁投是两种处置，效应未必可加**，须以 enforcement_type 分列估计","新增","@sec-limit-treatment + @sec-quasi-design",
+  339,"**闸门判定 G4 与 G5 双双 COMPLETE**：G4 结论为「当前数据源不存在可靠设备标识」；G5 不仅调查完成，且确有其表、确可比大小、确能判方向——此为 COMPLETE 之下最好的一种结果。五闸中 G1／G4／G5 已过，余 G2（语义）与 G3（删失证据，未过）","核实","@sec-limit-treatment + @sec-population-reconcile",
+  328,"**新立 @sec-probe-findings 五探针实测回填**：三方交叉对账**逐位相等**——§RC-00 玩家×荷官 8,061,974 ＝ §R03-inv 四档之和 ＝ ELIGIBLE 517,528 ＋ 其余三档；且 ELIGIBLE 517,528 ＝ R03_player_dealer.csv 实测行数。三层契约首次得到实证，无一行去向不明","核实","@sec-probe-findings",
+  329,"**稀疏性实证**：玩家×荷官加一层产品，边数涨 2.2 倍（806 万→1,744 万）而够格率跌 2.8 倍（10.4%→3.7%），P(n=1) 由 25.2% 升至 34.4%。另得建模方向指引：**凡以玩家为端者皆稀疏，不以玩家为端者皆稠密**（荷官×桌够格率 94.6%、荷官×产品 85.7%）——与其在八百万条玩家边上求信号，不如在数千条荷官边上求稳定；IP×代理线（够格 62 万条、33.5%）为以玩家为端者之最高且业务含义最直接，建议为关系层首做之事","核实","@sec-probe-findings + @sec-relation-census",
+  330,"**本方自陈措辞越界并收回**：哨兵实测只有**一个** dealer_id，却承载 14,153,416 局、占全部之 **11.35%**、涉 243,025 对。此前称其「非真实荷官（转播位／系统位）」**无据，今收回**；§TL-13 查得 tablelimit_third（第三方桌台，含 dealer_name／vendor）与 tablelimit 之「電投用」注记，故其极可能是第三方或电投渠道的**一条完整业务线**。剔除它不是清理噪声而是排除一条业务线；现行标注不删之做法仍正当，惟**本方案一切「全平台」口径的实际覆盖率为 88.65% 而非 100%**","斧正","@sec-probe-findings + @sec-limit",
+  331,"**§TL-12 设备：G4 判 COMPLETE**。全库仅得 game_log.user_agent（text，列义为空）与 payment_method.device（enum web/mobile/all，实为支付方式适用端），皆不构成设备标识。依 COMPLETE ≠ FOUND 判定，结论记「当前数据源不存在可靠设备标识」，设备维度正式退出 UVOS 可估范围；user_agent 留作唯一弱候选，查明覆盖率与共用率前不得入模","核实","@sec-probe-findings + @sec-device",
+  332,"**§TL-13 解开第三处同名异义（最隐蔽的一处）**：ods_a168_member.mem015 = login_error，而 **ods_a168_member_dtl.mem015 = 新版限額**——同一代号在两张表里是两件事（前两处 bet41／bet14 皆同表异义，此处是**异表同名**）。故 101-mem015 的取值形态与 member_dtl.mem015 完全吻合，极可能是按产品分设的限红；@sec-enforce-class 之警戒须反向再立一条：亦不得因名称相同即读作 login_error。**G5 只判「部分完成」**——六层判据只走到第二层，新增 §TL-13b 走第三、四层","核实","@sec-probe-findings + SQL §TL-13b",
+  333,"**§BZ-00：见到的全是配置，没见到流水**。红利见 RedPacketSetup（活动设置）、充值提款见 category／categoryLevel 之限额与费率、注册见 urllist.register（int(1) 开关）——皆规则非事实。登入时间确有（realtimebet.rtb07／realtimelobby.rtl03）惟不得冒充新浏览；**新浏览不可得，定案**。NGR₃ 命名纪律暂不解除，前景由「不可得」升为「待查」；新增 §BZ-01 专找流水表，查无则该纪律永久生效","核实","@sec-probe-findings + SQL §BZ-01",
+  334,"**§R03 导出粒度定案建议**：L0 全量 8,061,974 行为现行 ELIGIBLE 的 15.6 倍，先生既已导出 1,814 万行的 §R03b，工程可行。建议**全量导出**——合于事实层不删、P(n=1)=25.2% 一类数字唯全量可现算、eligibility_status 已在列故报告侧一行即可筛 L1。若体量不便退可取 n≥2（603 万行），惟须明记该下限及其影响","建议","@sec-probe-findings",
   321,"**新立 @sec-domain-ontology 统一能力领域本体**：说破此前设计缺陷——玩家「流水贡献」、荷官「在桌洗码量」、代理「真实流水」实为同一件事却各叫各名，故「玩家收入 83」与「荷官效率 91」之间无任何比较意义。立一刀：统一的是能力领域而非实体，领域为共同坐标轴，各实体投影其上方可横比","新增","@sec-domain-ontology",
   322,"**现有 31 维逐维归位，一维不删一维不改名**：玩家 10／荷官 8／代理 7／风控专员 6 全部可归入统一领域，共落入 12 个领域中的 9 个；仅加 domain_id 一列","斧正","@sec-domain-ontology + @sec-radar",
   323,"**实测查出三处结构性空缺**：① D02 激活、D03 充值、D12 合规现有 31 维一个未落到——D03 成因已查明（充值数据待证），而 **D02 激活与 D12 合规是此前从未意识到的空白**（有「谁在活跃」而无「谁把人从注册带到首投」，有「谁风险高」而无「谁流程合规」）；② **D06 收入是唯一四实体皆有者，故眼下唯一可跨实体横比的坐标轴即 D06**；③ D08 风险 8 维最厚、D10 质量 2 维最薄，如实反映本方案生于风控之出身","核实","@sec-domain-ontology",

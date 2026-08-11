@@ -2802,7 +2802,7 @@ SELECT                                                                          
   30                                         AS eligibility_min_n,                                  -- 取值表达式：本次所用的最小有效局数——显式化，改阈只改此处并记入变更日志
   'n_rounds_eff >= 30 且基准非空且非哨兵'      AS eligibility_rule,                                           -- 取值表达式：资格规则之明文，随行落档，免日后追问「当时筛的是什么」
   'L1_ELIGIBILITY'                           AS filter_stage,                                       -- 取值表达式：过滤所处之层——★ L0 事实层不删行，此处只标注其在 L1 资格层的去留
-  'v2026-08-11'                              AS filter_rule_version                                 -- 取值表达式：资格规则版本号——改规则须改版本号并记入变更日志，免「同名不同义」
+  'v2026-08-11'                              AS filter_rule_version,                                 -- 取值表达式：资格规则版本号——改规则须改版本号并记入变更日志，免「同名不同义」
   'R03_20260811_FULL_v1'                     AS comparison_id,                                      -- 取值表达式：比较批次号——★ 两臂须同批次方可比；口径见下五列，随行落档
   '2026-03-21..2026-08-06'                   AS cmp_time_window,                                    -- 取值表达式：时间窗，产出「cmp_time_window」——两臂必同
   'baccarat_bet02_101_all_pairs_incl_sentinel' AS cmp_population,                                   -- 取值表达式：总体定义（含哨兵之全量对），产出「cmp_population」——两臂必同
@@ -3108,6 +3108,175 @@ WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                         
      OR COLUMN_COMMENT LIKE '%活动%'                                                                  -- 续行：简体活动——以上七项决定 NGR 能否全口径计算
      OR COLUMN_COMMENT LIKE '%限额%' )                                                                -- 续行：简体限额——并收束整个候选条件组
 ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-13b · 限额字典最后一里：组 ID 究竟对应多少钱，孰紧孰松
+   对应报告：@sec-probe-findings
+   ---------------------------------------------------------------------------
+   §TL-13 已查得四张承载表，其中最关键的一项是**解开了一个新的同名异义**：
+     · ods_a168_member.mem015      = login_error（§TL-09 已证）
+     · ods_a168_member_dtl.mem015  = **新版限額**（varchar(300)）★ 同代号异表异义
+   而变更日志里的 `101-mem015`，其取值形态（逗号分隔整数串）与 member_dtl 的
+   「新版限額」完全吻合——**故 101-mem015 极可能是按产品分设的限红，而非 login_error**。
+   ⚠ 但「极可能」不是「已证」。六层判据（物理列→字典→旧值/新值→业务含义→处置动作→
+   处置节）目前只走到第二层。本查询走第三、四层：看限额组 ID 的取值与其金额映射，
+   **能比大小，方能判孰紧孰松**；判不出方向，限红就进不了处置总体。
+   读法：① bet_limit_default 的 set01~set14 若为金额档位，则组 ID 可排序；
+         ② 与 §TL-10 中出现过的组 ID（如 3、4、21、350）比对，须能对上；
+         ③ member_dtl.mem015 的实际取值形态须与 101-mem015 同形，方证同源。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §TL-13b 限额组取值形态，屏幕看结果。
+SELECT  'bet_limit_default' AS src, id AS grp_id, gtype,                                            -- 取列：起始取列子句，产出「src」「grp_id」——限额组定义表之主键与游戏类别
+        set01, set02, set03, set04, set05, set06, set07,                                            -- 续行：接续上一取列子句，续列七档设定值——若为金额则可排序
+        status, sort                                                                                -- 续行：续列启用状态与排序
+FROM    ods_mariadb_2b.ods_a168_bet_limit_default                                                   -- 取数来源：取自限额组定义表（§TL-13 查得）
+WHERE   dt = ( SELECT MAX(dt) FROM ods_mariadb_2b.ods_a168_bet_limit_default )                      -- 过滤条件：只取最新一版快照，免同一组多版重复
+ORDER BY CAST(NULLIF(TRIM(gtype),'') AS INT), CAST(NULLIF(TRIM(id),'') AS INT)                      -- 排序：按游戏类别与组号升序——档位阶梯一目了然
+LIMIT 200;                                                                                          -- 限行：仅看形态，不求全量
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §BZ-01 · 红利与充值流水搜寻：配置表已见，流水表未见
+   对应报告：@sec-probe-findings
+   ---------------------------------------------------------------------------
+   §BZ-00 实测所得可归纳为一句：**见到的全是「配置」，没见到「流水」**——
+     · ods_a168_RedPacketSetup     红包活动**设置**（活動獎金是否需打碼、活動規則）
+     · ods_a168_category / categoryLevel  存提款**限额**与手续费率
+     · ods_a168_urllist.register   一个 int(1) **开关**，非注册时间
+   配置回答「规则是什么」，流水回答「实际发了多少钱、谁在何时充了多少」——
+   **NGR₃ 能否升为全口径，系于后者而非前者**。本查询专找流水型承载表。
+   读法：凡表名含 record／detail／log／order／history 且列义译出为金额与时间者，
+   即为流水候选；找到则须再验其与 bet05（会员号）之可关联性。
+   ⚠ 找不到亦是结论：则 NGR₃ 三扣口径的命名纪律**永久生效**，
+     并写入局限章，不得以活动设置表反推发放额（那是拿规则冒充事实）。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §BZ-01 红利与充值流水搜寻，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( LOWER(TABLE_NAME) LIKE '%redpacket%'                                                        -- 并列条件：表名候选起算——红包（设置表已见，此处找其流水）
+     OR LOWER(TABLE_NAME) LIKE '%bonus%'                                                            -- 续行：红利
+     OR LOWER(TABLE_NAME) LIKE '%promo%'                                                            -- 续行：活动
+     OR LOWER(TABLE_NAME) LIKE '%reward%'                                                           -- 续行：奖励
+     OR LOWER(TABLE_NAME) LIKE '%cash%'                                                             -- 续行：资金（log_age_cash_change 即属此类）
+     OR LOWER(TABLE_NAME) LIKE '%wallet%'                                                           -- 续行：钱包
+     OR LOWER(TABLE_NAME) LIKE '%fund%'                                                             -- 续行：资金变动
+     OR LOWER(TABLE_NAME) LIKE '%trans%'                                                            -- 续行：交易
+     OR LOWER(TABLE_NAME) LIKE '%order%'                                                            -- 续行：订单
+     OR LOWER(TABLE_NAME) LIKE '%payment%'                                                          -- 续行：支付
+     OR LOWER(TABLE_NAME) LIKE '%recharge%'                                                         -- 续行：充值
+     OR LOWER(TABLE_NAME) LIKE '%deposit%'                                                          -- 续行：存款
+     OR LOWER(TABLE_NAME) LIKE '%withdraw%'                                                         -- 续行：提款
+     OR LOWER(TABLE_NAME) LIKE '%dailyreport%' )                                                    -- 续行：日报——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-14 · 限红处置事件：`101-mem015` 的方向判定与处置节起点
+   对应报告：@sec-limit-treatment
+   ---------------------------------------------------------------------------
+   §TL-13b 已把六层判据全数打通：
+     ① 物理列：ods_a168_member_dtl.mem015 = 新版限額（★ 与 member.mem015 = login_error
+        异表同名，务必分清）；
+     ② 数据字典：ods_a168_bet_limit_default，gtype = '101'（百家乐）下有 81 个限额组；
+     ③ 旧值/新值：§TL-10 中出现过的组 ID（1、2、3、4、5、6、7、21、350…）**全部在字典内**；
+     ④ 业务含义：set01 形如「下限,上限」，可比大小；
+     ⑤ 处置动作：`101-mem015` 之值是**允许选用的限额组清单**（逗号分隔），
+        故方向取该清单的**最高上限**之变化——降即收紧、升即放宽、平即持平。
+        实测四例皆判得出：350→21（5 万→2 万，收紧）、3,21→3,4（2 万→1 万，收紧）、
+        「124,59,1,200,2,3,4,162,21,22,184」→「124,59,1」（3 万→1 千，**大幅收紧**）、
+        59,22→59,30（3 万→5 万，放宽）。
+     ⑥ 处置节：本查询即其事件层，节的折叠沿 §TL-11 同法。
+   ⚠ 一处**尚未判明**的歧义，已显式标记而非默认：
+     每个 gtype 恰有一个 set01 = '0,0' 的组（百家乐为组 610，其 sort 排在最前）。
+     `category` 表的列义写「0 為不限制」，而其 sort 位次又像是**最低档／停用**。
+     二者含义相反：若为「不限制」，则含 0 组者应判**最松**；若为「停用」，则应判**最紧**。
+     本查询取**停用**解（合于 sort 位次），但另出 `has_zero_group` 一列标记，
+     **凡该列为 1 者，其方向判定须人工复核**，不得径入处置总体。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：需要 —— 存为「数据库/TL14_limit_treatment.csv」（§TL-14 限红处置事件·含方向判定）。
+WITH dict AS (                                                                                      -- 公共表表达式：开启中间结果集 dict——百家乐限额组字典（§TL-14）
+    SELECT  CAST(id AS STRING)                            AS grp_id,                                -- 取值表达式：取用组号并转字符，产出「grp_id」——与变更日志内的字面值同型方能连上
+            CAST(NULLIF(TRIM(SPLIT_PART(set01, ',', 1)),'') AS DECIMAL(20,2)) AS lo,                -- 取值表达式：set01 逗号前段为下限，产出「lo」
+            CAST(NULLIF(TRIM(SPLIT_PART(set01, ',', 2)),'') AS DECIMAL(20,2)) AS hi                 -- 取值表达式：set01 逗号后段为上限，产出「hi」——方向判定之凭据
+    FROM    ods_mariadb_2b.ods_a168_bet_limit_default                                               -- 取数来源：取自限额组定义表（§TL-13 查得）
+    WHERE   gtype = '101'                                                                           -- 过滤条件：限定百家乐，与本方案 bet02 = '101' 同口径
+      AND   dt = ( SELECT MAX(dt) FROM ods_mariadb_2b.ods_a168_bet_limit_default )                  -- 并列条件：只取最新一版快照，免同组多版重复
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+ev AS (                                                                                             -- 公共表表达式：开启中间结果集 ev——变更日志原始事件，口径与 §TL-11 一致（§TL-14）
+    SELECT  CAST(lmc02 AS STRING)                         AS member_id,                             -- 取值表达式：取用 lmc02（被改会员号），产出「member_id」
+            SUBSTR(CAST(lmc08 AS STRING), 1, 10)          AS action_date,                           -- 取值表达式：取用 lmc08（操作时间）之日期段，产出「action_date」
+            CAST(lmc08 AS STRING)                         AS action_time,                           -- 取值表达式：取用 lmc08（操作时间），产出「action_time」
+            CAST(lmc06 AS STRING)                         AS operator_id,                           -- 取值表达式：取用 lmc06（操作人账号），产出「operator_id」
+            CAST(lmc07 AS STRING)                         AS operator_lv,                           -- 取值表达式：取用 lmc07（操作人层级），产出「operator_lv」
+            CAST(lmc05 AS STRING)                         AS content                                -- 取值表达式：取用 lmc05（变更内容串），产出「content」
+    FROM    ods_mariadb_2b.ods_a168_log_mem_change                                                  -- 取数来源：取自会员变更日志表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')                                       -- 并列条件：只留配置修改与状态变更两类
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+seg AS (                                                                                            -- 公共表表达式：开启中间结果集 seg——把多段 content 逐段拆开（§TL-14）
+    SELECT  e.member_id, e.action_date, e.action_time, e.operator_id, e.operator_lv,                -- 取列：起始取列子句，透传五要素
+            TRIM(s.piece)                                 AS piece                                  -- 取值表达式：逐段去空白，产出「piece」
+    FROM ev e, unnest(split(e.content, ';')) AS s(piece)                                            -- 行展开：以 unnest(split(…)) 把分号分隔的多段逐段成行
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+lim AS (                                                                                            -- 公共表表达式：开启中间结果集 lim——只留百家乐限额变更段（§TL-14）
+    SELECT  member_id, action_date, action_time, operator_id, operator_lv,                          -- 取列：起始取列子句，透传五要素
+            TRIM(SPLIT_PART(SPLIT_PART(piece, ':', 2), '=>', 1)) AS grp_before,                     -- 取值表达式：箭头前段为旧组清单，产出「grp_before」
+            TRIM(SPLIT_PART(piece, '=>', 2))              AS grp_after,                             -- 取值表达式：箭头后段为新组清单，产出「grp_after」
+            CONCAT_WS('#', member_id, action_time)        AS ev_key                                 -- 取值表达式：会员×时刻拼事件键，产出「ev_key」——供两侧展开后回接
+    FROM    seg                                                                                     -- 取数来源：取自本条自建的中间结果集 seg
+    WHERE   piece LIKE '101-mem015:%'                                                               -- 过滤条件：只认百家乐的新版限額段——★ 不得与 member.mem015（login_error）相混
+      AND   piece LIKE '%=>%'                                                                       -- 并列条件：须含箭头方为有效变更段
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+bfr AS (                                                                                            -- 公共表表达式：开启中间结果集 bfr——旧组清单逐组展开后取最高上限（§TL-14）
+    SELECT  l.ev_key,                                                                               -- 取列：起始取列子句，本行先取事件键
+            MAX(d.hi)                                     AS max_hi_before,                         -- 聚合：旧清单之最高上限，产出「max_hi_before」
+            SUM(CASE WHEN d.hi = 0 THEN 1 ELSE 0 END)     AS zero_before,                           -- 聚合：旧清单含「0,0」组之个数，产出「zero_before」——歧义标记之料
+            COUNT(d.grp_id)                               AS n_grp_before                           -- 计数表达式：旧清单中能连上字典的组数，产出「n_grp_before」
+    FROM        lim l                                                                               -- 取数来源：取自本条自建的中间结果集 lim
+    CROSS JOIN  unnest(split(l.grp_before, ',')) AS g(grp)                                          -- 行展开：把逗号分隔的组清单逐组成行
+    LEFT JOIN   dict d ON d.grp_id = TRIM(g.grp)                                                    -- 左连接：取自本条自建的中间结果集 dict，连接键为组号——连不上者留空，不以 0 顶替
+    GROUP BY l.ev_key                                                                               -- 分组：按事件键汇总
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+aft AS (                                                                                            -- 公共表表达式：开启中间结果集 aft——新组清单同法（§TL-14）
+    SELECT  l.ev_key,                                                                               -- 取列：起始取列子句，本行先取事件键
+            MAX(d.hi)                                     AS max_hi_after,                          -- 聚合：新清单之最高上限，产出「max_hi_after」
+            SUM(CASE WHEN d.hi = 0 THEN 1 ELSE 0 END)     AS zero_after,                            -- 聚合：新清单含「0,0」组之个数，产出「zero_after」
+            COUNT(d.grp_id)                               AS n_grp_after                            -- 计数表达式：新清单中能连上字典的组数，产出「n_grp_after」
+    FROM        lim l                                                                               -- 取数来源：取自本条自建的中间结果集 lim
+    CROSS JOIN  unnest(split(l.grp_after, ',')) AS g(grp)                                           -- 行展开：把逗号分隔的组清单逐组成行
+    LEFT JOIN   dict d ON d.grp_id = TRIM(g.grp)                                                    -- 左连接：取自本条自建的中间结果集 dict，连接键为组号
+    GROUP BY l.ev_key                                                                               -- 分组：按事件键汇总
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+bl AS (                                                                                             -- 公共表表达式：开启中间结果集 bl——本方案口径的百家乐投注会员名单（§TL-14）
+    SELECT  DISTINCT CAST(bet05 AS STRING)                AS member_id                              -- 取值表达式：取用 bet05（会员号）去重，产出「member_id」
+    FROM    ods_mariadb_2b.ods_a168_bet02                                                           -- 取数来源：取自注单明细表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(bet02 AS STRING) = '101'                                                           -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§TL-14）
+SELECT  l.member_id,                                                                                -- 取列：起始取列子句，本行先取「member_id」
+        l.action_date, l.action_time,                                                               -- 取值表达式：事件之日与时刻
+        l.operator_id, l.operator_lv,                                                               -- 取值表达式：操作人与其层级——审计轨迹之「谁」
+        l.grp_before, l.grp_after,                                                                  -- 取值表达式：新旧限额组清单原文，留档以备复核
+        b.max_hi_before, f.max_hi_after,                                                            -- 取值表达式：新旧清单之最高上限——方向判定之两端
+        b.n_grp_before, f.n_grp_after,                                                              -- 取值表达式：两侧能连上字典的组数——连不上者即字典外之组，须查
+        CASE WHEN b.max_hi_before IS NULL OR f.max_hi_after IS NULL                                 -- 取值表达式：方向判定起算——任一端无从取上限即判不明
+             THEN 'UNKNOWN_NO_DICT'                                                                 -- 续行：组号不在字典内，方向不明
+             WHEN f.max_hi_after < b.max_hi_before THEN 'TIGHTEN'                                   -- 续行：上限调低即收紧——**限红处置**
+             WHEN f.max_hi_after > b.max_hi_before THEN 'RELEASE'                                   -- 续行：上限调高即放宽
+             ELSE 'FLAT' END                              AS direction,                             -- 续行：持平——清单变而上限未变，不入处置节，产出「direction」
+        CASE WHEN COALESCE(b.zero_before,0) + COALESCE(f.zero_after,0) > 0                          -- 取值表达式：歧义标记起算——含「0,0」组者
+             THEN 1 ELSE 0 END                            AS has_zero_group,                        -- 续行：产出「has_zero_group」——★ 为 1 者方向判定须人工复核，不得径入处置总体
+        CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END  AS is_baccarat_member,                    -- 取值表达式：是否本方案口径的百家乐会员
+        'v2026-08-11'                                     AS filter_rule_version                    -- 取值表达式：规则版本号——改判定规则须改版本并记入变更日志
+FROM        lim l                                                                                   -- 取数来源：取自本条自建的中间结果集 lim
+LEFT JOIN   bfr b  ON b.ev_key = l.ev_key                                                           -- 左连接：取自本条自建的中间结果集 bfr，连接键为事件键
+LEFT JOIN   aft f  ON f.ev_key = l.ev_key                                                           -- 左连接：取自本条自建的中间结果集 aft，连接键为事件键
+LEFT JOIN   bl     ON bl.member_id = l.member_id                                                    -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+ORDER BY l.member_id, l.action_time;                                                                -- 排序：按会员与时刻升序——逐人可读其限额调整史；导出必带排序
 
 /* ───────────────────────────────────────────────────────────────────────────
    §T02 · T02_daily_roi.csv
@@ -4151,7 +4320,7 @@ SELECT p.bet_date, p.member_id AS uid, p.dealer_id, p.is_sentinel_dealer,       
             ELSE 'ELIGIBLE' END                                 AS eligibility_status,               -- 续行：产出「eligibility_status」——日粒度不设局数下限，下限由分析层施加
        'R03b_20260811_FULL_v1'                              AS comparison_id,                       -- 取值表达式：比较批次号——与 §R03 同规格，两臂须同批次方可比
        'L1_ELIGIBILITY'                           AS filter_stage,                                  -- 取值表达式：过滤所处之层——★ L0 事实层不删行，此处只标注其在 L1 资格层的去留
-       'v2026-08-11'                              AS filter_rule_version                            -- 取值表达式：资格规则版本号——改规则须改版本号并记入变更日志，免「同名不同义」
+       'v2026-08-11'                              AS filter_rule_version,                            -- 取值表达式：资格规则版本号——改规则须改版本号并记入变更日志，免「同名不同义」
        '2026-03-21..2026-08-06'                             AS cmp_time_window,                     -- 取值表达式：时间窗，产出「cmp_time_window」
        'baccarat_bet02_101_all_pairs_incl_sentinel'         AS cmp_population,                      -- 取值表达式：总体定义（含哨兵之全量对）
        'round_win = game_pnl > 0 (decisive only)'           AS cmp_label,                           -- 取值表达式：标签定义
