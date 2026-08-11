@@ -6245,17 +6245,23 @@ ORDER BY p.action_time, p.member_id, p.field_name;
    ═══════════════════════════════════════════════════════════════════════════ */
 -- §TL-11 · 处置节折叠表（准实验分析单元；审计轨迹之节级视图）
 -- ▸ 导出：需要 —— 存为「数据库/TL11_treatment_episode.csv」（§TL-11 处置节·收紧→解除配对）。
+-- ★ 2026-08-11 补正六列（外部审计第十条）：is_baccarat_member（本方案口径）、
+--   enforcement_type（处置类别）、business_field（业务列名）、censor_reason（删失成因）、
+--   parse_status / parse_sep（解析状态与所用分隔符）——后二者堵住静默丢弃之漏。
+-- ★ 解析容错：实测 changestatus 有两种写法——「mem016:N=>Y;」（冒号）与「mem020 Y=>N;」（空格）。
+--   旧版只认冒号，空格式 815 条被静默丢弃（所幸皆为 mem020 且皆非百家乐会员）。
+--   今两式并收，并以 parse_sep 记明每行所用者，使丢弃永不再静默。
 WITH ev AS (                                                                                        -- 公共表表达式：开启中间结果集 ev——变更日志原始事件，口径与 §TL-10 一致（§TL-11）
     SELECT  CAST(lmc02 AS STRING)                         AS member_id,                             -- 取值表达式：取用 lmc02（被改会员号），产出「member_id」
             SUBSTR(CAST(lmc08 AS STRING), 1, 10)          AS action_date,                           -- 取值表达式：取用 lmc08（操作时间）之日期段，产出「action_date」
             CAST(lmc08 AS STRING)                         AS action_time,                           -- 取值表达式：取用 lmc08（操作时间），产出「action_time」
             CAST(lmc06 AS STRING)                         AS operator_id,                           -- 取值表达式：取用 lmc06（操作人账号），产出「operator_id」——审计轨迹之「谁」
             CAST(lmc07 AS STRING)                         AS operator_lv,                           -- 取值表达式：取用 lmc07（操作人层级），产出「operator_lv」
-            CAST(lmc05 AS STRING)                         AS content                                -- 取值表达式：取用 lmc05（变更内容「列:旧=>新;」串），产出「content」
-    FROM    ods_mariadb_2b.ods_a168_log_mem_change                                                  -- 取数来源：取自会员变更日志表（处置痕迹的正主，§TL-04～§TL-08 已验）
+            CAST(lmc05 AS STRING)                         AS content                                -- 取值表达式：取用 lmc05（变更内容串），产出「content」
+    FROM    ods_mariadb_2b.ods_a168_log_mem_change                                                  -- 取数来源：取自会员变更日志表（处置痕迹的正主）
     WHERE   dt >= '2026-03-21'                                                                      -- 过滤条件：限定 dt不少于 '2026-03-21'，涉 dt（营业日）——E1 全局窗起点
       AND   dt <  '2026-08-07'                                                                      -- 并列条件：限定 dt小于 '2026-08-07'——E1 全局窗终点（冻结字面量）
-      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')                                       -- 并列条件：只留配置修改与状态变更；add 系新增账户与处置无涉（§TL-08 实测百家乐零命中）
+      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')                                       -- 并列条件：只留配置修改与状态变更；add 系新增账户与处置无涉
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
 seg AS (                                                                                            -- 公共表表达式：开启中间结果集 seg——把多段 content 逐段拆开（§TL-11）
     SELECT  e.member_id, e.action_date, e.action_time,                                              -- 取列：起始取列子句，本行先列 member_id, action_date, action_time
@@ -6263,25 +6269,36 @@ seg AS (                                                                        
             TRIM(s.piece)                                 AS piece                                  -- 取值表达式：逐段去空白，产出「piece」
     FROM ev e, unnest(split(e.content, ';')) AS s(piece)                                            -- 行展开：以 unnest(split(…)) 把分号分隔的多段变更逐段成行（StarRocks 已验语法）
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-parsed AS (                                                                                         -- 公共表表达式：开启中间结果集 parsed——解析「列:旧值=>新值」三元组（§TL-11）
-    SELECT  member_id, action_date, action_time, operator_id, operator_lv,                          -- 取列：起始取列子句，透传六要素之五
-            TRIM(SPLIT_PART(piece, ':', 1))               AS field_name,                            -- 取值表达式：冒号前段为列名，产出「field_name」
-            TRIM(SPLIT_PART(SPLIT_PART(piece, ':', 2), '=>', 1)) AS value_before,                   -- 取值表达式：箭头前段为旧值，产出「value_before」
-            TRIM(SPLIT_PART(SPLIT_PART(piece, ':', 2), '=>', 2)) AS value_after                     -- 取值表达式：箭头后段为新值，产出「value_after」
+norm AS (                                                                                           -- 公共表表达式：开启中间结果集 norm——两式并收：冒号式与空格式统一为「列|旧|新」（§TL-11）
+    SELECT  member_id, action_date, action_time, operator_id, operator_lv, piece,                   -- 取列：起始取列子句，透传六要素与原始片段
+            CASE WHEN piece LIKE '%:%' THEN 'COLON' ELSE 'SPACE' END AS parse_sep,                  -- 取值表达式：记明所用分隔符，产出「parse_sep」——★ 使丢弃永不静默
+            CASE WHEN piece LIKE '%:%'                                                              -- 取值表达式：列名解析起算——冒号式取冒号前段
+                 THEN TRIM(SPLIT_PART(piece, ':', 1))                                               -- 续行：冒号式列名
+                 ELSE TRIM(SPLIT_PART(piece, ' ', 1)) END      AS field_name,                       -- 续行：空格式取首个空格前段（如「mem020 Y=>N」），产出「field_name」
+            CASE WHEN piece LIKE '%:%'                                                              -- 取值表达式：旧值解析起算
+                 THEN TRIM(SPLIT_PART(SPLIT_PART(piece, ':', 2), '=>', 1))                          -- 续行：冒号式旧值
+                 ELSE TRIM(SPLIT_PART(SPLIT_PART(piece, ' ', 2), '=>', 1)) END AS value_before,     -- 续行：空格式旧值，产出「value_before」
+            TRIM(SPLIT_PART(piece, '=>', 2))              AS value_after                            -- 取值表达式：新值一律取箭头后段（两式同形），产出「value_after」
     FROM    seg                                                                                     -- 取数来源：取自本条自建的中间结果集 seg
-    WHERE   piece LIKE '%=>%'                                                                       -- 过滤条件：须含箭头方为有效变更段
-      AND   piece LIKE '%:%'                                                                        -- 并列条件：须含冒号方能解析出列名
+    WHERE   piece LIKE '%=>%'                                                                       -- 过滤条件：须含箭头方为有效变更段——两式共有的唯一必要标志
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-enf AS (                                                                                            -- 公共表表达式：开启中间结果集 enf——只留两枚处置字段并判方向（§TL-11）
+enf AS (                                                                                            -- 公共表表达式：开启中间结果集 enf——只留已译定的处置字段并判方向与类别（§TL-11）
     SELECT  member_id, field_name, action_date, action_time,                                        -- 取列：起始取列子句，透传节要素之前四
-            value_before, value_after, operator_id, operator_lv,                                    -- 续行：接续上一取列子句，续列前后值与操作人
-            CASE WHEN TRIM(value_after) IN ('N', '0') THEN 'TIGHTEN'                                -- 取值表达式：新值为 N／0 判收紧——canbet 禁投或账户停用
-                 WHEN TRIM(value_after) IN ('Y', '1') THEN 'RELEASE'                                -- 续行：新值为 Y／1 判解除——恢复下注或重新启用
-                 ELSE 'OTHER' END                     AS direction                                  -- 续行：其余取值不明记 OTHER，后续不入节（宁缺毋滥），产出「direction」
-    FROM    parsed                                                                                  -- 取数来源：取自本条自建的中间结果集 parsed
-    WHERE   field_name IN ('mem016', 'mem017')                                                      -- 过滤条件：只认已译定的处置字段——mem017（canbet）与 mem016（enable），列义见 §TL-09
+            value_before, value_after, operator_id, operator_lv, parse_sep,                         -- 续行：接续上一取列子句，续列前后值、操作人与分隔符
+            CASE WHEN field_name = 'mem017' THEN 'CANBET_下注权限'                                      -- 取值表达式：处置类别起算——mem017 系下注权限（§TL-09 列义）
+                 WHEN field_name = 'mem016' THEN 'ENABLE_账户启停'                                      -- 续行：mem016 系账户启停
+                 ELSE 'OTHER' END                     AS enforcement_type,                          -- 续行：产出「enforcement_type」——外部审计所要的处置类别列
+            CASE WHEN field_name = 'mem017' THEN 'canbet'                                           -- 取值表达式：业务列名起算——代号译为业务名，免下游再查字典
+                 WHEN field_name = 'mem016' THEN 'enable'                                           -- 续行：mem016 之业务名
+                 ELSE 'unknown' END                   AS business_field,                            -- 续行：产出「business_field」
+            CASE WHEN TRIM(value_after) IN ('N', '0') THEN 'TIGHTEN'                                -- 取值表达式：新值为 N／0 判收紧——禁投或停用
+                 WHEN TRIM(value_after) IN ('Y', '1') THEN 'RELEASE'                                -- 续行：新值为 Y／1 判解除
+                 ELSE 'OTHER' END                     AS direction,                                 -- 续行：其余取值不明记 OTHER，不入节（宁缺毋滥），产出「direction」
+            'OK'                                     AS parse_status                                -- 取值表达式：解析状态，产出「parse_status」——本 CTE 所留者皆已解析成功
+    FROM    norm                                                                                    -- 取数来源：取自本条自建的中间结果集 norm
+    WHERE   field_name IN ('mem016', 'mem017')                                                      -- 过滤条件：只认已译定的处置字段——mem015 已证为 login_error，非处置，一律不入
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
-dedup AS (                                                                                          -- 公共表表达式：开启中间结果集 dedup——同刻重复写入只计一次（§TL-11 口径③）
+dedup AS (                                                                                          -- 公共表表达式：开启中间结果集 dedup——同刻重复写入只计一次（去重键四元组）
     SELECT  *,                                                                                      -- 取列：整体承接上游结果集的全部字段，不再逐列列举
             ROW_NUMBER() OVER (PARTITION BY member_id, field_name, action_time,                     -- 行号窗口表达式：按去重键 member×field×时刻×前后值 分组编号
                                value_before, value_after ORDER BY operator_id) AS rn                -- 续行：键内任取其一（按操作人序），产出「rn」
@@ -6294,32 +6311,168 @@ tight AS (                                                                      
 rel AS (                                                                                            -- 公共表表达式：开启中间结果集 rel——全部解除事件，用以为每节寻其后首个解除（§TL-11）
     SELECT * FROM dedup WHERE rn = 1 AND direction = 'RELEASE'                                      -- 取数来源：去重后的解除事件
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+bl AS (                                                                                             -- 公共表表达式：开启中间结果集 bl——本方案口径的百家乐投注会员名单（§TL-11 补列所需）
+    SELECT  DISTINCT CAST(bet05 AS STRING)                AS member_id                              -- 取值表达式：取用 bet05（会员号）去重，产出「member_id」
+    FROM    ods_mariadb_2b.ods_a168_bet02                                                           -- 取数来源：取自注单明细表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(bet02 AS STRING) = '101'                                                           -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+la AS (                                                                                             -- 公共表表达式：开启中间结果集 la——每会员在窗内的最末一次任何变更，供删失成因分类（§TL-11）
+    SELECT  member_id, MAX(action_time)                   AS last_seen                              -- 聚合：该会员最末一次出现于变更日志的时刻，产出「last_seen」
+    FROM    norm GROUP BY member_id                                                                 -- 取数来源：取自本条自建的中间结果集 norm；按会员汇总
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
 ep AS (                                                                                             -- 公共表表达式：开启中间结果集 ep——为每次收紧配其后首个解除（§TL-11）
-    SELECT  t.member_id, t.field_name, t.action_date, t.action_time,                                -- 取列：起始取列子句，节起点要素之前四
-            t.value_before, t.value_after, t.operator_id, t.operator_lv,                            -- 续行：接续上一取列子句，续列前后值与操作人
-            MIN(r.action_time)                            AS release_time                           -- 聚合：其后（同人同字段）首个解除时刻，无则 NULL，产出「release_time」
+    SELECT  t.member_id, t.field_name, t.business_field, t.enforcement_type,                        -- 取列：起始取列子句，节起点要素与两枚新增类别列
+            t.action_date, t.action_time, t.value_before, t.value_after,                            -- 续行：接续上一取列子句，续列时点与前后值
+            t.operator_id, t.operator_lv, t.parse_sep, t.parse_status,                              -- 续行：续列操作人、层级与解析两列
+            MIN(r.action_time)                            AS release_time                           -- 聚合：其后（同人同字段）首个解除时刻，无则空，产出「release_time」
     FROM        tight t                                                                             -- 取数来源：取自本条自建的中间结果集 tight
     LEFT JOIN   rel   r                                                                             -- 左连接：取自本条自建的中间结果集 rel——解除可缺席（右删失），故用左连接
            ON   r.member_id  = t.member_id                                                          -- 连接键：同一会员
           AND   r.field_name = t.field_name                                                         -- 并列键：同一处置字段——canbet 之节不由 enable 之解除关闭
           AND   r.action_time > t.action_time                                                       -- 并列键：解除须晚于收紧——只认其后者
-    GROUP BY t.member_id, t.field_name, t.action_date, t.action_time,                               -- 分组：按节起点全键汇总，使 MIN 取到「首个」解除
-             t.value_before, t.value_after, t.operator_id, t.operator_lv                            -- 续行：分组键补齐
+    GROUP BY t.member_id, t.field_name, t.business_field, t.enforcement_type,                       -- 分组：按节起点全键汇总，使 MIN 取到「首个」解除
+             t.action_date, t.action_time, t.value_before, t.value_after,                           -- 续行：分组键补齐
+             t.operator_id, t.operator_lv, t.parse_sep, t.parse_status                              -- 续行：分组键补齐
 )                                                                                                   -- 续行：收束上方的子查询或函数括号（§TL-11）
-SELECT  member_id,                                                                                  -- 取列：起始取列子句，本行先取「member_id」——节属谁
-        field_name,                                                                                 -- 取值表达式：处置字段——mem017（canbet）或 mem016（enable）
-        CONCAT_WS('#', member_id, field_name, action_time) AS episode_id,                           -- 取值表达式：三键拼节号，产出「episode_id」——审计轨迹与准实验共用的主键
-        action_date                                   AS start_date,                                -- 取值表达式：节起日，产出「start_date」
-        action_time                                   AS start_time,                                -- 取值表达式：节起时刻，产出「start_time」
-        value_before,                                                                               -- 取值表达式：收紧前取值——留痕以备申诉复核
-        value_after,                                                                                -- 取值表达式：收紧后取值
-        operator_id                                   AS start_operator,                            -- 取值表达式：收紧操作人，产出「start_operator」——审计轨迹之「谁」
-        operator_lv                                   AS start_operator_lv,                         -- 取值表达式：操作人层级，产出「start_operator_lv」
-        COALESCE(SUBSTR(release_time, 1, 10), '2026-08-07')   AS release_date,                      -- 取值表达式：解除日；缺席者以窗末顶替（配合下行 censored 判读），产出「release_date」
-        CASE WHEN release_time IS NULL THEN 1 ELSE 0 END      AS censored,                          -- 取值表达式：右删失标志——1 谓至窗末仍收紧，产出「censored」
-        DATEDIFF(CAST(COALESCE(SUBSTR(release_time, 1, 10), '2026-08-07') AS DATE),                 -- 取值表达式：节时长起算——解除日（或窗末）
-                 CAST(action_date AS DATE))           AS duration_days,                             -- 续行：减节起日得持续天数，产出「duration_days」——中位 6 日之实测即此口径
-        ROW_NUMBER() OVER (PARTITION BY member_id                                                   -- 行号窗口表达式：按会员为其节编序
-                           ORDER BY action_time)      AS episode_seq                                -- 续行：产出「episode_seq」——主分析取 1（首次处置设计），其余入敏感性
-FROM    ep                                                                                          -- 取数来源：取自本条自建的中间结果集 ep
-ORDER BY member_id, action_time;                                                                    -- 排序：按会员与节起时刻升序——逐人可读其处置史；导出必带排序，分页方有稳定序
+SELECT  p.member_id,                                                                                -- 取列：起始取列子句，本行先取「member_id」——节属谁
+        p.field_name,                                                                               -- 取值表达式：处置字段代号
+        p.business_field,                                                                           -- 取值表达式：业务列名（canbet／enable）——★ 补列，免下游再查字典
+        p.enforcement_type,                                                                         -- 取值表达式：处置类别——★ 补列，区分下注权限与账户启停
+        CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END  AS is_baccarat_member,                    -- 取值表达式：是否本方案口径的百家乐会员——★ 补列，准实验总体由此界定
+        CONCAT_WS('#', p.member_id, p.field_name, p.action_time) AS episode_id,                     -- 取值表达式：三键拼节号，产出「episode_id」——审计轨迹与准实验共用的主键
+        p.action_date                                 AS start_date,                                -- 取值表达式：节起日，产出「start_date」
+        p.action_time                                 AS start_time,                                -- 取值表达式：节起时刻，产出「start_time」
+        p.value_before,                                                                             -- 取值表达式：收紧前取值——留痕以备申诉复核
+        p.value_after,                                                                              -- 取值表达式：收紧后取值
+        p.operator_id                                 AS start_operator,                            -- 取值表达式：收紧操作人，产出「start_operator」——审计轨迹之「谁」
+        p.operator_lv                                 AS start_operator_lv,                         -- 取值表达式：操作人层级，产出「start_operator_lv」
+        p.parse_sep,                                                                                -- 取值表达式：本行所用分隔符（COLON／SPACE）——★ 补列，两式并收之凭据
+        p.parse_status,                                                                             -- 取值表达式：解析状态——★ 补列，恒为 OK；丢弃者见 §TL-11b 对账
+        COALESCE(SUBSTR(p.release_time, 1, 10), '2026-08-07') AS release_date,                      -- 取值表达式：解除日；缺席者以窗末顶替（配合下行 censored 判读），产出「release_date」
+        CASE WHEN p.release_time IS NULL THEN 1 ELSE 0 END    AS censored,                          -- 取值表达式：右删失标志——1 谓至窗末仍收紧，产出「censored」
+        CASE WHEN p.release_time IS NOT NULL THEN 'NOT_CENSORED'                                    -- 取值表达式：删失成因分类起算——★ 补列，KM 无偏性之前提
+             WHEN SUBSTR(la.last_seen, 1, 10) >= '2026-08-05' THEN 'WINDOW_END'                     -- 续行：至窗末仍有活动痕迹 → 真窗口右删失
+             WHEN la.last_seen IS NULL THEN 'UNKNOWN'                                               -- 续行：无任何活动痕迹 → 成因不明
+             ELSE 'MEMBER_DATA_END' END                        AS censor_reason,                    -- 续行：活动痕迹早于窗末即止 → 疑为资料终止型假删失，产出「censor_reason」
+        DATEDIFF(CAST(COALESCE(SUBSTR(p.release_time, 1, 10), '2026-08-07') AS DATE),               -- 取值表达式：节时长起算——解除日（或窗末）
+                 CAST(p.action_date AS DATE))         AS duration_days,                             -- 续行：减节起日得持续天数，产出「duration_days」——生存分析之时间轴
+        ROW_NUMBER() OVER (PARTITION BY p.member_id                                                 -- 行号窗口表达式：按会员为其节编序
+                           ORDER BY p.action_time)    AS episode_seq                                -- 续行：产出「episode_seq」——主分析取 1（首次处置设计），其余入敏感性
+FROM        ep p                                                                                    -- 取数来源：取自本条自建的中间结果集 ep
+LEFT JOIN   bl ON bl.member_id = p.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）——标注百家乐口径
+LEFT JOIN   la ON la.member_id = p.member_id                                                        -- 左连接：取自本条自建的中间结果集 la，连接键为 member_id（会员号）——供删失成因分类
+ORDER BY p.member_id, p.action_time;                                                                -- 排序：按会员与节起时刻升序——逐人可读其处置史；导出必带排序，分页方有稳定序
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-11b · 解析对账：进了几条、出了几条、丢了几条、为何而丢
+   ---------------------------------------------------------------------------
+   缘起：旧版 §TL-11 只认冒号式「mem016:N=>Y;」，而实测另有空格式「mem020 Y=>N;」
+   共 815 条，被 LIKE '%:%' **静默丢弃**（所幸皆为 mem020 且皆非百家乐会员）。
+   静默是最坏的失败方式。本查询把每一条原始片段的去向逐类点清，
+   使「丢了多少、因何而丢」永远看得见。
+   读法：DROPPED_* 各类之和 + KEPT 应等于 TOTAL_PIECES。凡 DROPPED_NO_ARROW 之外
+   出现大额其他类别，即须回头查解析规则，不得默认。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §TL-11b 解析对账，屏幕看结果。
+WITH ev AS (                                                                                        -- 公共表表达式：开启中间结果集 ev——与 §TL-11 同源同窗（§TL-11b）
+    SELECT  CAST(lmc05 AS STRING) AS content, CAST(lmc04 AS STRING) AS action_class                 -- 取值表达式：取用 lmc05（变更内容）与 lmc04（事件类别）
+    FROM    ods_mariadb_2b.ods_a168_log_mem_change                                                  -- 取数来源：取自会员变更日志表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')                                       -- 并列条件：只留配置修改与状态变更两类
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11b）
+seg AS (                                                                                            -- 公共表表达式：开启中间结果集 seg——逐段拆开（§TL-11b）
+    SELECT  TRIM(s.piece) AS piece FROM ev e, unnest(split(e.content, ';')) AS s(piece)             -- 行展开：以 unnest(split(…)) 把分号分隔的多段逐段成行
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11b）
+cls AS (                                                                                            -- 公共表表达式：开启中间结果集 cls——为每一片段判其去向（§TL-11b）
+    SELECT  piece,                                                                                  -- 取列：起始取列子句，本行先取「piece」
+            CASE WHEN piece = '' THEN 'DROPPED_EMPTY'                                               -- 取值表达式：去向分类起算——空片段
+                 WHEN piece NOT LIKE '%=>%' THEN 'DROPPED_NO_ARROW'                                 -- 续行：无箭头者非变更段，正当丢弃
+                 WHEN piece LIKE '%//%' THEN 'DROPPED_URL_LIKE'                                     -- 续行：含双斜杠者疑为网址，正当丢弃（沿 §TL-10 护栏）
+                 WHEN piece LIKE 'mem016%' OR piece LIKE 'mem017%' THEN 'KEPT_ENFORCEMENT'          -- 续行：两枚已译定的处置字段——本方案所取者
+                 WHEN piece LIKE '%:%' THEN 'PARSED_COLON_OTHERFIELD'                               -- 续行：冒号式但非处置字段——解析得出，按业务分类排除
+                 ELSE 'PARSED_SPACE_OTHERFIELD' END              AS disposition                     -- 续行：空格式且非处置字段——★ 旧版在此静默丢弃，今已收编，产出「disposition」
+    FROM    seg                                                                                     -- 取数来源：取自本条自建的中间结果集 seg
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§TL-11b）
+SELECT  disposition,                                                                                -- 取列：起始取列子句，本行先取「disposition」——去向类别
+        COUNT(*)                                      AS n_pieces,                                  -- 计数表达式：该类片段条数，产出「n_pieces」
+        COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()        AS share,                                     -- 除法或乘法计算：占全部片段之比，产出「share」
+        MIN(piece)                                    AS sample_min,                                -- 取最小值表达式：字母序最小之样例，产出「sample_min」——供人工目检
+        MAX(piece)                                    AS sample_max                                 -- 取最大值表达式：字母序最大之样例，产出「sample_max」
+FROM    cls                                                                                         -- 取数来源：取自本条自建的中间结果集 cls
+GROUP BY disposition                                                                                -- 分组：按去向类别汇总
+ORDER BY n_pieces DESC;                                                                             -- 排序：按条数降序——大宗去向居前
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-12 · 设备维度发现：库内究竟有无设备标识字段
+   ---------------------------------------------------------------------------
+   缘起：本方案的关系维覆盖产品、实体、局、IP、代理，**独缺设备**，且从未查证
+   库内有无此字段。设备共用的基数远小于 IP、指向性远强于 IP——本方案的地理维度
+   正因 IP 被电信基础设施稀释而作废（见报告 @sec-ip-e1），设备或可补此缺。
+   ⚠ 纪律：**找到字段 ≠ 立即纳入模型**。须先过基数、覆盖率、稳定性、
+   跨网络判别力四道体检（见报告 @sec-device），方按 L2 层准入判据定夺。
+   读法：先看 COLUMN_NAME 与 COLUMN_COMMENT 是否真指设备；同名而异义者甚多
+   （如 type、client 可能指业务类型而非客户端），一律回查列义与取值分布再定。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §TL-12 设备字段发现，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( LOWER(COLUMN_NAME) LIKE '%device%'                                                          -- 并列条件：英文候选起算——device 类
+     OR LOWER(COLUMN_NAME) LIKE '%fingerprint%'                                                     -- 续行：指纹类
+     OR LOWER(COLUMN_NAME) LIKE '%imei%'                                                            -- 续行：手机设备串号
+     OR LOWER(COLUMN_NAME) LIKE '%idfa%'                                                            -- 续行：iOS 广告标识
+     OR LOWER(COLUMN_NAME) LIKE '%android%'                                                         -- 续行：Android 标识
+     OR LOWER(COLUMN_NAME) LIKE '%hardware%'                                                        -- 续行：硬件标识
+     OR LOWER(COLUMN_NAME) LIKE '%terminal%'                                                        -- 续行：终端标识
+     OR LOWER(COLUMN_NAME) LIKE '%browser%'                                                         -- 续行：浏览器标识
+     OR LOWER(COLUMN_NAME) LIKE '%client%'                                                          -- 续行：客户端标识（⚠ 或指业务侧客户，须回查列义）
+     OR LOWER(COLUMN_NAME) LIKE '%user_agent%'                                                      -- 续行：UA 全称
+     OR LOWER(COLUMN_NAME) LIKE '%useragent%'                                                       -- 续行：UA 连写
+     OR LOWER(COLUMN_NAME) = 'ua'                                                                   -- 续行：UA 简称——须精确匹配，免误中含 ua 二字之列名
+     OR LOWER(COLUMN_NAME) LIKE '%app_version%'                                                     -- 续行：应用版本
+     OR LOWER(COLUMN_NAME) LIKE '%os_%'                                                             -- 续行：操作系统类
+     OR COLUMN_COMMENT LIKE '%设备%'                                                                  -- 续行：中文候选起算——设备
+     OR COLUMN_COMMENT LIKE '%终端%'                                                                  -- 续行：终端
+     OR COLUMN_COMMENT LIKE '%客户端%'                                                                 -- 续行：客户端
+     OR COLUMN_COMMENT LIKE '%浏览器%'                                                                 -- 续行：浏览器
+     OR COLUMN_COMMENT LIKE '%指纹%'                                                                  -- 续行：指纹
+     OR COLUMN_COMMENT LIKE '%机器码%'                                                                 -- 续行：机器码
+     OR COLUMN_COMMENT LIKE '%型号%' )                                                                -- 续行：设备型号——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-13 · 限额组字典搜寻：`101-mem015` 究竟是不是限红
+   ---------------------------------------------------------------------------
+   缘起：§TL-10 实测有一类字段形如 `101-mem015`（取值为逗号分隔整数串，
+   如 `101-mem015:3,21=>3,4`），百家乐口径 310 条 · 241 名会员，形似产品级限额组 ID。
+   若属限红，这是眼下最能改善准实验功效之一笔。
+   ⚠ 但 §TL-09 已证 `mem015` = login_error。若因名称相同即读作限额，
+   等于刚拆掉一个同名异义、转手又装回一个（与 bet41、bet14 同类之坑）。
+   故须先找到**限额组字典表**（组 ID → 限额金额／层级），六层判据打通方可采信：
+     物理列 → 数据字典 → 旧值/新值 → 业务含义 → 处置动作 → 处置节
+   在此之前，此类一律标注 PENDING_BUSINESS_DICTIONARY，既不入处置组、
+   也不当作「无处置」。
+   读法：找出候选表后，须验证 §TL-10 中出现过的组 ID（如 3、4、21、350）
+   确在该表主键内，且其限额金额可比大小——能比大小，方能判孰紧孰松。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §TL-13 限额组字典搜寻，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( LOWER(TABLE_NAME) LIKE '%limit%'                                                            -- 并列条件：表名候选起算——limit 类
+     OR LOWER(TABLE_NAME) LIKE '%bet_level%'                                                        -- 续行：投注层级类
+     OR LOWER(TABLE_NAME) LIKE '%betlimit%'                                                         -- 续行：投注限额连写
+     OR LOWER(TABLE_NAME) LIKE '%odds_limit%'                                                       -- 续行：赔率限额类
+     OR LOWER(TABLE_NAME) LIKE '%group%'                                                            -- 续行：分组类（限额组多以 group 命名）
+     OR COLUMN_COMMENT LIKE '%限額%'                                                                  -- 续行：列义候选起算——繁体限额
+     OR COLUMN_COMMENT LIKE '%限额%'                                                                  -- 续行：简体限额
+     OR COLUMN_COMMENT LIKE '%限紅%'                                                                  -- 续行：繁体限红
+     OR COLUMN_COMMENT LIKE '%限红%'                                                                  -- 续行：简体限红
+     OR COLUMN_COMMENT LIKE '%注額上限%'                                                                -- 续行：注额上限
+     OR COLUMN_COMMENT LIKE '%最高投注%'                                                                -- 续行：最高投注
+     OR COLUMN_COMMENT LIKE '%最低投注%' )                                                              -- 续行：最低投注——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
