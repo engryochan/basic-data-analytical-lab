@@ -3044,6 +3044,60 @@ FROM ( SELECT player_id, dealer_id, product_id, COUNT(*) AS n FROM base         
        GROUP BY player_id, dealer_id, product_id ) t8                                               -- 分组：按三轴汇总得边
 ORDER BY n_edges DESC;                                                                              -- 排序：按边数降序——体量与稀疏形状一目了然
 
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §BZ-00 · 经营指标可得性普查：营业额／注册／充值／访问，究竟哪几项库内真有
+   对应报告：@sec-capability-forecast
+   ---------------------------------------------------------------------------
+   缘起：先生令「营业额、新浏览、注册会员数、新或持续充值、盈利之增减，
+   一律须由各实体各领域能力值预测出来」。而预测的前提是**标的须可观测**——
+   库内没有的东西，任何模型都预测不出，宣称能预测即是空言。
+   本查询逐一扫描候选承载表的列义，判定五项标的各自的可得性。
+   已知线索（由 §00 表清单得）：
+     · ods_a168_dailyreport_member   会员日报——最可能承载充值／提款／输赢日汇总
+     · ods_a168_log_age_cash_change  代理资金变动日志——可能承载上下分／充提
+     · ods_a168_conversion           转换记录——待查其义
+     · ods_a168_member_dtl           会员主档明细（§TG-01 已证其 22 列**无注册时间**）
+     · ods_a168_tablelimit           ★ 桌台限额表——极可能即 §TL-13 所寻的限额字典
+   ⚠ 「新浏览」一项：库内**并无任何网站分析／会话／页面浏览表**，
+     故其可得性预判为「⛔ 不可得」。本查询若亦查无，即以此定案，
+     报告须明写「该指标不在数据资产之内」，**不得以活跃会员数顶替**——
+     二者不是一回事（顶替即是偷换标的）。
+   读法：凡 COLUMN_COMMENT 译出为充值／提款／注册时间／上下分者，即为可用承载列；
+   译不出者须回查其取值分布再定，**不得凭列名猜义**（bet41／bet14 之鉴在前）。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §BZ-00 经营指标可得性普查，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( TABLE_NAME IN ('ods_a168_dailyreport_member',                                               -- 并列条件：候选承载表起算——会员日报
+                       'ods_a168_log_age_cash_change',                                              -- 续行：代理资金变动日志
+                       'ods_a168_conversion',                                                       -- 续行：转换记录
+                       'ods_a168_member_dtl',                                                       -- 续行：会员主档明细
+                       'ods_a168_tablelimit')                                                       -- 续行：桌台限额表——★ 兼答 §TL-13 之问
+     OR LOWER(COLUMN_NAME) LIKE '%deposit%'                                                         -- 并列条件：列名候选起算——充值
+     OR LOWER(COLUMN_NAME) LIKE '%withdraw%'                                                        -- 续行：提款
+     OR LOWER(COLUMN_NAME) LIKE '%recharge%'                                                        -- 续行：充值别名
+     OR LOWER(COLUMN_NAME) LIKE '%regist%'                                                          -- 续行：注册
+     OR LOWER(COLUMN_NAME) LIKE '%signup%'                                                          -- 续行：注册别名
+     OR LOWER(COLUMN_NAME) LIKE '%visit%'                                                           -- 续行：访问——预判查无，查无即定案
+     OR LOWER(COLUMN_NAME) LIKE '%session%'                                                         -- 续行：会话
+     OR LOWER(COLUMN_NAME) LIKE '%pageview%'                                                        -- 续行：页面浏览
+     OR COLUMN_COMMENT LIKE '%充值%'                                                                  -- 并列条件：中文列义候选起算——充值
+     OR COLUMN_COMMENT LIKE '%存款%'                                                                  -- 续行：存款
+     OR COLUMN_COMMENT LIKE '%提款%'                                                                  -- 续行：提款
+     OR COLUMN_COMMENT LIKE '%上分%'                                                                  -- 续行：上分
+     OR COLUMN_COMMENT LIKE '%下分%'                                                                  -- 续行：下分
+     OR COLUMN_COMMENT LIKE '%注册%'                                                                  -- 续行：注册
+     OR COLUMN_COMMENT LIKE '%開戶%'                                                                  -- 续行：繁体开户
+     OR COLUMN_COMMENT LIKE '%开户%'                                                                  -- 续行：简体开户
+     OR COLUMN_COMMENT LIKE '%訪問%'                                                                  -- 续行：繁体访问
+     OR COLUMN_COMMENT LIKE '%登入%'                                                                  -- 续行：登入——退而求其次的活跃代理量，惟不得顶替「新浏览」
+     OR COLUMN_COMMENT LIKE '%限額%'                                                                  -- 续行：繁体限额——兼答限额字典之问
+     OR COLUMN_COMMENT LIKE '%限额%' )                                                                -- 续行：简体限额——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
 /* ───────────────────────────────────────────────────────────────────────────
    §T02 · T02_daily_roi.csv
    会员 × 日 的投注与游戏输赢序列 —— 索提诺 / CAS 的唯一输入
