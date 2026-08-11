@@ -344,13 +344,14 @@ NEED <- list(  # 每个 label 对应缺哪份导出文件，供占位提示指�
   ##   占位表因此答不出所待文件（显示 NA）。根因已堵，自检清单同步补入。
   "荷官局速"="R03_player_dealer.csv",
   ## ★ 2026-08-10：准实验所需的处置台账
-  "准实验"="TL10_treatment_ledger.csv")
+  "准实验"="TL10_treatment_ledger.csv",
+  "金标准时序"="C06d_hedge_pairs_dated.csv", "人工单时点"="K01c_seed_dated.csv")
 ## ★ 登记完备性自检：凡进入 ph_out() 的标签必须在 NEED 有登记，否则占位表说不出
 ##   所待文件。此处在渲染时立刻断言，缺登记即在控制台点名（结果表见变更日志章）。
 PH_LABELS <- c("版本ABC","最小订单数","关联数定位","IP网格","强特征","尾段网格",
                "能力值","策略性风控","团伙同桌","荷官关联","技术型","打水型",
                "赏罚经济","策略回测","五重检验","时间一致性","荷官双轨回测",
-               "荷官局速","准实验")
+               "荷官局速","准实验","金标准时序","人工单时点")
 local({
   miss <- setdiff(PH_LABELS, names(NEED))
   if (length(miss))
@@ -653,6 +654,9 @@ CONTRACT <- list(
   B01_bt_panel        = list(sql="§B01", cols=c("member_id","bet_date","stake","game_pnl","net_pnl")),
   TL10_treatment_ledger = list(sql="§TL-10", cols=c("member_id","action_date","field_name",
                                                     "value_before","value_after","is_baccarat_member")),
+  C06d_hedge_pairs_dated = list(sql="§C06d", cols=c("bet_ip","m_a","m_b","n_same_round",
+                                                    "opposite_rate","first_opposite_dt")),
+  K01c_seed_dated       = list(sql="§K01c", cols=c("seed_id","seed_ip","creator","add_date")),
   K01_risk_feature_matrix = list(sql="§K01", cols=c("member_id")),
   C06_hedge_pairs     = list(sql="§C06fix", cols=c("bet_ip","m_a","m_b","opposite_rate")),
   ## 表行数复核底料：SQL 包 §00 COUNT 预检的导出（两列：表名 / 行数）
@@ -872,7 +876,9 @@ D <- list(recon=fetch("V_recon"), ipmatch=fetch("V_ipmatch"),
           bt_panel=fetch("B01_bt_panel"), d03s=fetch("D03S_daily_roi_diff"),
           tblcnt=fetch("V_table_counts"), r03b=fetch("R03b_player_dealer_daily"),
           ## ★ 处置台账（§TL-10）：准实验的处置组由此而来
-          tl10=fetch("TL10_treatment_ledger"))
+          tl10=fetch("TL10_treatment_ledger"),
+          ## ★ 金标准的两个时点来源：对打侧（§C06d）与人工单侧（§K01c）
+          c06d=fetch("C06d_hedge_pairs_dated"), k01c=fetch("K01c_seed_dated"))
 invisible(gc(full = TRUE))   # 大表读完统一回收一次，为 Python 侧腾出空间
 ## 本次全部指纹落盘，供下次渲染比对「内容是否一致」
 invisible(tryCatch(saveRDS(MANIFEST_NEW, MANIFEST_PATH), error = function(e) NULL))
@@ -8705,7 +8711,8 @@ R 对不存在的列表元素返回 `NULL` **而不报错**。故凡把 `D$键�
 DK_ACTUAL <- names(D)
 DK_USED   <- c("recon","ipmatch","table_span","sec_dist","player_tail","ip_player",
                "ip_agg","combo","panel","anchor","online","r01","r02","r03",
-               "daily_roi","t3","seg_econ","bt_panel","d03s","tblcnt","r03b","tl10")
+               "daily_roi","t3","seg_econ","bt_panel","d03s","tblcnt","r03b","tl10",
+               "c06d","k01c")
 DK_BAD    <- setdiff(DK_USED, DK_ACTUAL)
 DK_UNUSED <- setdiff(DK_ACTUAL, DK_USED)
 aurora_kb(tibble::tibble(
@@ -8745,6 +8752,78 @@ aurora_kb(tibble::tibble(
 
 斧正之法亦已成通则：**跨越释放点的后续章节，一律改取释放前留存的轻量派生物**
 （现有 `WF_DAYS` 与 `R03_PACE` 两件，皆百余至三百行，内存可忽略），不得回头取大表。
+
+## 现算纪律自检：正文里的数字，是算出来的还是打上去的 {#sec-liveness}
+
+铁律第九条曰「无静态文字冒充运行结果」。此条要落地，同样不能靠宣称，
+须**逐次渲染自查**。本节即此自查。
+
+**先认下本轮查获的问题**：机械扫描全篇非代码区，得结果型数字 **432 处**，
+而行内现算（`` `r …` ``）**零处**。也就是说，包括我本轮亲手写入的
+「折均 42.2%」「2.37 倍」「188 名会员」在内，**全篇正文的每一个数字都是打上去的**——
+纵然它们确实出自实测，读者也无从分辨它是本次渲染算出来的，还是上一轮打进去的。
+**数据一变，表会变，字不会变**——这正是该铁律所防之事。
+
+```{r}
+#| label: liveness-audit
+#| echo: false
+## 逐次渲染自查：正文非代码区的结果型数字有多少、其中多少已改行内现算。
+LIVE <- local({
+  f <- tryCatch(knitr::current_input(), error = function(e) NULL)
+  if (is.null(f) || !file.exists(f)) return(NULL)
+  L <- readLines(f, warn = FALSE, encoding = "UTF-8")
+  inr <- FALSE; prose <- character(0)
+  for (l in L) {
+    if (grepl("^```\\{", l)) { inr <- TRUE; next }
+    if (identical(trimws(l), "```")) { inr <- FALSE; next }
+    if (!inr) prose <- c(prose, l)
+  }
+  P <- paste(prose, collapse = "\n")
+  pat <- "[0-9][0-9,]*(\\.[0-9]+)?\\s*(%|倍|名|人|条|折|组|次)"
+  n_num  <- length(gregexpr(pat, P)[[1]])
+  n_live <- length(gregexpr("`r ", P, fixed = TRUE)[[1]])
+  if (n_num  < 0) n_num  <- 0
+  if (n_live < 0) n_live <- 0
+  list(n_num = n_num, n_live = n_live)
+})
+if (is.null(LIVE)) {
+  aurora_kb(tibble::tibble(状态 = "⬜ 无法读取源档（非渲染环境）",
+                           说明 = "本自检须由 knitr 提供当前输入文件路径"),
+            caption = "现算纪律自检")
+} else {
+  aurora_kb(tibble::tibble(
+    判项 = c("正文结果型数字（处）", "其中行内现算（处）", "现算覆盖率", "判读"),
+    值 = c(LIVE$n_num, LIVE$n_live,
+           sprintf("%.1f%%", 100 * LIVE$n_live / max(LIVE$n_num, 1)),
+           if (LIVE$n_live == 0) "❌ 全篇静态——数据一变，表变而字不变"
+           else if (LIVE$n_live / max(LIVE$n_num,1) < 0.10) "🟡 覆盖率不足一成，承重数字须优先改现算"
+           else "🟢 承重数字已多数现算")),
+    caption = paste0(
+      "现算纪律自检（逐次渲染现算）｜解释：正文结果型数字指带 %／倍／名／人／条／折／组／次 者",
+      "｜本方案用途：此表使铁律第九条成为可查之事——覆盖率若为零，即全篇数字皆打上去的"))
+}
+```
+
+**斧正的次序不是把 432 处全改**——那既不现实，也无必要：
+其中许多是**外部引用**（Zender 的 50–55 局／小时）、**已定案常数**（m ＝ 1.918%）、
+或**惯例阈值**（α ＝ 0.05），本就不该随渲染而变。
+
+**该优先改的是「承重数字」**——即随数据更新而必然变动、且结论建立其上者。本轮已改三处：
+金标准折内合法性表及其读法（源 §C06d）、会员级风控处置逐列表及处置组规模（源 §TL-10）。
+其余承重数字列入待办，逐轮改完，覆盖率由本表逐次可查。
+
+::: {.callout-important}
+## 一条判别法：这个数字，数据变了它该不该跟着变
+
+**该跟着变的**（须现算）：折数、命中人数、泄漏幅度、处置组规模、各类占比、
+区间上下界、检验 p 值——凡由本次数据算出者。
+
+**不该跟着变的**（可静态，但须标出处）：外部权威基准、已定案的结构常数、
+统计学惯例阈值、以及**明确标注了日期与来源的历史实测值**（如「§EX-19b 2026-08-10 实测得 κ ＝ 1.660%」）。
+
+判别不在数字大小，而在**它是本次算的，还是引来的**。凡本次算的而写成静态，
+即为冒充；凡引来的而未标出处，即为无据。两者皆须斧正。
+:::
 
 ## 常数来源审计：213 处硬编码，逐类定性 {#sec-const-audit}
 
@@ -8869,36 +8948,89 @@ tibble::tribble(
 
 §C06d 到位后，泄漏矩阵第⑦环的幅度可以直接算出——**结果远大于「边际瑕疵」四字所能形容**。
 
-按 §C06fix 的口径对齐（`n_same_round ≥ 30` 且完全反向），得对打侧金标准 **1,182 名**会员。
+按 §C06fix 的口径对齐（`n_same_round ≥ 30` 且完全反向），得对打侧金标准
+**`r if (exists("LK") && !is.null(LK)) format(LK$n_mem, big.mark=",") else "⬜ 待 C06d"` 名**会员
+（来自 `r if (exists("LK") && !is.null(LK)) format(LK$n_pair, big.mark=",") else "—"` 对完全反向对）。
 以各折训练窗末日为界，逐折清点其中有多少人**在该折训练时其证据尚未成立**：
 
 ```{r}
 #| label: truth-lineage
 #| echo: false
-tibble::tribble(
-  ~折次, ~`训练窗末日`, ~`折内合法金标准`, ~`提前入训人数`, ~`提前入训占比`, ~`恰在测试窗内成立`,
-  "折 1","2026-05-22", 417, 765, "64.7%", 208,
-  "折 2","2026-05-29", 446, 736, "62.3%", 169,
-  "折 3","2026-06-05", 569, 613, "51.9%", 160,
-  "折 4","2026-06-12", 654, 528, "44.7%", 140,
-  "折 5","2026-06-19", 738, 444, "37.6%", 137,
-  "折 6","2026-06-26", 814, 368, "31.1%", 159,
-  "折 7","2026-07-03", 878, 304, "25.7%", 166,
-  "折 8","2026-07-10", 951, 231, "19.5%", 134
-) |> aurora_kb(caption = paste0(
-  "金标准的折内合法性（折规格甲：训练 63 · 空窗 7 · 测试 14 · 步长 7）",
-  "｜解释：提前入训＝该会员的完全反向证据在训练窗末日之后才首次出现，却已被计入该折训练标签",
-  "｜本方案用途：此列即标签侧泄漏的直接幅度，折均 42.2%、首折 64.7%"))
+## ★★ 现算纪律（铁律第九条）：本表此前为手打的 tribble——数字虽出自实测，
+##    但写在文档里就是静态文字，读者无从分辨它是算出来的还是打上去的。
+##    今改为**由 C06d 现算**：读入带时点的对打对，按 §C06fix 口径对齐
+##    （n_same_round ≥ 30 且完全反向），逐折以训练窗末日为界清点。
+LK <- NULL
+if (need_data(D$c06d, "金标准时序", c("m_a","m_b","n_same_round","opposite_rate","first_opposite_dt"))) {
+  num <- function(v) suppressWarnings(as.numeric(v))
+  C6 <- D$c06d
+  C6$n_same_round  <- num(C6$n_same_round)
+  C6$opposite_rate <- num(C6$opposite_rate)
+  C6$fd <- as.Date(C6$first_opposite_dt)
+  ## 与 §C06fix 同口径对齐：门槛 30 局、完全反向
+  C6 <- C6[is.finite(C6$n_same_round) & C6$n_same_round >= 30 &
+           is.finite(C6$opposite_rate) & C6$opposite_rate >= 1 - 1e-9 &
+           !is.na(C6$fd), , drop = FALSE]
+  if (nrow(C6)) {
+    ml <- rbind(data.frame(m = as.character(C6$m_a), d = C6$fd, stringsAsFactors = FALSE),
+                data.frame(m = as.character(C6$m_b), d = C6$fd, stringsAsFactors = FALSE))
+    MFIRST <- stats::aggregate(d ~ m, data = ml, FUN = min)   # 每人首次完全反向日
+    FD <- if (length(WF_DAYS)) purged_folds(WF_DAYS) else list()
+    if (length(FD)) {
+      rows <- lapply(FD, function(f) {
+        leg <- sum(MFIRST$d <= f$tr[2])
+        lk  <- sum(MFIRST$d >  f$tr[2])
+        te  <- sum(MFIRST$d >= f$te[1] & MFIRST$d <= f$te[2])
+        data.frame(fold = f$fold, tr_hi = as.character(f$tr[2]),
+                   legal = leg, leak = lk,
+                   rate = lk / max(nrow(MFIRST), 1), in_test = te,
+                   stringsAsFactors = FALSE)
+      })
+      LK <- list(tab = do.call(rbind, rows), n_mem = nrow(MFIRST),
+                 n_pair = nrow(C6))
+    }
+  }
+}
+if (is.null(LK)) {
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 待数据（非错误）", 本节内容 = "金标准的折内合法性",
+    所待文件 = "C06d_hedge_pairs_dated.csv（SQL 总包 §C06d）",
+    契约必需列 = "m_a, m_b, n_same_round, opposite_rate, first_opposite_dt",
+    受影响输出 = "本表全部数字、泄漏矩阵⑦的幅度、@sec-quasi-run 的折内金标准"),
+    caption = "金标准的折内合法性")
+} else {
+  TL <- LK$tab
+  out <- data.frame(
+    折次 = paste0("折 ", TL$fold),
+    `训练窗末日` = TL$tr_hi,
+    `折内合法金标准` = TL$legal,
+    `提前入训人数` = TL$leak,
+    `提前入训占比` = sprintf("%.1f%%", 100 * TL$rate),
+    `恰在测试窗内成立` = TL$in_test,
+    check.names = FALSE, stringsAsFactors = FALSE)
+  aurora_kb(out, caption = paste0(
+    "金标准的折内合法性（现算 · 折规格取 BT_PARAMS：训练 ", BT_PARAMS$train,
+    " · 空窗 ", BT_PARAMS$embargo, " · 测试 ", BT_PARAMS$test,
+    " · 步长 ", BT_PARAMS$step, "）",
+    "｜解释：提前入训＝该会员的完全反向证据在训练窗末日之后才首次出现，却已被计入该折训练标签",
+    "｜本方案用途：此列即标签侧泄漏的直接幅度。本表由 C06d 现算，非静态文字"))
+}
 ```
+
 
 **读法三条**。
 
-**其一，幅度不是边际的。** 折均 **42.2%**（折规格甲）与 **45.0%**（折规格乙），
-首折 **64.7%**——即首折训练时，近三分之二的正例其证据尚在未来。
+**其一，幅度是不是边际的，看现算。** 本次渲染实测：折均
+**`r if (exists("LK") && !is.null(LK)) sprintf("%.1f%%", 100*mean(LK$tab$rate)) else "⬜"`**、
+首折 **`r if (exists("LK") && !is.null(LK)) sprintf("%.1f%%", 100*LK$tab$rate[1]) else "⬜"`**、
+末折 **`r if (exists("LK") && !is.null(LK)) sprintf("%.1f%%", 100*LK$tab$rate[nrow(LK$tab)]) else "⬜"`**。
+首折之数若逼近三分之二，即意味着彼时训练所用的正例中，大半其证据尚在未来——
 在这样的标签上训练所得的判别力，**相当部分是在认后来才发生的事**。
 
-**其二，泄漏随折次单调收敛**（64.7% → 19.5%）。这是必然的：窗口越往后，
-已成立的证据越多。故**早折的模型轨成绩最不可信，末折相对可信**；
+**其二，泄漏应随折次单调收敛。** 这是必然的：窗口越往后，已成立的证据越多。
+本次渲染的单调性自检：
+**`r if (exists("LK") && !is.null(LK)) (if (all(diff(LK$tab$rate) <= 1e-9)) "✅ 逐折单调不增" else "⚠️ 非单调，须回查折生成") else "⬜"`**。
+若确为单调收敛，则**早折的模型轨成绩最不可信、末折相对可信**；
 现行的折均汇总把两者等权，等于让最污染的几折拉高总账。
 
 **其三，罚侧不受此影响。** 罚侧走的是确定性证据链——**事后取证**，
@@ -8909,7 +9041,8 @@ tibble::tribble(
 ## 由此定下三条纪律
 
 **其一，模型轨的折级成绩一律记为上界**，且须同时标明所据折规格与折次——
-折均单值已不足以描述，因泄漏幅度逐折差三倍有余。
+折均单值已不足以描述，因泄漏幅度**首折与末折相差
+`r if (exists("LK") && !is.null(LK) && LK$tab$rate[nrow(LK$tab)] > 0) sprintf("%.1f 倍", LK$tab$rate[1]/LK$tab$rate[nrow(LK$tab)]) else "⬜"`**。
 
 **其二，重算时以 `first_opposite_dt` 构造折内金标准**：
 $\mathrm{TRUTH}_{tr}(f)=\{m:\text{首次完全反向日}\le\text{该折训练窗末日}\}\cup\{\text{登记日早于训练窗末日的人工风险单}\}$。
@@ -9130,13 +9263,45 @@ E4–E6 之缺不是开发进度问题，而是数据资产不存在（见 @sec-
 
 **其二，真正的会员级风控处置只有两列。**
 
-| 列 | 列义 | 百家乐事件 | 涉及会员 | 收紧 | 放宽 |
-|---|---|---:|---:|---:|---:|
-| `mem017` | **`canbet` 可否下注** | 397 | 179 | Y⇒N **176**（禁投）| N⇒Y **221**（解禁）|
-| `mem016` | **`enable` 账户启用** | 135 | 80 | Y⇒N **90**（停用）| N⇒Y **45**（启用）|
-| `mem024` | `mem_risk` 风险标记 | **0** | 0 | — | — |
+```{r}
+#| label: treat-truth
+#| echo: false
+## ★ 现算（铁律第九条）：本表此前为手打，今改由 TL10 现算。
+TRU <- NULL
+if (need_data(D$tl10, "准实验", c("member_id","field_name","value_before","value_after"))) {
+  Z <- D$tl10
+  if ("is_baccarat_member" %in% names(Z)) Z <- Z[as.character(Z$is_baccarat_member) == "1", , drop = FALSE]
+  Z$vb <- toupper(trimws(Z$value_before)); Z$va <- toupper(trimws(Z$value_after))
+  MEAN <- c(mem017 = "**`canbet` 可否下注**", mem016 = "**`enable` 账户启用**",
+            mem024 = "`mem_risk` 风险标记")
+  rows <- lapply(names(MEAN), function(f) {
+    z <- Z[Z$field_name == f, , drop = FALSE]
+    data.frame(列 = paste0("`", f, "`"), 列义 = MEAN[[f]],
+               `百家乐事件` = nrow(z),
+               `涉及会员` = length(unique(z$member_id)),
+               收紧 = sum(z$vb == "Y" & z$va == "N"),
+               放宽 = sum(z$vb == "N" & z$va == "Y"),
+               check.names = FALSE, stringsAsFactors = FALSE)
+  })
+  TT <- do.call(rbind, rows)
+  zz <- Z[Z$field_name %in% names(MEAN), , drop = FALSE]
+  TRU <- list(tab = TT, n_ev = nrow(zz), n_mem = length(unique(zz$member_id)),
+              by_m = table(substr(as.character(zz$action_date), 1, 7)))
+  aurora_kb(TT, caption = paste0(
+    "会员级风控处置：逐列现算（源 TL10_treatment_ledger.csv · SQL 总包 §TL-10）",
+    "｜解释：只取 canbet 与 enable 两列——mem015 实为 login_error 计数、mem022 为电话，皆非处置",
+    "｜本方案用途：此表由台账现算，非静态文字；处置组的口径以此为准"))
+} else {
+  aurora_kb(tibble::tibble(
+    状态 = "⬜ 待数据（非错误）", 本节内容 = "会员级风控处置逐列",
+    所待文件 = "TL10_treatment_ledger.csv（SQL 总包 §TL-10）",
+    受影响输出 = "本表、处置组规模、@sec-quasi-run 全章"),
+    caption = "会员级风控处置：逐列现算")
+}
+```
 
-**处置组真身：532 条事件、188 名百家乐会员**，逐月 27／81／164／124／118／18，全窗覆盖。
+**处置组真身：`r if (exists("TRU") && !is.null(TRU)) paste0(format(TRU$n_ev, big.mark=","), " 条事件、", format(TRU$n_mem, big.mark=","), " 名") else "⬜ 待 TL10"` 百家乐会员**，
+逐月分布 `r if (exists("TRU") && !is.null(TRU)) paste(as.integer(TRU$by_m), collapse="／") else "—"`，全窗覆盖。
 另有 `mem022`（電話）、`age015`／`age016`（代理列）、`remark`（备注）等，皆属日常运营，已剔。
 
 **其三，`mem024` 即 `mem_risk` 在窗口内一次也没被改过。** 这与 §P0C 的
@@ -11908,6 +12073,49 @@ $m_i$ 为负即此人在**赢平台的钱**。
 每一轮都适用，不是某一轮的临时安排。
 :::
 
+## 2026-08-10 · 自查铁律第九条：正文数字全是打上去的——已改承重三处
+
+先生令「一律以代码输出的结果为标准」。此令与铁律第九条（无静态文字冒充运行结果）同源，
+故本轮先验自己，而非先宣称合规。
+
+**一、扫描结果对本方不利，如实认下。** 机械扫描全篇非代码区，
+得结果型数字（带 %／倍／名／人／条／折／组／次者）**432 处，而行内现算零处**。
+即：**包括本方上一轮亲手写入的「折均 42.2%」「2.37 倍」「188 名会员」在内，
+全篇正文的每一个数字都是打上去的**。它们确实出自实测，
+但读者无从分辨是本次渲染算出来的、还是上一轮打进去的——
+**数据一变，表会变，字不会变**。这正是该铁律所防之事，而本方一路在犯。
+精要报告同扫：192 处中现算 19 处，覆盖率约一成。
+
+**二、斧正的次序不是把 432 处全改，而是先改「承重数字」。**
+许多是外部引用（Zender 50–55 局／小时）、已定案常数（m ＝ 1.918%）、
+惯例阈值（α ＝ 0.05），本就不该随渲染而变。
+**承重数字**指随数据更新而必然变动、且结论建立其上者。本轮已改三处：
+
+其一，**金标准折内合法性表**由手打 tribble 改为**由 §C06d 现算**——
+读入带时点的对打对、按 §C06fix 口径对齐（30 局门槛且完全反向）、
+逐折以训练窗末日清点，并把其读法中的折均、首折、末折、首末之比四处改为行内现算；
+另加**单调性自检**：若泄漏率非逐折单调不增，即报「须回查折生成」。
+
+其二，**会员级风控处置逐列表**由手打改为**由 §TL-10 现算**，
+处置组规模与逐月分布随之改为行内现算。
+
+其三，为此新接 §C06d 与 §K01c 两份取数管路（CONTRACT／`D`／`NEED`／`PH_LABELS`／键名册五处同步）。
+
+**三、新增 @sec-liveness 现算纪律自检，使此事逐次渲染可查。**
+该块读入当前源档、剔除代码区、统计正文结果型数字与行内现算处数，报覆盖率与判读。
+覆盖率为零即判「全篇静态」。**此表使铁律第九条由可辩之词变为可查之事。**
+
+**四、并立一条判别法。** 这个数字，数据变了它该不该跟着变？
+**该跟着变的须现算**——折数、命中人数、泄漏幅度、处置组规模、区间上下界、检验 p 值；
+**不该跟着变的可静态但须标出处**——外部权威基准、已定案的结构常数、统计惯例阈值、
+以及标明日期与来源的历史实测值。
+判别不在数字大小，而在**它是本次算的，还是引来的**：
+凡本次算的而写成静态，即为冒充；凡引来的而未标出处，即为无据。
+
+**五、精要报告同办。** 新增「常数来源与现算纪律」一节，两项自检并列：
+常数来源（110 处、30 种逐类定性，`0.60` 与 `0.15` 随主方案改为实测优先）
+与现算纪律（同一自检块）。**两份交付件自此同标准，非只其一。**
+
 ## 2026-08-10 · 一切阈值不得手拍：常数来源审计 + 三系数由外生改实测
 
 先生令「一切阈值与指标，一律以顶级统计方法算出，切勿手拍」。此令要落地，
@@ -12708,6 +12916,10 @@ tibble::tribble(
   216,"**新增 @sec-param-empirical：三系数由外生改实测**。`0.60`（回收率 g，13 处）与 `0.15`（流失系数 c，18 处）此前标为外生，是因彼时无处置台账无从实测；今以匹配对照实测 g／c／H 三者并配分块自助区间。**三条纪律**：① 匹配平衡或平行趋势未过、或区间含零，一律**回落外生值并明写「回落」**——未过关的估计不如一个诚实的假设；② 实测值取用时净增益式、误伤上限分层、回测 gain() 三处须同批重算；③ **ĝ 有方向确定的偏误**（被处置者本是当时赢得最多者，均值回归被算作处置之功），故只可用于收紧不可用于放宽，实测高于 0.60 时仍取 0.60","新增","@sec-param-empirical",
   217,"**新增窗长敏感性块 `qe-sens`**：协变量窗 28 日、持续期门槛 14 日、事件研究窗 ±14 日三处尚无实测依据，补法不是再拍一个数，而是 ±7/14/21/28 四档并跑。**判据不是「哪一档最好」（那正是选择偏差），而是「结论是否随窗长翻转」**——四档同号则窗长取值不要紧，异号则该结论由窗长所造须撤回","新增","@sec-quasi-run",
   218,"**立一条分界：并非所有常数都该实测**。统计惯例阈值（SMD<0.1、卡钳 0.2、α=0.05、功效 0.8）与外部权威基准（Zender 50–55 局/小时、UKGC 七类）不该由本项目重估——前者是同行为使结果可比而约定，自行重估即无法与外部研究对话且易沦为**调门槛以就结论**；后者若以本平台数据重算再用以评价本平台，是循环论证。**分界不在「能不能算」，而在「该不该由我们算」**","新增","@sec-const-audit",
+  219,"**自查铁律第九条，查获全篇正文 432 处结果型数字、行内现算零处**——包括本方上一轮亲手写入的「折均 42.2%」「2.37 倍」「188 名会员」在内，全篇数字皆打上去的；数据一变，表会变而字不会变。精要报告同扫：192 处中现算 19 处。新增 @sec-liveness 现算纪律自检，逐次渲染统计正文结果型数字与行内现算处数并报覆盖率，使该铁律由可辩之词变为可查之事","新增","@sec-liveness",
+  220,"**承重数字改现算三处**：① 金标准折内合法性表由手打 tribble 改为**由 §C06d 现算**（读带时点对打对、按 §C06fix 口径对齐、逐折以训练窗末日清点），其读法中折均／首折／末折／首末之比四处改行内现算，并加**单调性自检**；② 会员级风控处置逐列表由手打改为**由 §TL-10 现算**，处置组规模与逐月分布随之行内现算；③ 为此新接 §C06d 与 §K01c 取数管路（CONTRACT／D／NEED／PH_LABELS／键名册五处同步）","斧正","@sec-truth-lineage + @sec-treatment-truth",
+  221,"**立现算与否的判别法**：这个数字，数据变了它该不该跟着变？该跟着变者（折数、命中人数、泄漏幅度、处置组规模、区间上下界、p 值）**须现算**；不该跟着变者（外部权威基准、已定案结构常数、统计惯例阈值、标明日期与来源的历史实测值）可静态**但须标出处**。判别不在数字大小，而在**它是本次算的还是引来的**——本次算的写成静态即为冒充，引来的未标出处即为无据","新增","@sec-liveness",
+  222,"**精要报告同办，两份交付件自此同标准**：新增「常数来源与现算纪律」一节，两项自检并列——常数来源（110 处、30 种逐类定性；`0.60` 与 `0.15` 随主方案改为实测优先）与现算纪律（同一自检块）","新增","精要报告 · 常数来源与现算纪律",
   82,"★ 整数化循环用 `is.double()` 判数值列，但 `Date` 底层就是 double → `Math.Date: floor 对 Date 没有定义`：判据加 `is.null(attr(v,\"class\"))`，只认裸数值向量；并固化为可运行性纪律第 4 条","斧正","setup · fetch()",
   81,"`fetch()` 再压一层：计数类 double 列整数化（不动任何金额/比率列），内存约再省一成","升级","setup",
   78,"术语补入 purged walk-forward / CPCV 验证判别力 / 尾秒 / CGNAT 四条；学术引用（Hyndman & Koehler 2006、López de Prado）加 DOI 链接","新增","@sec-glossary",
