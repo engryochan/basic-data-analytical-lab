@@ -3095,6 +3095,15 @@ WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                         
      OR COLUMN_COMMENT LIKE '%訪問%'                                                                  -- 续行：繁体访问
      OR COLUMN_COMMENT LIKE '%登入%'                                                                  -- 续行：登入——退而求其次的活跃代理量，惟不得顶替「新浏览」
      OR COLUMN_COMMENT LIKE '%限額%'                                                                  -- 续行：繁体限额——兼答限额字典之问
+     OR LOWER(COLUMN_NAME) LIKE '%bonus%'                                                           -- 并列条件：红利／彩金——★ NGR 之构件，查其有无以定 NGR 可算与否
+     OR LOWER(COLUMN_NAME) LIKE '%promo%'                                                           -- 续行：活动／推广成本
+     OR LOWER(COLUMN_NAME) LIKE '%coupon%'                                                          -- 续行：优惠券
+     OR COLUMN_COMMENT LIKE '%紅利%'                                                                  -- 续行：繁体红利
+     OR COLUMN_COMMENT LIKE '%红利%'                                                                  -- 续行：简体红利
+     OR COLUMN_COMMENT LIKE '%優惠%'                                                                  -- 续行：繁体优惠
+     OR COLUMN_COMMENT LIKE '%优惠%'                                                                  -- 续行：简体优惠
+     OR COLUMN_COMMENT LIKE '%活動%'                                                                  -- 续行：繁体活动
+     OR COLUMN_COMMENT LIKE '%活动%'                                                                  -- 续行：简体活动——以上七项决定 NGR 能否全口径计算
      OR COLUMN_COMMENT LIKE '%限额%' )                                                                -- 续行：简体限额——并收束整个候选条件组
 ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
 
