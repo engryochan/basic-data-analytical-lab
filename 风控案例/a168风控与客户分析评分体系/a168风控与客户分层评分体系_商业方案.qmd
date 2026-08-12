@@ -134,7 +134,7 @@ execute:
 
 ```{r}
 #| label: setup-python
-#| include: false
+# include: false
 ## ═══════════════════════════════════════════════════════════════════════
 ##  Python 环境自举：建虚拟环境 → 装齐所有建模包 → 写 .gitignore
 ##  设计原则：
@@ -314,7 +314,7 @@ if (PY_OK) {
 
 ```{r}
 #| label: setup
-#| include: false
+# include: false
 if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
 suppressPackageStartupMessages(pacman::p_load(
   dplyr, tidyr, readr, stringr, purrr, tibble, lubridate, glue,
@@ -896,7 +896,89 @@ invisible(gc(full = TRUE))   # 大表读完统一回收一次，为 Python 侧�
 ## 本次全部指纹落盘，供下次渲染比对「内容是否一致」
 invisible(tryCatch(saveRDS(MANIFEST_NEW, MANIFEST_PATH), error = function(e) NULL))
 AVAIL <- lapply(D, Negate(is.null))
+
+## ═══════════════════════════════════════════════════════════════════════════
+## 资格分层（2026-08-12 立）：装载即分层，其后各块一律取合格层，不再各自筛
+## ---------------------------------------------------------------------------
+##   缘起：此前哨兵剔除散在 r03-dual／r03-dealer-rank／r03-fdr／release-r03 四块，
+##   同一判据写四遍——任一处漏改即口径分裂；且四块之前的统计量皆含哨兵。
+##   今照 @sec-layer-contract 之三层契约，于装载处一次分清：
+##     L0 事实层  D$r03_full   全量，含哨兵、含不合格——**留档备查，不得直接分析**
+##     L1 合格层  D$r03        非哨兵且基准非空且有决胜局且局数达阈——**分析一律取此**
+##   哨兵判据与 SQL 侧 §R03 的 is_sentinel_dealer 逐字同义（eid ∈ {-1, 0, 空}）。
+## ═══════════════════════════════════════════════════════════════════════════
+SENTINEL_IDS <- c("-1", "0", "")          # 哨兵荷官号：与 SQL §R03 之判据逐字同义
+is_sentinel  <- function(v) trimws(as.character(v)) %in% SENTINEL_IDS
+
+## ── 分层：r03 与 r03b 各留一份事实层，再分出合格层 ───────────────────────────
+QUAL <- list()                             # 分层账：供下方「资格分层实况」表现算
+for (k in c("r03", "r03b")) {
+  x <- D[[k]]
+  if (is.null(x) || !("dealer_id" %in% names(x))) next
+  D[[paste0(k, "_full")]] <- x             # L0 事实层：原样留档
+  sent <- is_sentinel(x$dealer_id)
+  ## L1 资格：非哨兵为其必要条件；若导出件已带 eligibility_status 则一并采信
+  keep <- !sent
+  if ("eligibility_status" %in% names(x)) keep <- keep & (x$eligibility_status == "ELIGIBLE")
+  QUAL[[k]] <- list(n_full = nrow(x), n_sent = sum(sent), n_keep = sum(keep),
+                    has_elig = "eligibility_status" %in% names(x))
+  D[[k]] <- x[keep, , drop = FALSE]        # L1 合格层：其后各块所取者
+  rm(x, sent, keep)
+}
+invisible(gc(full = TRUE))
+
+AVAIL <- lapply(D, Negate(is.null))        # 分层后重取，使 _full 亦入可用清单
 ```
+
+## 资格分层实况：事实层去了多少、为何而去 {#sec-qual-layer}
+
+**先呈现，再分层，然后才分析**——本表即那道分界，其数由本次装载现算。
+
+```{r}
+#| label: qual-layer
+# echo: false
+## 资格分层账：逐件列出 L0 行数、哨兵行数与占比、L1 留存行数与留存率。
+##   本表是「事实层不删、分析层才筛」这条契约的**唯一凭据**：
+##   凡后文任一数字，其所据者是 L1；而 L0 去了多少、为何而去，尽在此表。
+if (!length(QUAL)) {
+  ph_out("资格分层")
+} else {
+  rows <- lapply(names(QUAL), function(k) {
+    q <- QUAL[[k]]
+    tibble::tibble(
+      导出件 = c(r03 = "R03_player_dealer（玩家×荷官·全窗）",
+                 r03b = "R03b_player_dealer_daily（玩家×荷官·日粒度）")[[k]],
+      `L0 事实层` = format(q$n_full, big.mark = ","),
+      `其中哨兵` = sprintf("%s（%.2f%%）", format(q$n_sent, big.mark = ","),
+                           100 * q$n_sent / max(q$n_full, 1)),
+      `L1 合格层` = format(q$n_keep, big.mark = ","),
+      `留存率` = sprintf("%.1f%%", 100 * q$n_keep / max(q$n_full, 1)),
+      `资格列` = if (q$has_elig) "✅ 采信导出件之 eligibility_status" else "🟡 仅按哨兵判据筛（该件无资格列）")
+  })
+  do.call(rbind, rows) |> aurora_kb(caption = paste0(
+    "资格分层实况（渲染现算）｜解释：L0 事实层 → 剔哨兵与不合格 → L1 合格层，逐件列其去向",
+    "｜本方案用途：**其后一切分析一律取 L1**；L0 以 `_full` 后缀留档备查，",
+    "凡需回答「平台究竟有多少关系」者取之，不得用于统计推断"))
+}
+```
+
+::: {.callout-important}
+## 为何必须在此处分层，而不在各分析块里各自筛
+
+**其一，口径唯一。** 此前同一条哨兵判据写在四个块里，**任一处漏改即口径分裂**；
+今只此一处，改判据只改 `SENTINEL_IDS` 一行。
+
+**其二，可审计。** 去了多少、为何而去，由上表一次说清；
+而散在各块时，读者须自行翻遍全篇才数得出来。
+
+**其三，报告侧与 SQL 侧的三层契约终于对齐。** SQL 侧 §R03 已改为
+「哨兵标注不删、下限标注不筛」，交来的本就是 **L0 事实层**；
+报告侧若仍各块零散地筛，则等于 SQL 分了三层而 R 侧仍是一锅。
+
+**其四，哨兵之量并非小数。** 实测一个哨兵 `dealer_id` 承载 **14,153,416 局，
+占全部之 11.35%**（@sec-probe-findings）——**故凡未剔哨兵的统计量，
+其口径实为「88.65% ＋ 一条不可辨识的业务线」的混合**，而非全平台。
+:::
 
 ---
 
@@ -1006,9 +1088,16 @@ MASE 以 naive one-step 基准归一，**得到无量纲、可跨维度比较、
 ::: {.callout-note}
 ## 口径声明二：不止 bet01/bet02 两表，实际跨了八张表
 
+**先厘清三个并存的表数口径，以免互相冲撞**：
+① **八张表**——下表所列的**有效注单口径连接骨架**，少一张即口径不成立；
+② **十四行点货单**——@sec-tables 的核心表清单（其中两行各合并两张表）；
+③ **二十四张表**——SQL 总包全包实际触及的表名全集（含日志族、名单族与已证伪族）。
+**三者各有其域，不可互相替代引用。** 本节所论者为①。
+
+
 ```{r}
 #| label: tbl-crosstable
-#| echo: false
+# echo: false
 tibble::tribble(
   ~表, ~连接键, ~带来什么维度, ~哪些分析依赖它, ~若缺失,
   "`ods_a168_bet02`","—（主表）","注单本金/派彩/退水/汇率/靴局/桌台/荷官/IP/五级代理线",
@@ -1050,7 +1139,7 @@ tibble::tribble(
 
 ```{r}
 #| label: tbl-inventory
-#| echo: false
+# echo: false
 表清单 <- tibble::tribble(
   ~表名, ~行数量级, ~行业含义, ~在本方案的角色, ~状态,
   "ods_a168_bet02","≈1.9亿","注单流水（结算侧）——每一注的本金、派彩、退水、代理线、IP","**主表**：流水、输赢、洗码量全从这来","✅ 主力",
@@ -1100,7 +1189,7 @@ aurora_dt(表清单, caption = glue::glue(
 
 ```{r}
 #| label: tbl-naming
-#| echo: false
+# echo: false
 正名 <- tibble::tribble(
   ~库内代号, ~行业叫法, ~口径说明,
   "bet03","靴号","一靴牌，百家乐 60–80 把",
@@ -1149,7 +1238,7 @@ aurora_dt(正名, caption="正名表：先正名，后算账", len=18)
 
 ```{r}
 #| label: e1-global-dist
-#| echo: false
+# echo: false
 ## ★ 窗口端点与营业日数一律**现算**：取本次已就位的日粒度导出（回测面板优先，
 ##   其次玩家×荷官日表）的实际最小与最大营业日。旧版写死 2026-08-07 为止，
 ##   而取数条件是 dt < '2026-08-07'，末日实为 08-06——写死即错。
@@ -1253,7 +1342,7 @@ $$\text{L0 事实} \;\supseteq\; \text{L1 资格} \;\supseteq\; \text{L2 模型}
 
 ```{r}
 #| label: nonregression-audit
-#| echo: false
+# echo: false
 ## 防退化清单：以 §R03 导出件的**实际列与实际取值**判定，不看源码、不凭声明。
 ##   任一条为 ⛔ 即示该版导出退化，须回查 SQL 并重导，不得放行。
 NR <- (function() {
@@ -1476,7 +1565,7 @@ G15 为本轮新增，其所针对者正是 `z_score` 那类别名的「隐性�
 
 ```{r}
 #| label: table-manifest
-#| echo: false
+# echo: false
 ## 逐节现算：标签 → 所需文件 → SQL 编号 → 契约必需列 → 本次就位状态。
 ## 一律由 NEED / CONTRACT / resolve_csv() 三者推出，不写死任何静态文字。
 mf <- dplyr::bind_rows(lapply(PH_LABELS, function(lb) {
@@ -1606,7 +1695,7 @@ dplyr::bind_rows(mf, py) |>
 
 ```{r}
 #| label: settle-form
-#| echo: false
+# echo: false
 ## 结算形态实测（§R03-chk）：逐投注产品的退还率与两套基准，一律现算，不写死。
 ##   形态判定按退还率分档：≥5% 判 DNB、1%~5% 判局部退还、<0.1% 判纯二元；
 ##   决胜局为零者（噪声产品）基准无从定义，如实标注，不以 0.5 顶替。
@@ -1753,7 +1842,7 @@ Tie、BPair、Big 等本应零退还的产品，实测退还率约 0.0005%–0.0
 
 ```{r}
 #| label: glossary-def
-#| echo: false
+# echo: false
 ## 术语库：名称 → 类别 / 一句话定义 / 在本方案的用途
 ## 新增术语只改这里一处，正文与浮层同步生效
 GLOSSARY <- tibble::tribble(
@@ -1905,7 +1994,7 @@ GLOSSARY <- tibble::tribble(
   "净贡献（NC）","博彩业务","(hold% − 退水率 − 占成率) × 洗码量。会员对平台的真实价值。",
     "**净贡献率为负的会员，一分钱都不该赏**——这一条否掉了「大流水就是大客户」这个行业最贵的误解。",
   "靴（shoe）","博彩业务","一副牌从洗好到用尽的整个周期，百家乐一靴约 60–80 把。",
-    "R-01 策略性风控的时间坐标。固定「第 50 把」在短靴是末段、长靴才中段，必须做相对靴位归一。",
+    "R-01 策略性风控的时间坐标。实测靴长均值 49.86 把、P50=50，故 2026-08-12 起判据一律改用相对靴位 shoe_pos ≥ 0.80（每靴末 20% 之局位），不再用绝对局号；须辨明其固定的是局位区间，非下注占比。",
   "算牌 / ramping","博彩业务","靴末段剩余牌可数性提高，真数有利时把注额抬高数倍。",
     "R-01 的真正指纹。**只统计「有没有晚下注」会丢掉全部信号强度**，必须看注额斜率。",
   "对押（对打 / hedge）","博彩业务","同一局同时押庄与闲，把游戏输赢锁在接近零。",
@@ -2004,7 +2093,7 @@ GLOSSARY <- tibble::tribble(
   "止血","本方案用语","不追究个体、直接改配置参数来停止漏损。",
     "T3 打水型是唯一可以只靠「改一个数字」（退水档位）止血的一类，不需要抓任何人。",
   "purged walk-forward","验证方法","按时间前推切折，并把跨切点的整块样本剔除（净化）、切点后留禁运期；本方案中文一律称**净化滚动回测**，二者同义。",
-    "本报告回测的标准协议：训练 60 日 / 禁运 7 日 / 测试 14 日 / 步长 14 日。同一物理局横跨切点会把测试期信息带进训练期。",
+    "本报告回测的标准协议（折规格甲）：训练 63 日 / 禁运 7 日 / 测试 14 日 / 步长 1 日，名义折数约 56、有效独立折数约 4.0。同一物理局横跨切点会把测试期信息带进训练期。口径以 @sec-fold-contract 为准，本条不得与之分歧。",
   "CPCV 验证判别力","验证方法","用组合式净化交叉验证得到的多路径绩效分布，判断策略的区分能力是真本事还是运气。",
     "单路径回测只给一个点估计。多路径分布若大面积覆盖 0，说明判别力不成立，不可上线。",
   "尾秒","博彩业务","一局封盘前最后几秒才下的注。",
@@ -2047,7 +2136,7 @@ GLOSSARY <- tibble::tribble(
 
 ```{r}
 #| label: fieldcode-def
-#| echo: false
+# echo: false
 FIELDCODE <- tibble::tribble(
   ~代号, ~所在表, ~业务含义, ~在本方案的用途,
   # ── bet02 注单表 ────────────────────────────────────────────
@@ -2127,7 +2216,7 @@ FIELDCODE |> aurora_dt(caption = glue::glue(
 
 ```{r}
 #| label: field-contract
-#| echo: false
+# echo: false
 tibble::tribble(
   ~表, ~列, ~业务名, ~语义, ~单位, ~粒度, ~符号, ~值域, ~来源, ~版本,
   ## ── 同名异义：本表最要紧的两行，置于首位 ──────────────────────────
@@ -2199,7 +2288,7 @@ tibble::tribble(
 
 ```{r}
 #| label: fieldcode-merge
-#| echo: false
+# echo: false
 ## 并入术语库：代号与术语共用同一套浮层，新增代号只改上面一处。
 ## ★ 区间/并列条目先程序化展开为逐一代号（`bet23~bet27` → bet23…bet27、
 ##   `mem009 / mem010` → 两条），正文中**单独出现**的每个代号都能命中悬停释义；
@@ -2236,7 +2325,7 @@ tibble::tibble(
 
 ```{r}
 #| label: glossary-inject
-#| echo: false
+# echo: false
 #| results: asis
 ## 把术语库注入页面：CSS 悬停浮层 + 自动加注脚本
 ## 脚本扫描正文段落/表格单元格/列表与**行内代码**，跳过 pre / script / 标题锚点；
@@ -2437,7 +2526,7 @@ cat("\n", FENCE, "{=html}\n", JS_A, gj, JS_B, "\n", FENCE, "\n", sep = "")
 
 ```{r}
 #| label: glossary-table
-#| echo: false
+# echo: false
 GLOSSARY |>
   dplyr::mutate(释义 = paste0("**", 定义, "**<br>▸ ", `在本方案的用途`)) |>
   dplyr::select(术语, 类别, 释义) |>
@@ -2468,7 +2557,7 @@ GLOSSARY |>
 
 ```{r}
 #| label: evidence-tier
-#| echo: false
+# echo: false
 tibble::tribble(
   ~级别, ~来源, ~可信度, ~允许用途, ~禁止用途,
   "**E1 全局**","Superset 全量 SQL / information_schema","✅ 权威","阈值标定、分布定位、命中率、对外结论","—",
@@ -2481,7 +2570,7 @@ tibble::tribble(
 
 ```{r}
 #| label: time-skew
-#| echo: false
+# echo: false
 tibble::tribble(
   ~表, ~dt_min, ~dt_max, ~n_days, ~n_rows, ~`与 bet02 重叠`,
   "**bet02（基准）**","2026-03-21","2026-08-06","139","190,276,940","—",
@@ -2535,7 +2624,7 @@ tibble::tribble(
 
 ```{r}
 #| label: tail-strata
-#| echo: false
+# echo: false
 tibble::tribble(
   ~投注选项, ~佣金模式, ~订单数, ~`尾段有效投注`, ~`roi_diff`,
   "Banker","**0 一般**","41,237,794","12.35 亿","**+0.001055**",
@@ -2560,7 +2649,7 @@ tibble::tribble(
 
 ```{r}
 #| label: tail-noise
-#| echo: false
+# echo: false
 tibble::tribble(
   ~选项, ~佣金, ~订单数, ~`尾段有效投注`, ~`roi_diff`, ~判读,
   "Small","0","20,019","13.1 万","**+0.1191**","样本极小，边注高方差",
@@ -2579,7 +2668,7 @@ tibble::tribble(
 
 ```{r}
 #| label: simpson-decomp
-#| echo: false
+# echo: false
 tibble::tribble(
   ~口径, ~`roi_diff`, ~说明,
   "D-03R 全局聚合 `SUM(pnl)/SUM(vb)`","**+0.000657**","尾段/正常段在各层构成比不同 → 被稀释",
@@ -2595,7 +2684,7 @@ tibble::tribble(
 
 ```{r}
 #| label: strata-contrib
-#| echo: false
+# echo: false
 tibble::tribble(
   ~分组, ~`vb_tail`, ~占比, ~`加权 roi_diff`, ~`折算金额`,
   "主注 Banker/Player","26.37 亿","**97.28%**","+0.001448","+382 万",
@@ -2621,7 +2710,7 @@ $$\frac{\lvert -0.004418 \rvert}{\lvert +0.002330 \rvert} = 1.90$$
 
 ```{r}
 #| label: signal-noise
-#| echo: false
+# echo: false
 tibble::tribble(
   ~诊断, ~结果, ~判读,
   "符号检验（30 层中 17 层为正）","**p = 0.5847**","**方向完全随机**，与抛硬币无异",
@@ -2694,7 +2783,7 @@ D-03R 的全局 `roi_diff = +0.000657` 采用 `SUM(pnl)/SUM(vb)` 形式，
 
 ```{r}
 #| label: tail-verdict
-#| echo: false
+# echo: false
 tibble::tribble(
   ~口径, ~定义, ~n_cells, ~`ROI 尾段`, ~`ROI 正常`, ~`roi_diff`,
   "**D-03Q**","`bet_progress` ≥ 该桌 P90","4,348,005","−0.018454","−0.016883","**−0.001571**",
@@ -2750,7 +2839,7 @@ tibble::tribble(
 
 ```{r}
 #| label: tail-significance
-#| echo: false
+# echo: false
 ## ★ 斧正（2026-08-07）：本块原先直接 readr::read_csv + t.test，
 ##   文件缺位或行数不足时抛「'x'观察值数量不足」并**中断整份渲染**。
 ##   现改为 need_data 前置校验 + 逐项独立降级：
@@ -2819,7 +2908,7 @@ if (need_data(D$d03s, "五重检验", c("roi_diff", "vb_tail"))) guard({
 
 ```{r}
 #| label: release-d03s
-#| include: false
+# include: false
 ## 用完即释放：D$d03s 最后一次引用就在上一个代码块
 release("d03s")
 ```
@@ -2891,7 +2980,7 @@ n = 139 天，`roi_diff` 均值 = +0.003263（尾段 ROI 略优于常规，方�
 
 ```{r}
 #| label: denom-e1
-#| echo: false
+# echo: false
 tibble::tribble(
   ~项, ~值,
   "有效订单数","124,187,539",
@@ -2915,7 +3004,7 @@ tibble::tribble(
 
 ```{r}
 #| label: recon-e1
-#| echo: false
+# echo: false
 tibble::tribble(
   ~指标, ~值, ~判读,
   "`n_matched_round`","4,715,176","局级 join 成功",
@@ -2955,7 +3044,7 @@ MASE 以「同桌相邻局 `gi005` 的平均绝对差分」为 naive one-step �
 
 ```{r}
 #| label: label-e1
-#| echo: false
+# echo: false
 tibble::tribble(
   ~risk, ~orders, ~n_rows, ~n_members, ~占比,
   "0","0","8,111,547","**714,003**","99.98%",
@@ -3084,7 +3173,7 @@ naive 比法系统性低估了效应。
 
 ```{r}
 #| label: ip-e1
-#| echo: false
+# echo: false
 tibble::tribble(
   ~指标, ~值, ~含义,
   "`bet02.ip` 去重","**1,322,894**","真实客户端下注 IP",
@@ -3118,7 +3207,7 @@ tibble::tribble(
 
 ```{r}
 #| label: risklist-e1
-#| echo: false
+# echo: false
 tibble::tribble(
   ~op, ~n_risklist, ~n_joined, ~join_rate,
   "249","4,991","**0**","0",
@@ -3153,7 +3242,7 @@ tibble::tribble(
 
 ```{r}
 #| label: dedup-e1
-#| echo: false
+# echo: false
 tibble::tribble(
   ~检验, ~结果, ~结论,
   "百家乐订单总数","125,128,569","分析窗 139 天",
@@ -3167,7 +3256,7 @@ tibble::tribble(
 
 ```{r}
 #| label: rebate-e1
-#| echo: false
+# echo: false
 tibble::tribble(
   ~`mem003 退水率`, ~n_member, ~占比,
   "0","54,942,592","94.4%",
@@ -3186,7 +3275,7 @@ tibble::tribble(
 
 ```{r}
 #| label: member-e1
-#| echo: false
+# echo: false
 tibble::tribble(
   ~is_test, ~mem_risk, ~enable_flag, ~n_member,
   "N","0","Y","55,128,461",
@@ -3215,7 +3304,7 @@ tibble::tribble(
 
 ```{r}
 #| label: ironrules
-#| echo: false
+# echo: false
 tibble::tribble(
   ~铁律, ~原文, ~裁定, ~证据与补正,
   "①","schema 前缀 ods_mariadb_2b.","✅ 成立·需补正","真实表名带 `ods_a168_` 中段前缀",
@@ -3237,11 +3326,187 @@ tibble::tribble(
 
 ---
 
+# 来源文档逐条溯源矩阵：五份需求，逐项对到章节 {#sec-req-trace}
+
+本章只做一件事：**把五份来源文档的每一项要求，逐条对到本方案的具体章节、口径与状态**。
+其用处是**举证**——任何一项要求被追问「你做了没有、做在哪、口径是什么」，翻本章即得。
+
+::: {.callout-note}
+## 五份来源与本方案的分工
+
+| 来源文档 | 其性质 | 本方案的对应 |
+|---|---|---|
+| **异常IP与尾秒下注风控_阈值分析需求文档** | **甲方需求书**（30 项） | **逐条实现**，另指出其**七处缺陷**（@sec-defect） |
+| 百家乐下注时机风控参数分析报告 | 乙方既有分析（第 40 局 · 60% · 30 单） | 升为 R-01 三闸；**并以五重检验判定尾秒优势不成立** |
+| 百家乐同桌对打风控分析报告 | 乙方既有分析（同桌≥100 · 20% · 60%） | 升为 R-02，**裸比率改提升度** |
+| 真人博彩风控模型 | 乙方既有评分（P95/P99 · 0/10/20） | 升为 R-03，**分位改按产品基准的 Z ＋ FDR** |
+| 玩家风险等级判定设计 | **工程落地设计**（小时级·API·缓存·版本追溯） | **本方案未覆盖工程侧**——二者**互补而非替代** |
+
+**最后一行须特别说明**：《玩家风险等级判定设计》所解的是「分数怎么算出来之后怎么送到业务系统」，
+本方案所解的是「分数该怎么算才站得住」。**两份文档没有重叠，缺一不可。**
+:::
+
+## 需求文档逐节溯源
+
+```{r}
+#| label: req-trace
+# echo: false
+## 逐条溯源矩阵：需求条 → 本方案章节 → 本方案所用口径 → 状态。
+##   状态三态：✅ 已实现／🟡 已实现但受数据所限而降级／⛔ 数据不可得，已如实记载。
+tibble::tribble(
+  ~`需求条`, ~`要求内容`, ~`本方案章节`, ~`所用口径`, ~状态,
+  "§1","给出可配置阈值，并解释为何不选更宽松/更严格","@sec-recommend","每档三问定式：分布位置·样本充分性·审核量","✅",
+  "§2.1-1","「关联20个账户」处于分布什么位置","@sec-ip-dist","按关联玩家数分组的 IP 数与分位","✅",
+  "§2.1-2","每账户至少多少订单/物理局才算有效关联","@sec-ip-player","物理局键 bet03+bet04+bet39；候选 10/30/50/100","✅",
+  "§2.1-3","用「该IP下盈利」还是「全平台盈利」","@sec-ip-agg","**三版本并出**：A 全平台净盈利／B 仅该IP净盈利／**C 游戏盈利（剔返水）**","✅ 超出要求",
+  "§2.1-4","盈利玩家比例取 80/90/100","@sec-ip-grid","四档全扫 70/80/90/100","✅",
+  "§2.1-5","各阈值的异常IP数·关联账户数·审核工作量","@sec-ip-grid","每组合出命中IP数·命中玩家数·每周复核量","✅",
+  "§2.1-6","命中IP跨月是否稳定","@sec-ip-dist","按月分档统计 + 跨月重复命中率","✅",
+  "§2.2-1","每把的开始下注/封盘时间/下注时长能否取得","@sec-close","**⛔ close_bet_time 实测不存在**（缺陷 D3）→ 改下注进度代理 + 按桌分层","🟡 降级",
+  "§2.2-2","下注集中在第几秒；最后1/2/3/5秒覆盖多少","@sec-tail","归档 A-10 秒段/进度分布","🟡 以进度代理秒",
+  "§2.2-3","各秒段胜率·盈利·ROI 是否有差异","@sec-tail","**辛普森效应定量分解**——分桌后差异消失","✅ 且证伪",
+  "§2.2-4","「第29秒」是真异常还是大家都在第29秒","@sec-tail","**桌台异质性发现**：不同桌台下注时长不同，「第29秒」无统一含义","✅ 已证伪",
+  "§2.2-5","至少多少尾秒局数，胜率盈利才稳定","@sec-tail-grid","10/20/30/50/100 五档全扫","✅",
+  "§2.2-6","尾秒占比多少才算行为持续","@sec-tail-grid","10/20/30/50/70 五档全扫","✅",
+  "§2.2-7","尾秒胜率或胜率差多少才适合作风险条件","@sec-tail-grid","胜率 55/60/65/70；胜率差 5/10/15/20 个百分点","✅",
+  "§2.2-8","是否「正常时段亏损、尾秒盈利」且跨月持续","@sec-strong","**强特征专项**：尾秒游戏盈利>0 且正常时段≤0","✅",
+  "§3.1","数据范围·游戏范围·时间字段·玩家ID·IP·物理局键","@sec-field-contract","**十列正式登记**；局键三键；⚠ ip 高度疑似网关，已另立警示","✅ 且补正",
+  "§3.2","去重顺序 updatetime→sync_time→dt；六条有效订单谓词","@sec-sql-a-01","逐条实现，**另加三项补正**（测试线五路排除等）","✅ 超出要求",
+  "§3.3","金额与盈利四式；净盈利/游戏盈利/返水同时输出","@sec-defect","**缺陷 D5**：bet17 含返水 → 洗码客被判盈利玩家 → 补版本 C","✅ 且纠错",
+  "§3.4","胜率按物理局算；和局不入分母","@sec-sql-a-03","**并实测退还率 9.4841%**，Z 分母取决胜局","✅ 超出要求",
+  "§4.1","玩家—IP 基础指标六项","@sec-ip-player","六项逐项实现","✅",
+  "§4.2","IP 汇总指标十项 + 两版本盈利","@sec-ip-agg","十项逐项 + **三版本**；关联代理数 LV1–LV5 全出（缺陷 D6）","✅ 超出要求",
+  "§4.3","分布分析四项","@sec-ip-dist","四项逐项 + @sec-ip-excl 排除清单","✅",
+  "§4.4","候选阈值组合四参数 × 十项输出","@sec-ip-grid","四参数全扫；十项输出中「人工抽样可疑率」如实标注**暂不可计算**","🟡 无审核标签",
+  "§5.1","时间字段可用性五问","@sec-close","**两级替代方案**；桌台异质性为本节最关键发现","🟡 降级",
+  "§5.2","全体订单秒段分布六项","@sec-sql-a-10","含 Banker/Player/Tie/边注**分开算胜率**","✅",
+  "§5.3","玩家尾秒指标十一项","@sec-player-tail","十一项逐项实现","✅",
+  "§5.4","候选阈值组合五参数 + 强特征","@sec-tail-grid","五参数全扫 + @sec-strong","✅",
+  "§6","两规则组合分析四项 + 三档门槛","@sec-combo","同IP下尾秒风险玩家数 ≥2/3/5 三档","✅",
+  "§7","阈值选择七原则","@sec-principle","**七条逐条核验**","✅",
+  "§7 末","无风险标签时只能定义为「试运行阈值」","@sec-recommend","**全部标注 Trial**，并提供宽松/严格双档","✅ 严格遵守"
+) |> aurora_kb(caption = paste0(
+  "需求文档逐条溯源矩阵（30 项）",
+  "｜解释：需求条 → 本方案章节 → 所用口径 → 状态",
+  "｜本方案用途：任一项要求被追问「做了没有、做在哪、口径是什么」，本表即答"))
+```
+
+**三态之别须说明**：**✅** 为已实现；**🟡** 为已实现但**受数据所限而降级**，且降级理由与替代方案皆已记载；
+**无一项标 ⛔**——凡数据不可得者（如 `close_bet_time`），本方案不是跳过，而是**给出替代口径并注明其局限**。
+
+## 另三份分析报告的对应
+
+```{r}
+#| label: src-trace
+# echo: false
+tibble::tribble(
+  ~`来源报告`, ~`其结论`, ~`本方案处理`, ~`所以然`,
+  "**下注时机报告**","第 40 局 · 占比 60% · 30 单，命中 2,644 人",
+    "升为 R-01 三闸；**并以五重检验判定尾秒优势未能证实，从规则集删除**",
+    "该报告自陈命中者**平均 ROI 为 −4.61%（负）**，信号只在 P90/P95 尾部；本方案接着做符号检验 p=0.175",
+  "**同桌对打报告**","同桌≥100 · 同桌率≥20% · 对打率≥60%",
+    "升为 R-02，**裸比率改提升度（Lift）**；局键采其自身建议的三键",
+    "全场仅 **30 张桌**，夜班高频散客同桌率天然超 30%——**鸽笼原理，非团伙**",
+  "**真人博彩风控模型**","ROI/Profit/Top1Dealer/Top1Partner 之 P95/P99，0/10/20 计分",
+    "升为 R-03，**分位改按投注产品基准的 Z ＋ BH-FDR**；金额一律 /bet11 归一",
+    "同一 ROI 在押庄（基准 50.67%）与押和（基准约 2%）下的异常程度天差地别",
+  "**玩家风险等级判定设计**","工程落地：小时级事实·API·Valkey 缓存·版本追溯·降级",
+    "**本方案未覆盖工程侧**，二者互补",
+    "该文档解「分数怎么送到业务系统」，本方案解「分数怎么算才站得住」"
+) |> aurora_kb(caption = paste0(
+  "另三份来源报告的对应",
+  "｜解释：其结论 → 本方案处理 → 所以然",
+  "｜本方案用途：说明本方案不是另起炉灶，而是接住其对的部分、补上其留的口子"))
+```
+
 # 需求文档缺陷与修补 {#sec-defect}
+
+## 口径总表：数据源 · 维度正名 · 分群标准 · 判断标准 {#sec-spec-summary}
+
+本节把散见全篇的四项口径**汇于一处**，供答辩与移交之用；每项皆注明其详章所在。
+
+### 一、数据源
+
+**库**：StarRocks `ods_mariadb_2b`（ODS 层，**只读**）｜**前端**：Superset SQL Lab（单次下载上限十万行）
+
+**窗口**：2026-03-21 ~ 2026-08-06 收盘，**139 个完整营业日**。
+SQL 谓词一律 `dt >= '2026-03-21' AND dt < '2026-08-07'`——**右端为开区间**，
+2026-08-07 当日不在窗口内。**改窗须同时改全包 53 处字面量。**
+
+**料源十二张**（实测规模见 @sec-needtables）：`B01_bt_panel`（2,676,309 行 · 723,442 名会员）、
+`E02_segment_econ`（59 层）、`K01`（120,063 名活跃会员）、`K01b`（**金标准 125 人**）、
+`C06_hedge_pairs`、`R01_late_shoe`、`R03b`（18,139,550 行）、`I_ip_player`、
+`DX05`、`S01`~`S04`（四实体能力值）、`C01_ip_chain`、`C08_subnet_sparse`。
+
+### 二、维度与正名
+
+**三条术语铁律**（详见卷首字段正名速查）：
+
+1. **产品 ≠ 玩法**——产品是游戏种类，玩法是 `bet09` 的 23 种取值，**不可混用**；
+2. **`bet11` 是汇率不是赔率**——`stake = bet13 / bet11`，误作赔率则全盘金额皆错；
+3. **同名异义已查获三处**——`bet14` 在 `bet01` 为退水%、在 `bet02` 为派彩（同表异义）；
+   **`member.mem015` 为 `login_error`，而 `member_dtl.mem015` 为新版限額（异表同名，最隐蔽）**。
+
+**物理局键三键**：`bet03`（靴号）＋ `bet04`（局内序号）＋ `bet39`（桌号）。
+**少一键即误判**：不同桌台恰好同靴号同局号时会被读作同桌——
+此点《百家乐同桌对打风控分析报告》2.3 节自身已预警，本方案照其建议执行。
+
+**金额五式**：`stake = bet13/bet11`｜`game_pnl = (bet14−bet13)/bet11`（**会员视角**，
+平台毛利取其负）｜`rebate = bet16/bet11`｜`net_pnl = bet17/bet11`（**含返水**）｜
+`validbet = COALESCE(bet41, bet13)/bet11`。
+
+**四实体三十一维**：玩家 10（赏 5 罚 5，**索提诺稳定性在罚侧**——赢得越稳越可疑）、
+荷官 8（赏 4 罚 4）、代理 7（赏 4 罚 3）、风控专员 6（赏 4 罚 2）。详见 @sec-radar。
+
+### 三、以什么标准分类客户群
+
+**分层结构**：59 层（洗码量档 × 毛利率档 × 活跃度），逐层出洗码量·GGR·退水·占成四项。
+
+**分类判据是净贡献门槛**：
+
+$$\text{门槛} = \frac{\rho}{1 - \kappa_{\text{share}}} = 2.59\%,
+\qquad \rho = 0.349\%\ (\text{退水}),\ \kappa = 1.660\%\ (\text{占成})$$
+
+**层级平台毛利率低于 2.59% 者，其洗码量越大，平台亏得越多。**
+
+**且须先立一条主语纪律**：本方案的「毛利」「毛利率」**主语一律是平台（庄家）**，绝无例外。
+四层聚合口径（平台 `m` · 会员级 `m_i` · 层级 · 日 Hold%）分子分母定义完全一致。
+**`m_i` 为负，说明这位会员在赢平台的钱。**
+
+**由此得出的一条足以翻转礼遇政策的实测结论**：
+
+$$\gamma^{*} = m - \rho - \kappa = 1.918\% - 0.349\% - 1.660\% = -0.091\% \;(<0)$$
+
+**礼遇每付出 1 元须换来 $1/\gamma^{*}$ 的增量洗码量方能回本，而 $\gamma^{*}$ 为负，
+意即无论引来多少流水都回不了本。** 故赏侧唯一的回本路径**不是「引来更多流水」，
+而是「引来平台毛利率高于门槛的人」**——**不看谁下注多，看谁留得下钱**。
+其直接后果：**本方案不设赏侧金额层，只留过程性激励。**
+
+### 四、以什么标准判断不同类别
+
+**三条线各有其判据**（详见 @sec-r01 / @sec-r02 / @sec-r03）：
+
+| 线 | 判据 | 分层 | 落点 |
+|---|---|---|---|
+| **R-01 靴末段** | 靴位分位 × 注额斜率 × ROI | 三闸递进 | **产品参数**（靴末段限红／提前封盘），**不是账户处罚** |
+| **R-02 团伙同桌** | **提升度 Lift**，非裸同桌率 | `opposite_rate` ＋ `hedge_coverage`（反向**且注额差 ≤10%**） | 关联调查 |
+| **R-03 玩家×荷官** | 按产品基准的 Z 偏离 | $Z \ge 3.2$ 观察／$Z \ge 4$ 调查 | 须过 BH-FDR 门槛 |
+
+**R-01 的落点尤须强调**：产品侧改动**对全体生效、无争议、可回滚**；
+**账户处罚一旦误伤，赔的是终身价值**。
+
+**处置分层与其容错上限**（@sec-fp-tier，$f^{*}(a) = gW/(gW+cHL)$）：
+L2 加密监控 **83.3%**、L3 人工调查 **80.0%**、L4 结算侧处置 **50.0%**、L5 账户侧处置 **17.6%**。
+**动作越重，可容忍的错判越少。**
+
+**四条红线**（@sec-r03）：**Z 高 ≠ 作弊**；**必做对照**（`win_rate_other`——
+此人在其他荷官处的胜率若同样高，则非该荷官之故）；**同局拆单必先合并**（否则 Z 被 $\sqrt{k}$ 倍放大）；
+**并行检验必校正**。
+
 
 ```{r}
 #| label: defects
-#| echo: false
+# echo: false
 tibble::tribble(
   ~缺陷, ~内容, ~严重度, ~修补,
   "D1","尾秒章无任何测试账户排除","🔴 严重","铁律④b 两级排除",
@@ -3276,7 +3541,7 @@ A/B 回答「钱包是否变多」，二者在洗码场景下结论相反。
 
 ```{r}
 #| label: batch2
-#| echo: false
+# echo: false
 tibble::tribble(
   ~表, ~样本行数, ~核心发现, ~级别,
   "**ods_a168_SMR_log**","100,000","⛔ **AML 假设证伪**：非可疑事项报告。列为 `sn/bet02/bet03/bet04/bet22/category/receivetime`，粒度≈局×LV5代理，**语义未明需列注释**","E2",
@@ -3355,7 +3620,7 @@ time : 2025-01-08 ~ 2026-07-11                    ← ✅ 与分析窗重叠
 
 ```{r}
 #| label: verified
-#| echo: false
+# echo: false
 tibble::tribble(
   ~表, ~行数, ~核心发现,
   "ods_a168_agent","46,163","**age022='1' 共 214 个测试代理**，跨全部五级；age006=层级；age001=主键",
@@ -3718,7 +3983,7 @@ Top 网段 `103.199.32/33/56/57`、`49.48.233`、`49.49.225` 系列的
 
 ```{r}
 #| label: ip-abc
-#| echo: false
+# echo: false
 ## ★ 斧正：不再依赖 chunk 选项 eval，改为代码自身前置校验（控制台粘贴亦有效）
 if (need_data(D$ip_agg, "版本ABC",
               c("n_prof_A","n_prof_B","n_prof_C","n_member_eff"))) guard({
@@ -3753,7 +4018,7 @@ if (need_data(D$ip_agg, "版本ABC",
 
 ```{r}
 #| label: ip-min-orders
-#| echo: false
+# echo: false
 if (need_data(D$ip_player, "最小订单数",
               c("n_orders_ip","bet_ip","game_pnl_ip"))) guard({
   ip <- D$ip_player
@@ -3775,7 +4040,7 @@ if (need_data(D$ip_player, "最小订单数",
 
 ```{r}
 #| label: ip-position
-#| echo: false
+# echo: false
 if (need_data(D$ip_agg, "关联数定位", c("n_member_eff"))) guard({
   ## ★ 斧正：ecdf() 收到全 NA 会抛「'x'必需含一个或多个非缺失值」，
   ##    先滤掉非有限值，数据到位但该列有缺失时也不会炸。
@@ -3797,7 +4062,7 @@ if (need_data(D$ip_agg, "关联数定位", c("n_member_eff"))) guard({
 
 ```{r}
 #| label: release-ip_agg
-#| include: false
+# include: false
 ## 用完即释放：D$ip_agg 最后一次引用就在上一个代码块
 release("ip_agg")
 ```
@@ -3812,7 +4077,7 @@ IP订单占比 `20%/50%/80%`、盈利玩家比例 `70%/80%/90%/100%`。
 
 ```{r}
 #| label: ip-grid
-#| echo: false
+# echo: false
 ip_hit <- function(ipp, min_members, min_orders, min_share, min_rate, ver="C"){
   e <- ipp |> dplyr::filter(n_orders_ip>=min_orders, ip_order_share>=min_share)
   agg <- e |> dplyr::group_by(bet_ip) |> dplyr::summarise(
@@ -3848,7 +4113,7 @@ if (need_data(D$ip_player, "IP网格",
 
 ```{r}
 #| label: release-ip_player
-#| include: false
+# include: false
 ## 用完即释放：D$ip_player 最后一次引用就在上一个代码块
 release("ip_player")
 ```
@@ -3881,7 +4146,7 @@ release("ip_player")
 
 ```{r}
 #| label: base-rate
-#| echo: false
+# echo: false
 tibble::tribble(
   ~检验, ~方法, ~判读,
   "① 绝对水平","该进度段的胜率/ROI 点估计 + Wilson CI","CI 跨 0 → 不显著，不得作条件",
@@ -3904,7 +4169,7 @@ tibble::tribble(
 
 ```{r}
 #| label: wilson
-#| echo: false
+# echo: false
 guard({
   purrr::map_dfr(c(5,10,20,30,50,100,200), function(k){
     hw <- if (HAS[["binom"]]) { ci <- binom::binom.confint(round(k*.5),k,methods="wilson")
@@ -3916,6 +4181,28 @@ guard({
 
 **判据说明**：10 局时胜率 95% CI 宽度约 ±0.30——**55% 与 70% 在统计上不可区分**，
 此时任何基于胜率的阈值都是噪声。这是需求 §2.2-5 追问的核心。
+
+::: {.callout-important}
+## 样本门槛统一纪律（2026-08-12 立为常设）
+
+同一平台族内的历次交付件，样本门槛曾出现**十条互不相同的取值**——
+30 天 ≥5 局、≥20 笔、≥30 单、≥50 单、≥66 局、≥100 局、≥100 单，
+以及有效投注 ≥660／≥1,000／≥10,000。**门槛不同不是错，错在其中九条未说明依据。**
+
+1. **比例型判据**（胜率、占比、对打率、同桌率、`late_share`）——
+   以 **Wilson 95% CI 宽度 ≤ 0.15** 于 $p=0.5$ 最不利处反解，得 **n ≥ 30**。
+   凡报比例，**必须同时报其样本量与区间**；只报点估计者不予采信。
+2. **金额型判据**（ROI、净贡献率、盈利额）——**不得沿用比例型门槛**。
+   金额分布重尾（净赢的变异系数实测约 8），须另以变异系数反解，或改报缩尾统计量。
+
+**并附判伪纪律一条**：凡以「命中组的 ROI 高分位（P90/P95）更高」论证阈值更优者，
+须先排除抽样方差——**个体 ROI 的分位随每人样本量按 $1/\sqrt{n}$ 系统性收缩**，
+调低样本门槛即可「制造」更漂亮的 P95。
+外部交付件 `百家乐下注时机风控参数分析报告.md` 第七节的三行数据即为实例：
+固定规则只把订单门槛由 30 提到 50 再到 100，ROI P95 由 38.62% 降至 20.46%，
+收缩倍数 1.235 / 1.888，与纯噪声预测 1.291 / 1.826 **偏离不足 5%**。
+**该尾部无须任何「优势」假设即可解释，故不构成风险强度证据。**
+:::
 
 ## 玩家尾段指标（需求 §5.3，十一项） {#sec-player-tail}
 
@@ -3936,7 +4223,7 @@ guard({
 
 ```{r}
 #| label: strong
-#| echo: false
+# echo: false
 if (need_data(D$player_tail, "强特征",
               c("tail_game_pnl","norm_game_pnl","n_rounds_tail","tail_winrate",
                 "norm_winrate","winrate_diff","tail_roi"))) guard({
@@ -3971,7 +4258,7 @@ if (need_data(D$player_tail, "强特征",
 
 ```{r}
 #| label: tail-grid
-#| echo: false
+# echo: false
 tail_hit <- function(p,min_rounds,min_share,min_wr,min_diff)
   dplyr::filter(p, n_rounds_tail>=min_rounds, tail_share>=min_share,
                 tail_winrate>=min_wr, winrate_diff>=min_diff)
@@ -4028,7 +4315,7 @@ if (need_data(D$player_tail, "尾段网格",
 
 ```{r}
 #| label: principle
-#| echo: false
+# echo: false
 tibble::tribble(
   ~原则, ~核验方法, ~实现位置, ~通过标准,
   "① 分布高位非普通行为","分位定位 + ECDF","@sec-ip-dist","命中阈值 ≥ P95",
@@ -4054,7 +4341,7 @@ tibble::tribble(
 
 ```{r}
 #| label: cap-model
-#| echo: false
+# echo: false
 tibble::tribble(
   ~维度, ~代号, ~数据源, ~构成指标, ~状态,
   "资金能力","CAP","bet02 + **member_dtl** + tablelimit + in_out_m","投注规模分位、单注/桌限比、净存款","🟡 部分",
@@ -4070,7 +4357,7 @@ tibble::tribble(
 
 ```{r}
 #| label: cap-score
-#| echo: false
+# echo: false
 cap_score <- function(x){ r <- rank(x, na.last="keep", ties.method="average")
   round(100*(r-0.5)/sum(!is.na(x)),1) }   # 分位映射，稳健于极端值
 if (need_data(D$player_tail, "能力值",
@@ -4085,7 +4372,7 @@ if (need_data(D$player_tail, "能力值",
 
 ```{r}
 #| label: release-player_tail
-#| include: false
+# include: false
 ## 用完即释放：D$player_tail 最后一次引用就在上一个代码块
 release("player_tail")
 ```
@@ -4131,7 +4418,7 @@ release("player_tail")
 
 ```{r}
 #| label: req3-map
-#| echo: false
+# echo: false
 tibble::tribble(
   ~需求编号, ~需求原文关键条件, ~工程口径, ~主表字段, ~本报告编号,
   "1 策略性风控","每局第50把及之后才投注，订单占比≥70%，订单数>100",
@@ -4156,8 +4443,33 @@ tibble::tribble(
 百家乐一靴 60–80 把，实测桌间差异显著。同样是「第 50 把」，
 在 60 把的靴里是 **83% 靴位**（末段），在 80 把的靴里只是 **63% 靴位**（中段）。
 固定绝对局序 = 对短靴桌系统性偏严、对长靴桌系统性偏松。
-**修正**：同时输出**相对靴位** `round_no / max_round_in_shoe`，
-并给出与「50」等价的相对分位，让阈值在桌间可比。
+
+**2026-08-12 斧正：判据已由绝对局号改为相对靴位。**
+外部交付件 `百家乐下注时机风控参数分析报告.md` 以全量注单实测靴长分布——
+**均值 49.86 把、P50 = 50、P75 = 52、P90 = 54、P99 = 58**。
+据此现算，`round_no >= 50` 的相对靴位为 **100.3%**（以均值计），
+即该判据实际筛出的是「**靴的最后一局，及长于中位数的那半数靴**」，
+**约半数牌靴根本到不了第 50 把**，其成员一律被判为无末段下注，`late_share` 被系统性压低。
+故 §R01、§B01、§B01-D 三处一律改为
+`shoe_pos = round_no / max_round_in_shoe >= 0.80`，并各输出常量列 `late_def` 作口径锁。
+
+::: {.callout-warning}
+## 须辨明：新判据固定的是**局位**，不是下注占比
+
+`shoe_pos ≥ 0.80` 恒定的是**靴内的局位区间**（每靴最后两成的局），
+**不是** `late_share` 恒为 20%。`late_share` 仍由该玩家的实际下注行为决定，
+可以是 0%、10%、70%、100%；20% 只是**均匀下注、零靴位偏好这一零假设下的期望值**。
+修好一个定义错误，不可顺手制造一个「定义—统计量混淆」。
+:::
+
+**受影响输出**：`R01_late_shoe.csv`、`B01_bt_panel.csv`、`B01_bt_panel_delta.csv`
+三份交付件须重跑重导；未重导前，凡引用 `late_share` 者一律按旧口径
+（第 50 把及以后的订单占比）理解，**且不得与重导后的数字并列比较**。
+旧档不删，改名归档为 `_v1_superseded`，作审计证据。
+
+**并须记明：阈值不随坐标搬家。** 现行三闸的 `late_share >= 0.70` 是在旧坐标的分布上选出的，
+新坐标下其分位位置已变，**必须从新分布上重新反解**（照 @sec-stability 的分位法），
+不得原样沿用——**把旧刻度按在新坐标上，就是以「沿用」为名的手拍阈值。**
 
 **缺陷二 · 「晚下注占比高」不等于「有优势」。**
 这正是本报告 @sec-tail-verdict 已经用 139 天全量数据裁定过的同一类错误：
@@ -4182,7 +4494,7 @@ tibble::tribble(
 
 ```{r}
 #| label: r01-grid
-#| echo: false
+# echo: false
 COLS_R01 <- c("uid","n_orders_all","n_orders_late","late_share",
               "stake_ramp","roi_late","roi_early","stake_late","game_pnl_late")
 if (need_data(D$r01, "策略性风控", COLS_R01)) guard({
@@ -4217,7 +4529,7 @@ if (need_data(D$r01, "策略性风控", COLS_R01)) guard({
 
 ```{r}
 #| label: r01-decision
-#| echo: false
+# echo: false
 if (need_data(D$r01, "策略性风控", c("late_share","roi_late","roi_early","stake_late"))) guard({
   x <- D$r01 |> dplyr::mutate(dplyr::across(
         dplyr::any_of(c("late_share","roi_late","roi_early","stake_late","game_pnl_late")),
@@ -4289,6 +4601,21 @@ $$\mathbb{E}[\text{same}] \;=\; \sum_{(t,d)} \frac{n_a(t,d)\cdot n_b(t,d)}{N(t,d
 其中 $n_a(t,d)$ 是会员 a 在桌 $t$ 日 $d$ 的局数，$N(t,d)$ 是该桌该日总局数。
 **Lift = 实测同桌局数 ÷ 期望同桌局数**。Lift ≈ 1 = 巧合；Lift ≥ 3 才值得看。
 
+**修正一之附则 · 方向判定不得用 `MAX(bet09)`（2026-08-12 新增）。**
+外部交付件 `百家乐同桌对打风控分析报告.md` §11.1 指出：
+若一名玩家在**同一局同时押庄与押闲**，`MAX(bet09)` 会按字符串序任取其一，
+把双向下注者错误标记为单一方向。**正解是先判方向唯一性再入对**：
+
+```sql
+GROUP BY session_id, round_id, player_id
+HAVING COUNT(DISTINCT bet_type) = 1
+```
+
+混合方向的玩家局应**单独作为一类行为**分析（本方案以 `is_self_hedge` 承之，见 §B01），
+不得混入对打对统计。此条与 §DX-01 查获的
+「`LIKE '%BANK%'` 会误纳 BankerDragonBonus 20.7 万笔」是**同一类错误的两个面**：
+**方向判定必须等值且唯一，既不能模糊匹配，也不能任取其一。**
+
 **修正二 · 同桌不等于协同，对押才是。**
 同桌只是「在同一张桌」。真正的洗码套利指纹是 @sec-e1-dist 已实证的
 **完美对押**（999 对，最长 1,185 把全反向）。同桌率必须与**对押率**联合判定。
@@ -4307,7 +4634,7 @@ $$\mathbb{E}[\text{same}] \;=\; \sum_{(t,d)} \frac{n_a(t,d)\cdot n_b(t,d)}{N(t,d
 
 ```{r}
 #| label: r02-grid
-#| echo: false
+# echo: false
 COLS_R02 <- c("uid1","uid2","n_same_orders","same_rate","lift")
 if (need_data(D$r02, "团伙同桌", COLS_R02)) guard({
   x <- D$r02 |> dplyr::mutate(dplyr::across(
@@ -4339,7 +4666,7 @@ if (need_data(D$r02, "团伙同桌", COLS_R02)) guard({
 
 ```{r}
 #| label: r02-community
-#| echo: false
+# echo: false
 if (need_data(D$r02, "团伙同桌", c("uid1","uid2","same_rate","lift"))) guard({
   if (!HAS[["igraph"]]) {
     tibble::tibble(状态="⬜ igraph 未安装",
@@ -4401,6 +4728,34 @@ if (need_data(D$r02, "团伙同桌", c("uid1","uid2","same_rate","lift"))) guard
 | 订单门槛 | 订单 > 100 笔 | 订单 ≥ 30 且 Z ≥ 3.2 已命中 1,057 组合 / 181 荷官 / 关联注单盈利 272.55 万 | 订单 ≥ 30 为观察池，**≥100 为优先调查加严条件** |
 | 判定力 | 命中即视为作弊 | **Z-score 只能证明结果异常，不能单独证明作弊** | 必须叠加「异常是否集中于该荷官」的对照检验 |
 
+**其一 · 命中池的隐含 ROI 是选择效应，不是漏损（2026-08-12 补）。**
+该阈值报告的命中池由「Z ≥ 3.2 **且注单盈利 > 0**」定义，即**在结果上选样**。
+以其自载数字现算：关联投注 913.47 万、注单盈利 272.55 万，
+隐含 ROI = **29.84%**，约为百家乐理论抽水率（1.15%~1.60%）的 **十九倍**。
+**故凡按此口径外推的「关联漏损」皆为上界，不是漏损估计。**
+本报告凡引用该池金额一律标注上界；进入经济评估时须改用未按结果选样的口径。
+
+**其二 · 对照检验的空值语义（采自 `三类风控新增指标说明.md`）。**
+当该会员在**其他荷官处没有下注记录**时，「其他荷官胜率」与「荷官胜率差」皆为 **NULL**。
+
+::: {.callout-important}
+## NULL 不是 0，也不是 100%——它是「没有基线」
+
+`win_rate_gap = NULL` **不等于**其他荷官胜率为 0%，**也不等于**胜率差为 100 个百分点。
+把 NULL 当 0 处理，会让「只在一个荷官处下过注」的会员自动跃升为最强证据。
+
+**故本报告为玩家—荷官关联单列一档证据等级：**
+
+| 档 | 条件 | 证据等级 | 可采取的动作 |
+|---|---|---|---|
+| **甲** | 有其他荷官样本（对照组有效局数 ≥ 30）且目标荷官显著更高 | 完整 | 可进优先调查 |
+| **乙** | 有其他荷官样本但对照组有效局数 < 30 | **下调一级** | 仅观察，须补样本后复评 |
+| **丙** | 无其他荷官样本，`win_rate_gap = NULL` | **不成立** | **不得作为证据**，只作画像 |
+
+此档与泄漏矩阵的四类结论同源同旨：
+**「未证」与「不通过」不可混为一谈，「无基线」与「基线为零」同样不可混为一谈。**
+:::
+
 阈值报告的回测阶梯（Z≥3.2 → 1,057 组合；Z≥4 → 87 组合；Z≥5 → 仅 2 组合）
 说明：**Z≥5 作为唯一阈值过严，Z≥3.2 作为唯一阈值过宽**。
 本报告采纳其分层建议——**Z≥3.2 观察池 / Z≥4 优先调查**。
@@ -4417,7 +4772,7 @@ if (need_data(D$r02, "团伙同桌", c("uid1","uid2","same_rate","lift"))) guard
 
 ```{r}
 #| label: r03-dual
-#| echo: false
+# echo: false
 COLS_R03 <- c("uid","dealer_id","stake_amount","profit_amount",
               "win_rate","n_related_orders","n_rounds_eff","z_score")
 if (need_data(D$r03, "荷官关联", COLS_R03)) guard({
@@ -4426,8 +4781,9 @@ if (need_data(D$r03, "荷官关联", COLS_R03)) guard({
                         "n_rounds_eff","z_score","win_rate_other")),
         ~suppressWarnings(as.numeric(.x))))
   if (!"win_rate_other" %in% names(x)) x$win_rate_other <- NA_real_
-  ## 哨兵剔除（@sec-r03-fdr）：dealer_id ∈ {−1,0,空} 非真实荷官，先逐出检验总体
-  x <- x[!trimws(as.character(x$dealer_id)) %in% c("-1","0",""), , drop = FALSE]
+  ## ★ 2026-08-12：哨兵已于装载处一次剔清（见「资格分层」块），此处不再重复筛，
+  ##   改为**断言式自检**——若上游分层失效而漏入哨兵，此处即刻显形，不静默带病往下算。
+  stopifnot(!any(is_sentinel(x$dealer_id)))
   rule <- function(d, nm, note) tibble::tibble(
     规则 = nm,
     命中组合数 = nrow(d),
@@ -4455,13 +4811,13 @@ if (need_data(D$r03, "荷官关联", COLS_R03)) guard({
 
 ```{r}
 #| label: r03-dealer-rank
-#| echo: false
+# echo: false
 if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","profit_amount","stake_amount"))) guard({
   x <- D$r03 |> dplyr::mutate(dplyr::across(
         dplyr::any_of(c("z_score","profit_amount","stake_amount","n_rounds_eff")),
         ~suppressWarnings(as.numeric(.x))))
-  ## 哨兵剔除（@sec-r03-fdr）：非真实荷官不得入榜
-  x <- x[!trimws(as.character(x$dealer_id)) %in% c("-1","0",""), , drop = FALSE]
+  ## ★ 2026-08-12：同上——哨兵已于装载处剔清，此处只作断言，不重复筛。
+  stopifnot(!any(is_sentinel(x$dealer_id)))
   x |> dplyr::filter(n_rounds_eff >= 30, z_score >= 3.2) |>
     dplyr::group_by(dealer_id) |>
     dplyr::summarise(
@@ -4502,15 +4858,18 @@ if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","profit_amount","st
 
 ```{r}
 #| label: r03-fdr
-#| echo: false
+# echo: false
 if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","n_rounds_eff"))) guard({
   num <- function(v) suppressWarnings(as.numeric(v))
   x <- D$r03
   x$z_score      <- num(x$z_score)
   x$n_rounds_eff <- num(x$n_rounds_eff)
-  sent   <- trimws(as.character(x$dealer_id)) %in% c("-1","0","")
-  n_sent <- sum(sent, na.rm = TRUE)
-  x <- x[!sent & is.finite(x$z_score), , drop = FALSE]
+  ## ★ 2026-08-12：哨兵已于装载处剔清（见「资格分层」块），此处 n_sent 恒为 0；
+  ##   保留该量只为使本节的「检验总体如何得来」一句仍可现算，其值今取自分层账。
+  sent   <- is_sentinel(x$dealer_id)
+  n_sent <- if (!is.null(QUAL$r03)) QUAL$r03$n_sent else sum(sent, na.rm = TRUE)
+  stopifnot(!any(sent))
+  x <- x[is.finite(x$z_score), , drop = FALSE]
   N  <- nrow(x)
   hit  <- function(t) sum(x$z_score >=  t & x$n_rounds_eff >= 30, na.rm = TRUE)
   expn <- function(t) N * stats::pnorm(-t)
@@ -4568,7 +4927,7 @@ if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","n_rounds_eff"))) g
 
 ```{r}
 #| label: provenance-sentinel
-#| echo: false
+# echo: false
 ## 血统自检：对每份荷官键导出件，数其哨兵行数 → 判定过滤前／过滤后。
 ##   纪律：判定一律由本次装载的数据现算，不接受任何静态声明。
 SENT <- c("-1","0","")
@@ -4802,7 +5161,7 @@ $$\text{观测统计量} \;\longrightarrow\; \text{共同脆弱度／Copula 依�
 
 ```{r}
 #| label: release-r03
-#| include: false
+# include: false
 ## ★ 跨释放点派生物（2026-08-10 立）：@sec-dealer-pace 位于本释放点之后 1,200 余行，
 ##   若在彼处取 D$r03，拿到的是已释放的 NULL——症状与「文件未就位」完全相同。
 ##   故在此先算出该节所需的**每荷官有效局数**（约 300 行，内存可忽略）并留存，
@@ -4810,7 +5169,7 @@ $$\text{观测统计量} \;\longrightarrow\; \text{共同脆弱度／Copula 依�
 R03_PACE <- if (!is.null(D$r03) && is.data.frame(D$r03) &&
                 all(c("dealer_id","n_rounds_eff") %in% names(D$r03))) {
   z <- D$r03[, c("dealer_id","n_rounds_eff")]
-  z <- z[!trimws(as.character(z$dealer_id)) %in% c("-1","0",""), , drop = FALSE]  # 哨兵剔除（@sec-r03-fdr）
+  stopifnot(!any(is_sentinel(z$dealer_id)))   # ★ 2026-08-12：哨兵已于装载处剔清，此处只作断言
   z$n_rounds_eff <- suppressWarnings(as.numeric(z$n_rounds_eff))
   z <- z[is.finite(z$n_rounds_eff), , drop = FALSE]
   stats::aggregate(n_rounds_eff ~ dealer_id, data = z, FUN = sum)
@@ -4823,7 +5182,7 @@ release("r03")
 
 ```{r}
 #| label: r03-timeseries
-#| echo: false
+# echo: false
 COLS_R03B <- c("bet_date","uid","dealer_id","stake_amount","profit_amount",
                "win_rate","n_related_orders","n_rounds_eff","z_score")
 if (need_data(D$r03b, "荷官双轨回测", COLS_R03B)) guard({
@@ -4917,7 +5276,7 @@ if (need_data(D$r03b, "荷官双轨回测", COLS_R03B)) guard({
 
 ```{r}
 #| label: r03b-status
-#| echo: false
+# echo: false
 ## 本节的日维度依赖与因果口径一律现算，不写死结论：
 ##   R03b 就位与否、覆盖多少天与多少周、面板是否含对照组标识，全部读数据得出。
 COLS_R03B_S <- c("bet_date","uid","dealer_id")
@@ -4946,7 +5305,7 @@ if (need_data(D$r03b, "荷官双轨回测", COLS_R03B_S)) guard({
 
 ```{r}
 #| label: release-r03b
-#| include: false
+# include: false
 ## 用完即释放：D$r03b 的最后一次引用在上一个代码块（r03b-status）
 release("r03b")
 ```
@@ -4984,7 +5343,7 @@ release("r03b")
 
 ```{r}
 #| label: risktype-map
-#| echo: false
+# echo: false
 tibble::tribble(
   ~类型, ~代号, ~一句话定义, ~核心判别式, ~主要误报源, ~处置落点,
   "同 IP 下盈利用户","**T1**","一个门牌下的人集体在赢庄家",
@@ -5062,7 +5421,7 @@ CAS 在本方案中是**新引入**的口径，尚无历史基线可对齐，
 
 ```{r}
 #| label: t2-sortino
-#| echo: false
+# echo: false
 COLS_T2 <- c("member_id","bet_date","stake","game_pnl")
 if (need_data(D$daily_roi, "技术型", COLS_T2)) guard({
   d <- D$daily_roi |> dplyr::mutate(dplyr::across(
@@ -5104,7 +5463,7 @@ if (need_data(D$daily_roi, "技术型", COLS_T2)) guard({
 
 ```{r}
 #| label: release-daily_roi
-#| include: false
+# include: false
 ## 用完即释放：D$daily_roi 最后一次引用就在上一个代码块
 release("daily_roi")
 ```
@@ -5137,7 +5496,7 @@ $\epsilon$ 与 $\tau$ **一律由数据的分位数给出**，不写死。
 
 ```{r}
 #| label: t3-arb
-#| echo: false
+# echo: false
 COLS_T3 <- c("member_id","stake","game_pnl","net_pnl","rebate")
 if (need_data(D$t3, "打水型", COLS_T3)) guard({
   x <- D$t3 |> dplyr::mutate(dplyr::across(
@@ -5183,7 +5542,7 @@ if (need_data(D$t3, "打水型", COLS_T3)) guard({
 
 ```{r}
 #| label: release-t3
-#| include: false
+# include: false
 ## 用完即释放：D$t3 最后一次引用就在上一个代码块
 release("t3")
 ```
@@ -5216,7 +5575,7 @@ C-06「同IP对打对」实测返回**零结果**。当时判断这不该读作�
 
 ```{r}
 #| label: bet09-taxonomy
-#| echo: false
+# echo: false
 tibble::tribble(
   ~层级, ~投注产品, ~注单数, ~占比, ~会员数, ~风控含义,
   "**主线**","Banker","46,821,669","37.26%","571,169","对冲判别的正方向",
@@ -5487,7 +5846,7 @@ except Exception as _e:
 
 ```{r}
 #| label: t4-seedlog
-#| echo: false
+# echo: false
 sl <- tryCatch(reticulate::py$T4_SEEDLOG, error = function(e) NULL)
 if (length(sl)) {
   dplyr::bind_rows(lapply(sl, function(x) tibble::as_tibble(lapply(x, as.character)))) |>
@@ -5503,7 +5862,7 @@ if (length(sl)) {
 
 ```{r}
 #| label: t4-table
-#| echo: false
+# echo: false
 t4 <- tryCatch(reticulate::py$T4_TBL, error = function(e) NULL)
 if (length(t4)) {
   dplyr::bind_rows(lapply(t4, tibble::as_tibble)) |>
@@ -5584,7 +5943,7 @@ P3 试运行仍须随机对照组（@sec-plan），但**代理结算审计可以
 
 ```{r}
 #| label: score-design
-#| echo: false
+# echo: false
 评分设计 <- tibble::tribble(
   ~实体, ~维度, ~赏罚, ~行业解释, ~数据源, ~实装状态,
   ## ── 玩家 ────────────────────────────────────────────────────────────
@@ -5914,7 +6273,7 @@ for ent, (path, dims) in (ENT.items() if ENV_OK else []):
 
 ```{r}
 #| label: radar-embed
-#| echo: false
+# echo: false
 #| output: asis
 ## plotly 片段一律用显式 raw-html 围栏包住：片段自带缩进，
 ##   裸 asis 会被 Pandoc 当成缩进代码块而显示成源码。围栏边界确定、与缩进无关。
@@ -5948,7 +6307,7 @@ if (length(it)) {
 
 ```{r}
 #| label: radar-summary
-#| echo: false
+# echo: false
 s <- tryCatch(reticulate::py$SCORE_TBL, error = function(e) NULL)
 if (length(s)) {
   dplyr::bind_rows(lapply(s, tibble::as_tibble)) |>
@@ -5968,7 +6327,7 @@ if (length(s)) {
 
 ```{r}
 #| label: dim-expand
-#| echo: false
+# echo: false
 tibble::tribble(
   ~实体, ~现有维度, ~可扩编维度, ~为什么值得加, ~需要哪张表, ~状态,
   "**玩家**","已实装 7 维 + 本轮补列 3 维（投注产品结构熵·索提诺稳定性·生命周期阶段）",
@@ -6073,7 +6432,7 @@ Zender 为 BCLC 所作的高限百家乐评估给出行业基准：**常规发�
 
 ```{r}
 #| label: dealer-pace
-#| echo: false
+# echo: false
 ## ★ 两轮斧正记此（2026-08-10）：
 ##   第一轮改键名——原写 `D$R03_player_dealer`，而装载键为 `r03`；
 ##   第二轮改次序——`release("r03")` 位于本节之前 1,200 余行，纵然键名对了，
@@ -6132,7 +6491,7 @@ if (is.null(R03_PACE) || !nrow(R03_PACE)) {
 
 ```{r}
 #| label: ukgc-map
-#| echo: false
+# echo: false
 UK <- tibble::tribble(
   ~`UKGC 指标类`, ~`本方案对应特征`, ~`数据来源`, ~`本平台可得性`,
   "消费额（customer spend）", "投注额、有效投注、净输赢",
@@ -6199,7 +6558,7 @@ DX-01 全量普查（139 天，1.2565 亿注单）已确认投注产品编码为
 
 ```{r}
 #| label: subclass-bet09
-#| echo: false
+# echo: false
 BET09 <- tibble::tribble(
   ~层级, ~投注产品, ~注单数, ~会员数, ~理论庄家优势, ~风控意义,
   "主线","Banker",       46821669L, 571169L, "≈1.06%","对押判别的正方向；Z-score 基准取决胜局口径约 50.68%（45.86% 为含和局的无条件概率，另作他用）",
@@ -6248,7 +6607,7 @@ BET09 |> dplyr::select(层级, 投注产品, 注单数, 占比, 会员数, 人�
 
 ```{r}
 #| label: bet09-action
-#| echo: false
+# echo: false
 tibble::tribble(
   ~层级, ~投注产品, ~漏损从哪来, ~判别要点, ~措施, ~业绩影响与量级,
   "主线","Banker / Player","**对押打水**：同局同额押两边，游戏输赢锁在零，钱从退水与占成出",
@@ -6303,7 +6662,7 @@ tibble::tribble(
 
 ```{r}
 #| label: subclass-frame
-#| echo: false
+# echo: false
 tibble::tribble(
   ~实体, ~一级分类, ~子分类维度, ~所需导出, ~用途,
   "**会员**","T1/T2/T3/T4 风险型","× 退水档位 × 洗码量四分位 × 活跃度（日数）× 投注产品结构熵 × 生命周期阶段",
@@ -6342,7 +6701,7 @@ tibble::tribble(
 
 ```{r}
 #| label: timeguard
-#| echo: false
+# echo: false
 CUTOFF <- as.Date("2026-08-07")
 tibble::tribble(
   ~表, ~时间字段, ~应有约束, ~检出后的处置, ~SQL,
@@ -6357,7 +6716,7 @@ tibble::tribble(
 
 ```{r}
 #| label: timeguard-run
-#| echo: false
+# echo: false
 if (need_data(D$anchor, "时间一致性", character(0))) guard({
   a <- D$anchor
   tcols <- names(a)[vapply(a, function(x)
@@ -6531,7 +6890,7 @@ policy_cap <- function(m, rho, kappa, V, H,
 
 ```{r}
 #| label: policy-table
-#| echo: false
+# echo: false
 COLS_SEG <- c("segment","validbet","ggr","rebate","commission","n_member")
 if (need_data(D$seg_econ, "赏罚经济", COLS_SEG)) guard({
   s <- D$seg_econ |> dplyr::mutate(dplyr::across(
@@ -6571,7 +6930,7 @@ if (need_data(D$seg_econ, "赏罚经济", COLS_SEG)) guard({
 
 ```{r}
 #| label: policy-curve
-#| echo: false
+# echo: false
 if (need_data(D$seg_econ, "赏罚经济", c("segment","validbet","ggr","rebate"))) guard({
   s <- D$seg_econ |> dplyr::mutate(dplyr::across(
         dplyr::any_of(c("validbet","ggr","rebate","commission","tenure_months")),
@@ -6897,7 +7256,7 @@ except Exception as _e:
 
 ```{r}
 #| label: arena-table
-#| echo: false
+# echo: false
 a  <- tryCatch(reticulate::py$ARENA_TBL,  error = function(e) NULL)
 dg <- tryCatch(reticulate::py$ARENA_DIAG, error = function(e) NULL)
 if (length(a)) {
@@ -6948,7 +7307,7 @@ if (length(a)) {
 
 ```{r}
 #| label: arsenal-map
-#| echo: false
+# echo: false
 tibble::tribble(
   ~方法, ~回答什么问题, ~在本方案的落位, ~产出, ~状态,
   "**XGBoost**","谁最像已知风险用户（监督）","竞技场冠军模型 @sec-py-arena","风险分 risk_score","✅ 已跑",
@@ -7401,7 +7760,7 @@ except Exception as _e:
 
 ```{r}
 #| label: arsenal-table
-#| echo: false
+# echo: false
 ar <- tryCatch(reticulate::py$ARSENAL_TBL, error = function(e) NULL)
 if (length(ar)) {
   dplyr::bind_rows(lapply(ar, tibble::as_tibble)) |>
@@ -7438,7 +7797,7 @@ if (length(ar)) {
 
 ```{r}
 #| label: bench-baselines
-#| echo: false
+# echo: false
 tibble::tribble(
   ~维度, ~"一般统计学做法（基准）", ~本方案做法, ~凭什么说更优, ~失败则,
   "**中心估计**","算术均值","分位数（P50/P90/P99）+ 洗码量加权均值",
@@ -7673,7 +8032,7 @@ bench_vs <- function(strategy, baselines, labels = names(baselines)) {
 
 ```{r}
 #| label: bench-run
-#| echo: false
+# echo: false
 COLS_BT2 <- c("member_id","bet_date","stake","game_pnl","net_pnl")
 if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
   p <- prep_bt(D$bt_panel); folds <- purged_folds(p$bet_date)
@@ -7717,7 +8076,7 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
 ```{r}
 #| label: bench-chart
 #| fig-height: 4.6
-#| echo: false
+# echo: false
 if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
   p <- prep_bt(D$bt_panel); folds <- purged_folds(p$bet_date)
   pfp <- .hash(list(nrow(p), names(p), .fp_input(p)))   # 面板指纹只算一次，供折级检查点复用
@@ -7839,7 +8198,7 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
 
 ```{r}
 #| label: bench-window-grid
-#| echo: false
+# echo: false
 if (need_data(D$bt_panel, "策略回测", COLS_BT2)) guard({
   p <- prep_bt(D$bt_panel)
   pfp <- .hash(list(nrow(p), names(p), .fp_input(p)))
@@ -7957,7 +8316,7 @@ $$\text{净增益}=\underbrace{\max(\textstyle\sum\text{命中者净赢},0)\time
 
 ```{r}
 #| label: bt-protocol
-#| echo: false
+# echo: false
 ## 设置一栏一律由 BT_PARAMS 与实际面板现算，不写死数字——改参数即同步。
 BT_AXIS <- if (!is.null(D$bt_panel) && is.data.frame(D$bt_panel) &&
                "bet_date" %in% names(D$bt_panel)) {
@@ -8019,7 +8378,7 @@ tibble::tribble(
 
 ```{r}
 #| label: bt-run
-#| echo: false
+# echo: false
 COLS_BT <- c("member_id","bet_date","stake","game_pnl","net_pnl")
 if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
   p <- prep_bt(D$bt_panel)
@@ -8056,7 +8415,7 @@ if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
 
 ```{r}
 #| label: bt-verdict
-#| echo: false
+# echo: false
 if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
   p <- prep_bt(D$bt_panel)
   folds <- purged_folds(p$bet_date)
@@ -8149,7 +8508,7 @@ $$f^{*}(a) \;=\; \frac{g\,W}{g\,W + c\,H\,L}$$
 
 ```{r}
 #| label: fp-tier
-#| echo: false
+# echo: false
 ## 赢输额之比 W/L：有回测结果时取实测，否则取 1（等量假设）并在表内注明
 FP_WL <- if (exists("BT_WL") && is.finite(BT_WL) && BT_WL > 0) BT_WL else 1
 FP_TAB <- ACT_TIER
@@ -8195,7 +8554,7 @@ $g$、$c$、$H$ 与经济增益模型中的回收率、流失系数同属**情�
 
 ```{r}
 #| label: roster-tiers
-#| echo: false
+# echo: false
 ## 名录一律读 @sec-radar 现场落盘的评分件（数据库/_scored_{实体}.csv），
 ## 不另起一套口径；文件由该章在本次渲染中写出，故此处必与雷达同源。
 ROSTER_ENT <- c("玩家", "荷官", "代理", "风控专员")
@@ -8259,7 +8618,7 @@ if (!length(ROSTER)) {
 
 ```{r}
 #| label: roster-list
-#| echo: false
+# echo: false
 ## 全量名单在 数据库/_scored_{实体}.csv 内逐行可查；网页内嵌全量会令浏览器不堪负荷，
 ## 故此处按分档各取两端各 100 名可检索呈现，并注明全量文件与行数。
 if (length(ROSTER)) {
@@ -8302,7 +8661,7 @@ if (length(ROSTER)) {
 
 ```{r}
 #| label: roster-uplift
-#| echo: false
+# echo: false
 ## 业绩增幅：以回测逐折净增益合计对同期投注与 GGR 取比，全部现算。
 ## 净增益 = 回收(命中者净赢×回收率) − 误伤成本(好客净贡献×流失系数)，口径见 @sec-econ。
 if (need_data(D$bt_panel, "策略回测", COLS_BT)) guard({
@@ -8397,7 +8756,7 @@ $$\gamma_i=\gamma^{*}\sum_{d\in D^{+}_e} w_d\,u^{+}_{i,d},\qquad
 
 ```{r}
 #| label: roster-dim-amounts
-#| echo: false
+# echo: false
 ## 逐维赏罚：维度清单与方向取自 @sec-radar 本次实际用上的维度（非静态清单），
 ## 分位与分档线按各维现算，幅度按等权分摊后乘以该实体上限。
 ED <- tryCatch(reticulate::py$ENT_DIMS, error = function(e) NULL)
@@ -8465,7 +8824,7 @@ if (!length(ROSTER) || !length(ED)) {
 
 ```{r}
 #| label: roster-amounts
-#| echo: false
+# echo: false
 ## 幅度参数一律现算：分档线与极值取自评分件，上限取自 @sec-econ 的赏罚引擎
 ## （玩家、代理走退水口径）与本次回测净增益（荷官、风控专员走奖金池口径）。
 BONUS_SHARE <- c(荷官 = 0.02, 风控专员 = 0.03)   # 外生常数，与回收率/流失系数同类
@@ -8568,7 +8927,7 @@ if (!length(ROSTER)) {
 
 ```{r}
 #| label: release-seg_econ
-#| include: false
+# include: false
 ## 用完即释放：D$seg_econ 的最后一次引用在 @sec-roster-amount 的幅度上限块
 release("seg_econ")
 ```
@@ -8600,7 +8959,7 @@ release("seg_econ")
 
 ```{r}
 #| label: qe-build
-#| echo: false
+# echo: false
 ## ── ① 处置组与对照候选 ───────────────────────────────────────────────
 ## 内存纪律：先在**会员级**做匹配（约十二万行），匹配定案后才取那七百余人的日序列。
 QE <- NULL
@@ -8666,7 +9025,7 @@ if (is.null(QE)) {
 
 ```{r}
 #| label: qe-psm
-#| echo: false
+# echo: false
 ## ── ② 倾向得分匹配：以处置前 28 日的可观测特征配对 ──────────────────
 QE_M <- NULL
 if (!is.null(QE)) {
@@ -8772,7 +9131,7 @@ if (is.null(QE_M)) {
 
 ```{r}
 #| label: qe-did
-#| echo: false
+# echo: false
 #| fig-height: 4.2
 ## ── ③ 事件研究式双重差分：逐期估计，解禁日右删失 ─────────────────────
 QE_ES <- NULL
@@ -8872,7 +9231,7 @@ if (is.null(QE_ES)) {
 
 ```{r}
 #| label: qe-power
-#| echo: false
+# echo: false
 ## ── ④ 功效核算：先算最小可检出效应，再谈结论 ─────────────────────────
 if (is.null(QE_ES)) {
   aurora_kb(tibble::tibble(
@@ -8929,7 +9288,7 @@ $A$ 为处置后活跃日数、$T$ 为观察期长度（故 $\hat H$ 即**实测
 
 ```{r}
 #| label: qe-params
-#| echo: false
+# echo: false
 ## ── 以匹配对照实测 g / c / H 三系数 ─────────────────────────────────
 ## 纪律：实测值只在**匹配平衡通过且平行趋势通过**时才取用；否则一律回落外生值，
 ##   并在表内明写「回落」二字——绝不以一个未过关的估计去替换一个诚实的假设。
@@ -9005,7 +9364,7 @@ aurora_kb(tibble::tibble(
 
 ```{r}
 #| label: qe-sens
-#| echo: false
+# echo: false
 ## ── 窗长敏感性：三处「尚待实测」的常数，以四档并跑代替再拍一个数 ──────
 ## 判据不是「哪一档最好」——那正是选择偏差；判据是**结论是否随窗长翻转**。
 QE_SENS <- NULL
@@ -9108,7 +9467,7 @@ if (is.null(QE_SENS)) {
 
 ```{r}
 #| label: release-bt_panel
-#| include: false
+# include: false
 ## 用完即释放：D$bt_panel 的最后一次引用在 @sec-roster 的业绩增幅块
 
 if (!exists("WF_DAYS")) WF_DAYS <- as.Date(character(0))  # 捕获失败时的兜底
@@ -9951,7 +10310,7 @@ $P(n{=}1)$ 自此不可由该件现算，须回引本章之数。
 
 ```{r}
 #| label: segment
-#| echo: false
+# echo: false
 tibble::tribble(
   ~分群, ~代号, ~能力特征, ~处置, ~商业动作, ~预期效果,
   "核心价值客","V1","CAP高·COO低·TIM正常·EFF符合庄家优势","🏆赏","返水上浮、专属客服、优先桌位","留存↑ ARPU↑",
@@ -9982,7 +10341,7 @@ tibble::tribble(
 
 ```{r}
 #| label: labels
-#| echo: false
+# echo: false
 tibble::tribble(
   ~层, ~来源, ~粒度, ~性质, ~时间窗E2, ~与2026重叠, ~用途,
   "**L0**","`alert_ip_setting` 17 IP","IP","人工确认","2022–2025","部分","**一票否决检验**（不可估精度）",
@@ -10012,7 +10371,7 @@ E1 全局查询证明 `dailyreport_member` 与 `bet02` 时间窗几乎完全重�
 
 ```{r}
 #| label: purged
-#| echo: false
+# echo: false
 ## ── 时间隔离的两个参数须分列，混为一谈即生死代码 ────────────────────
 ##   · gap_days（前置空窗）：测试窗**之前**空出的天数。前向推进的净化回测
 ##     所需者正是此项，本方案承诺 7 日。
@@ -10143,7 +10502,7 @@ wf_fold_assert <- function(health, gap_expect = BT_PARAMS$embargo){
 
 ```{r}
 #| label: leak
-#| echo: false
+# echo: false
 tibble::tibble(
   协议=c("朴素 5-fold（有泄漏）","Purged Walk-Forward","CPCV 多路径 均值±SD"),
   `PR-AUC`=NA_real_, Lift=NA_real_, `95% CI`=NA_character_,
@@ -10232,7 +10591,7 @@ $\mathrm{TRUTH}_{tr}(f)=\{m:\text{首次完全反向日}<\text{该折训练窗�
 
 ```{r}
 #| label: wf-health
-#| echo: false
+# echo: false
 ## 折体检只需**营业日**，不需整张面板——面板逾千万行，取 unique 后仅百余日，
 ## 死代码自证亦在此百余点观测上复算，内存开销可忽略。
 ## 取用释放前留存的营业日向量，不回头取已 release() 的大表
@@ -10265,7 +10624,7 @@ if (!is.null(WF_FH)) {
 
 ```{r}
 #| label: wf-health-assert
-#| echo: false
+# echo: false
 if (!is.null(WF_FH)) {
   WF_AS <- wf_fold_assert(WF_FH, gap_expect = BT_PARAMS$embargo)
   ## 死代码自证：以点观测（t0 = t1 = 营业日）复算旧式过滤的后置禁运项剔除量
@@ -10306,7 +10665,7 @@ R 对不存在的列表元素返回 `NULL` **而不报错**。故凡把 `D$键�
 
 ```{r}
 #| label: datakey-audit
-#| echo: false
+# echo: false
 ## 把装载表的实际键与代码中取用的键逐一比对；不符即满幅点名。
 DK_ACTUAL <- names(D)
 DK_USED   <- c("recon","ipmatch","table_span","sec_dist","player_tail","ip_player",
@@ -10366,7 +10725,7 @@ aurora_kb(tibble::tibble(
 
 ```{r}
 #| label: liveness-audit
-#| echo: false
+# echo: false
 ## 逐次渲染自查：正文非代码区的结果型数字有多少、其中多少已改行内现算。
 LIVE <- local({
   f <- tryCatch(knitr::current_input(), error = function(e) NULL)
@@ -10433,7 +10792,7 @@ if (is.null(LIVE)) {
 
 ```{r}
 #| label: const-audit
-#| echo: false
+# echo: false
 tibble::tribble(
   ~类别, ~例, ~处数, ~性质, ~判定,
   "**由数据现算**","罚阈值档位（P99.5~P99.99 逐折 argmax）、赏池档位（P90~P99 净养账最大化）、分位归一的分位点、各维分档线",
@@ -10497,8 +10856,8 @@ $g$、$c$、$H$ 三者已可由匹配对照实测（@sec-param-empirical），
 
 ```{r}
 #| label: leak-matrix
-#| echo: false
-tibble::tribble(
+# echo: false
+LEAK <- tibble::tribble(
   ~环节, ~须证明什么, ~现有凭据, ~判定, ~解阻所需,
   "① 取数窗口","事实表自身无越界记录","§TG-05 越界自检返回 0 行","✅ 通过","—",
   "② 修订滞后","静态快照与逐日下载信息集等价",
@@ -10533,16 +10892,27 @@ tibble::tribble(
     "✅ **通过**（原判受阻）","—（惟须注意处置多为短暂：持续期中位 6 日，DID 窗口须改事件研究式）",
   "⑭ 反事实对照","有同风险层的随机对照组","无","⛔ **受阻**","玩家级随机灰度，须平台配合",
   "⑮ 增量净收","增量净收由实际处置与对照实测得出","现为情景会计，非实测","⛔ **受阻**","⑬⑭ 到位后方可闭合"
-) |> aurora_kb(caption = paste0(
+)
+
+## 铁律九·现算：环数与四类判定的计数一律由表体导出，不得手写
+LEAK_N     <- nrow(LEAK)
+LEAK_PASS  <- sum(grepl("通过", LEAK$判定) & !grepl("不通过", LEAK$判定))
+LEAK_FAIL  <- sum(grepl("不通过", LEAK$判定))
+LEAK_UNPRV <- sum(grepl("未证",  LEAK$判定))
+LEAK_BLOCK <- sum(grepl("受阻",  LEAK$判定))
+LEAK_BLOCK_IDS <- paste(LEAK$环节[grepl("受阻", LEAK$判定)], collapse = "、")
+
+LEAK |> aurora_kb(caption = paste0(
   "泄漏矩阵｜解释：通过＝已有实测凭据；不通过＝已实测出问题；",
   "未证＝尚无实测；受阻＝数据资产不存在，非本方案所能自解",
   "｜本方案用途：对外结论只能引用「通过」环所支撑者，凡跨越未通过环的结论一律标注上界"))
 ```
 
-**读法**：十五环中八环通过、两环不通过、两环未证、三环受阻。
+**读法**：`r LEAK_N` 环中 `r LEAK_PASS` 环通过、`r LEAK_FAIL` 环不通过、`r LEAK_UNPRV` 环未证、`r LEAK_BLOCK` 环受阻
+（四数由上表 `判定` 列现算，非手写；⑬环由「受阻」转「通过」后本行随之自动更新）。
 **不通过与受阻是两回事**：不通过者本方案自己能修（⑦已备 §C06d、⑨已改走标签乙），
 受阻者则须平台先建数据资产，文档层面再用功也无从闭合。
-故本方案的诚实位置是：**风控体系可用，增利承诺不成立**——后者卡在⑬⑭⑮三环。
+故本方案的诚实位置是：**风控体系可用，增利承诺不成立**——后者卡在 `r LEAK_BLOCK_IDS` 两环。
 
 ## 金标准时序：泄漏幅度已实测，非小数 {#sec-truth-lineage}
 
@@ -10555,7 +10925,7 @@ tibble::tribble(
 
 ```{r}
 #| label: truth-lineage
-#| echo: false
+# echo: false
 ## ★★ 现算纪律（铁律第九条）：本表此前为手打的 tribble——数字虽出自实测，
 ##    但写在文档里就是静态文字，读者无从分辨它是算出来的还是打上去的。
 ##    今改为**由 C06d 现算**：读入带时点的对打对，按 §C06fix 口径对齐
@@ -10662,8 +11032,8 @@ $\mathrm{TRUTH}_{tr}(f)=\{m:\text{首次完全反向日}\le\text{该折训练窗
 
 ```{r}
 #| label: evidence-grade
-#| echo: false
-tibble::tribble(
+# echo: false
+EG <- tibble::tribble(
   ~等级, ~同业要求, ~本方案现状, ~判定,
   "E1 规则与名单可审计","必须","SQL 总包逐条编号、导出声明唯一、折结构体检与泄漏矩阵齐备","✅ 已达",
   "E2 时序回测不偷看未来","必须",
@@ -10677,13 +11047,26 @@ tibble::tribble(
   "E5 随机或准实验对照","报增利之必要条件","准实验（PSM＋事件研究）设计与代码已实装（@sec-quasi-run），出数待匹配平衡与平行趋势两闸；**随机对照仍缺**","🟡 准实验已实装待出数；随机对照 ⛔",
   "E6 增量 NGR 财务口径可复核","必须","**缺**——现为回测会计，非账上可解释的增量","⛔ 未达",
   "E7 持续监控与回撤","生产后","上线八闸与月度复检已设计，尚未进入生产","⬜ 未到"
-) |> aurora_kb(caption = paste0(
+)
+
+## 铁律九·现算：达成／部分／未达三档一律由表体导出，不得手写
+eg_id      <- sub("^(E[0-9]).*", "\\1", EG$等级)
+EG_DONE    <- paste(eg_id[grepl("✅", EG$判定)], collapse = "、")
+EG_PARTIAL <- paste(eg_id[grepl("🟡", EG$判定)], collapse = "、")
+EG_MISS    <- paste(eg_id[grepl("⛔", EG$判定)], collapse = "、")
+EG_NA      <- paste(eg_id[grepl("⬜", EG$判定)], collapse = "、")
+
+EG |> aurora_kb(caption = paste0(
   "同业证据等级 E1–E7｜解释：顶级运营商只认「识别→处置→结果→对照→增量」这条链，缺一环不得报已增利",
-  "｜本方案用途：定位本方案的诚实位置——风控侧已达 E1–E3，盈利侧停在 E3，E4–E6 皆缺"))
+  "｜本方案用途：定位本方案的诚实位置——已达 ", EG_DONE,
+  "；部分达成 ", EG_PARTIAL, "；仍缺 ", EG_MISS, "；未到 ", EG_NA))
 ```
 
-**结论一句**：**风控侧已达 E1–E3，盈利侧亦停在 E3。**
-E4–E6 之缺不是开发进度问题，而是数据资产不存在（见 @sec-treatment-ledger）。
+**结论一句**：**已达 `r EG_DONE`；`r EG_PARTIAL` 部分达成；仍缺 `r EG_MISS`。**
+四档皆由上表 `判定` 列现算，**不得手写**——E4 已由「缺位」转「达成」，
+此句随表体自动更新，不会再出现表已改、话未改的旧疾。
+`r EG_MISS` 之缺不是开发进度问题，而是数据资产不存在（见 @sec-treatment-ledger）：
+E5 须平台配合随机灰度，E6 须财务侧给出可复核的增量口径。
 故凡「年化增益」「增幅百分比」「投资回报率」一类数字，**一律只能作情景陈述**。
 
 同业另有把这条链拆得更细的九级划分（E0 商业假设 → E1 数据描述 → E2 探索发现 →
@@ -10873,7 +11256,7 @@ E7 增量 NGR 坐实 → E8 商业规模化验证）。两套阶梯可互译：�
 
 ```{r}
 #| label: treat-truth
-#| echo: false
+# echo: false
 ## ★ 现算（铁律第九条）：本表此前为手打，今改由 TL10 现算。
 TRU <- NULL
 if (need_data(D$tl10, "准实验", c("member_id","field_name","value_before","value_after"))) {
@@ -10917,8 +11300,13 @@ if (need_data(D$tl10, "准实验", c("member_id","field_name","value_before","va
 而 `member.mem_risk` 是**主档的风险位**，实测为死字段。
 故平台的风险标记走的是日报表，主档那一位形同虚设，此点须记入数据契约。
 
-::: {.callout-important}
 ## 处置持续期：旧称「中位仅 6 日」系长度偏倚，今以 Kaplan–Meier 改判 {#sec-duration}
+
+:::: {.callout-important}
+## 本节要旨
+
+处置究竟是短暂还是长期，直接决定 DID 的窗长与设计。旧说据「已解除者」取中位，
+所得必偏短；今以生存分析改判，结论方向相反。
 
 ::: {.callout-warning}
 ## 结论撤销并反向（2026-08-11 · §TL-11 处置节表实测）
@@ -10938,9 +11326,11 @@ if (need_data(D$tl10, "准实验", c("member_id","field_name","value_before","va
 **处置以长期为主，而非短暂**。
 :::
 
+::::
+
 ```{r}
 #| label: tl11-km
-#| echo: false
+# echo: false
 ## 处置持续期的 Kaplan–Meier 估计：一切数字现算，不写死。
 ##   事件 = 观察到解除（censored=0）；右删失 = 至窗末仍收紧（censored=1）。
 ##   报告 S(1)/S(3)/S(7)/S(14)/S(30)/S(60) 与 Greenwood 95% 区间，
@@ -11091,7 +11481,7 @@ $$\text{PSM} \to \text{平衡诊断} \to \text{事件研究} \to \text{平行趋
 
 ```{r}
 #| label: tl11c-reconcile
-#| echo: false
+# echo: false
 ## 处置总体四级对账：原始片段 → 处置事件 → 收紧（＝处置节）→ 解除。
 ##   逐级递减须由「定义」一栏解释得通；解释不通即有解析或口径缺陷。
 if (need_data(D$tl11c, "总体对账",
@@ -11275,7 +11665,7 @@ CUPED 另削一成。以此推之，**188 人的处置组在朴素口径下几�
 
 ```{r}
 #| label: param-lineage
-#| echo: false
+# echo: false
 tibble::tribble(
   ~参数, ~取值, ~性质, ~可见范围, ~是否由结果反选, ~判定,
   "回收率","0.60","**外生情景参数**，业务给定","不适用（不由数据估）","否","✅ 通过（惟须正名为假设）",
@@ -11435,7 +11825,7 @@ $$\text{物理列} \to \text{数据字典} \to \text{旧值／新值} \to \text{
 
 ```{r}
 #| label: treatment-ledger
-#| echo: false
+# echo: false
 tibble::tribble(
   ~层, ~表, ~最小字段, ~粒度, ~闭合了哪一环,
   "一 · 风险账","risk_ledger",
@@ -11529,7 +11919,7 @@ $$\Delta \text{GGR} = G_1 + G_2 + G_3 - L_1 - L_2$$
 
 ```{r}
 #| label: counterfactual
-#| echo: false
+# echo: false
 ## ★ 反事实回测（2026-08-09 斧正）：三处修正
 ##   ① `intercept_rate` 与 `churn_rate` 正名为**情景参数**，默认值只是网格中心点，
 ##      不得当作模型估计；折级明细同时留下 W（命中者赢走额）与 L（命中者输掉额）
@@ -11650,7 +12040,7 @@ profit_sensitivity <- function(bt,
 
 ```{r}
 #| label: sensitivity-surface
-#| echo: false
+# echo: false
 #| eval: false
 ## 用法（回测跑完后执行）：
 ##   surf <- profit_sensitivity(bt)                 # 4×4 网格
@@ -11695,7 +12085,7 @@ profit_sensitivity <- function(bt,
 
 ```{r}
 #| label: recommend
-#| echo: false
+# echo: false
 tibble::tribble(
   ~规则, ~档位, ~条件, ~状态,
   "异常IP","Trial-L","最小关联玩家数≥[§4.4定] ∧ 该IP最小订单数≥[定] ∧ 盈利玩家比例(版本C)≥[定]","待数据",
@@ -11865,7 +12255,7 @@ risk_grade <- function(score, cuts = c(.50, .80, .95, .99)) {
 
 ```{r}
 #| label: grade-policy
-#| echo: false
+# echo: false
 tibble::tribble(
   ~等级, ~分位带, ~含义, ~系统动作, ~人工动作, ~可申诉,
   "**G0 正常**","< P50","无异常信号","无","无","—",
@@ -11928,6 +12318,46 @@ a168:risk:v1:meta                    → Hash         （model_version / 生成�
 3. **版本号进键名**（`v1`）。新模型灌 `v2` 前缀，后端切读前缀即灰度，
    出问题切回 `v1` 即回滚，**永远不要原地覆盖**。
 4. **写入用 pipeline + `HSET` 批量**，单会员单次往返在百万级实体下会跑一整夜。
+
+## 三之二、数据集发布状态机：把「上游延迟」与「此人无数据」分开（2026-08-12 新增）
+
+采自外部交付件 `玩家风险等级判定设计.md`。本方案原接口契约只有「查得到／查不到」两态，
+**一旦上游任务延迟，接口会把陈旧分数当作有效分数返回**——这是生产事故，不是数据问题。
+
+```sql
+CREATE TABLE risk_publish_state (
+  dataset_name   VARCHAR(32) PRIMARY KEY,  -- 固定 'MEMBER_RISK'
+  as_of_time     DATETIME NOT NULL,        -- 最后一次完整发布的右开截止时间
+  expires_at     DATETIME NOT NULL,        -- 数据集过期时刻（建议 as_of_time + 2h）
+  rule_version   VARCHAR(32) NOT NULL,     -- 与 model_card 同源
+  publish_status VARCHAR(16) NOT NULL,     -- READY / PUBLISHING / FAILED
+  run_id         VARCHAR(64) NOT NULL,
+  update_time    DATETIME NOT NULL
+);
+```
+
+| 场景 | HTTP | `data_status` | 等级／动作 |
+|---|---:|---|---|
+| 数据集已发布且该会员快照有效 | 200 | `READY` | 用离线结果 |
+| 样本不足（未过样本门禁） | 200 | `INSUFFICIENT_SAMPLE` | `UNKNOWN` / `REVIEW` |
+| 数据集新鲜但该会员无记录 | 200 | `NO_DATA` | `UNKNOWN` / `REVIEW` |
+| 全局发布状态已过期 | 200 | `STALE` | `UNKNOWN` / `REVIEW` |
+| `member_id` 非法 | 400 | — | 参数错误 |
+| 存储层不可用 | 503 | — | 调用方执行 `REVIEW` |
+
+::: {.callout-important}
+## 三条纪律，写死在服务层
+
+1. **`UNKNOWN` 是明确的业务结果，不用 404 表示。**
+   404 会被调用方当成「没这个人」，而真相可能是「上游还没跑完」。
+2. **数据库故障不得伪装成 `UNKNOWN`。** 否则无法区分「真实无数据」与「系统不可用」，
+   事故会被静默吞掉——与本方案「静默失效比报错危险」同旨。
+3. **过期以全局 `expires_at` 判定，不按单人 `as_of_time` 判定。**
+
+**发布次序（任一步失败即不推进 checkpoint）**：写历史快照 → upsert 最新快照
+→ 按受影响会员失效缓存 → **最后**更新发布状态。
+状态最后更新，是为防调用方把「发布到一半」当作完整数据集。
+:::
 
 ## 四、接口契约（FastAPI）
 
@@ -12027,7 +12457,7 @@ def health():
 
 ```{r}
 #| label: serving-rollout
-#| echo: false
+# echo: false
 tibble::tribble(
   ~阶段, ~时长, ~做什么, ~通过条件, ~失败动作,
   "**S0 影子期**","2 周","接口全量输出，后端**只记录不执行**","分数分布稳定；G3+G4 日均量 ≤ 复核产能","回退调阈值",
@@ -12089,7 +12519,7 @@ tibble::tribble(
 
 ```{r}
 #| label: trace
-#| echo: false
+# echo: false
 tibble::tribble(
   ~编号, ~需求要点, ~实现, ~状态,
   "§2.1-1","20个账户处于分布什么位置","@sec-ip-dist","✅",
@@ -12271,7 +12701,7 @@ $$\text{fingerprint}=H\big(\underbrace{\text{输入内容}}_{①}\;\|\;\underbra
 
 ```{r}
 #| label: data-health
-#| echo: false
+# echo: false
 if (length(HEALTH$rows)) {
   dplyr::bind_rows(HEALTH$rows) |>
     dplyr::arrange(factor(substr(状态, 1, 1), levels = c("🔴","🟠","⬜","🆕","🟢")), 文件) |>
@@ -12308,7 +12738,7 @@ if (length(HEALTH$rows)) {
 
 ```{r}
 #| label: mem-watch
-#| echo: false
+# echo: false
 rows <- purrr::imap(D, function(x, nm) {
   if (is.null(x)) return(NULL)
   tibble::tibble(对象 = nm, 行数 = nrow(x), 列数 = ncol(x),
@@ -12335,7 +12765,7 @@ if (!nrow(rows)) {
 
 ```{r}
 #| label: mem-released
-#| echo: false
+# echo: false
 if (length(RELEASED$rows)) {
   rl <- dplyr::bind_rows(RELEASED$rows)
   rl |> dplyr::arrange(dplyr::desc(释放MB)) |>
@@ -12386,7 +12816,7 @@ if (length(RELEASED$rows)) {
 
 ```{r}
 #| label: timing-log
-#| echo: false
+# echo: false
 if (length(TIMING$rows)) {
   tl <- dplyr::bind_rows(TIMING$rows) |> dplyr::arrange(dplyr::desc(耗时秒))
   tl |> dplyr::mutate(占比 = scales::percent(耗时秒 / sum(耗时秒), accuracy = 0.1)) |>
@@ -12400,7 +12830,7 @@ if (length(TIMING$rows)) {
 
 ```{r}
 #| label: timing-log-py
-#| echo: false
+# echo: false
 tp <- tryCatch(reticulate::py$TIMING_PY, error = function(e) NULL)
 hp <- tryCatch(reticulate::py$HEALTH_PY, error = function(e) NULL)
 out <- list()
@@ -12444,7 +12874,7 @@ if (length(out)) {
 
 ```{r}
 #| label: cache-manifest
-#| echo: false
+# echo: false
 if (length(CACHE_LOG$rows)) {
   dplyr::bind_rows(CACHE_LOG$rows) |>
     aurora_kb(caption = "R 侧缓存清单（本次渲染实况：命中即省算，未命中会写明原因）")
@@ -12460,7 +12890,7 @@ if (length(CACHE_LOG$rows)) {
 
 ```{r}
 #| label: cache-manifest-py
-#| echo: false
+# echo: false
 cl <- tryCatch(reticulate::py$CACHE_LOG_PY, error = function(e) NULL)
 if (length(cl)) {
   dplyr::bind_rows(lapply(cl, function(x) tibble::as_tibble(lapply(x, as.character)))) |>
@@ -12554,7 +12984,7 @@ if (length(cl)) {
 
 ```{r}
 #| label: runbook-batch1
-#| echo: false
+# echo: false
 tibble::tribble(
   ~顺序, ~编号, ~查的是什么, ~预期结果, ~不对怎么办,
   1,"00-1","有没有「空局」混进百家乐","0","非 0 → 停，口径要重定",
@@ -12585,7 +13015,7 @@ tibble::tribble(
 
 ```{r}
 #| label: runbook-batch2
-#| echo: false
+# echo: false
 tibble::tribble(
   ~顺序, ~编号, ~导出文件名, ~点亮什么, ~约耗时,
   6,"S-01","**S01_player_score.csv**","玩家雷达 + 玩家综合分","1–3 分钟",
@@ -12608,7 +13038,7 @@ tibble::tribble(
 
 ```{r}
 #| label: runbook-batch2b
-#| echo: false
+# echo: false
 tibble::tribble(
   ~顺序, ~编号, ~导出文件名, ~点亮哪一章, ~业务含义,
   "6a","R-01","**R01_late_shoe.csv**","@sec-r01","靴末段下注占比 + 注额斜率 + 末段ROI",
@@ -12636,7 +13066,7 @@ tibble::tribble(
 
 ```{r}
 #| label: runbook-batch3
-#| echo: false
+# echo: false
 tibble::tribble(
   ~顺序, ~编号, ~导出文件名, ~业务含义,
   11,"A-01","**A_anchor.csv**","**先跑这条**：风控 17 个关注 IP 现在还活不活跃",
@@ -12655,7 +13085,7 @@ tibble::tribble(
 
 ```{r}
 #| label: runbook-batch4
-#| echo: false
+# echo: false
 tibble::tribble(
   ~顺序, ~编号, ~导出文件名, ~用途,
   18,"D-06","**S_player_tail.csv**","玩家尾注十一项（只做画像，不做处罚）",
@@ -12676,7 +13106,7 @@ tibble::tribble(
 
 ```{r}
 #| label: runbook-verify
-#| echo: false
+# echo: false
 need <- c("S01_player_score","S02_dealer_score","S03_agent_score",
           "S04_analyst_score","S05_member_month_panel","A_anchor",
           "C01_ip_chain","C06_hedge_pairs","C08_subnet_sparse","C08_subnet_all",
@@ -12722,9 +13152,20 @@ aurora_kb(chk, caption="导出清单自检（渲染时自动核对 数据库/ �
 > 按「缺了它哪一章跑不动」排序。**前六张是硬阻塞**——没有它们，
 > 赏罚经济学、生存模型、设备聚集、时间一致性这四块只能停在结构就绪。
 
+::: {.callout-note}
+## 口径先厘清：本章所列多为「表在、列不在」，不是「表都不在」（2026-08-12 措辞收紧）
+
+本章若干条目所指的表**已在库内、且已见于 @sec-tables 点货单**
+（如 `ods_a168_member`、`ods_a168_employee`、`ods_a168_agent_dtl`），
+所缺者是**其中的关键列或列的可用性**——例如员工表在库而**入职时间**不可用、
+`employee.lastip` 荷官侧全空。此与「荷官局速：不是读不到表，是表在、列不在」同一体例。
+**故本章逐条读法应为「所缺的是哪一列、缺了它哪一章跑不动」**，
+而非「平台连表都没有」。
+:::
+
 ```{r}
 #| label: need-tables
-#| echo: false
+# echo: false
 tibble::tribble(
   ~优先级, ~表, ~关键字段, ~没有它会怎样, ~解锁哪一章,
   "🔴 P0","**会员主表**（`ods_a168_member` 或等价）",
@@ -12882,7 +13323,7 @@ tibble::tribble(
 
 ```{r}
 #| label: e1-checklist
-#| echo: false
+# echo: false
 tibble::tribble(
   ~编号, ~验证项, ~为何必须全局, ~推翻则影响,
   "E1-01","五张标签表的 `MIN/MAX(dt)` 与行数","E2 样本时间偏斜严重","**决定标签策略走甲/乙/丙哪条路**",
@@ -13107,7 +13548,7 @@ $m_i$ 越高，说明平台从这位会员身上赚得越多；$m_i$ **为负**�
 
 ```{r}
 #| label: caption-audit
-#| echo: false
+# echo: false
 src_f2 <- tryCatch(knitr::current_input(), error = function(e) NULL)
 if (length(src_f2) && !is.na(src_f2) && file.exists(src_f2)) {
   src2 <- readLines(src_f2, warn = FALSE, encoding = "UTF-8")
@@ -13152,7 +13593,7 @@ if (length(src_f2) && !is.na(src_f2) && file.exists(src_f2)) {
 
 ```{r}
 #| label: fieldcode-audit
-#| echo: false
+# echo: false
 src_f <- tryCatch(knitr::current_input(), error = function(e) NULL)
 if (length(src_f) && !is.na(src_f) && file.exists(src_f)) {
   src  <- readLines(src_f, warn = FALSE, encoding = "UTF-8")
@@ -13687,7 +14128,8 @@ enriched AS (
          b.round_no * 1.0 / NULLIF(s.max_round,0)      AS shoe_pos,
          b.stake_raw / b.fx                            AS stake,
          (b.payout_raw - b.stake_raw) / b.fx           AS game_pnl,
-         CASE WHEN b.round_no >= 50 THEN 1 ELSE 0 END  AS is_late
+         CASE WHEN b.round_no * 1.0 / NULLIF(s.max_round,0) >= 0.80
+              THEN 1 ELSE 0 END                        AS is_late  -- B-01 斧正：相对靴位
   FROM base b JOIN shoe_len s
     ON s.shoe_id = b.shoe_id AND s.table_id = b.table_id
 )
@@ -13949,7 +14391,7 @@ SELECT
   'COMPATIBILITY_ONLY_NOT_PRODUCTION'        AS z_score_alias_status
 FROM pd
 JOIN player_all pa ON pa.member_id = pd.member_id
-ORDER BY z_score DESC, profit_amount DESC;
+ORDER BY pd.member_id, pd.dealer_id;
 ```
 
 ## 归档 A-18·六、DiD 校准骨架（有历史调档就立刻跑） {#sec-sql-a-18}
@@ -14143,6 +14585,85 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
 ```
 
 # 变更日志 {#sec-changelog}
+
+**2026-08-12 · 第三十八轮：外部六份交付件交叉核验后的斧正（两份同标准 · SQL 总包同步）**
+
+本轮据《a168 多源风控文档交叉核验说明书》所列发现执行，共八处。
+**须先记明一处本方之误**：本轮初次施工时误以先生较早上传的一版（主方案 13,005 行、
+SQL 总包 6,140 行）为基础，未含 2026-08-11 第三十七轮的全部工作；
+经先生上传当前版本后已重做，本条所载一律以**当前版本为唯一基础**。
+铁律第一条自此再加一句：**接手前必先核对 MD5 与行数，不符即当面点破，不得径行开工。**
+
+**一、B-01（最重）· 靴末段判据选错了坐标，非文字问题**
+
+§R01 原以 `round_no >= 50` 定义靴末段，§B01 / §B01-D 的 `late_share_d` 同式。
+外部交付件 `百家乐下注时机风控参数分析报告.md` 以全量注单实测靴长：
+**均值 49.86 把、P50 = 50、P75 = 52、P90 = 54、P99 = 58**。
+据此现算，第 50 把的相对靴位为 **100.3%**——该判据实际筛出的是
+「靴的最后一局，及长于中位数的那半数靴」，**约半数牌靴根本到不了第 50 把**。
+本方案 @sec-glossary 早已写明「固定第 50 把须做相对靴位归一」，§R01 也早已输出 `shoe_pos`，
+**缺的只是把判据从绝对局号换成相对靴位这一步——此为本方之疏**。
+
+今三处一律改为 `shoe_pos >= 0.80`，并各输出常量列 `late_def`（口径锁）。
+§B01 / §B01-D 为此新增 `shoe_id` 取列与 `shoe_len`、`ordx` 两个 CTE。
+**须辨明**：新判据固定的是**靴内局位区间**，不是 `late_share` 恒为 20%；
+20% 只是均匀下注零偏好基准下的期望值。
+**受影响输出**：`R01_late_shoe.csv`、`B01_bt_panel.csv`、`B01_bt_panel_delta.csv`
+须重跑重导，旧档改名 `_v1_superseded` 归档不删；未重导前凡引用 `late_share` 者按旧口径理解。
+**且阈值不随坐标搬家**——三闸的 `late_share >= 0.70` 须从新分布重新反解。
+
+**二、B-11 · 样本门槛统一纪律（@sec-stability 新增）**
+
+十条互不相同的门槛中仅一条有统计推导。今立两条可推导规则：比例型以 Wilson 95% CI
+宽度 ≤ 0.15 反解（n ≥ 30）且必须并报样本量与区间；金额型另以变异系数反解。
+并附判伪纪律：凡以 ROI 高分位论证阈值更优者须先排除抽样方差
+（外部报告第七节自身数据的收缩倍数与 $1/\sqrt{n}$ 预测偏离不足 5%）。
+
+**三、B-05 · 玩家—荷官对照检验的空值语义（@sec-r03 新增甲乙丙三档）**
+
+`win_rate_gap = NULL` 表示**没有基线**，非 0 亦非 100%。丙档（无对照组）不得作为证据。
+
+**四、B-04 · 荷官命中池的选择效应须标上界（@sec-r03 补量化说明）**
+
+命中池由「Z ≥ 3.2 且盈利 > 0」定义即在结果上选样，隐含 ROI 现算 29.84%，
+约为理论抽水率的十九倍。**凡引用该池金额一律标注上界。**
+
+**五、B-09 · 方向判定不得用 `MAX(bet09)`（@sec-r02 增引）**
+
+正解为 `HAVING COUNT(DISTINCT bet_type) = 1`；混合方向单列一类，不得混入对打对。
+
+**六、B-10 · 数据集发布状态机（@sec-serving 新增「三之二」节）**
+
+新增 `risk_publish_state` 与 `READY / INSUFFICIENT_SAMPLE / NO_DATA / STALE` 四态语义，
+并立三条服务层纪律。
+
+**七、铁律九补课：三处计数由静态文字改行内现算**
+
+- **泄漏矩阵读法**：原写「八环通过、两环不通过、两环未证、三环受阻」，
+  而表体自⑬环转「通过」后实为 **9 / 3 / 1 / 2**。今四数由 `LEAK$判定` 列现算。
+- **证据等级 E1–E7**：表题与结语原写「已达 E1–E3、E4–E6 皆缺」，而同表 E4 已达成。
+  今四档由 `EG$判定` 列现算。
+- **精要报告结论裁定表**：原称「十二条」而表体 14 行，今改由 `nrow(V)` 现算。
+
+**八之前 · 本轮补记两事（2026-08-12 下午）**
+
+- **§B01／§B01-D 首跑报错，系本方之误**：`shoe_len` 与 `ordx` 两个 CTE 因脚本定位有误，
+  被误插入 §P0C-04 而非 §B01／§B01-D，致两条 `FROM ordx` 无定义、
+  StarRocks 报 `Unknown table 'ods_mariadb_2b.ordx'`，同时 §P0C-04 亦被波及。
+  今已移出并正确置于两条的 `rk AS (` 之前，§P0C-04 复原。**此误明认于此。**
+- **`::: {.callout-important}` 未闭合（@sec-duration）已按甲乙兼采修毕**：
+  外层改为章节标题 `##`（保留 `{#sec-duration}` 锚点），
+  另立一个四冒号 `::::` 的外层 callout 正确包裹内层三冒号 warning。
+  自此本档嵌套 callout 一律遵此式：**外层四冒号、内层三冒号，缺一即吞版面**。
+
+**八、其余四处措辞与口径斧正**
+
+- @sec-glossary 折规格由「60/7/14/步长 14」改正为甲规格「63/7/14/步长 1」；
+- 精要报告泄漏矩阵「本报告步长 14、主方案 7」改为「甲乙同规」；
+- @sec-tables 增列三口径注解（八表骨架／十四行点货单／二十四表全包触及）；
+- @sec-needtables 措辞收紧为「表在、列不在」；
+- SQL 总包卷首导出计数按当前版本实测更正为 **64 / 72**，并新增口径锁纪律第⑤条。
+
 
 **2026-08-10 · 主方案审核轮：以代码为准校正正文，代码零改动**
 
@@ -15775,7 +16296,7 @@ DATE 型、`dailyreport_member` 自身亦带 `bet02` 产品列（原查询漏筛
 
 ```{r}
 #| label: v3-changes
-#| echo: false
+# echo: false
 tibble::tribble(
   ~序, ~本轮动作, ~性质, ~落在哪一章,
   1,"七处 `eval: !expr AVAIL$x` 防护**从根上斧正**为 `need_data()` 前置校验（三层：NULL / 空表 / 列名）","斧正","setup + @sec-ip / @sec-tail",
@@ -15986,6 +16507,16 @@ tibble::tribble(
   230,"**文档与实现不同基之根治**：SQL 侧 side_base 分母已剔退还局，而正文七处把无条件概率称作 Z-score 基准，差 4.82pp。全篇十一处改为并列两基或明注所取之基（庄家优势算式取无条件属正确用法，加注以免相混）。定性为文档缺陷非计算缺陷——代码取实测 p_base，既有结论一个未错；危害在下游照文档实现者，其偏差随局数以根号 n 增长，只押庄者约 1,100 决胜局即自动越 Z≥3.2 线","斧正","@sec-settle + 术语库 + @sec-r03",
   340,"**归档 A-17 与总包脱节已根治**：连日斧正总包 §R03 而未同步主方案归档 A-17，实测其仍含 MAX(bet_side)（字母序取主注）与 COALESCE(s.p_base, 0.5)（0.5 兜底）两处已废之法——同一份 SQL 两处口径不一，读者依归档实现即得旧结果。A-17 已全面重写与总包逐字一致，并于段首列出六处实质差异与预期产出行数（8,061,974 行，ELIGIBLE 应恰 517,528、SENTINEL 应 243,025，对不上即回查）","斧正","@sec-sql-a-17",
   341,"**二十三份归档全数普查，旧法残留归零**：逐份扫描四类旧法（0.5 兜底／哨兵源头删除／下限过滤／字母序主注），23 份中需斧正者仅 A-17 一份，其余二十二份洁净","核实","@sec-sql-archive",
+  348,"**新立 @sec-req-trace 来源文档逐条溯源矩阵**：把五份来源的每一项要求逐条对到章节、口径与状态。需求文档 30 项全数在表，三态标注（✅ 已实现／🟡 受数据所限而降级／⛔ 无一项）——凡数据不可得者（如 close_bet_time）非跳过，而是给出替代口径并注明局限。另出「另三份分析报告的对应」表，说明本方案非另起炉灶，而是接住其对的部分、补上其留的口子","新增","@sec-req-trace",
+  349,"**新立 @sec-spec-summary 口径总表**：把散见全篇的四项口径汇于一处——数据源（库/窗口/十二张料源）、维度与正名（三条术语铁律·三处同名异义·三键局键·金额五式·四实体三十一维）、分群标准（59 层·净贡献门槛 2.59%·四层毛利率主语纪律·γ*=−0.091% 之推论）、判断标准（三线判据·处置五层容错上限·四条红线）。每项皆注明其详章所在","新增","@sec-spec-summary",
+  350,"**精要报告同步新立「五份来源文档，本报告如何作答」一章**：以精要之笔法自成一节，把五份来源的**结论层要点**对到本报告章节，并立分工之约——需求 30 项逐条实现在主方案，精要只答四件事，故「有没有做到第几条」翻主方案、「结论是什么」翻精要。另补一句独有立场：五份来源中三份自陈「不能单独作为处罚依据」，说得对却都没说该怎么办，本报告以误伤上限分层把它做成可执行的","新增","精要报告 · 五份来源文档作答章（跨档，本方案不解析）",
+  351,"**立跨档引用之约**：精要报告引 @sec-req-trace／@sec-uvos／@sec-unified-value／@sec-domain-ontology／@sec-probe-findings／@sec-limit 六处，其目标章在主方案而非精要，Quarto 不作跨档解析，渲染后显示未解析属预期非缺陷；六者经核实在主方案内皆存在","校对","精要报告 · 同章（跨档，本方案不解析）",
+  353,"**装载即分层，其后各块一律取合格层**（先生令）。此前哨兵剔除散在 r03-dual／r03-dealer-rank／r03-fdr／release-r03 四块，同一判据写四遍——任一处漏改即口径分裂，且四块之前的统计量皆含哨兵。今于装载块之后一次分清：L0 事实层留 D$r03_full／D$r03b_full 备查，L1 合格层入 D$r03／D$r03b 供分析；判据 SENTINEL_IDS 全篇只此一处","斧正","@sec-qual-layer",
+  354,"**四处重复剔除改断言式自检**：stopifnot(!any(is_sentinel(...)))——若上游分层失效而漏入哨兵，渲染即刻中断，不静默带病往下算。r03-fdr 的 n_sent 改取自分层账 QUAL，使「检验总体如何得来」一句仍可现算","斧正","@sec-r03-fdr",
+  355,"**新立 @sec-qual-layer 资格分层实况表**：逐件列 L0 行数、哨兵行数与占比、L1 留存行数与留存率、资格列采信与否。此表是「事实层不删、分析层才筛」之唯一凭据——后文任一数字其所据者皆为 L1，而 L0 与 L1 之差尽在此表，不另藏于正文","新增","@sec-qual-layer",
+  356,"**精要报告同步**：分层提至 load-core 之后（此前在 DE／DW 聚合之后，故 R03b 全量含哨兵之 1,415 万局已被别处引用）；分层置于聚合之前，使**经验贝叶斯之先验与分位归一之池两者同得净化**；三处重复剔除同改断言；并立同名实况表，次序为 装载 → 分层 → 呈现 → 分析","斧正","精要报告 · 资格分层章",
+  357,"**校对查获一处顺序倒置并即改**：精要的实况表初置于 L1408，而装载与分层在 L1453／L1489——表比数据先，渲染时 QUAL 尚不存在。已移至分层块之后，四段次序核验通过（装载 1406 → 分层 1442 → 呈现 1461 → 分析 1505）","校对","精要报告 · 资格分层章",
+  352,"**以先生 08-12 上传件为基底重建，并补回工作件多出的排序键斧正**：上传件的归档 A-17 末行仍为旧的 ORDER BY z_score DESC（排序键不唯一，实测 517,528 行中并列 103,510 组），已补回为 (member_id, dealer_id)。三十五处锚点逐一核链，无一死链","斧正","@sec-sql-a-17",
   342,"**立常设纪律·交付件一致性**：凡斧正 SQL 总包内某段，须同时检查主方案 @sec-sql-archive 有无其归档；有则同步重写并于段首列出与旧版之差异。此前四轮斧正 §R03 皆漏此步，根因是把「总包」与「归档」当作两件事——**它们是同一段 SQL 的两处载体，不同步即是让读者拿到两个答案**","新增","@sec-runbook + @sec-sql-archive",
   335,"**本方语法缺漏已修**：§R03 报「Unable to parse SQL near 'R03_20260811_FULL_v1'」，根因为分两批插列时 filter_rule_version 一行漏行尾逗号；§R03／§R03b 同处同错皆补正，并对两段作 SELECT 列表逗号连贯性全扫。**此为分批插列的第三次同类失误**，故立自检：凡分批向同一 SELECT 列表插列，落盘后须整段重扫逗号连贯性，不得只验括号平衡","斧正","SQL §R03 + §R03b",
   336,"**新立 @sec-limit-treatment：101-mem015 六层判据全数打通**。① member_dtl.mem015 ＝ 新版限額；② bet_limit_default 之 gtype='101' 下 81 个限额组；③ §TL-10 出现过的组 ID 全部在字典内；④ set01 形如「下限,上限」可比大小；⑤ **方向可判**——其值是「允许选用的限额组清单」，取最高上限之变化，实测四例（350→21、3,21→3,4、十一组→三组、59,22→59,30）皆判得出；⑥ 可成节。新增 §TL-14 限红处置事件表","新增","@sec-limit-treatment + SQL §TL-14",
@@ -16133,7 +16664,7 @@ tibble::tribble(
 
 ```{r}
 #| label: corrections
-#| echo: false
+# echo: false
 tibble::tribble(
   ~序号, ~校正项, ~原写法, ~校正后, ~依据,
   1,"物理局键","(bet03, bet04)","**(bet03, bet04, bet39)** 三段","需求 §3.1",
