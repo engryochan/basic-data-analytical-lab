@@ -2325,8 +2325,8 @@ tibble::tibble(
 
 ```{r}
 #| label: glossary-inject
-# echo: false
 #| results: asis
+# echo: false
 ## 把术语库注入页面：CSS 悬停浮层 + 自动加注脚本
 ## 脚本扫描正文段落/表格单元格/列表与**行内代码**，跳过 pre / script / 标题锚点；
 ## ★ 全篇每次出现均加注——任何位置悬停任一词典词条即得释义（遵先生令）。
@@ -6273,8 +6273,8 @@ for ent, (path, dims) in (ENT.items() if ENV_OK else []):
 
 ```{r}
 #| label: radar-embed
-# echo: false
 #| output: asis
+# echo: false
 ## plotly 片段一律用显式 raw-html 围栏包住：片段自带缩进，
 ##   裸 asis 会被 Pandoc 当成缩进代码块而显示成源码。围栏边界确定、与缩进无关。
 ##   围栏用 strrep 在运行时拼出，源码行内不出现连续三反引号（见写作纪律第 5 条）。
@@ -9131,8 +9131,8 @@ if (is.null(QE_M)) {
 
 ```{r}
 #| label: qe-did
-# echo: false
 #| fig-height: 4.2
+# echo: false
 ## ── ③ 事件研究式双重差分：逐期估计，解禁日右删失 ─────────────────────
 QE_ES <- NULL
 if (!is.null(QE_M) && all(abs(QE_M$BAL$匹配后SMD) < 0.1, na.rm = TRUE)) {
@@ -12040,8 +12040,8 @@ profit_sensitivity <- function(bt,
 
 ```{r}
 #| label: sensitivity-surface
-# echo: false
 #| eval: false
+# echo: false
 ## 用法（回测跑完后执行）：
 ##   surf <- profit_sensitivity(bt)                 # 4×4 网格
 ##   knitr::kable(surf, digits = 3)
@@ -14645,7 +14645,27 @@ SQL 总包 6,140 行）为基础，未含 2026-08-11 第三十七轮的全部工
   今四档由 `EG$判定` 列现算。
 - **精要报告结论裁定表**：原称「十二条」而表体 14 行，今改由 `nrow(V)` 现算。
 
-**八之前 · 本轮补记两事（2026-08-12 下午）**
+**八之前 · 本轮补记三事（2026-08-12 下午至傍晚）**
+
+- **渲染缺陷之根：`#|` 选项被前置的普通注释截断（五处）**。
+  Quarto／knitr 规定 chunk 选项须自 ```` ```{r} ```` 起**连续**书写；
+  一旦中间夹入一行普通 `#` 注释，其后的 `#|` 即降格为注释，**静默失效**。
+  本档实测命中四处、精要报告一处：
+
+  | 文件 | chunk | 失效选项 | 已致后果 |
+  |---|---|---|---|
+  | 主方案 | `glossary-inject` | `results: asis` | 术语库的 `<style>/<script>` 原样漏成代码块 |
+  | 主方案 | `radar-embed` | `output: asis` | 四实体雷达图漏成文本，图不出 |
+  | 主方案 | `qe-did` | `fig-height: 4.2` | 图高失效 |
+  | 主方案 | `sensitivity-surface` | `eval: false` | **本不该执行的块被执行** |
+  | 精要报告 | `glossary` | `results: asis` | 同第一项 |
+
+  今五处一律把 `#|` 上移至紧接 ```` ```{r} ```` 之后，普通注释顺移其下；
+  两档行数与内容多重集改前改后逐一相同，**只动顺序、不动一字**。
+  **立为常设纪律**：chunk 头部一律「先 `#|` 选项、后 `#` 注释」，
+  例检脚本增一项——凡 `#|` 出现在普通注释之后即报错。
+
+**八之前 · 另记两事**
 
 - **§B01／§B01-D 首跑报错，系本方之误**：`shoe_len` 与 `ordx` 两个 CTE 因脚本定位有误，
   被误插入 §P0C-04 而非 §B01／§B01-D，致两条 `FROM ordx` 无定义、
