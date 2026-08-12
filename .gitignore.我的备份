@@ -9,13 +9,7 @@
 #
 # ⚠️ 关于那批 "!*.csv" 否定规则，请务必读一遍文末的《两点说明》。
 # ═══════════════════════════════════════════════════════════════════════════
-数据库/
-*.csv
-*.zip
-*.z0*
-*_files/
-*.html
-!*/README.html
+
 
 # ── R ──────────────────────────────────────────────────────────────────────
 .Rproj.user/
@@ -41,21 +35,6 @@ renv/sandbox/
 !renv/activate.R
 !renv/settings.json
 
-
-git lfs untrack "*.csv"
-git lfs untrack "*.zip"
-git lfs untrack "*.z0*"
-git add .gitattributes
-
-* text=auto eol=lf
-*.qmd   text eol=lf
-*.sql   text eol=lf
-*.R     text eol=lf
-*.md    text eol=lf
-*.csv   -text
-*.html  -text
-*.png   binary
-*.zip   binary
 
 # ── Quarto / bookdown / knitr 渲染产物 ─────────────────────────────────────
 /.quarto/
@@ -199,5 +178,103 @@ desktop.ini
 #         git add .gitattributes
 #    注意 LFS 免费额度为 1 GB 存储 / 1 GB 月流量，超出需付费。
 # ═══════════════════════════════════════════════════════════════════════════
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
+.Rproj.user
+.posit/assistant
 .Rproj.user
 .posit/assistant

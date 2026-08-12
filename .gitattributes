@@ -1,18 +1,9 @@
-数据库/*.csv filter=lfs diff=lfs merge=lfs -text
-数据库/*.xlsx filter=lfs diff=lfs merge=lfs -text
-*.xlsx filter=lfs diff=lfs merge=lfs -text
-*.csv filter=lfs diff=lfs merge=lfs -text
-*.rds filter=lfs diff=lfs merge=lfs -text
-*.parquet filter=lfs diff=lfs merge=lfs -text
-*.pack filter=lfs diff=lfs merge=lfs -text
-*.xls filter=lfs diff=lfs merge=lfs -text
-*.feather filter=lfs diff=lfs merge=lfs -text
-*.RData filter=lfs diff=lfs merge=lfs -text
-*.rda filter=lfs diff=lfs merge=lfs -text
-*.zip filter=lfs diff=lfs merge=lfs -text
-*.sqlite filter=lfs diff=lfs merge=lfs -text
-*.db filter=lfs diff=lfs merge=lfs -text
-*.7z filter=lfs diff=lfs merge=lfs -text
-*.tar.gz filter=lfs diff=lfs merge=lfs -text
-风控案例/案例分析/卷房/*.rds !text !filter !merge !diff
-*.RDS filter=lfs diff=lfs merge=lfs -text
+* text=auto eol=lf
+*.qmd   text eol=lf
+*.sql   text eol=lf
+*.R     text eol=lf
+*.md    text eol=lf
+*.csv   -text
+*.html  -text
+*.png   binary
+*.zip   binary
