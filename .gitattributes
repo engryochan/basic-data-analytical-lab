@@ -1,9 +1,94 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# basic-data-analytical-lab · .gitattributes
+# Ryo（雷欧） · 2026-08-12
+# ---------------------------------------------------------------------------
+# 立此档只为一件事：**护住交付件的 MD5 可核性**。
+#
+# Windows 的 Git 默认 core.autocrlf=true，检出时把 LF 转成 CRLF。
+# 一旦任其转换，先生手中的 .qmd 与在下交付时的字节流即不一致，
+# MD5 必然对不上，此前每一轮「行数与 MD5 逐一相符」的核对就此失效，
+# 且往后每次 git diff 都会满屏假变更。
+#
+# 本档强制：文本类一律 LF，二进制类一律不作行尾转换。
+#
+# ⚠️ 落档之后须跑一次规范化，否则只对**此后**入库的内容生效：
+#      git add .gitattributes .gitignore
+#      git commit -m "行尾规范：.gitattributes 独立成档"
+#      git add --renormalize .
+#      git commit -m "统一行尾为 LF，护住交付件 MD5 可核性"
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+# ── 默认：由 Git 判定文本／二进制；凡判为文本者一律 LF ────────────────────
 * text=auto eol=lf
-*.qmd   text eol=lf
-*.sql   text eol=lf
-*.R     text eol=lf
-*.md    text eol=lf
-*.csv   -text
-*.html  -text
-*.png   binary
-*.zip   binary
+
+
+# ── ★ 交付件：三类核心档，行尾锁死 LF ───────────────────────────────────
+*.qmd        text eol=lf
+*.rmarkdown  text eol=lf
+*.Rmd        text eol=lf
+*.sql        text eol=lf
+*.R          text eol=lf
+*.r          text eol=lf
+*.md         text eol=lf
+
+
+# ── 其余文本 ────────────────────────────────────────────────────────────
+*.py         text eol=lf
+*.scss       text eol=lf
+*.css        text eol=lf
+*.js         text eol=lf
+*.json       text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+*.toml       text eol=lf
+*.txt        text eol=lf
+*.gitignore  text eol=lf
+*.gitattributes text eol=lf
+Makefile     text eol=lf
+
+
+# ── Windows 批处理必须 CRLF，否则不执行（此为唯一例外）─────────────────────
+*.bat        text eol=crlf
+*.cmd        text eol=crlf
+*.ps1        text eol=crlf
+
+
+# ── 数据档：不作行尾转换 ────────────────────────────────────────────────
+# CSV 虽为文本，但动辄百万行；一旦被行尾转换，整档字节流全变，
+# diff 无意义、MD5 亦不可核。故一律按二进制对待。
+*.csv        -text
+*.tsv        -text
+*.parquet    binary
+*.rds        binary
+*.RData      binary
+*.feather    binary
+
+
+# ── 渲染成品与二进制 ────────────────────────────────────────────────────
+*.html       -text
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.gif        binary
+*.webp       binary
+*.svg        text eol=lf
+*.pdf        binary
+*.docx       binary
+*.xlsx       binary
+*.pptx       binary
+*.zip        binary
+*.7z         binary
+*.rar        binary
+*.z0*        binary
+*.gz         binary
+*.tar        binary
+*.ttf        binary
+*.woff       binary
+*.woff2      binary
+
+
+# ── GitHub 语言统计：派生物与渲染成品不计入 ──────────────────────────────
+*.html       linguist-generated=true
+数据库/*     linguist-generated=true
+*_files/*    linguist-generated=true
