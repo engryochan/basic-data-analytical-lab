@@ -1,0 +1,610 @@
+---
+title: "分析异常IP与尾秒投注的风控与降低误判"
+format: 
+  html:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看代码"
+    toc-location: left
+
+---
+
+# 设置
+
+
+```{r}
+#| label: 设置
+# echo: false
+suppressMessages(if(!require('BBmisc')) install.packages('BBmisc'))
+suppressMessages(library('BBmisc'))
+suppressMessages(if(!require('pacman')) install.packages('pacman'))
+suppressMessages(library('pacman'))
+suppressMessages(p_load('data.table', 'tidyverse', 'kableExtra', 'here', 'gt'))
+
+
+```
+
+# 1. 简介
+
+本报告以`异常IP与尾秒下注风控阈值分析需求文档.md`为要求来进行分析。
+
+# 2. 数据
+
+## 2.1 数据要求
+
+> **数据范围**
+> 
+> - 数据源：`ods_a168_bet02`，必要时关联每局开始下注和封盘时间表。
+> - 游戏范围：仅统计 `bet02 = '101'` 的百家乐数据。
+> - 分析时间：使用可获得的全量历史数据，或者同时按月和滚动30天窗口观察稳定性。
+> - 时间字段：下注时间使用 `bet08`。
+> - 玩家ID：`bet05`。
+> - IP：`ip`。
+> - 物理局键：`bet03 + bet04 + bet39`。
+> 
+> **去重与有效订单**
+> 
+> 同一 `bet01` 必须按以下顺序保留最新版本：
+> 
+> ```text
+> updatetime DESC
+> sync_time DESC
+> dt DESC
+> ```
+> 
+> 只统计满足以下条件的最新结算订单：
+> 
+> ```text
+> bet02 = 101
+> category = 1
+> UPPER(TRIM(bet38)) = 'N'
+> bet05 > 0
+> bet11 > 0
+> bet08有效
+> ```
+> 
+> IP分析还需要排除：
+> 
+> - 空IP和格式错误IP。
+> - 已确认的公司出口、测试环境、内部代理或白名单IP。
+> - 是否排除其他公共网络IP，由数据分析列出影响后交业务确认。
+> 
+> **金额和盈利口径**
+> 
+> ```text
+> 投注金额 = bet13 / bet11
+> 游戏盈利 = (bet14 - bet13) / bet11
+> 返水 = bet16 / bet11
+> 净盈利 = bet17 / bet11
+> ```
+> 
+> - 判断账户整体是否盈利，使用窗口内 `SUM(净盈利) > 0`。
+> - 分析尾秒下注带来的游戏表现，主要使用不含返水的游戏盈利。
+> - 净盈利、游戏盈利和返水需要同时输出，避免返水影响对下注优势的判断。
+> 
+> **胜率口径**
+> 
+> 尾秒胜率必须按“玩家物理局”计算，不能按单笔订单计算。
+> 
+> 同一玩家在同一物理局的多笔订单先聚合：
+> 
+> ```text
+> 局游戏盈利 > 0：胜局
+> 局游戏盈利 < 0：负局
+> 局游戏盈利 = 0：和局
+> ```
+> 
+> ```text
+> 胜率 = 胜局数 / (胜局数 + 负局数)
+> ```
+> 
+> 和局不进入胜率分母。
+
+## 2.2 数据要求的输出
+
+### 2.2.1 §C-01  去重与有效订单漏斗核对
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+/* ===========================================================================
+   §C-01  去重与有效订单漏斗核对
+   目的：逐级量化「原始行 → 最新版本 → 五项有效性条件」的折损，确立后续
+         一切比率的分母，并核对去重前后差额。
+   ▸ 导出：需要 → C01_有效订单漏斗核对.csv
+   ========================================================================= */
+WITH v AS (
+  SELECT
+      t.bet01, t.bet05, t.bet08, t.bet11, t.bet38, t.category,
+      ROW_NUMBER() OVER (
+          PARTITION BY t.bet01
+          ORDER BY t.updatetime DESC, t.sync_time DESC, t.dt DESC
+      ) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 t
+  WHERE t.bet02 = '101'
+),
+latest AS (
+  SELECT * FROM v WHERE rn = 1
+)
+SELECT
+    (SELECT COUNT(*) FROM v)                              AS S0_原始行数_含全部版本,
+    (SELECT COUNT(*) FROM latest)                         AS S1_去重后订单数,
+    (SELECT COUNT(*) FROM v) - (SELECT COUNT(*) FROM latest) AS S1_被去重的历史版本行数,
+    SUM(CASE WHEN CAST(category AS VARCHAR) = '1' THEN 1 ELSE 0 END)          AS S2_category等于1,
+    SUM(CASE WHEN CAST(category AS VARCHAR) = '1'
+              AND UPPER(TRIM(CAST(bet38 AS VARCHAR))) = 'N' THEN 1 ELSE 0 END) AS S3_再叠加bet38为N,
+    SUM(CASE WHEN CAST(category AS VARCHAR) = '1'
+              AND UPPER(TRIM(CAST(bet38 AS VARCHAR))) = 'N'
+              AND CAST(bet05 AS BIGINT) > 0 THEN 1 ELSE 0 END)                 AS S4_再叠加bet05大于0,
+    SUM(CASE WHEN CAST(category AS VARCHAR) = '1'
+              AND UPPER(TRIM(CAST(bet38 AS VARCHAR))) = 'N'
+              AND CAST(bet05 AS BIGINT) > 0
+              AND CAST(bet11 AS DOUBLE) > 0 THEN 1 ELSE 0 END)                 AS S5_再叠加bet11大于0,
+    SUM(CASE WHEN CAST(category AS VARCHAR) = '1'
+              AND UPPER(TRIM(CAST(bet38 AS VARCHAR))) = 'N'
+              AND CAST(bet05 AS BIGINT) > 0
+              AND CAST(bet11 AS DOUBLE) > 0
+              AND bet08 IS NOT NULL
+              AND bet08 > '1970-01-01 00:00:00' THEN 1 ELSE 0 END)             AS S6_有效订单数,
+    SUM(CASE WHEN CAST(bet05 AS BIGINT) IS NULL THEN 1 ELSE 0 END)             AS 附_bet05非数值行数,
+    SUM(CASE WHEN bet08 IS NULL
+                OR bet08 <= '1970-01-01 00:00:00' THEN 1 ELSE 0 END)           AS 附_bet08无效行数
+FROM latest;
+```
+
+输出储存为`C01_有效订单漏斗核对.csv`。
+
+```{r}
+C01_有效订单漏斗核对 <- here(getwd(), '数据库', 'C01_有效订单漏斗核对.csv') |> 
+  fread()
+C01_有效订单漏斗核对 |> 
+  gt()
+```
+
+### 2.2.2 §C-02  IP 清洗漏斗与排除影响量化
+
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+/* ===========================================================================
+   §C-02  IP 清洗漏斗与排除影响量化
+   目的：量化「空值 / 空串 / 格式错误 / 结构性无效地址」各自剔除的订单数、
+         会员数与金额规模，作为 IP 维度分析可用性的前置声明。
+   ▸ 导出：需要 → C02_IP清洗影响量化.csv
+   ========================================================================= */
+WITH v AS (
+  SELECT
+      t.bet01, t.bet05, t.ip, t.bet08, t.bet11, t.bet13, t.bet38, t.category,
+      ROW_NUMBER() OVER (
+          PARTITION BY t.bet01
+          ORDER BY t.updatetime DESC, t.sync_time DESC, t.dt DESC
+      ) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 t
+  WHERE t.bet02 = '101'
+),
+valid AS (
+  SELECT
+      CAST(bet05 AS VARCHAR) AS member_id,
+      CAST(ip    AS VARCHAR) AS ip_addr,
+      CAST(bet13 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS stake_amt
+  FROM v
+  WHERE rn = 1
+    AND CAST(category AS VARCHAR) = '1'
+    AND UPPER(TRIM(CAST(bet38 AS VARCHAR))) = 'N'
+    AND CAST(bet05 AS BIGINT) > 0
+    AND CAST(bet11 AS DOUBLE) > 0
+    AND bet08 IS NOT NULL
+    AND bet08 > '1970-01-01 00:00:00'
+),
+flagged AS (
+  SELECT
+      member_id,
+      ip_addr,
+      stake_amt,
+      CASE WHEN ip_addr IS NULL THEN 1 ELSE 0 END AS f_null,
+      CASE WHEN ip_addr = ''    THEN 1 ELSE 0 END AS f_blank,
+      CASE
+        WHEN ip_addr IS NULL OR ip_addr = '' THEN 0
+        WHEN ip_addr REGEXP '^([0-9]{1,3}\\.){3}[0-9]{1,3}$'
+             AND CAST(split_part(ip_addr, '.', 1) AS INT) BETWEEN 0 AND 255
+             AND CAST(split_part(ip_addr, '.', 2) AS INT) BETWEEN 0 AND 255
+             AND CAST(split_part(ip_addr, '.', 3) AS INT) BETWEEN 0 AND 255
+             AND CAST(split_part(ip_addr, '.', 4) AS INT) BETWEEN 0 AND 255 THEN 0
+        WHEN ip_addr REGEXP '^[0-9A-Fa-f:]+:[0-9A-Fa-f:]*$' THEN 0
+        ELSE 1
+      END AS f_malformed,
+      CASE WHEN ip_addr IN ('0.0.0.0', '127.0.0.1', '::1') THEN 1 ELSE 0 END AS f_reserved
+  FROM valid
+)
+SELECT
+    COUNT(*)                                                    AS 有效订单数,
+    COUNT(DISTINCT member_id)                                   AS 有效订单会员数,
+    SUM(f_null)                                                 AS IP为空值_订单数,
+    SUM(f_blank)                                                AS IP为空串_订单数,
+    SUM(f_malformed)                                            AS IP格式错误_订单数,
+    SUM(f_reserved)                                             AS 结构性无效地址_订单数,
+    SUM(CASE WHEN f_null + f_blank + f_malformed + f_reserved > 0
+             THEN 1 ELSE 0 END)                                 AS 合计被剔除_订单数,
+    COUNT(DISTINCT CASE WHEN f_null + f_blank + f_malformed + f_reserved > 0
+                        THEN member_id END)                     AS 合计被剔除_涉及会员数,
+    SUM(CASE WHEN f_null + f_blank + f_malformed + f_reserved > 0
+             THEN stake_amt ELSE 0 END)                         AS 合计被剔除_投注金额,
+    CAST(SUM(CASE WHEN f_null + f_blank + f_malformed + f_reserved > 0
+                  THEN 1 ELSE 0 END) AS DOUBLE)
+        / NULLIF(COUNT(*), 0)                                   AS 合计被剔除_订单占比,
+    SUM(CASE WHEN f_null + f_blank + f_malformed + f_reserved = 0
+             THEN 1 ELSE 0 END)                                 AS 可用于IP分析_订单数
+FROM flagged;
+
+```
+
+输出储存为`C02_IP清洗影响量化.csv`。
+
+```{r}
+C02_IP清洗影响量化 <- here(getwd(), '数据库', 'C02_IP清洗影响量化.csv') |> 
+  fread()
+C02_IP清洗影响量化 |> 
+  gt()
+```
+
+### 2.2.3 C03_高聚集IP待确认清单
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+/* ===========================================================================
+   §C-03  高聚集 IP 待业务确认清单（对应「缺-03」）
+   目的：其他公共网络 IP 是否排除，由业务裁决。本语句只列示候选与其影响量，
+         不作任何排除动作。
+   门槛：承载会员数的 P99.9，由本语句内 PERCENTILE_APPROX 自数据推导，
+         无手工设定阈值；门槛值随结果一并输出以便追溯。
+   ▸ 导出：需要 → C03_高聚集IP待确认清单.csv
+   ========================================================================= */
+WITH v AS (
+  SELECT
+      t.bet01, t.bet05, t.ip, t.bet08, t.bet11, t.bet13, t.bet14, t.bet17,
+      t.bet38, t.category,
+      ROW_NUMBER() OVER (
+          PARTITION BY t.bet01
+          ORDER BY t.updatetime DESC, t.sync_time DESC, t.dt DESC
+      ) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 t
+  WHERE t.bet02 = '101'
+),
+valid AS (
+  SELECT
+      CAST(bet05 AS VARCHAR) AS member_id,
+      CAST(ip    AS VARCHAR) AS ip_addr,
+      DATE(bet08)            AS bet_date,
+      CAST(bet13 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS stake_amt,
+      (CAST(bet14 AS DOUBLE) - CAST(bet13 AS DOUBLE)) / CAST(bet11 AS DOUBLE) AS game_pl,
+      CAST(bet17 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS net_pl
+  FROM v
+  WHERE rn = 1
+    AND CAST(category AS VARCHAR) = '1'
+    AND UPPER(TRIM(CAST(bet38 AS VARCHAR))) = 'N'
+    AND CAST(bet05 AS BIGINT) > 0
+    AND CAST(bet11 AS DOUBLE) > 0
+    AND bet08 IS NOT NULL
+    AND bet08 > '1970-01-01 00:00:00'
+    AND ip IS NOT NULL AND CAST(ip AS VARCHAR) <> ''
+    AND CAST(ip AS VARCHAR) NOT IN ('0.0.0.0', '127.0.0.1', '::1')
+),
+per_ip AS (
+  SELECT
+      ip_addr,
+      COUNT(DISTINCT member_id) AS n_member,
+      COUNT(*)                  AS n_orders,
+      COUNT(DISTINCT bet_date)  AS n_days,
+      SUM(stake_amt)            AS stake_amt,
+      SUM(game_pl)              AS game_pl,
+      SUM(net_pl)               AS net_pl
+  FROM valid
+  GROUP BY ip_addr
+),
+cut AS (
+  SELECT CAST(PERCENTILE_APPROX(CAST(n_member AS DOUBLE), 0.999) AS BIGINT) AS m_cut
+  FROM per_ip
+),
+tot AS (
+  SELECT COUNT(*) AS t_orders, SUM(stake_amt) AS t_stake FROM valid
+)
+SELECT
+    p.ip_addr                                        AS IP,
+    p.n_member                                       AS 承载会员数,
+    p.n_orders                                       AS 订单数,
+    p.n_days                                         AS 活跃天数,
+    p.stake_amt                                      AS 投注金额,
+    p.game_pl                                        AS 游戏盈利,
+    p.net_pl                                         AS 净盈利,
+    CAST(p.n_orders AS DOUBLE) / NULLIF(t.t_orders, 0) AS 订单占全量比,
+    CAST(p.stake_amt AS DOUBLE) / NULLIF(t.t_stake, 0) AS 投注额占全量比,
+    c.m_cut                                          AS 入选门槛_承载会员数P999
+FROM per_ip p
+CROSS JOIN cut c
+CROSS JOIN tot t
+WHERE p.n_member >= c.m_cut
+ORDER BY p.n_member DESC, p.n_orders DESC;
+```
+
+输出储存为`C03_高聚集IP待确认清单.csv`
+
+```{r}
+C03_高聚集IP待确认清单 <- here(getwd(), '数据库', 'C03_高聚集IP待确认清单.csv') |> 
+  fread()
+C03_高聚集IP待确认清单 |> 
+  gt() |>
+  tab_options(
+    container.height = "600px",
+    container.overflow.y = TRUE,
+    container.overflow.x = FALSE  )
+
+```
+
+### 2.2.4 §C-04  金额与盈利口径日度对账
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+/* ===========================================================================
+   §C-04  金额与盈利口径日度对账
+   目的：四项金额口径同时输出，供逐日核对；避免返水混入而误判下注优势。
+         恒等关系核验：净盈利 - (游戏盈利 + 返水) 的日度残差应为 0，
+         若非 0，则 bet17 与 (bet14 - bet13 + bet16) 之间存在未知项，须查证。
+   ▸ 导出：需要 → C04_金额盈利口径日度对账.csv
+   ========================================================================= */
+WITH v AS (
+  SELECT
+      t.bet01, t.bet05, t.bet08, t.bet11, t.bet13, t.bet14, t.bet16, t.bet17,
+      t.bet38, t.category,
+      ROW_NUMBER() OVER (
+          PARTITION BY t.bet01
+          ORDER BY t.updatetime DESC, t.sync_time DESC, t.dt DESC
+      ) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 t
+  WHERE t.bet02 = '101'
+),
+valid AS (
+  SELECT
+      CAST(bet05 AS VARCHAR) AS member_id,
+      DATE(bet08)            AS bet_date,
+      CAST(bet13 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS stake_amt,
+      (CAST(bet14 AS DOUBLE) - CAST(bet13 AS DOUBLE)) / CAST(bet11 AS DOUBLE) AS game_pl,
+      CAST(bet16 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS rebate_amt,
+      CAST(bet17 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS net_pl
+  FROM v
+  WHERE rn = 1
+    AND CAST(category AS VARCHAR) = '1'
+    AND UPPER(TRIM(CAST(bet38 AS VARCHAR))) = 'N'
+    AND CAST(bet05 AS BIGINT) > 0
+    AND CAST(bet11 AS DOUBLE) > 0
+    AND bet08 IS NOT NULL
+    AND bet08 > '1970-01-01 00:00:00'
+)
+SELECT
+    bet_date                                          AS 日期,
+    COUNT(*)                                          AS 有效订单数,
+    COUNT(DISTINCT member_id)                         AS 活跃会员数,
+    SUM(stake_amt)                                    AS 投注金额,
+    SUM(game_pl)                                      AS 游戏盈利,
+    SUM(rebate_amt)                                   AS 返水,
+    SUM(net_pl)                                       AS 净盈利,
+    SUM(net_pl) - (SUM(game_pl) + SUM(rebate_amt))    AS 恒等残差_净减游戏加返水,
+    SUM(game_pl)   / NULLIF(SUM(stake_amt), 0)        AS 游戏盈利率,
+    SUM(rebate_amt)/ NULLIF(SUM(stake_amt), 0)        AS 返水率,
+    SUM(net_pl)    / NULLIF(SUM(stake_amt), 0)        AS 净盈利率
+FROM valid
+GROUP BY bet_date
+ORDER BY bet_date;
+```
+
+输出储存为`C04_金额盈利口径日度对账.csv`。
+
+```{r}
+C04_金额盈利口径日度对账 <- here(getwd(), '数据库', 'C04_金额盈利口径日度对账.csv') |> 
+  fread()
+C04_金额盈利口径日度对账 |> 
+  gt() |>
+  tab_options(
+    container.height = "600px",
+    container.overflow.y = TRUE,
+    container.overflow.x = FALSE
+  )
+```
+
+### 2.2.5 §C-05  玩家物理局聚合基表（局级明细）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+/* ===========================================================================
+   §C-05  玩家物理局聚合基表（局级明细）
+   目的：同一玩家在同一物理局的多笔订单先行聚合，作为 §C-06 至 §C-09 的
+         唯一局级来源；胜负和判定一律在本层完成，禁止在订单层判定。
+   说明：导出量级约等于「会员 × 参与局」，如需落地请采用键集分页
+         （按 member_id, round_key 升序），不得使用 OFFSET。
+   ▸ 导出：不需要
+   ========================================================================= */
+WITH v AS (
+  SELECT
+      t.bet01, t.bet03, t.bet04, t.bet05, t.bet08, t.bet11, t.bet13, t.bet14,
+      t.bet16, t.bet17, t.bet38, t.bet39, t.category,
+      ROW_NUMBER() OVER (
+          PARTITION BY t.bet01
+          ORDER BY t.updatetime DESC, t.sync_time DESC, t.dt DESC
+      ) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 t
+  WHERE t.bet02 = '101'
+),
+valid AS (
+  SELECT
+      CAST(bet05 AS VARCHAR) AS member_id,
+      CONCAT_WS('|',
+          CAST(bet03 AS VARCHAR),
+          CAST(bet04 AS VARCHAR),
+          CAST(bet39 AS VARCHAR)) AS round_key,
+      bet08                  AS bet_time,
+      DATE(bet08)            AS bet_date,
+      CAST(bet13 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS stake_amt,
+      (CAST(bet14 AS DOUBLE) - CAST(bet13 AS DOUBLE)) / CAST(bet11 AS DOUBLE) AS game_pl,
+      CAST(bet16 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS rebate_amt,
+      CAST(bet17 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS net_pl
+  FROM v
+  WHERE rn = 1
+    AND CAST(category AS VARCHAR) = '1'
+    AND UPPER(TRIM(CAST(bet38 AS VARCHAR))) = 'N'
+    AND CAST(bet05 AS BIGINT) > 0
+    AND CAST(bet11 AS DOUBLE) > 0
+    AND bet08 IS NOT NULL
+    AND bet08 > '1970-01-01 00:00:00'
+)
+SELECT
+    member_id                       AS 会员ID,
+    round_key                       AS 物理局键,
+    MIN(bet_date)                   AS 局日期,
+    MIN(bet_time)                   AS 局内首单时间,
+    MAX(bet_time)                   AS 局内末单时间,
+    COUNT(*)                        AS 局内订单数,
+    SUM(stake_amt)                  AS 局投注金额,
+    SUM(game_pl)                    AS 局游戏盈利,
+    SUM(rebate_amt)                 AS 局返水,
+    SUM(net_pl)                     AS 局净盈利,
+    CASE WHEN SUM(game_pl) > 0 THEN '胜局'
+         WHEN SUM(game_pl) < 0 THEN '负局'
+         ELSE '和局' END            AS 局结果
+FROM valid
+GROUP BY member_id, round_key
+ORDER BY member_id, round_key;
+```
+
+只屏读不输出储存。
+
+|   | 会员ID	| 物理局键	| 局日期	| 局内首单时间	| 局内末单时间	| 局内订单数	| 局投注金额	| 局游戏盈利	| 局返水	| 局净盈利	| 局结果 |
+|:-:|:-------|:---------:|:-------:|:-------------:|:-------------:|:-----------:|:-----------:|:-----------:|:-------:|:---------:|:------:| 
+| 1	| 100000592	| 1294206\|18\|901	| 2026-7-21	| 2026-7-21 23:20	| 2026-7-21 23:20	| 1	| 49.05377843	| -49.05377843	| 0	| -49.05377843	| 负局 |
+| 2	| 100000592	| 114590235\|38\|112	| 2026-3-27	| 2026-3-27 21:37	| 2026-3-27 21:37	| 1	| 33.70461069	| -33.70461069	| 0	| -33.70461069	| 负局 |
+| 3	| 100000592	| 114590242\|53\|113	| 2026-3-27	| 2026-3-27 22:02	| 2026-3-27 22:02	| 1	| 26.3317271	| -26.3317271	| 0	| -26.3317271	| 负局 |
+| ...	| | | | | | | | | | | |									
+| ...	| | | | | | | | | | | |									
+| ...	| | | | | | | | | | | |
+| N-2	| 100000592	| 124827\|7\|908	| 2026-3-30	| 2026-3-30 0:05	| 2026-3-30 0:05	| 1	| 7.109566316	| 7.109566316	| 0	| 7.109566316	| 胜局 |
+| N-1	| 100000592	| 114739864\|22\|1	| 2026-8-11	| 2026-8-11 0:29	| 2026-8-11 0:29	| 1	| 113.0146662	| -113.0146662	| 0	| -113.0146662	| 负局 |
+| N	| 100000592	| 114589551\|47\|116	| 2026-3-27	| 2026-3-27 7:41	| 2026-3-27 7:41	| 1	| 52.6634542	| 50.03028149	| 0	| 50.03028149	| 胜局 |
+
+### 2.2.6 §C-06  会员盈亏判定（全量历史窗口）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+/* ===========================================================================
+   §C-06  会员盈亏判定（全量历史窗口）
+   判定：窗口内 SUM(净盈利) > 0 为盈利账户。净盈利、游戏盈利、返水同时输出，
+         以便区分「靠下注优势盈利」与「靠返水盈利」两类账户。
+   ▸ 导出：需要 → C06_会员盈亏判定_全量窗口.csv
+   ========================================================================= */
+WITH v AS (
+  SELECT
+      t.bet01, t.bet03, t.bet04, t.bet05, t.bet08, t.bet11, t.bet13, t.bet14,
+      t.bet16, t.bet17, t.bet38, t.bet39, t.category,
+      ROW_NUMBER() OVER (
+          PARTITION BY t.bet01
+          ORDER BY t.updatetime DESC, t.sync_time DESC, t.dt DESC
+      ) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 t
+  WHERE t.bet02 = '101'
+),
+valid AS (
+  SELECT
+      CAST(bet05 AS VARCHAR) AS member_id,
+      CONCAT_WS('|',
+          CAST(bet03 AS VARCHAR),
+          CAST(bet04 AS VARCHAR),
+          CAST(bet39 AS VARCHAR)) AS round_key,
+      DATE(bet08)            AS bet_date,
+      CAST(bet13 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS stake_amt,
+      (CAST(bet14 AS DOUBLE) - CAST(bet13 AS DOUBLE)) / CAST(bet11 AS DOUBLE) AS game_pl,
+      CAST(bet16 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS rebate_amt,
+      CAST(bet17 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS net_pl
+  FROM v
+  WHERE rn = 1
+    AND CAST(category AS VARCHAR) = '1'
+    AND UPPER(TRIM(CAST(bet38 AS VARCHAR))) = 'N'
+    AND CAST(bet05 AS BIGINT) > 0
+    AND CAST(bet11 AS DOUBLE) > 0
+    AND bet08 IS NOT NULL
+    AND bet08 > '1970-01-01 00:00:00'
+),
+round_agg AS (
+  SELECT
+      member_id, round_key,
+      MIN(bet_date)  AS bet_date,
+      SUM(stake_amt) AS stake_amt,
+      SUM(game_pl)   AS game_pl,
+      SUM(rebate_amt) AS rebate_amt,
+      SUM(net_pl)    AS net_pl
+  FROM valid
+  GROUP BY member_id, round_key
+)
+SELECT
+    member_id                                              AS 会员ID,
+    COUNT(*)                                               AS 参与局数,
+    COUNT(DISTINCT bet_date)                               AS 活跃天数,
+    SUM(stake_amt)                                         AS 投注金额,
+    SUM(game_pl)                                           AS 游戏盈利,
+    SUM(rebate_amt)                                        AS 返水,
+    SUM(net_pl)                                            AS 净盈利,
+    CASE WHEN SUM(net_pl)  > 0 THEN 1 ELSE 0 END           AS 是否净盈利,
+    CASE WHEN SUM(game_pl) > 0 THEN 1 ELSE 0 END           AS 是否游戏盈利,
+    CASE WHEN SUM(net_pl) > 0 AND SUM(game_pl) <= 0
+         THEN 1 ELSE 0 END                                 AS 是否仅靠返水转正,
+    SUM(CASE WHEN game_pl > 0 THEN 1 ELSE 0 END)           AS 胜局数,
+    SUM(CASE WHEN game_pl < 0 THEN 1 ELSE 0 END)           AS 负局数,
+    SUM(CASE WHEN game_pl = 0 THEN 1 ELSE 0 END)           AS 和局数,
+    CAST(SUM(CASE WHEN game_pl > 0 THEN 1 ELSE 0 END) AS DOUBLE)
+        / NULLIF(SUM(CASE WHEN game_pl > 0 THEN 1 ELSE 0 END)
+               + SUM(CASE WHEN game_pl < 0 THEN 1 ELSE 0 END), 0) AS 胜率,
+    SUM(game_pl) / NULLIF(SUM(stake_amt), 0)               AS 游戏盈利率,
+    SUM(net_pl)  / NULLIF(SUM(stake_amt), 0)               AS 净盈利率
+FROM round_agg
+GROUP BY member_id
+ORDER BY 净盈利 DESC;
+```
+
+输出储存为`C06_会员盈亏判定_全量窗口.csv`
+
+```{r}
+
+```
+
+### 2.2.2 去重与有效订单漏斗核对
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+输出储存为`.csv`
+
+```{r}
+
+```
+
+### 2.2.2 去重与有效订单漏斗核对
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+输出储存为`.csv`
+
+```{r}
+
+```
+
+# 3. 分析
+
