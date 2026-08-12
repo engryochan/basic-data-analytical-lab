@@ -577,6 +577,148 @@ ORDER BY 净盈利 DESC;
 输出储存为`C06_会员盈亏判定_全量窗口.csv`
 
 ```{r}
+C06_会员盈亏判定_全量窗口 <- here(getwd(), '数据库', 'C06_会员盈亏判定_全量窗口.csv') |> 
+  fread()
+cbind(` ` = c(1:3, (nrow(C06_会员盈亏判定_全量窗口) - 2):nrow(C06_会员盈亏判定_全量窗口)), C06_会员盈亏判定_全量窗口[c(1:3, (nrow(C06_会员盈亏判定_全量窗口) - 2):nrow(C06_会员盈亏判定_全量窗口)),]) |> 
+  gt() |>
+  tab_options(
+    container.height = "600px",
+    container.overflow.y = TRUE,
+    container.overflow.x = FALSE
+  )
+```
+
+### 2.2.7 §C-07  月度稳定性面板（自然月，局级胜率 + 三项盈利口径）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+/* ===========================================================================
+   §C-07  月度稳定性面板（自然月，局级胜率 + 三项盈利口径）
+   注意：首尾月通常不满月，须结合「当月有下注天数」判读。
+   ▸ 导出：需要 → C07_月度稳定性面板.csv
+   ========================================================================= */
+WITH v AS (
+  SELECT
+      t.bet01, t.bet03, t.bet04, t.bet05, t.bet08, t.bet11, t.bet13, t.bet14,
+      t.bet16, t.bet17, t.bet38, t.bet39, t.category,
+      ROW_NUMBER() OVER (
+          PARTITION BY t.bet01
+          ORDER BY t.updatetime DESC, t.sync_time DESC, t.dt DESC
+      ) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 t
+  WHERE t.bet02 = '101'
+),
+valid AS (
+  SELECT
+      CAST(bet05 AS VARCHAR) AS member_id,
+      CONCAT_WS('|',
+          CAST(bet03 AS VARCHAR),
+          CAST(bet04 AS VARCHAR),
+          CAST(bet39 AS VARCHAR)) AS round_key,
+      DATE(bet08)                 AS bet_date,
+      DATE_FORMAT(bet08, '%Y-%m') AS ym,
+      CAST(bet13 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS stake_amt,
+      (CAST(bet14 AS DOUBLE) - CAST(bet13 AS DOUBLE)) / CAST(bet11 AS DOUBLE) AS game_pl,
+      CAST(bet16 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS rebate_amt,
+      CAST(bet17 AS DOUBLE) / CAST(bet11 AS DOUBLE) AS net_pl
+  FROM v
+  WHERE rn = 1
+    AND CAST(category AS VARCHAR) = '1'
+    AND UPPER(TRIM(CAST(bet38 AS VARCHAR))) = 'N'
+    AND CAST(bet05 AS BIGINT) > 0
+    AND CAST(bet11 AS DOUBLE) > 0
+    AND bet08 IS NOT NULL
+    AND bet08 > '1970-01-01 00:00:00'
+),
+round_agg AS (
+  SELECT
+      ym, member_id, round_key,
+      MIN(bet_date)   AS bet_date,
+      SUM(stake_amt)  AS stake_amt,
+      SUM(game_pl)    AS game_pl,
+      SUM(rebate_amt) AS rebate_amt,
+      SUM(net_pl)     AS net_pl
+  FROM valid
+  GROUP BY ym, member_id, round_key
+)
+SELECT
+    ym                                                     AS 年月,
+    COUNT(DISTINCT bet_date)                               AS 当月有下注天数,
+    COUNT(DISTINCT member_id)                              AS 活跃会员数,
+    COUNT(DISTINCT round_key)                              AS 物理局数,
+    COUNT(*)                                               AS 玩家局数,
+    SUM(stake_amt)                                         AS 投注金额,
+    SUM(game_pl)                                           AS 游戏盈利,
+    SUM(rebate_amt)                                        AS 返水,
+    SUM(net_pl)                                            AS 净盈利,
+    SUM(CASE WHEN game_pl > 0 THEN 1 ELSE 0 END)           AS 胜局数,
+    SUM(CASE WHEN game_pl < 0 THEN 1 ELSE 0 END)           AS 负局数,
+    SUM(CASE WHEN game_pl = 0 THEN 1 ELSE 0 END)           AS 和局数,
+    CAST(SUM(CASE WHEN game_pl > 0 THEN 1 ELSE 0 END) AS DOUBLE)
+        / NULLIF(SUM(CASE WHEN game_pl > 0 THEN 1 ELSE 0 END)
+               + SUM(CASE WHEN game_pl < 0 THEN 1 ELSE 0 END), 0) AS 胜率,
+    SUM(game_pl) / NULLIF(SUM(stake_amt), 0)               AS 游戏盈利率,
+    SUM(net_pl)  / NULLIF(SUM(stake_amt), 0)               AS 净盈利率
+FROM round_agg
+GROUP BY ym
+ORDER BY ym;
+```
+
+输出储存为`.csv`
+
+```{r}
+
+```
+
+### 2.2.8 C08_滚动30日稳定性面板
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+输出储存为`.csv`
+
+```{r}
+
+```
+
+### 2.2.2 去重与有效订单漏斗核对
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+输出储存为`.csv`
+
+```{r}
+
+```
+
+### 2.2.2 去重与有效订单漏斗核对
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+输出储存为`.csv`
+
+```{r}
+
+```
+
+### 2.2.2 去重与有效订单漏斗核对
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+```
+
+输出储存为`.csv`
+
+```{r}
 
 ```
 
