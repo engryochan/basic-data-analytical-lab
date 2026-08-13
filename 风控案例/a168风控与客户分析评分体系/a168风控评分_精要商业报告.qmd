@@ -69,6 +69,19 @@ table code{background:rgba(34,211,238,.12);padding:0 .25em;border-radius:3px;}
 **§17.2 四实体能力值分层（玩家十维·荷官八维·代理七维·专员十维骨架）、净化时序回测、业绩提升的因果验证协议**。
 本报告继承同一数据契约与同一纪律，只做一件事：**把结论压缩到可拍板的篇幅**。
 
+**四档血统关系（2026-08-13 十九轮立 · 一族四档，改一档须同步其余三档）**：
+
+| 档 | 角色 | 与本档之关系 |
+|---|---|---|
+| `a168风控与客户分层评分体系_商业方案.qmd` | **主方案**（父） | 本档为其执行精要版；§17.2 维度字典之权威出处 |
+| `a168风控评分_精要商业报告.qmd` | **本档**（子） | 承主方案之数据契约与纪律，压缩至可拍板篇幅 |
+| `a168_取数与核验_SQL总包_v3.sql` | **取数层**（料源） | 本档一切数字之唯一料源；口径锁列由其输出 |
+| `a168_能力值口径解读_SQL转R.qmd` | **对照本**（校验） | 把取数层与本档之口径逐条对照，并出同源同值指纹自检 |
+
+同步纪律三条：① 维度字典（`*_DIMS`）以主方案 §17.2 为准，四档一字不差；
+② 交付件表头契约以取数层为准，本档以 `must=` 挂锁；
+③ 任一档改动，须于其变更日志记明改前改后之六元组，并核对其余三档是否受累。
+
 **开篇先说三句实话**，以免后文被误读为业绩承诺：
 ① 本方案**已主动否掉一个看似有利可图的策略**——尾秒下注优势经五重统计检验（含 Simpson
 悖论分解与符号检验 p=0.175）**未能证实**，遂从规则集中删除，不因均值好看而硬留；
@@ -176,6 +189,33 @@ read_any <- function(name, select = NULL, must = NULL) {
                   format(nrow(x), big.mark = ","), ncol(x),
                   as.numeric(difftime(Sys.time(), t0, units = "secs"))))
   x
+}
+## ══ 取列闸 pick()（2026-08-13 十九轮斧正 · 先生实测「选择了未定义的列」之根治）══
+##   病史：score-player 块 `R01[, c("uid","late_share")]` 撞 base R 哑错，整篇停摆。
+##   根因两层：
+##     · 表层——旧版 R01 导出件无 late_share 列，而本块只验 !is.null(R01)，未验列；
+##     · 里层——**交付件契约锁未挂**。SQL §R01 自 2026-08-12 起输出常量列 late_def
+##       正是为此而设（口径变更即缺列、缺列即当场报错），但报告侧以无 must 装载，
+##       锁形同虚设，遂由「显式失败」退化为「深处哑错」。
+##   斧正原则（与本报告既有 ph() 占位成法同源）：
+##     缺列**不得静默**，亦**不得停摆**——点名登记 + NA 占位 + 汇总成表。
+##     真正该当场失败的是**装载处的契约锁**（见 load-core 的 must=），不是取列处。
+GAPS <- new.env(parent = emptyenv()); GAPS$rows <- list()
+pick <- function(df, cols, src = deparse(substitute(df)), impact = "") {
+  if (is.null(df)) return(NULL)
+  miss <- setdiff(cols, names(df))
+  if (length(miss)) {
+    GAPS$rows[[length(GAPS$rows) + 1L]] <- data.frame(
+      check.names = FALSE, 来源表 = src,
+      缺列 = paste(miss, collapse = "、"),
+      在列 = paste(utils::head(setdiff(names(df), cols), 8), collapse = "、"),
+      受影响输出 = if (nzchar(impact)) impact else "（未标注）",
+      stringsAsFactors = FALSE)
+    message(sprintf("⛔ [%s] 缺列：%s → 受影响：%s（按 NA 占位，已登记，不静默）",
+                    src, paste(miss, collapse = "、"), impact))
+    for (m in miss) df[[m]] <- NA
+  }
+  df[, cols, drop = FALSE]
 }
 ## ★ 表题瘦身：表题内凡写「｜解释：…」者，正文只留主标题，
 ##   释义收进标题后的 ⓘ 悬停浮层（沿用上面的 .gl-tip / data-tip 机制）。
@@ -1404,16 +1444,21 @@ kb(src, paste0("五份来源文档 → 本报告作答处",
 
 ```{r}
 #| label: load-core
-B01 <- read_any("B01_bt_panel")
+B01 <- read_any("B01_bt_panel",
+                must = c("member_id","bet_date","validbet","net_pnl","game_pnl"))
 E02 <- read_any("E02_segment_econ")
-K01 <- read_any("K01_risk_feature_matrix")
+K01 <- read_any("K01_risk_feature_matrix",
+                must = c("member_id","validbet","hedge_rate","side_entropy","n_days"))
 SEED<- read_any("K01b_seed_manual")
 C06 <- read_any("C06_hedge_pairs")
-R01 <- read_any("R01_late_shoe")
+R01 <- read_any("R01_late_shoe",
+                must = c("late_def","uid","late_share"))   ## ★ late_def 即 SQL §R01 之口径锁列：旧版 CSV 无此列即当场不装载，
+                                                          ##   使「新文字配旧数字」的静默语义漂移在装载处即显形，不拖到深处哑错
 R03b<- read_any("R03b_player_dealer_daily",
                 select = c("bet_date","uid","dealer_id","stake_amount",
                            "net_pnl","n_rounds_eff","z_score"))
-IPL <- read_any("I_ip_player")
+IPL <- read_any("I_ip_player",
+                must = c("member_id","bet_ip","lv3"))
 ## 四实体 score 导出件一律尝试装载（先生令）：在包内即直读、缺席即由包内表复算——灵活搭配
 S01 <- read_any("S01_player_score",
                 must = c("流水贡献","游戏输赢贡献","活跃稳定","投注产品结构熵",
@@ -1422,7 +1467,8 @@ S02 <- read_any("S02_dealer_score")
 S03 <- read_any("S03_agent_score")
 S04 <- read_any("S04_analyst_score",
                 must = c("标注产量","覆盖IP广度","判定详尽度","首次登记","最近登记"))
-C01 <- read_any("C01_ip_chain")
+C01 <- read_any("C01_ip_chain",
+                must = c("bet_ip","member_per_chain"))
 C08s<- read_any("C08_subnet_sparse")
 DX5 <- read_any("DX05_product_panorama")
 WIN <- if (!is.null(B01)) list(a=min(B01$bet_date), b=max(B01$bet_date),
@@ -1617,7 +1663,8 @@ if (!is.null(K01) && !is.null(B01)) {
   for (cc in c("hedge_rate","stake_cv","night_share","rebate_dep","roi_game",
                "side_entropy","validbet","n_ip")) pl[[cc]] <- num(pl[[cc]])
   if (!is.null(R01)) {
-    r1 <- R01[, c("uid","late_share")]; r1$late_share <- num(r1$late_share)
+    r1 <- pick(R01, c("uid","late_share"), "R01_late_shoe",
+             "玩家十维之晚注占比、@sec-r01 靴末段裁定"); r1$late_share <- num(r1$late_share)
     pl <- merge(pl, r1, by.x = "member_id", by.y = "uid", all.x = TRUE)
   } else pl$late_share <- NA_real_
   B01$net_pnl <- num(B01$net_pnl); B01$validbet <- num(B01$validbet)
@@ -1629,7 +1676,8 @@ if (!is.null(K01) && !is.null(B01)) {
   ## ── Sortino 下行比（平台视角日收益）：均值 ÷ 下行标准差 ─────────────
   ##    「常年从平台赢钱且回撤极小」= 下行比深负 → T2 持续正向优势候选判据
   if (HAS$dt) {
-    bb <- data.table::as.data.table(B01[, c("member_id","net_pnl","validbet")])
+    bb <- data.table::as.data.table(pick(B01, c("member_id","net_pnl","validbet"),
+            "B01_bt_panel", "索提诺稳定性（玩家罚侧维）"))
     data.table::set(bb, j = "r", value = -bb$net_pnl / pmax(bb$validbet, 1))
     so <- bb[, .(n = .N, mu = mean(r),
                  dn = stats::sd(r[r < 0])), by = member_id]
@@ -1697,7 +1745,8 @@ if (!is.null(K01) && !is.null(B01)) {
   pl$ae_err <- rowMeans((as.matrix(Zm[, FEAT]) - rec)^2)
   ## CVaR 5%：平台视角日收益的最差 5% 尾均值（需 ≥10 个活跃日）
   if (HAS$dt) {
-    bb2 <- data.table::as.data.table(B01[, c("member_id","net_pnl","validbet")])
+    bb2 <- data.table::as.data.table(pick(B01, c("member_id","net_pnl","validbet"),
+            "B01_bt_panel", "CVaR 5% 尾损维"))
     data.table::set(bb2, j = "r", value = -bb2$net_pnl / pmax(bb2$validbet, 1))
     cvt <- bb2[, .(nn = .N,
                    cvar = { qq <- stats::quantile(r, .05, na.rm = TRUE)
@@ -1740,7 +1789,8 @@ if (exists("pl") && !is.null(B01)) {
   P17$member_id <- num(P17$member_id)
   ## B01 全窗聚合：游戏口径赢利、首末注单日
   if (HAS$dt) {
-    b <- data.table::as.data.table(B01[, c("member_id","bet_date","game_pnl")])
+    b <- data.table::as.data.table(pick(B01, c("member_id","bet_date","game_pnl"),
+            "B01_bt_panel", "游戏输赢贡献、生命周期阶段（玩家赏侧维）"))
     b[, game_pnl := suppressWarnings(as.numeric(game_pnl))]
     gsp <- as.data.frame(b[, .(gp = sum(game_pnl, na.rm = TRUE),
                                d0 = min(bet_date), d1 = max(bet_date)),
@@ -1785,8 +1835,9 @@ if (exists("pl") && !is.null(B01)) {
   P17$批量注册嫌疑[is.na(P17$批量注册嫌疑)] <- 0
   ## IP结构风险 ← 单链密度（C01.member_per_chain 会员级最大值）×（1＋稀疏段命中）
   if (!is.null(IPL) && !is.null(C01)) {
-    mm <- merge(IPL[,c("member_id","bet_ip")],
-                C01[,c("bet_ip","member_per_chain")], by="bet_ip")
+    mm <- merge(pick(IPL, c("member_id","bet_ip"), "I_ip_player", "IP结构风险"),
+                pick(C01, c("bet_ip","member_per_chain"), "C01_ip_chain", "IP结构风险"),
+                by="bet_ip")
     mm$member_per_chain <- num(mm$member_per_chain)
     dens <- tapply(mm$member_per_chain, mm$member_id, max, na.rm=TRUE)
     dd <- data.frame(member_id=num(names(dens)), 密度=as.numeric(dens))
@@ -2252,15 +2303,17 @@ if (!is.null(IPL)) {
   AG$退水消耗比 <- AG$退水支出 / pmax(AG$游戏赢利, 1)
   ## 真实流水（赏）：线下会员剔对打后的洗码量（K01.validbet × (1−hedge_rate)）
   if (!is.null(K01)) {
-    k2 <- merge(K01[, c("member_id","validbet","hedge_rate")], mp, by = "member_id")
+    k2 <- merge(pick(K01, c("member_id","validbet","hedge_rate"),
+                     "K01_risk_feature_matrix", "代理·真实流水"), mp, by = "member_id")
     k2$rv <- num(k2$validbet) * (1 - pmin(pmax(num(k2$hedge_rate), 0), 1))
     rv <- tapply(k2$rv, k2$lv3, sum, na.rm = TRUE)
     AG$真实流水 <- as.numeric(rv[as.character(AG$lv3)])
   } else AG$真实流水 <- NA_real_
   ## 单链密度（罚）：该线会员所踩 IP 的 member_per_chain 最大值
   if (!is.null(C01)) {
-    li <- merge(unique(IPL[, c("bet_ip","lv3")]),
-                C01[, c("bet_ip","member_per_chain")], by = "bet_ip")
+    li <- merge(unique(pick(IPL, c("bet_ip","lv3"), "I_ip_player", "代理·单链密度")),
+                pick(C01, c("bet_ip","member_per_chain"), "C01_ip_chain", "代理·单链密度"),
+                by = "bet_ip")
     li$member_per_chain <- num(li$member_per_chain)
     mx <- tapply(li$member_per_chain, li$lv3, max, na.rm = TRUE)
     AG$单链密度 <- as.numeric(mx[as.character(AG$lv3)])
@@ -2269,7 +2322,8 @@ if (!is.null(IPL)) {
   PPM <- read_any("P_player_month")
   if (!is.null(PPM)) {
     PPM$net_pnl <- num(PPM$net_pnl)
-    PPM <- merge(PPM[, c("member_id","ym","net_pnl")], mp, by = "member_id")
+    PPM <- merge(pick(PPM, c("member_id","ym","net_pnl"), "P_player_month",
+                      "代理·下线留存、新增会员质量"), mp, by = "member_id")
     PPM$ym <- format(as.Date(paste0(sub("-1$","-01",PPM$ym))), "%Y-%m")
     ret1 <- lapply(split(PPM, PPM$lv3), function(g) {
       ms <- sort(unique(g$ym)); if (length(ms) < 2) return(NULL)
@@ -2519,6 +2573,30 @@ if (!is.null(SYM)) {
     "「罚侧状态」须为「已生效」——**待表不得作为不罚的理由**，",
     "缺金额层时应以现有实测料源派生可核验的过程维，先立罚侧、再等金额层",
     "｜本方案用途：常设看门人——日后任何一轮修订若削去某实体的罚侧，本表即刻显形"), escape = FALSE, scroll = 420)
+}
+```
+
+
+```{r}
+#| label: gap-registry
+#| results: asis
+## ── 缺口登记表（2026-08-13 十九轮立）────────────────────────────────────
+##   pick() 闸每拦下一处缺列即在此登记。表空即全部契约齐备；
+##   非空则逐行点名：哪张表、缺哪列、影响哪一处输出——**缺口从此可数、可追、可验收**。
+if (length(GAPS$rows)) {
+  GT <- do.call(rbind, GAPS$rows)
+  GT <- GT[!duplicated(paste(GT$来源表, GT$缺列)), , drop = FALSE]
+  kb(GT, paste0("交付件契约缺口登记表：本次渲染共拦下 ", nrow(GT), " 处缺列",
+    "｜解释：缺列一律 NA 占位并登记，绝不静默填零，亦不令整篇停摆；",
+    "「受影响输出」指该缺口会令哪一处结论退化，据此判断是否须回上游重跑取数",
+    "｜本方案用途：把「渲染时才炸」提前为「渲染时即列明」——",
+    "缺口成表，验收即有据"), escape = FALSE, scroll = 320)
+  cat("\n**处置次序**：凡「受影响输出」落在四实体能力值或回测者，",
+      "须回 `a168_取数与核验_SQL总包_v3.sql` 重跑对应条目后再渲染；",
+      "落在存档/画像者，可记录在案随下轮处置。\n\n")
+} else {
+  cat("::: {.callout-note}\n## 交付件契约缺口登记表：**本次零缺口**\n\n",
+      "全部 `pick()` 取列闸均未拦下缺列，交付件表头契约与本报告口径完全一致。\n:::\n\n")
 }
 ```
 
@@ -2890,7 +2968,8 @@ if (!is.null(B01)) {
   num <- function(v) suppressWarnings(as.numeric(v))
   MB <- NULL
   if (isTRUE(HAS$dt)) {
-    d9 <- data.table::as.data.table(B01[, c("member_id","validbet","net_pnl")])
+    d9 <- data.table::as.data.table(pick(B01, c("member_id","validbet","net_pnl"),
+            "B01_bt_panel", "@sec-unit 单位经济学"))
     d9[, `:=`(validbet = num(validbet), net_pnl = num(net_pnl))]
     MB <- as.data.frame(d9[, .(vb = sum(validbet, na.rm = TRUE),
                                np = sum(net_pnl,  na.rm = TRUE)), by = member_id])
@@ -3021,8 +3100,10 @@ if (!is.null(B01)) {
   ##   故改建「一次性索引 + 单次分组」的窗口聚合器：B01 转 data.table、
   ##   按营业日序号建键，每折以二分查找取窗，一次 by=member_id 分组同时算出全部所需列。
   ##   同一窗口只扫一遍、只分组一次，取代原先每折九次 stats::aggregate。
-  BTD <- data.table::as.data.table(B01[, c("member_id","bet_date","hedge_rate_d",
-           "stake_cv_d","late_share_d","n_ip","stake","net_pnl","validbet")])
+  BTD <- data.table::as.data.table(pick(B01,
+                c("member_id","bet_date","hedge_rate_d",
+                "stake_cv_d","late_share_d","n_ip","stake","net_pnl","validbet"),
+                "B01_bt_panel", "@sec-backtest 回测面板"))
   data.table::setnames(BTD,
     c("hedge_rate_d","stake_cv_d","late_share_d","n_ip"),
     c("hedge","cv","late","nip"))
@@ -4553,7 +4634,8 @@ if (exists("BT") && !is.null(B01) && all(c("名单洗码","名单日均活跃","
   RHO_TRK <- 0.00349
   ## ── 日频实测底表（营业额·活跃会员数·盈利·返水）───────────────────
   if (isTRUE(HAS$dt)) {
-    d8 <- data.table::as.data.table(B01[, c("bet_date","member_id","validbet","net_pnl")])
+    d8 <- data.table::as.data.table(pick(B01, c("bet_date","member_id","validbet","net_pnl"),
+            "B01_bt_panel", "@sec-track 三情景金融走势"))
     d8[, `:=`(validbet = num(validbet), net_pnl = num(net_pnl))]
     DAY <- as.data.frame(d8[, .(洗码 = sum(validbet, na.rm = TRUE),
                                 活跃 = data.table::uniqueN(member_id),
@@ -5439,7 +5521,8 @@ if (!is.null(B01) && exists("MB")) {
   num <- function(v) suppressWarnings(as.numeric(v))
   CH <- NULL
   if (isTRUE(HAS$dt)) {
-    d7 <- data.table::as.data.table(B01[, c("member_id","bet_date")])
+    d7 <- data.table::as.data.table(pick(B01, c("member_id","bet_date"),
+            "B01_bt_panel", "@sec-amount 赏罚幅度"))
     d7[, ym := substr(as.character(bet_date), 1, 7)]
     d7 <- unique(d7[, .(member_id, ym)])
     d7[, first := min(ym), by = member_id]
