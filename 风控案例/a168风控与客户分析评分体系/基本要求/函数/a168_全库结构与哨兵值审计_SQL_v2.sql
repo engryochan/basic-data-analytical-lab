@@ -91,8 +91,14 @@ ORDER BY 疑似性质, TABLE_NAME;
 
 /* ═══════════════════════════════════════════════════════════════════════════
    §Z-02 · 排除清单（备份／测试／临时／副本表）
-   用途：此清单须写入全案「禁用表」名录。已知实例：ods_a168_agent_bak20250610、
-         ods_a168_agent_test、ods_a168_game_demoipsetting。
+   用途：此清单须写入全案「禁用表」名录。
+   ★ 2026-08-13 实测：全库 129 张表，命中 5 张——
+       ods_a168_wallet_reporter_copy（182,452 行·副本·**本轮新发现**）
+       ods_a168_agent_bak20250610（43,244 行·备份）
+       ods_a168_agent_dtl_test（57 行·测试）
+       ods_a168_agent_test（30 行·测试）
+       ods_a168_game_demoipsetting（16 行·演示·须业务确认）
+     其中副本表逾十八万行，量级不小，**误用之害不容轻忽**。
    判读：凡列入者，一律不得进入任何分析；若某分析已引用之，须整体重跑。
    ▸ 导出：需要 —— 存为「数据库/Z02_excluded_tables.csv」
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -213,7 +219,13 @@ ORDER BY 状态, TABLE_NAME, ORDINAL_POSITION;
          手拟必漏，且会遗漏 9999-12-31、1900-01-01、'N/A'、'null' 字符串、
          -999、全角空格等未曾预料者。
    用法：先跑本条**生成** SQL，再逐条执行其输出（承纪律②，禁批量）。
-   分批：若表数逾百，先依 §Z-01 之估计行数与业务重要性排序，分批执行。
+   分批：★ 2026-08-13 实测——生成 **1,530 条**查询，涉 125 张表。
+         若逐条提交，即 1,530 次执行，**断不可一次全跑**（承纪律③禁批量）。
+         建议次序：先跑 §Z-01 之最大八表（member_dtl 8.18 亿行、
+         log_age_cash_change 3.15 亿、bet01 1.99 亿、bet02 1.99 亿、
+         in_out_m 1.71 亿、wallet_dtl 1.08 亿、member 5,878 万、
+         mem_login 5,742 万），其余按业务重要性顺延。
+         大表之逐列 GROUP BY 代价高，务必逐条观察耗时后再续。
    ▸ 导出：需要 —— 存为「数据库/Z06_generated_probe_sql.csv」
    ═══════════════════════════════════════════════════════════════════════════ */
 SELECT
@@ -242,6 +254,16 @@ ORDER BY t.TABLE_ROWS DESC, c.TABLE_NAME, c.ORDINAL_POSITION;
 
 /* ═══════════════════════════════════════════════════════════════════════════
    §Z-07 · 普查执行样例（以注单主表示范；其余各表由 §Z-06 生成）
+   ★ 2026-08-13 实测斧正（v1 → v2，两处）：
+     一、原十条 UNION 支路**皆无 `WHERE bet02 = '101'`**，扫的是整表（含全部游戏
+         类别），得 199,151,240 行；而 §Z-08／§Z-11 限百家乐，得 131,058,975 行。
+         二者相差 6,809 万行，**根本不可比**。今补齐游戏范围谓词。
+         教训：同一份审计内，各条之样本范围须一致；范围不一致而并列判读，
+         必得错误结论——此正是 v1 实测中 bet03=0 有 120,811 笔、
+         而 §Z-08 只报 102 笔之所以然。
+     二、末尾排序原为 `ORDER BY 1,2,4 DESC`。因哨兵值系以**高频尖峰**现形，
+         已确认按 n 降序为正解，保留。
+
    判读准则（三条，缺一不可）：
      一、单点尖峰：某具体取值之占比较其邻近取值高出数个量级者，列为候选；
      二、语义可疑：取值形如 -1／0／-999／'unknown'／'N/A'／'null'／
@@ -252,43 +274,43 @@ ORDER BY t.TABLE_ROWS DESC, c.TABLE_NAME, c.ORDINAL_POSITION;
    ═══════════════════════════════════════════════════════════════════════════ */
 SELECT 'ods_a168_bet02' AS t, 'bet03' AS c, CAST(bet03 AS VARCHAR) AS v,
        COUNT(*) AS n, COUNT(*) * 1.0 / SUM(COUNT(*)) OVER () AS pct
-FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+FROM ods_mariadb_2b.ods_a168_bet02 WHERE bet02 = '101' GROUP BY 3
 UNION ALL
 SELECT 'ods_a168_bet02', 'bet04', CAST(bet04 AS VARCHAR),
        COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
-FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+FROM ods_mariadb_2b.ods_a168_bet02 WHERE bet02 = '101' GROUP BY 3
 UNION ALL
 SELECT 'ods_a168_bet02', 'bet39', CAST(bet39 AS VARCHAR),
        COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
-FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+FROM ods_mariadb_2b.ods_a168_bet02 WHERE bet02 = '101' GROUP BY 3
 UNION ALL
 SELECT 'ods_a168_bet02', 'eid', CAST(eid AS VARCHAR),
        COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
-FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+FROM ods_mariadb_2b.ods_a168_bet02 WHERE bet02 = '101' GROUP BY 3
 UNION ALL
 SELECT 'ods_a168_bet02', 'gametype', CAST(gametype AS VARCHAR),
        COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
-FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+FROM ods_mariadb_2b.ods_a168_bet02 WHERE bet02 = '101' GROUP BY 3
 UNION ALL
 SELECT 'ods_a168_bet02', 'commission', CAST(commission AS VARCHAR),
        COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
-FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+FROM ods_mariadb_2b.ods_a168_bet02 WHERE bet02 = '101' GROUP BY 3
 UNION ALL
 SELECT 'ods_a168_bet02', 'category', CAST(category AS VARCHAR),
        COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
-FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+FROM ods_mariadb_2b.ods_a168_bet02 WHERE bet02 = '101' GROUP BY 3
 UNION ALL
 SELECT 'ods_a168_bet02', 'bet09', CAST(bet09 AS VARCHAR),
        COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
-FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+FROM ods_mariadb_2b.ods_a168_bet02 WHERE bet02 = '101' GROUP BY 3
 UNION ALL
 SELECT 'ods_a168_bet02', 'bet10', CAST(bet10 AS VARCHAR),
        COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
-FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+FROM ods_mariadb_2b.ods_a168_bet02 WHERE bet02 = '101' GROUP BY 3
 UNION ALL
 SELECT 'ods_a168_bet02', 'bet11', CAST(bet11 AS VARCHAR),
        COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
-FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+FROM ods_mariadb_2b.ods_a168_bet02 WHERE bet02 = '101' GROUP BY 3
 ORDER BY 1, 2, 4 DESC;
 
 
@@ -351,10 +373,18 @@ SELECT
    何以要紧：本项目一切「日／月／滚动 30 日」聚合，皆须先确定切日基准。
          候选有三：`dt`（StarRocks 分区日）、`bet07`（帳務日期）、
          `DATE(bet08)`（下注日）。SQL 总包现行一律以 `dt` 切日。
-   判读准则：
-     · 三数若同为行数，则三者一致，议题消解，**总包现行做法正确，不必改动**；
-     · 若 dt = bet07 恒成立而两者皆异于下注日，则 dt 已承载账务日语义，仍不必改；
-     · 唯有当 bet07 与 dt 分歧显著时，方须讨论切日基准之更换。
+   ★ 2026-08-13 实测结论（已闭合，此后不必再议）：
+       dt 等于账务日     131,058,975 / 131,058,975 = **100.0%**
+       dt 等于下注日      80,471,049 / 131,058,975 = **61.4%**
+     结论一：`dt` 即 `bet07`（帳務日期），**总包一律以 dt 切日之做法正确，无须改动**。
+     结论二：账务日与下注日有 **38.6%** 不一致——营业日不以午夜为界。
+             故**凡以 `DATE(bet08)` 切日者，三成八以上行数错分**。
+             此为硬结论：日／月／滚动窗口一律以 `dt` 为准，禁用 `DATE(bet08)`。
+     结论三：bet06 与 bet08 之纪元哨兵皆为 0，时序异常仅 3 笔；
+             下注距开局秒 P50 = 11、P99 = P999 = 25、最大 215、最小 −1。
+             故 **bet06 确为「开放下注」时刻**（非开牌），且下注窗口上界约 25~30 秒。
+             封盘时刻或可由 `bet06 + 窗口长度` 推得——惟窗口是否恒定，
+             须另跑差值之完整分布（见 §Z-09b）方能定谳，不得据 P999 单点即下结论。
    附带：bet06（開局時間）与 bet08 之差值分布，可一并回答三事——
          bet06 究为「开放下注」抑或「开牌」、下注时长是否恒定、两者时区是否一致。
          若差值集中于 0 至 30 秒，则 bet06 在下注之前且时长约 30 秒；
@@ -393,6 +423,62 @@ SELECT
                                                                     AS 下注距开局秒_P999,
     MAX(TIMESTAMPDIFF(SECOND, t_open, t_bet))                       AS 下注距开局秒_最大
 FROM v;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-09b · 下注窗口长度之完整分布（★ 2026-08-13 新增 · 尾秒阻塞之钥）
+   缘起：§Z-09 实测得下注距开局秒 P50 = 11、P99 = P999 = 25、最大 215。
+         P99 与 P999 同为 25，形态上高度暗示**下注窗口存在硬上界**。
+         若窗口恒定，则 close_bet_time = bet06 + 窗口长度，
+         **需求文档 §5 之尾秒分析即可开工**，无须外求封盘时间表。
+   惟不得据 P999 单点即断——PERCENTILE_APPROX 系近似算法，
+   且极端尾部之近似误差最著。故本条改取**逐秒直方图**，一次看全。
+   判读：
+     · 若逐秒频次在某秒后骤降至近零，该秒即窗口上界，窗口恒定 → B-1 解封；
+     · 若频次呈长尾缓降而无明显断点，则窗口不恒定 → 仍须外求封盘表，
+       或退用需求 §5.1 所许之「下注后第几秒」，惟须另证其可比性；
+     · 每局最大差值之分布（下半段）另证窗口是否随局而异。
+   ▸ 导出：需要 —— 存为「数据库/Z09b_bet_window.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+WITH v AS (
+  SELECT
+      CONCAT_WS('|', CAST(bet03 AS VARCHAR),
+                     CAST(bet04 AS VARCHAR),
+                     CAST(bet39 AS VARCHAR))                        AS round_key,
+      TIMESTAMPDIFF(SECOND,
+        CAST(NULLIF(TRIM(bet06),'') AS DATETIME),
+        CAST(NULLIF(TRIM(bet08),'') AS DATETIME))                   AS d_sec
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE bet02 = '101'
+),
+hist AS (
+  SELECT d_sec, COUNT(*) AS n_orders
+  FROM v WHERE d_sec IS NOT NULL
+  GROUP BY d_sec
+),
+rmax AS (
+  SELECT round_key, MAX(d_sec) AS max_d
+  FROM v WHERE d_sec IS NOT NULL
+  GROUP BY round_key
+),
+rhist AS (
+  SELECT max_d, COUNT(*) AS n_rounds
+  FROM rmax GROUP BY max_d
+)
+SELECT '注单层·逐秒' AS 层, CAST(h.d_sec AS VARCHAR) AS 距开局秒,
+       h.n_orders AS 计数,
+       h.n_orders * 1.0 / SUM(h.n_orders) OVER ()               AS 占比,
+       SUM(h.n_orders) OVER (ORDER BY h.d_sec)
+         * 1.0 / SUM(h.n_orders) OVER ()                        AS 累计占比
+FROM hist h
+UNION ALL
+SELECT '局层·该局最末下注秒', CAST(r.max_d AS VARCHAR),
+       r.n_rounds,
+       r.n_rounds * 1.0 / SUM(r.n_rounds) OVER (),
+       SUM(r.n_rounds) OVER (ORDER BY r.max_d)
+         * 1.0 / SUM(r.n_rounds) OVER ()
+FROM rhist r
+ORDER BY 1, CAST(距开局秒 AS INT);
 
 
 /* ═══════════════════════════════════════════════════════════════════════════

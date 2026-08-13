@@ -1,0 +1,1260 @@
+---
+title: "a168 · 分析异常IP与尾秒投注的风控与降低误判"
+subtitle: "第一阶段 · L1 数据真实性审计（§Z 前置章逐条落地）"
+author: "Ryo（雷欧）"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看代码"
+    df-print: kable
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: true
+---
+
+```{r}
+#| label: setup
+suppressMessages({
+  if (!require("pacman", quietly = TRUE)) install.packages("pacman")
+  library(pacman)
+  p_load(data.table, gt, here)
+})
+
+## ════════════════════════════════════════════════════════════════════════
+##  铁律第九条：凡正文数字，一律于渲染时自表格本体现算，严禁硬编码。
+##  本档所有计数、占比、门禁判定，皆由下列函数于渲染时求得。
+## ════════════════════════════════════════════════════════════════════════
+
+## ════════════════════════════════════════════════════════════════════════
+##  数据目录解析（2026-08-13 斧正 · 实测教训固化）
+##  病灶：原写 here::here("数据库")。here() 锚定的是**项目根**（依 .Rproj／
+##        .here／.git／DESCRIPTION 之有无而定），**不是本 qmd 所在目录**。
+##        若 qmd 置于项目子目录，here("数据库") 指向 <项目根>/数据库，
+##        而实际资料在 <qmd 目录>/数据库 —— 于是「明明有档却读不到」。
+##  斧正：改为多候选依序试探，并把**实际采用之路径**印在正文，
+##        使「读不到」当场可见其所寻何处，不再静默失败。
+## ════════════════════════════════════════════════════════════════════════
+.dir_candidates <- unique(c(
+  file.path(getwd(), "数据库"),                                    # ① qmd 所在目录（Quarto 渲染时之工作目录）
+  "数据库",                                                        # ② 相对路径
+  tryCatch(here::here("数据库"), error = function(e) NA_character_),# ③ 项目根
+  file.path(dirname(getwd()), "数据库"),                           # ④ 上一层
+  file.path(getwd(), "data"), file.path(getwd(), "Data")           # ⑤ 常见英文名
+))
+.dir_candidates <- .dir_candidates[!is.na(.dir_candidates)]
+.hit <- .dir_candidates[dir.exists(.dir_candidates)]
+DATA_DIR <- if (length(.hit)) .hit[1] else .dir_candidates[1]
+
+## 常数集中登记（K-22）：改一处即全档生效，禁散落
+N_PEEK   <- 3L        # 每张表展示之首／末行数
+BOX_H    <- "420px"   # scroll-y 容器高度（过长者滚动，不截行）
+BOX_W    <- "100%"    # scroll-x 容器宽度（过宽者滚动，不截列）
+## ★ 2026-08-13 斧正：原设 N_MAXCOL 截列，已废。
+##   截列即隐藏证据——宽表一律改以 scroll-x 呈现，一列不少。
+
+## ════════════════════════════════════════════════════════════════════════
+##  文件名归一（承主方案「文件自动识别」之例）
+##  Superset 另存常产生 .csv.csv、(1) 副本、大小写差异等变体；
+##  精确名 → 忽略大小写 → 去重复扩展名 → 前缀近似，依序试探。
+##  ★ 命中变体时**必须显式回报**，不得静默采用——静默即是语义漂移之温床。
+## ════════════════════════════════════════════════════════════════════════
+resolve_file <- function(fname) {
+  if (!dir.exists(DATA_DIR)) return(NULL)
+  fs <- list.files(DATA_DIR, full.names = FALSE)
+  if (!length(fs)) return(NULL)
+  hit <- fs[fs == fname]                                            # ① 精确
+  if (!length(hit)) hit <- fs[tolower(fs) == tolower(fname)]        # ② 忽略大小写
+  if (!length(hit)) hit <- fs[tolower(fs) == tolower(paste0(fname, ".csv"))]  # ③ .csv.csv
+  if (!length(hit)) {                                               # ④ 前缀近似
+    stem <- sub("\\.csv$", "", fname)
+    hit  <- fs[grepl(paste0("^", stem), fs, ignore.case = TRUE)]
+  }
+  if (!length(hit)) return(NULL)
+  list(path = file.path(DATA_DIR, hit[1]), name = hit[1],
+       variant = !identical(hit[1], fname))
+}
+
+## ════════════════════════════════════════════════════════════════════════
+##  编码自适应读取器（2026-08-13 斧正）
+##  病灶：原版只把 encoding 传给 fread，而 fread 之 encoding 仅认
+##        "UTF-8"／"Latin-1"／"unknown"，**根本不试 GB18030／GBK／Big5**，
+##        名为自适应，实则只试了 UTF-8 一种。
+##  斧正：改为先读原始字节、剥 BOM、再以 iconv 逐一转码，转成方解析。
+##        依序：UTF-8-BOM → UTF-8 → GB18030 → GBK → Big5 → Latin1。
+## ════════════════════════════════════════════════════════════════════════
+read_adaptive <- function(fname) {
+  r <- resolve_file(fname)
+  if (is.null(r)) return(NULL)
+  raw <- readBin(r$path, "raw", file.info(r$path)$size)
+  if (length(raw) >= 3 && identical(as.integer(raw[1:3]), c(239L, 187L, 191L))) {
+    raw <- raw[-(1:3)]; encs <- c("UTF-8"); bom <- TRUE
+  } else {
+    encs <- c("UTF-8", "GB18030", "GBK", "BIG5", "latin1"); bom <- FALSE
+  }
+  for (enc in encs) {
+    txt <- try(iconv(rawToChar(raw), from = enc, to = "UTF-8"), silent = TRUE)
+    if (inherits(txt, "try-error") || is.na(txt) || !nzchar(txt)) next
+    d <- try(data.table::fread(text = txt, showProgress = FALSE), silent = TRUE)
+    if (!inherits(d, "try-error") && ncol(d) > 0) {
+      attr(d, "encoding_used") <- if (bom) "UTF-8-BOM" else enc
+      attr(d, "file_used")     <- r$name
+      attr(d, "is_variant")    <- r$variant
+      return(d)
+    }
+  }
+  NULL
+}
+
+## 缺失占位：须写明所待文件名、SQL 编号与受影响输出（铁律）
+placeholder <- function(fname, sqlid, affected) {
+  cat(sprintf(
+    "\n::: {.callout-important}\n## ⚠ 待补数据\n\n**所待文件**：`数据库/%s`  \n**产出语句**：`%s`  \n**受影响输出**：%s\n\n本节数字一律不填、不推想、不以静态文字冒充运行结果。\n:::\n",
+    fname, sqlid, affected))
+}
+
+## ════════════════════════════════════════════════════════════════════════
+##  统一 gt 包装（2026-08-13 立 · 呈表纪律）
+##   一、表格一律 gt（或 kable），**禁用静态表**；
+##   二、过宽 → scroll-x，过长 → scroll-y，**一律不截列、不截行**；
+##       截断即隐藏证据，与本档「截断认识论」自相矛盾。
+## ════════════════════════════════════════════════════════════════════════
+gt_box <- function(g, h = BOX_H, w = BOX_W) {
+  g |> gt::tab_options(
+    table.font.size       = "82%",
+    container.width       = w,
+    container.height      = h,
+    container.overflow.x  = TRUE,   # scroll-x：过宽者横向滚动
+    container.overflow.y  = TRUE    # scroll-y：过长者纵向滚动
+  )
+}
+
+## 小表全展（用于本档自算之清单）
+show_tbl <- function(d, cap = NULL) {
+  if (is.null(d)) return(invisible(NULL))
+  g <- gt::gt(d)
+  if (!is.null(cap)) g <- gt::tab_header(g, title = cap)
+  gt_box(g)
+}
+
+## ════════════════════════════════════════════════════════════════════════
+##  首末各 N_PEEK 行展示器（2026-08-13 增补）
+##  设计要点（皆为顶级标准之落地，非装饰）：
+##   一、【截断认识论】首末各三行是**样本，不是全集**。故副标题一律现算
+##       总行数与中间省略行数——读者须能一眼判知自己看到的是几分之几，
+##       且「首末三行未出现」永远不等于「不存在」。
+##   二、【行号即实际序号】采 data.table 打印概念：行号栏印**真实观测序号**
+##       （1:、2:、3: … --- … N-2:、N-1:、N:），故**总观测数一望即知**。
+##       严禁写成「首1／末1」之类相对标号——相对标号看不出总量，
+##       等同隐藏样本规模；且首末两段相邻，无序号则易被误读为连续行。
+##   三、【小表不切】总行数 ≤ 2×N_PEEK 时全数展示并注明「全表已尽列」，
+##       不作无意义之首末切分。
+##   四、【不截列不截行】过宽者由 gt_box 之 scroll-x 承担，过长者由 scroll-y 承担，
+##       一列不少、一行不漏。原设 N_MAXCOL 截列已于 2026-08-13 废止——
+##       截断即隐藏证据，与本档所奉之「截断认识论」自相矛盾。
+##   五、【零行显式】0 行不是「没问题」，而是须解释之读数，单独出提示。
+##   六、一切行数、列数、省略数皆于渲染时现算（铁律第九条），无一硬编码。
+## ════════════════════════════════════════════════════════════════════════
+show_head_tail <- function(d, cap = NULL, n = N_PEEK) {
+  if (is.null(d)) return(invisible(NULL))
+  N <- nrow(d); M <- ncol(d)
+
+  if (N == 0L) {
+    return(gt::gt(data.table::data.table(
+             提示 = "本表 0 行——须查明是查询无命中，抑或导出失败；0 行不等于无异常")) |>
+             gt::tab_header(title = cap, subtitle = "⚠ 空表·须解释") |>
+             gt_box(h = "auto"))
+  }
+
+  dd <- d   # ★ 一列不截：过宽者由 gt_box 之 scroll-x 承担
+
+  ## 逐列转字串（保留千分位），俾可插入 data.table 式的 --- 分隔列
+  as_disp <- function(x) {
+    if (is.numeric(x)) {
+      ifelse(is.na(x), "NA",
+             format(x, big.mark = ",", trim = TRUE, scientific = FALSE))
+    } else as.character(x)
+  }
+  rowlab <- function(i) sprintf("%s:", format(i, big.mark = "", trim = TRUE))
+
+  if (N <= 2L * n) {
+    body <- as.data.table(lapply(dd, as_disp))
+    body[, 行号 := rowlab(seq_len(N))]
+    omit <- 0L
+    sub  <- sprintf("共 %s 行 × %d 列 —— 全表已尽列（行号即实际观测序号）",
+                    format(N, big.mark = ","), M)
+  } else {
+    hi <- seq_len(n); ti <- seq.int(N - n + 1L, N)
+    h  <- as.data.table(lapply(dd[hi], as_disp)); h[, 行号 := rowlab(hi)]
+    sep <- as.data.table(lapply(dd[1L],  \(x) "---"));  sep[, 行号 := "---"]
+    t  <- as.data.table(lapply(dd[ti], as_disp)); t[, 行号 := rowlab(ti)]
+    body <- data.table::rbindlist(list(h, sep, t), use.names = TRUE, fill = TRUE)
+    omit <- N - 2L * n
+    sub  <- sprintf(
+      "共 %s 行 × %d 列 —— 首 %d 行与末 %d 行（行号即实际观测序号，末行号 %s 即总观测数），中间省略 %s 行（%.1f%%）",
+      format(N, big.mark = ","), M, n, n,
+      format(N, big.mark = ","), format(omit, big.mark = ","), 100 * omit / N)
+  }
+  data.table::setcolorder(body, "行号")
+  gt::gt(body) |>
+    gt::tab_header(title = cap, subtitle = sub) |>
+    gt::cols_align(align = "right", columns = "行号") |>
+    gt_box() |>
+    gt::tab_source_note(gt::md(
+      "*行号为**实际观测序号**（data.table 打印概念），末行号即总观测数；`---` 为省略段。首末数行系样本非全集，「未出现」不等于「不存在」。*"))
+}
+
+## ════════════════════════════════════════════════════════════════════════
+##  门禁判定器（S1 致命 / S2 阻断 / S3 条件 / S4 建议）
+##  ★ 2026-08-13 补回：本函数于 v3 改写 show_head_tail 时被整段误删——
+##    彼次以「起讫行区间」整片替换，而 gate 恰落在该区间之内，
+##    且替换后只验了 show_head_tail 之存在，未验区间内他物是否连坐。
+##    教训：替换须以**唯一锚点字串**为界，不得以行区间整片替换；
+##    且改后须逐一核对**全部函数定义仍在**，非只验所改者。
+## ════════════════════════════════════════════════════════════════════════
+gate <- function(pass, s, msg_pass, msg_fail) {
+  if (isTRUE(pass)) sprintf("🟢 通过 —— %s", msg_pass)
+  else sprintf("%s %s —— %s",
+               c(S1 = "🔴", S2 = "🟠", S3 = "🟡", S4 = "🟢")[[s]],
+               c(S1 = "S1 致命·停止分析", S2 = "S2 阻断·禁入正式结论",
+                 S3 = "S3 条件·须满足附加条件", S4 = "S4 建议")[[s]],
+               msg_fail)
+}
+
+## ════════════════════════════════════════════════════════════════════════
+##  既知同名异义登记册（2026-08-13 立）
+##  用途：§Z-04 跑出结果后，据此现算三数——既知者命中几处、遗漏几处、
+##        **新发现几处**。第三数最要紧：它衡量「我们原以为知道多少」
+##        与「实际有多少」之差。无此对照表，§Z-04 之输出无从判读。
+##  来源栏：既有登记 = 本项目此前已录；本轮新发现 = 2026-08-13 结构剖析所得。
+## ════════════════════════════════════════════════════════════════════════
+KNOWN_COLLISION <- data.table::data.table(
+  ## ★ 2026-08-13 实测斧正：原将 region 列入本册，实为归类错误——
+  ##   region 属「单表内字段名与注释不符」（名实不符），非跨表同名异义，
+  ##   §Z-04 以「同一列名在不同表释义不同」为判据，本就不会亦不应捕获它。
+  ##   以之责 §Z-04「遗漏」，是拿错尺量错物。今移出本册，另立 NAME_MISMATCH。
+  列名 = c("bet14","bet15","bet16","bet17","bet31","bet32","bet41","mem015"),
+  甲表 = c("ods_a168_bet01","ods_a168_bet01","ods_a168_bet01","ods_a168_bet01",
+           "ods_a168_bet01","ods_a168_bet01","ods_a168_bet02","ods_a168_member"),
+  甲义 = c("退水％數","LV1ID","LV2ID","LV3ID","桌子編號","房間編號",
+           "下注退水金額","（详 member 主档）"),
+  乙表 = c("ods_a168_bet02","ods_a168_bet02","ods_a168_bet02","ods_a168_bet02",
+           "ods_a168_bet02","ods_a168_bet02","ods_a168_dailyreport_member",
+           "ods_a168_member_dtl"),
+  乙义 = c("派彩","退水％數","退水金額","結果（净输赢）","LV4退水%數","LV5退水%數",
+           "有效投注","（详 member_dtl 明细）"),
+  类型亦异 = c("是","是","是","是","是","是","否","待查"),
+  来源 = c("本轮新发现","本轮新发现","本轮新发现","既有登记","本轮新发现",
+           "本轮新发现","本轮新发现","既有登记"),
+  风险 = c("🔴 义异且型异","🔴 义异且型异","🔴 义异且型异",
+           "🔴 义异且型异·最凶险","🔴 义异且型异","🔴 义异且型异",
+           "🟠 义异型同","🟠 义异")
+)
+
+## 名实不符登记册（字段名与注释相左，属**单表内**问题，§Z-04 不捕获，须另查）
+NAME_MISMATCH <- data.table::data.table(
+  表   = c("ods_a168_game_log"),
+  列名 = c("region"),
+  注释 = c("國家"),
+  症状 = c("字段名作 region（地区），注释却作「國家」——援用者极易误当省/州级"),
+  风险 = c("🟡 名实不符·非跨表")
+)
+
+## 载入清单：本档所读之全部文件，一次登记，供 @sec-manifest 现算
+Z_MANIFEST <- data.table::data.table(
+   SQL编号 = c("§Z-01","§Z-02","§Z-03","§Z-04","§Z-05","§Z-06",
+               "§Z-07","§Z-08","§Z-09","§Z-09b","§Z-11"),
+   文件名  = c("Z01_table_inventory.csv","Z02_excluded_tables.csv",
+               "Z03_column_dictionary.csv","Z04_name_collision.csv",
+               "Z05_missing_typehint.csv","Z06_generated_probe_sql.csv",
+               "Z07_probe_bet02.csv","Z08_roundkey_integrity.csv",
+               "Z09_time_axis_recon.csv","Z09b_bet_window.csv",
+               "Z11_sentinel_impact.csv"),
+   层      = c("L1","L1","L1","L1","L1","L1","L1","L2","L2","L2","L1"),
+   门禁    = c("S3","S1","S2","S1","S2","S3","S1","S1","S2","S2","S2")
+)
+Z_MANIFEST[, 已就位   := vapply(文件名, \(f) !is.null(resolve_file(f)), logical(1))]
+Z_MANIFEST[, 实际档名 := vapply(文件名, \(f) { r <- resolve_file(f)
+                                  if (is.null(r)) "—" else r$name }, character(1))]
+Z_MANIFEST[, 变体命中 := fifelse(实际档名 != "—" & 实际档名 != 文件名, "⚠ 是", "")]
+```
+
+# 〇 本档定位、铁律与门禁 {#sec-charter}
+
+## 本档做什么、不做什么
+
+本档为 **第一阶段：L1 数据真实性审计**。它只回答一个问题——
+
+> **这批数据能不能用？**
+
+它**不回答**「异常 IP 阈值该定多少」「尾秒是否带来优势」。
+那属第三、四阶段，须待本阶段门禁全数通过后方可开工。
+此非拖延，而是次序：**取数次序为铁律，不可倒**——
+
+```text
+结构剖析 → 列剖析 → 关系剖析 → 口径固化 → 取数下载 → 分析
+```
+
+前一版本档建立在一份未与 SQL 总包对齐的临时脚本之上，其八份 CSV
+（`C01_有效订单漏斗核对.csv` 至 `C09_会员月度盈亏胜率面板.csv`）
+与总包 `C01_ip_chain.csv`／`C06_hedge_pairs.csv`／`C08_subnet_all.csv`
+**编号族正面碰撞**：同一 C 前缀，内容毫不相干。
+该批脚本已依铁律改名 `_v1_superseded` 存档（禁止删除），本档据 §Z 前置章重建。
+
+## 适用铁律（全档生效）
+
+| 轴 | 内容 |
+|---|---|
+| **标准来源** | 一律以全天下最顶尖之数据分析／数据科学／量化科技标准为准，不以任何单一辖区为上限；「不适用于本场景」永不得作为放宽之由 |
+| **T 依据性质** | T1 规范性／T2 科学性／T3 工程性／T4 业务性 —— 四者不得混称同级；自拟规则永不冒充国际标准 |
+| **L 核验领域** | 本档只做 L1（数据真实性）与 L2（计算正确性）之一部 |
+| **S 风险严重度** | S1 致命·停止分析／S2 阻断·禁入正式结论／S3 条件／S4 建议 |
+| **铁律第九条** | 凡正文数字，渲染时自表格本体现算，严禁硬编码 |
+| **核实之定义** | 以文件与数据实测验证每一处声明；禁止凭源码推断即宣告完成；禁止以静态文字冒充运行结果 |
+| **缺失显式化** | 缺数据须写明**文件名 / SQL 编号 / 受影响输出**三要素，不推想、不留白 |
+| **截断认识论** | 导出上限下只承认排序头部结论；「未出现」不等于「不存在」 |
+| **已知缺陷显式化** | 哨兵值、同名异义、冲突字段一经查出，须于文档登记并载明处置与依据；**只存于分析者脑中或 SQL 注释者，视同未查** |
+| **呈表纪律** | 表格一律 gt／kable，禁用静态表；过宽用 scroll-x、过长用 scroll-y，**不截列不截行**——截断即隐藏证据 |
+| **首末抽样纪律** | 每张表展示首 N_PEEK 行与末 N_PEEK 行，并现算总行数与省略行数；所见永远是样本，判读不得逾此 |
+
+## 取数来源
+
+本档所读之 CSV，一律由 `a168_全库结构与哨兵值审计_SQL_v1.sql`（即 SQL 总包 §Z 前置章）
+按 §Z-00 → §Z-12 之顺序逐条执行、逐条导出而得。
+**编号、顺序、文件名三者与该脚本一一对应，不得另起。**
+
+### 数据目录诊断（★ 「明明有档却读不到」之专诊）
+
+```{r}
+#| label: dir-diagnostic
+#| results: asis
+cat(sprintf("\n**当前工作目录**：`%s`\n\n", getwd()))
+cat("**候选路径试探（依序）**：\n\n")
+for (p in .dir_candidates)
+  cat(sprintf("- `%s` —— %s\n", p, if (dir.exists(p)) "✅ 存在" else "❌ 不存在"))
+cat(sprintf("\n**实际采用**：`%s`（%s）\n\n",
+            DATA_DIR, if (dir.exists(DATA_DIR)) "✅ 存在" else "🔴 不存在"))
+if (dir.exists(DATA_DIR)) {
+  fs <- list.files(DATA_DIR, pattern = "(?i)\\.csv$", full.names = FALSE)
+  cat(sprintf("**该目录内 CSV 共 %d 份**：\n\n", length(fs)))
+  if (length(fs)) {
+    sz <- file.info(file.path(DATA_DIR, fs))$size
+    for (i in seq_along(fs))
+      cat(sprintf("- `%s`（%s 字节）\n", fs[i], format(sz[i], big.mark = ",")))
+  } else {
+    cat("> ⚠ 目录存在但无任何 CSV —— 请确认导出是否已落盘。\n")
+  }
+  cat("\n")
+} else {
+  cat("::: {.callout-important}\n## 🔴 数据目录不存在\n\n")
+  cat("上列候选路径皆不存在。请核对三事：\n\n")
+  cat("1. `数据库` 目录是否与本 `.qmd` 同级；\n")
+  cat("2. 目录名是否为简体「数据库」三字（非「數據庫」、非 `data`）；\n")
+  cat("3. 若置于他处，请于 setup 区手工指定 `DATA_DIR <- \"绝对路径\"`。\n")
+  cat("\n:::\n")
+}
+```
+
+```{r}
+#| label: manifest
+show_tbl(Z_MANIFEST, "◆ 载入清单（就位状态于渲染时现算）")
+```
+
+```{r}
+#| results: asis
+n_all <- nrow(Z_MANIFEST); n_ok <- sum(Z_MANIFEST$已就位)
+cat(sprintf(
+  "\n> **就位现况（现算）**：应载 %d 份，已就位 **%d** 份，尚缺 **%d** 份。\n\n",
+  n_all, n_ok, n_all - n_ok))
+if (n_ok < n_all) {
+  miss <- Z_MANIFEST[已就位 == FALSE]
+  cat("> 尚缺者及其 SQL 编号：\n>\n")
+  for (i in seq_len(nrow(miss)))
+    cat(sprintf("> - `%s` ← %s（门禁 %s）\n", miss$文件名[i], miss$SQL编号[i], miss$门禁[i]))
+  cat("\n")
+}
+```
+
+
+# 一 §Z 前置章逐条落地 {#sec-z}
+
+本章严格依 `a168_全库结构与哨兵值审计_SQL_v1.sql` 之语句顺序向下展开：
+每节先列该条 SQL 原文（**自脚本原样嵌入，未作任何改写**），
+次陈其用途与判读准则，再读取其导出并现算门禁。
+
+
+## Z-00 · 会话参数（每个 Superset 会话开跑前逐条单跑一次） {#sec-z-00}
+```{sql, eval = FALSE}
+SET SESSION query_timeout = 259200;
+SET SESSION cbo_cte_reuse = true;
+```
+
+> 本条导出声明为「不需要」，无 CSV 产出，故无读取环节。
+
+## Z-01 · 全库表清单与规模 {#sec-z-01}
+```{sql, eval = FALSE}
+SELECT
+    TABLE_NAME                                                   AS 表名,
+    TABLE_TYPE                                                   AS 表类型,
+    TABLE_ROWS                                                   AS 估计行数,
+    TABLE_COMMENT                                                AS 表注释,
+    CASE
+      WHEN LOWER(TABLE_NAME) LIKE '%_bak%'  THEN '备份'
+      WHEN LOWER(TABLE_NAME) LIKE '%bak2%'  THEN '备份'
+      WHEN LOWER(TABLE_NAME) LIKE '%_test%' THEN '测试'
+      WHEN LOWER(TABLE_NAME) LIKE '%_tmp%'  THEN '临时'
+      WHEN LOWER(TABLE_NAME) LIKE '%_old%'  THEN '旧版'
+      WHEN LOWER(TABLE_NAME) LIKE '%_copy%' THEN '副本'
+      WHEN LOWER(TABLE_NAME) LIKE '%_v1%'   THEN '疑似旧版'
+      WHEN LOWER(TABLE_NAME) LIKE '%demo%'  THEN '疑似演示'
+      ELSE '生产'
+    END                                                          AS 疑似性质
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+ORDER BY 疑似性质, TABLE_NAME;
+```
+
+**用途与判读**：确立审计范围与分批次序。TABLE_ROWS 为估计值，仅供排序，不作结论。
+
+**输出储存为** `数据库/Z01_table_inventory.csv`。
+
+```{r}
+#| label: read-z-01
+d_Z01_table_inventory <- read_adaptive("Z01_table_inventory.csv")
+show_head_tail(d_Z01_table_inventory, "◆ Z-01 · 全库表清单与规模")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z01_table_inventory
+if (is.null(.d)) {
+  placeholder("Z01_table_inventory.csv", "Z-01", "审计范围、分批次序、§Z-06 之生成基数")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`%s，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    if (isTRUE(attr(.d, "is_variant"))) "（⚠ 变体命中，非精确档名）" else "",
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S3", "全库表清单已就位，可据以排定分批次序", "表清单未就位，无从确定审计范围与分批")))
+}
+```
+
+## Z-02 · 排除清单（备份／测试／临时／副本表） {#sec-z-02}
+```{sql, eval = FALSE}
+SELECT
+    TABLE_NAME                          AS 表名,
+    TABLE_ROWS                          AS 估计行数,
+    TABLE_COMMENT                       AS 表注释,
+    CASE
+      WHEN LOWER(TABLE_NAME) LIKE '%_bak%'  OR LOWER(TABLE_NAME) LIKE '%bak2%' THEN '备份表·禁用'
+      WHEN LOWER(TABLE_NAME) LIKE '%_test%' THEN '测试表·禁用'
+      WHEN LOWER(TABLE_NAME) LIKE '%_tmp%'  THEN '临时表·禁用'
+      WHEN LOWER(TABLE_NAME) LIKE '%_old%'  THEN '旧版表·禁用'
+      WHEN LOWER(TABLE_NAME) LIKE '%_copy%' THEN '副本表·禁用'
+      WHEN LOWER(TABLE_NAME) LIKE '%demo%'  THEN '演示表·须确认'
+      ELSE '其他·须确认'
+    END                                 AS 处置
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND (   LOWER(TABLE_NAME) LIKE '%_bak%'  OR LOWER(TABLE_NAME) LIKE '%bak2%'
+       OR LOWER(TABLE_NAME) LIKE '%_test%' OR LOWER(TABLE_NAME) LIKE '%_tmp%'
+       OR LOWER(TABLE_NAME) LIKE '%_old%'  OR LOWER(TABLE_NAME) LIKE '%_copy%'
+       OR LOWER(TABLE_NAME) LIKE '%demo%')
+ORDER BY 处置, TABLE_NAME;
+```
+
+**用途与判读**：识别备份／测试／临时／副本表。凡列入者一律不得进入任何分析；若某分析已引用之，须整体重跑。
+
+**输出储存为** `数据库/Z02_excluded_tables.csv`。
+
+```{r}
+#| label: read-z-02
+d_Z02_excluded_tables <- read_adaptive("Z02_excluded_tables.csv")
+show_head_tail(d_Z02_excluded_tables, "◆ Z-02 · 排除清单（备份／测试／临时／副本表）")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z02_excluded_tables
+if (is.null(.d)) {
+  placeholder("Z02_excluded_tables.csv", "Z-02", "§4 全部 IP 结论之可信度；既有分析是否误用备份表")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`%s，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    if (isTRUE(attr(.d, "is_variant"))) "（⚠ 变体命中，非精确档名）" else "",
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S1", "排除清单已就位", "排除清单未就位——无从证明既有分析未误用备份表")))
+}
+```
+
+## Z-03 · 全库字段字典（含 source_type 解析） {#sec-z-03}
+```{sql, eval = FALSE}
+SELECT
+    TABLE_NAME                                                        AS 表名,
+    ORDINAL_POSITION                                                  AS 列序,
+    COLUMN_NAME                                                       AS 列名,
+    DATA_TYPE                                                         AS 存储类型,
+    IS_NULLABLE                                                       AS 可空,
+    REGEXP_EXTRACT(COLUMN_COMMENT, 'source_type=([^;]+)', 1)          AS 原始类型,
+    TRIM(REGEXP_REPLACE(COLUMN_COMMENT, 'source_type=[^;]+;', ''))    AS 业务含义,
+    COLUMN_COMMENT                                                    AS 原始注释
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+ORDER BY TABLE_NAME, ORDINAL_POSITION;
+```
+
+**用途与判读**：本表即数据字典之基底，落盘后作为一切字段引用之唯一依据。全库字段皆以 varchar 存储，真实类型仅存于注释之 source_type 前缀。
+
+**输出储存为** `数据库/Z03_column_dictionary.csv`。
+
+```{r}
+#| label: read-z-03
+d_Z03_column_dictionary <- read_adaptive("Z03_column_dictionary.csv")
+show_head_tail(d_Z03_column_dictionary, "◆ Z-03 · 全库字段字典（含 source_type 解析）")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z03_column_dictionary
+if (is.null(.d)) {
+  placeholder("Z03_column_dictionary.csv", "Z-03", "一切字段引用与 CAST；§Z-04／§Z-05 之输入")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`%s，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    if (isTRUE(attr(.d, "is_variant"))) "（⚠ 变体命中，非精确档名）" else "",
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S2", "字段字典已就位，字段引用有据", "字段字典未就位——一切 CAST 皆属臆测")))
+}
+```
+
+## Z-04 · 同名异义自动侦测（★ 本文件最关键之一条） {#sec-z-04}
+```{sql, eval = FALSE}
+WITH d AS (
+  SELECT
+      COLUMN_NAME,
+      TABLE_NAME,
+      TRIM(REGEXP_REPLACE(COLUMN_COMMENT, 'source_type=[^;]+;', ''))  AS 含义,
+      REGEXP_EXTRACT(COLUMN_COMMENT, 'source_type=([^;]+)', 1)        AS 类型
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+    AND COLUMN_COMMENT IS NOT NULL
+    AND TRIM(COLUMN_COMMENT) <> ''
+)
+SELECT
+    COLUMN_NAME                                  AS 列名,
+    COUNT(DISTINCT 含义)                          AS 释义数,
+    COUNT(DISTINCT 类型)                          AS 类型数,
+    COUNT(DISTINCT TABLE_NAME)                   AS 出现表数,
+    CASE WHEN COUNT(DISTINCT 类型) >= 2 THEN '🔴 义异且型异'
+         ELSE '🟠 义异型同' END                   AS 风险,
+    GROUP_CONCAT(DISTINCT CONCAT(TABLE_NAME, ' → ', 含义, ' [', 类型, ']')
+                 SEPARATOR '  ||  ')             AS 明细
+FROM d
+GROUP BY COLUMN_NAME
+HAVING COUNT(DISTINCT 含义) >= 2
+ORDER BY 类型数 DESC, 释义数 DESC, 出现表数 DESC, COLUMN_NAME;
+```
+
+**用途与判读**：一次列出全库所有同名异义字段。已知七例（bet14、bet01/bet02 自 bet14 起整段错位、bet31/32 与 bet39/40、bet41 于 bet02 与 dailyreport_member、member.mem015 双义、game_log.region 注释为「國家」），本条应全数覆盖，且极可能另有未知者。
+
+**输出储存为** `数据库/Z04_name_collision.csv`。
+
+```{r}
+#| label: read-z-04
+d_Z04_name_collision <- read_adaptive("Z04_name_collision.csv")
+show_head_tail(d_Z04_name_collision, "◆ Z-04 · 同名异义自动侦测（★ 本文件最关键之一条）")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z04_name_collision
+if (is.null(.d)) {
+  placeholder("Z04_name_collision.csv", "Z-04", "跨表取数之全部语句；同名异义登记册之完备性")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`%s，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    if (isTRUE(attr(.d, "is_variant"))) "（⚠ 变体命中，非精确档名）" else "",
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S1", "同名异义清单已就位", "未就位——跨表援用同一段 SQL 之风险不可控")))
+}
+```
+
+## Z-04b · 既知同名异义对照与遗漏检出 {#sec-z-04b}
+
+本节不另跑 SQL，只把 §Z-04 之输出与**既知登记册**对照，现算三数：
+
+- **命中**：既知者被 §Z-04 捕获——证侦测有效；
+- **遗漏**：既知者未被捕获——**须查侦测逻辑是否有洞**（如注释为空之列不入 §Z-04 之统计）；
+- **新发现**：§Z-04 捕获而登记册未录——**此数最要紧**，它是「原以为知道」与「实际有」之差。
+
+```{r}
+#| label: known-collision
+show_head_tail(KNOWN_COLLISION, "◆ 既知跨表同名异义登记册（本档常数，非读档）")
+```
+
+```{r}
+#| label: name-mismatch
+show_head_tail(NAME_MISMATCH, "◆ 名实不符登记册（单表内问题，§Z-04 不捕获，另查）")
+```
+
+::: {.callout-note}
+## 两册之别，不可混淆
+
+**跨表同名异义**——同一列名，在甲表与乙表释义不同（如 `bet17` 于 `bet01` 为
+LV3ID、于 `bet02` 为結果）。§Z-04 以此为判据，故能捕获。
+
+**名实不符**——单表之内，字段名与其注释相左（如 `game_log.region` 注释作「國家」）。
+§Z-04 **本就不会亦不应捕获**，以之责其「遗漏」是拿错尺量错物。
+须另以人工审阅字段字典（§Z-03）方能查出。
+
+★ 前一版曾将 `region` 误入同名异义册，遂在实测中被误判为「遗漏一处」——
+此为**登记册分类错误**，非侦测逻辑之洞。今已分立两册。
+:::
+
+```{r}
+#| label: collision-recon
+#| results: asis
+.z4 <- d_Z04_name_collision
+if (is.null(.z4)) {
+  placeholder("Z04_name_collision.csv", "Z-04",
+              "既知九处能否被侦测捕获；遗漏与新发现之数；同名异义登记册之完备性")
+} else {
+  colnm <- intersect(c("列名", "COLUMN_NAME", "column_name"), names(.z4))
+  if (!length(colnm)) {
+    cat("\n::: {.callout-important}\n## ⚠ 无法对照\n\n",
+        "`Z04_name_collision.csv` 内未见「列名」栏（实得栏位：",
+        paste(names(.z4), collapse = "、"),
+        "）。请确认导出是否取自 §Z-04 之语句。\n:::\n", sep = "")
+  } else {
+    got   <- unique(as.character(.z4[[colnm[1]]]))
+    known <- KNOWN_COLLISION$列名
+    hit   <- intersect(known, got)
+    miss  <- setdiff(known, got)
+    novel <- setdiff(got,   known)
+    cat(sprintf(
+      "\n> **对照现算**：既知 **%d** 处，其中命中 **%d**、遗漏 **%d**；§Z-04 另捕获**新发现 %d** 处。\n\n",
+      length(known), length(hit), length(miss), length(novel)))
+    if (length(miss)) {
+      cat("::: {.callout-warning}\n## 🟠 既知而未被捕获者\n\n")
+      for (x in miss) cat(sprintf("- `%s`\n", x))
+      cat("\n**须查侦测逻辑是否有洞**：§Z-04 以 COLUMN_COMMENT 为据，",
+          "凡注释为空、或两表注释文字虽异而语义实同者，皆会漏网。\n:::\n", sep = "")
+    }
+    if (length(novel)) {
+      cat("::: {.callout-important}\n## 🔴 新发现（登记册未录）\n\n")
+      for (x in novel) cat(sprintf("- `%s`\n", x))
+      cat(sprintf(
+        "\n此 %d 处须逐一定性后补入登记册。**在补齐之前，凡跨表援用上列字段之语句一律 S2 阻断。**\n:::\n",
+        length(novel)))
+    }
+    cat(sprintf("\n%s\n\n", gate(length(miss) == 0 && length(novel) == 0, "S1",
+      "既知与实测完全吻合，同名异义登记册已闭合",
+      sprintf("登记册未闭合（遗漏 %d、新发现 %d）——跨表取数之风险不可控",
+              length(miss), length(novel)))))
+  }
+}
+```
+
+## Z-05 · 类型缺注与注释缺失侦测 {#sec-z-05}
+```{sql, eval = FALSE}
+SELECT
+    TABLE_NAME                        AS 表名,
+    ORDINAL_POSITION                  AS 列序,
+    COLUMN_NAME                       AS 列名,
+    DATA_TYPE                         AS 存储类型,
+    COLUMN_COMMENT                    AS 原始注释,
+    CASE
+      WHEN COLUMN_COMMENT IS NULL OR TRIM(COLUMN_COMMENT) = ''      THEN '🔴 无任何注释'
+      WHEN COLUMN_COMMENT NOT LIKE '%source_type=%'                 THEN '🟠 缺原始类型'
+      WHEN TRIM(REGEXP_REPLACE(COLUMN_COMMENT,'source_type=[^;]+;','')) = ''
+                                                                    THEN '🟠 有类型无含义'
+      ELSE '🟢 完整'
+    END                               AS 状态
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND (COLUMN_COMMENT IS NULL
+       OR TRIM(COLUMN_COMMENT) = ''
+       OR COLUMN_COMMENT NOT LIKE '%source_type=%'
+       OR TRIM(REGEXP_REPLACE(COLUMN_COMMENT,'source_type=[^;]+;','')) = '')
+ORDER BY 状态, TABLE_NAME, ORDINAL_POSITION;
+```
+
+**用途与判读**：凡注释为空或无 source_type 前缀者，其真实类型无从判定。此清单即「不得使用之字段」名录。
+
+**输出储存为** `数据库/Z05_missing_typehint.csv`。
+
+```{r}
+#| label: read-z-05
+d_Z05_missing_typehint <- read_adaptive("Z05_missing_typehint.csv")
+show_head_tail(d_Z05_missing_typehint, "◆ Z-05 · 类型缺注与注释缺失侦测")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z05_missing_typehint
+if (is.null(.d)) {
+  placeholder("Z05_missing_typehint.csv", "Z-05", "不可用字段名录；一切类型转换之正当性")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`%s，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    if (isTRUE(attr(.d, "is_variant"))) "（⚠ 变体命中，非精确档名）" else "",
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S2", "类型缺注清单已就位", "未就位——无从辨识哪些字段不可用")))
+}
+```
+
+## Z-06 · 生成逐列高频值普查语句（★ 令哨兵值自行现形） {#sec-z-06}
+```{sql, eval = FALSE}
+SELECT
+    c.TABLE_NAME                                          AS 表名,
+    c.ORDINAL_POSITION                                    AS 列序,
+    c.COLUMN_NAME                                         AS 列名,
+    t.TABLE_ROWS                                          AS 估计行数,
+    CONCAT(
+      'SELECT ''', c.TABLE_NAME, ''' AS t, ''', c.COLUMN_NAME, ''' AS c, ',
+      'CAST(', c.COLUMN_NAME, ' AS VARCHAR) AS v, COUNT(*) AS n, ',
+      'COUNT(*) * 1.0 / SUM(COUNT(*)) OVER () AS pct ',
+      'FROM ods_mariadb_2b.', c.TABLE_NAME, ' ',
+      'GROUP BY 3 ORDER BY n DESC LIMIT 20;'
+    )                                                     AS 待执行SQL
+FROM INFORMATION_SCHEMA.COLUMNS c
+LEFT JOIN INFORMATION_SCHEMA.TABLES t
+       ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME
+WHERE c.TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND c.COLUMN_NAME NOT IN ('__source_pk','source_db','source_table',
+                            'ods_table_name','sync_time')
+  AND NOT (   LOWER(c.TABLE_NAME) LIKE '%_bak%'  OR LOWER(c.TABLE_NAME) LIKE '%bak2%'
+           OR LOWER(c.TABLE_NAME) LIKE '%_test%' OR LOWER(c.TABLE_NAME) LIKE '%_tmp%'
+           OR LOWER(c.TABLE_NAME) LIKE '%_old%'  OR LOWER(c.TABLE_NAME) LIKE '%_copy%')
+ORDER BY t.TABLE_ROWS DESC, c.TABLE_NAME, c.ORDINAL_POSITION;
+```
+
+**用途与判读**：由 schema 自动生成逐列普查语句。**一律不预设候选清单**——手拟必漏，且会遗漏 9999-12-31、1900-01-01、'N/A'、'null' 字符串、-999、全角空格等未曾预料者。
+
+**输出储存为** `数据库/Z06_generated_probe_sql.csv`。
+
+```{r}
+#| label: read-z-06
+d_Z06_generated_probe_sql <- read_adaptive("Z06_generated_probe_sql.csv")
+show_head_tail(d_Z06_generated_probe_sql, "◆ Z-06 · 生成逐列高频值普查语句（★ 令哨兵值自行现形）")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z06_generated_probe_sql
+if (is.null(.d)) {
+  placeholder("Z06_generated_probe_sql.csv", "Z-06", "§Z-07 之执行；全库哨兵值普查")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`%s，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    if (isTRUE(attr(.d, "is_variant"))) "（⚠ 变体命中，非精确档名）" else "",
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S3", "生成语句已就位，可据以分批执行普查", "未就位——哨兵值普查无从展开")))
+}
+```
+
+## Z-07 · 普查执行样例（以注单主表示范；其余各表由 Z-06 生成） {#sec-z-07}
+```{sql, eval = FALSE}
+SELECT 'ods_a168_bet02' AS t, 'bet03' AS c, CAST(bet03 AS VARCHAR) AS v,
+       COUNT(*) AS n, COUNT(*) * 1.0 / SUM(COUNT(*)) OVER () AS pct
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'bet04', CAST(bet04 AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'bet39', CAST(bet39 AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'eid', CAST(eid AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'gametype', CAST(gametype AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'commission', CAST(commission AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'category', CAST(category AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'bet09', CAST(bet09 AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'bet10', CAST(bet10 AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'bet11', CAST(bet11 AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+ORDER BY 1, 2, 4 DESC;
+```
+
+::: {.callout-important}
+## ⚠ v1 之范围缺陷已斧正（读数解读须留意）
+
+本条 v1 版十条 UNION 支路**皆无 `WHERE bet02 = '101'`**，扫的是整表（含全部
+游戏类别），得 199,151,240 行；而 §Z-08／§Z-11 限百家乐，得 131,058,975 行。
+二者相差 6,809 万行，**根本不可比**。
+
+此即 v1 实测中「`bet03 = 0` 有 120,811 笔，而 §Z-08 只报 102 笔」之所以然——
+**不是两条互相矛盾，是两条量的根本不是同一批行**。
+`a168_全库结构与哨兵值审计_SQL_v2.sql` 已补齐范围谓词，须以 v2 重跑本条。
+
+**教训（已入铁律）**：同一份审计之内，各条之样本范围须一致；
+范围不一致而并列判读，必得错误结论。
+:::
+
+**用途与判读**：哨兵值普查读数。判据三条：① 单点尖峰（某取值占比较邻近高出数个量级）；② 语义可疑；③ 跨列共现（候选行其余字段是否同步异常）。
+
+**输出储存为** `数据库/Z07_probe_bet02.csv`。
+
+```{r}
+#| label: read-z-07
+d_Z07_probe_bet02 <- read_adaptive("Z07_probe_bet02.csv")
+show_head_tail(d_Z07_probe_bet02, "◆ Z-07 · 普查执行样例（以注单主表示范；其余各表由 Z-06 生成）")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z07_probe_bet02
+if (is.null(.d)) {
+  placeholder("Z07_probe_bet02.csv", "Z-07", "§Z-08／§Z-10／§Z-11；哨兵值处置裁定")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`%s，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    if (isTRUE(attr(.d, "is_variant"))) "（⚠ 变体命中，非精确档名）" else "",
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S1", "普查读数已就位", "未就位——哨兵值有无、几何，一概不知")))
+}
+```
+
+## Z-08 · 局键唯一性与塌缩检验（对应「待-02」·风险最高之一条） {#sec-z-08}
+```{sql, eval = FALSE}
+WITH v AS (
+  SELECT
+      CAST(bet03 AS VARCHAR) AS k3,
+      CAST(bet04 AS VARCHAR) AS k4,
+      CAST(bet39 AS VARCHAR) AS k39,
+      CAST(bet05 AS VARCHAR) AS member_id,
+      CONCAT_WS('|', CAST(bet03 AS VARCHAR),
+                     CAST(bet04 AS VARCHAR),
+                     CAST(bet39 AS VARCHAR)) AS round_key
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE bet02 = '101'
+),
+per_key AS (
+  SELECT round_key,
+         COUNT(*)                  AS n_rows,
+         COUNT(DISTINCT member_id) AS n_member,
+         COUNT(DISTINCT k39)       AS n_table
+  FROM v GROUP BY round_key
+),
+per_k3 AS (
+  SELECT k3, COUNT(DISTINCT k39) AS n_table_per_k3,
+             COUNT(DISTINCT k4)  AS n_k4_per_k3
+  FROM v GROUP BY k3
+)
+SELECT
+    (SELECT COUNT(*) FROM v)                                            AS 注单行数,
+    (SELECT COUNT(*) FROM per_key)                                      AS 局键数,
+    (SELECT MAX(n_rows)   FROM per_key)                                 AS 单局最大注单行数,
+    (SELECT MAX(n_member) FROM per_key)                                 AS 单局最大会员数,
+    (SELECT PERCENTILE_APPROX(CAST(n_member AS DOUBLE),0.999) FROM per_key)
+                                                                        AS 单局会员数P999,
+    (SELECT COUNT(*) FROM per_key WHERE n_table > 1)                    AS 跨桌局键数_应为0,
+    (SELECT COUNT(*) FROM per_k3 WHERE n_table_per_k3 > 1)              AS bet03跨桌数,
+    (SELECT COUNT(*) FROM per_k3)                                       AS bet03唯一值数,
+    (SELECT SUM(CASE WHEN k3 IN ('-1','0','') OR k3 IS NULL
+                       OR k4 IN ('-1','0','') OR k4 IS NULL
+                       OR k39 IN ('-1','0','') OR k39 IS NULL
+                     THEN 1 ELSE 0 END) FROM v)                         AS 局键含哨兵值行数;
+
+/* 配套：局键规模排行（若榜首出现 -1|-1|-1 之类且注单数远超其余，即坐实塌缩）
+   ▸ 承上条之诊断，本注释块不单独计为一条语句 */
+```
+
+**用途与判读**：局键塌缩检验。若 bet03/bet04/bet39 任一含哨兵值，则此类注单被拼为同一局键，成千上万笔互不相干之注单聚合为一局——同桌共现将凭空产生天量虚假配对，玩家局级胜负判定亦全盘错乱。
+
+**输出储存为** `数据库/Z08_roundkey_integrity.csv`。
+
+```{r}
+#| label: read-z-08
+d_Z08_roundkey_integrity <- read_adaptive("Z08_roundkey_integrity.csv")
+show_head_tail(d_Z08_roundkey_integrity, "◆ Z-08 · 局键唯一性与塌缩检验（对应「待-02」·风险最高之一条）")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z08_roundkey_integrity
+if (is.null(.d)) {
+  placeholder("Z08_roundkey_integrity.csv", "Z-08", "物理局键、同桌共现、对打配对、玩家局级胜负和；候选_同桌异常 CSV 是否受污染")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`%s，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    if (isTRUE(attr(.d, "is_variant"))) "（⚠ 变体命中，非精确档名）" else "",
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S1", "局键完整性已核，可续行关系层分析", "未就位——同桌与对打之全部结论皆不可信")))
+}
+```
+
+## Z-09 · 时间字段口径核验（对应「待-01」） {#sec-z-09}
+```{sql, eval = FALSE}
+WITH v AS (
+  SELECT
+      dt,
+      CAST(NULLIF(TRIM(bet07),'') AS DATE)      AS d_acct,
+      CAST(NULLIF(TRIM(bet06),'') AS DATETIME)  AS t_open,
+      CAST(NULLIF(TRIM(bet08),'') AS DATETIME)  AS t_bet
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE bet02 = '101'
+)
+SELECT
+    COUNT(*)                                                        AS 行数,
+    SUM(CASE WHEN dt = d_acct THEN 1 ELSE 0 END)                    AS dt等于账务日,
+    SUM(CASE WHEN dt = DATE(t_bet) THEN 1 ELSE 0 END)               AS dt等于下注日,
+    SUM(CASE WHEN d_acct = DATE(t_bet) THEN 1 ELSE 0 END)           AS 账务日等于下注日,
+    SUM(CASE WHEN d_acct IS NULL THEN 1 ELSE 0 END)                 AS 账务日不可用,
+    SUM(CASE WHEN t_open IS NULL THEN 1 ELSE 0 END)                 AS 开局时间不可用,
+    SUM(CASE WHEN t_bet  IS NULL THEN 1 ELSE 0 END)                 AS 下注时间不可用,
+    SUM(CASE WHEN t_bet <= '1971-01-01 00:00:00' THEN 1 ELSE 0 END) AS 下注时间纪元哨兵,
+    SUM(CASE WHEN t_open <= '1971-01-01 00:00:00' THEN 1 ELSE 0 END) AS 开局时间纪元哨兵,
+    MIN(d_acct)                                                     AS 账务日最小,
+    MAX(d_acct)                                                     AS 账务日最大,
+    SUM(CASE WHEN TIMESTAMPDIFF(SECOND, t_open, t_bet) <  0 THEN 1 ELSE 0 END)
+                                                                    AS 下注早于开局_时序异常,
+    MIN(TIMESTAMPDIFF(SECOND, t_open, t_bet))                       AS 下注距开局秒_最小,
+    PERCENTILE_APPROX(CAST(TIMESTAMPDIFF(SECOND, t_open, t_bet) AS DOUBLE), 0.50)
+                                                                    AS 下注距开局秒_P50,
+    PERCENTILE_APPROX(CAST(TIMESTAMPDIFF(SECOND, t_open, t_bet) AS DOUBLE), 0.99)
+                                                                    AS 下注距开局秒_P99,
+    PERCENTILE_APPROX(CAST(TIMESTAMPDIFF(SECOND, t_open, t_bet) AS DOUBLE), 0.999)
+                                                                    AS 下注距开局秒_P999,
+    MAX(TIMESTAMPDIFF(SECOND, t_open, t_bet))                       AS 下注距开局秒_最大
+FROM v;
+```
+
+**用途与判读**：时间轴三方对账。三数若同为行数，则 dt／bet07／DATE(bet08) 一致，议题消解，总包现行以 dt 切日之做法正确，无须改动。另附 bet06−bet08 差值分布，可一并回答 bet06 语义、下注时长是否恒定、时区是否一致三事。
+
+**输出储存为** `数据库/Z09_time_axis_recon.csv`。
+
+```{r}
+#| label: read-z-09
+d_Z09_time_axis_recon <- read_adaptive("Z09_time_axis_recon.csv")
+show_head_tail(d_Z09_time_axis_recon, "◆ Z-09 · 时间字段口径核验（对应「待-01」）")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z09_time_axis_recon
+if (is.null(.d)) {
+  placeholder("Z09_time_axis_recon.csv", "Z-09", "日／月／滚动窗口之切日基准；尾秒相位之可行性")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`%s，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    if (isTRUE(attr(.d, "is_variant"))) "（⚠ 变体命中，非精确档名）" else "",
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S2", "时间轴口径已核", "未就位——切日基准与尾秒相位皆无从成立")))
+}
+```
+
+## Z-09b · 下注窗口长度之完整分布（尾秒阻塞之钥） {#sec-z-09b}
+
+§Z-09 实测已定三事：`bet06` 确为**开放下注**时刻（非开牌）；纪元哨兵为零；
+时序异常仅三笔。**惟封盘时刻仍缺**——`bet06` 是开局、`gi004` 是局开始、
+`gi006` 是开牌，三者皆非封盘。
+
+若下注窗口恒定，则 `close_bet_time = bet06 + 窗口长度`，
+**需求文档 §5 之尾秒分析即可开工，无须外求封盘时间表**。
+§Z-09 之 P99 与 P999 同为 25 秒，形态上高度暗示存在硬上界——
+**惟 `PERCENTILE_APPROX` 系近似算法，极端尾部误差最著，不得据单点即断**。
+故本条改取逐秒直方图，一次看全。
+
+```{sql, eval = FALSE}
+WITH v AS (
+  SELECT
+      CONCAT_WS('|', CAST(bet03 AS VARCHAR),
+                     CAST(bet04 AS VARCHAR),
+                     CAST(bet39 AS VARCHAR))                        AS round_key,
+      TIMESTAMPDIFF(SECOND,
+        CAST(NULLIF(TRIM(bet06),'') AS DATETIME),
+        CAST(NULLIF(TRIM(bet08),'') AS DATETIME))                   AS d_sec
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE bet02 = '101'
+),
+hist AS (
+  SELECT d_sec, COUNT(*) AS n_orders
+  FROM v WHERE d_sec IS NOT NULL GROUP BY d_sec
+),
+rmax AS (
+  SELECT round_key, MAX(d_sec) AS max_d
+  FROM v WHERE d_sec IS NOT NULL GROUP BY round_key
+),
+rhist AS (
+  SELECT max_d, COUNT(*) AS n_rounds FROM rmax GROUP BY max_d
+)
+SELECT '注单层·逐秒' AS 层, CAST(h.d_sec AS VARCHAR) AS 距开局秒,
+       h.n_orders AS 计数,
+       h.n_orders * 1.0 / SUM(h.n_orders) OVER ()               AS 占比,
+       SUM(h.n_orders) OVER (ORDER BY h.d_sec)
+         * 1.0 / SUM(h.n_orders) OVER ()                        AS 累计占比
+FROM hist h
+UNION ALL
+SELECT '局层·该局最末下注秒', CAST(r.max_d AS VARCHAR),
+       r.n_rounds,
+       r.n_rounds * 1.0 / SUM(r.n_rounds) OVER (),
+       SUM(r.n_rounds) OVER (ORDER BY r.max_d)
+         * 1.0 / SUM(r.n_rounds) OVER ()
+FROM rhist r
+ORDER BY 1, CAST(距开局秒 AS INT);
+```
+
+**判读准则**：若逐秒频次在某秒后**骤降至近零**，该秒即窗口上界，窗口恒定 →
+B-1 解封，尾秒可开工；若呈长尾缓降而无断点，则窗口不恒定 → 仍须外求封盘表，
+或退用需求 §5.1 所许之「下注后第几秒」，惟须另证其跨局可比性。
+「局层·该局最末下注秒」一段另证窗口是否随局而异。
+
+**输出储存为** `数据库/Z09b_bet_window.csv`。
+
+```{r}
+#| label: read-z-09b
+d_Z09b_bet_window <- read_adaptive("Z09b_bet_window.csv")
+show_head_tail(d_Z09b_bet_window, "◆ Z-09b · 下注窗口长度之完整分布")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z09b_bet_window
+if (is.null(.d)) {
+  placeholder("Z09b_bet_window.csv", "Z-09b",
+              "封盘时刻能否由 bet06 推得；需求 §5 尾秒分析能否开工（B-1 阻塞之解封）")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S2", "窗口分布已就位，可判窗口是否恒定",
+         "未就位——封盘时刻无从推算，尾秒一线仍阻塞")))
+}
+```
+
+## Z-10 · 哨兵值定性登记（须携 Z-07 读数向上游查询后填写） {#sec-z-10}
+> 本条为纪律陈述，非查询，无 SQL 正文。
+
+### 十二字段登记册（须携 §Z-07 读数向上游查询后填写）
+
+哨兵值之**业务成因无法自数据闭合**——同一个 `-1`，可能是「字段未采集」，
+也可能是「该场景不适用」，还可能是「尚未发生」。三者处置迥异，
+故本节之登记须由上游确认后方能填实，本档不得先行推想。
+
+```{r}
+#| label: sentinel-registry
+SENTINEL_REG <- data.table::data.table(
+  字段 = c("table","column","sentinel_value","row_count","pct","co_anomaly",
+           "semantic","source","disposition","rationale","affected_output","decided_at"),
+  含义 = c("所属表","所属列","哨兵取值","命中行数","占比","跨列共现（该行其余字段是否同步异常）",
+           "业务成因（四选一）","确认人／确认凭据","处置（剔除／分离／保留）","裁定依据",
+           "受影响之下游输出","裁定日期"),
+  可自数据闭合 = c("是","是","是","是","是","是",
+                   "❌ 否·须问上游","❌ 否·须问上游","否·待成因定",
+                   "否","是","否")
+)
+show_head_tail(SENTINEL_REG, "◆ §Z-10 哨兵值登记册·十二字段（模板，非读档）")
+```
+
+### 四种业务成因与其处置对照
+
+```{r}
+#| label: sentinel-disposition
+SENTINEL_RULE <- data.table::data.table(
+  业务成因 = c("字段未采集", "该业务场景下不适用", "ETL 故障", "尚未发生（如未结算）"),
+  处置     = c("剔除", "分离·单独分析", "剔除并向上游报缺陷", "🔴 不可剔除·另立状态"),
+  理由     = c("视同缺失，惟须报告剔除量",
+               "属另一类业务，混入即污染口径",
+               "非业务事实，且须溯源修复",
+               "剔除将造成选择性偏差——被剔除者非随机，而是系统性偏向未完成之交易"),
+  风险     = c("🟠 S2", "🟡 S3", "🟠 S2", "🔴 S1")
+)
+show_head_tail(SENTINEL_RULE, "◆ 成因→处置对照（末行为最易误判者）")
+```
+
+### 分字段处置策略（两派并用，依风险择之）
+
+```{r}
+#| label: sentinel-strategy
+SENTINEL_POLICY <- data.table::data.table(
+  字段类别 = c("局键三要素 bet03／bet04／bet39", "维度字段（荷官 eid、代理 bet18~22 等）"),
+  策略     = c("装载层一律转 NULL 并剔除", "保留原值，另设标志列"),
+  依据     = c("局键塌缩之害太重——互不相干之注单被聚合为同一局，同桌配对凭空产生，不容任何遗漏渗入下游",
+               "成因未明，或有单独分析之价值；惟须加口径锁定列，令旧版产物导入时强制报错"),
+  配套     = c("§Z-08 前后对照量化其影响（见 §Z-11）",
+               "承既有 late_def 之例：不依赖下游自觉，而使错误自己撞上闸门")
+)
+show_head_tail(SENTINEL_POLICY, "◆ 处置策略·两派并用")
+```
+
+```{r}
+#| label: sentinel-pending
+#| results: asis
+.z7 <- d_Z07_probe_bet02
+if (is.null(.z7)) {
+  placeholder("Z07_probe_bet02.csv", "Z-07",
+              "哨兵值有无与规模；§Z-10 登记册之「哨兵取值／行数／占比」三栏；§Z-11 影响量化之输入")
+  cat("\n> **登记册现况**：因 §Z-07 读数未就位，本册十二栏**一栏未填**。\n\n")
+} else {
+  cat(sprintf(
+    "\n> **现算**：§Z-07 已就位（%s 行），其中可自数据闭合之六栏具备填写条件；\n> 余六栏（semantic／source／disposition／rationale／decided_at 等）**仍待上游答复**。\n\n",
+    format(nrow(.z7), big.mark = ",")))
+  cat("::: {.callout-warning}\n## 🟠 待上游确认（S2 阻断）\n\n",
+      "须携 §Z-07 之**具体读数**向上游查询，问法为：\n\n",
+      "> 「`<表>.<列>` 有 N 笔取值为 `<哨兵值>`，占 P%，且该批行之 `<其余字段>` 同步异常，请问何故？」\n\n",
+      "空口问「有没有哨兵值」无用；**带着读数问，方能得到可裁定之答复**。\n",
+      "在答复到位之前，一切以哨兵值为前提之处置**禁入正式结论**。\n:::\n", sep = "")
+}
+```
+
+## Z-11 · 哨兵值处置前后影响量化 {#sec-z-11}
+```{sql, eval = FALSE}
+WITH v AS (
+  SELECT
+      CAST(bet05 AS VARCHAR) AS member_id,
+      CAST(ip    AS VARCHAR) AS ip_addr,
+      CONCAT_WS('|', CAST(bet03 AS VARCHAR),
+                     CAST(bet04 AS VARCHAR),
+                     CAST(bet39 AS VARCHAR)) AS round_key,
+      CASE WHEN CAST(bet03 AS VARCHAR) IN ('-1','0','') OR bet03 IS NULL
+                OR CAST(bet04 AS VARCHAR) IN ('-1','0','') OR bet04 IS NULL
+                OR CAST(bet39 AS VARCHAR) IN ('-1','0','') OR bet39 IS NULL
+           THEN 1 ELSE 0 END AS is_sentinel_key
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE bet02 = '101'
+),
+a AS (
+  SELECT COUNT(*) AS n_rows, COUNT(DISTINCT round_key) AS n_key,
+         COUNT(DISTINCT member_id) AS n_member, COUNT(DISTINCT ip_addr) AS n_ip
+  FROM v
+),
+b AS (
+  SELECT COUNT(*) AS n_rows, COUNT(DISTINCT round_key) AS n_key,
+         COUNT(DISTINCT member_id) AS n_member, COUNT(DISTINCT ip_addr) AS n_ip
+  FROM v WHERE is_sentinel_key = 0
+),
+ma AS (SELECT MAX(c) AS m FROM (SELECT round_key, COUNT(DISTINCT member_id) AS c
+                                FROM v GROUP BY round_key) x),
+mb AS (SELECT MAX(c) AS m FROM (SELECT round_key, COUNT(DISTINCT member_id) AS c
+                                FROM v WHERE is_sentinel_key = 0 GROUP BY round_key) y)
+SELECT
+    a.n_rows   AS 未处置_注单行数,  b.n_rows   AS 已处置_注单行数,
+    a.n_key    AS 未处置_局键数,    b.n_key    AS 已处置_局键数,
+    a.n_member AS 未处置_会员数,    b.n_member AS 已处置_会员数,
+    a.n_ip     AS 未处置_IP数,      b.n_ip     AS 已处置_IP数,
+    ma.m       AS 未处置_单局最大会员数,
+    mb.m       AS 已处置_单局最大会员数,
+    ma.m - mb.m                                       AS 单局最大会员数_差额,
+    a.n_rows - b.n_rows                               AS 剔除行数,
+    (a.n_rows - b.n_rows) * 1.0 / NULLIF(a.n_rows, 0) AS 剔除占比
+FROM a CROSS JOIN b CROSS JOIN ma CROSS JOIN mb;
+```
+
+**用途与判读**：哨兵值处置前后影响量化。「单局最大会员数」对局键塌缩最敏感，其前后差额即虚假配对之规模。
+
+**输出储存为** `数据库/Z11_sentinel_impact.csv`。
+
+```{r}
+#| label: read-z-11
+d_Z11_sentinel_impact <- read_adaptive("Z11_sentinel_impact.csv")
+show_head_tail(d_Z11_sentinel_impact, "◆ Z-11 · 哨兵值处置前后影响量化")
+```
+
+```{r}
+#| results: asis
+.d <- d_Z11_sentinel_impact
+if (is.null(.d)) {
+  placeholder("Z11_sentinel_impact.csv", "Z-11", "哨兵值处置裁定之代价评估")
+} else {
+  cat(sprintf("\n> **现算**：读入 %s 行 × %s 列，实际档名 `%s`%s，编码 `%s`。门禁：%s\n\n",
+    format(nrow(.d), big.mark = ","), ncol(.d), attr(.d, "file_used"),
+    if (isTRUE(attr(.d, "is_variant"))) "（⚠ 变体命中，非精确档名）" else "",
+    attr(.d, "encoding_used"),
+    gate(nrow(.d) > 0, "S2", "影响量化已就位", "未就位——处置之代价无从评估")))
+}
+```
+
+## Z-12 · 锁定（承既有 late_def 之例） {#sec-z-12}
+> 本条为纪律陈述，非查询，无 SQL 正文。
+
+> 本条导出声明为「不需要」，无 CSV 产出，故无读取环节。
+
+# 二 门禁总账 {#sec-gate}
+
+```{r}
+#| label: gate-summary
+G <- copy(Z_MANIFEST)
+G[, 行数 := vapply(文件名, \(f) { x <- read_adaptive(f); if (is.null(x)) NA_integer_ else nrow(x) }, integer(1))]
+G[, 判定 := fifelse(已就位 & !is.na(行数) & 行数 > 0, "🟢 通过",
+             fifelse(门禁 == "S1", "🔴 S1 致命",
+             fifelse(门禁 == "S2", "🟠 S2 阻断",
+             fifelse(门禁 == "S3", "🟡 S3 条件", "🟢 S4 建议"))))]
+show_tbl(G, "◆ 门禁总账（渲染时现算）")
+```
+
+```{r}
+#| results: asis
+n_fatal <- sum(G$判定 == "🔴 S1 致命")
+n_block <- sum(G$判定 == "🟠 S2 阻断")
+n_pass  <- sum(G$判定 == "🟢 通过")
+cat(sprintf("\n> **门禁现况（现算）**：通过 **%d** 项，S1 致命 **%d** 项，S2 阻断 **%d** 项。\n\n",
+            n_pass, n_fatal, n_block))
+if (n_fatal > 0) {
+  cat("::: {.callout-important}\n## 🔴 S1 致命 —— 分析须就此停止\n\n")
+  cat("存在致命级门禁未通过项，依铁律**停止分析**，不得进入第二阶段。\n")
+  cat("须先补齐下列产出：\n\n")
+  for (f in G[判定 == "🔴 S1 致命", 文件名]) cat(sprintf("- `数据库/%s`\n", f))
+  cat("\n:::\n")
+} else if (n_block > 0) {
+  cat("::: {.callout-warning}\n## 🟠 S2 阻断 —— 可续探索，禁入正式结论\n\n")
+  cat("可继续探索性分析，但**不得写入正式结论、不得据以作生产处置**。\n:::\n")
+} else {
+  cat("::: {.callout-note}\n## 🟢 L1 门禁全数通过\n\n")
+  cat("数据真实性层已闭合，可进入第二阶段（口径固化与取数）。\n:::\n")
+}
+```
+
+# 三 下一阶段之前置条件 {#sec-next}
+
+本档为第一阶段。第二阶段（口径固化与取数）开工，须同时满足：
+
+1. **本章门禁零 S1、零 S2**；
+2. **§Z-10 哨兵值定性已完成** —— 此为唯一无法自数据闭合者，须携 §Z-07 之具体读数向上游确认各异常取值之业务成因（字段未采集／该场景不适用／ETL 故障／尚未发生）。四者处置迥异，尤须注意：若为「尚未发生」（如未结算），**剔除将造成选择性偏差**，不可剔除；
+3. **§Z-12 锁定已落地** —— 处置须于装载层实施，并加口径锁定列，令旧版产物在导入时**强制报错而非静默通过**（承既有 `late_def` 之例）。旧产物一律改名 `_v1_superseded` 存档，禁止删除。
+
+第三阶段（异常 IP 阈值）与第四阶段（尾秒阈值）之开工条件，另见需求文档 §4、§5；
+其中尾秒一线尚阻塞于封盘时刻——`bet06` 为「開局時間」，`gi004` 为局开始、`gi006` 为开牌，
+**三者皆非封盘**。故尾秒相位能否成立，取决于 §Z-09 之 `bet06 − bet08` 差值分布上界。
+
+# 四 本档之自我限制 {#sec-limits}
+
+1. 本档**只做 L1 数据真实性审计**，不含任何阈值、评分、因果或经济结论。
+2. 本档所有数字皆于渲染时自 CSV 现算；凡 CSV 未就位者，一律出具占位提示
+   （写明文件名、SQL 编号、受影响输出），**不推想、不以静态文字冒充运行结果**。
+3. 本档 SQL 原文自 `a168_全库结构与哨兵值审计_SQL_v1.sql` **程序化嵌入，未作任何改写**；
+   若脚本更新，本档须同步重生成，不得手改。
+4. 证据等级上限为 **E3（原始 SQL 可重算）**。凡称「实测」者，
+   指本档所读 CSV 之现算，非原始 ODS 之独立复核。
+
+*谨呈 Ryo Eng 斧正。*
