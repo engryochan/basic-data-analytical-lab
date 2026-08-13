@@ -1,0 +1,1087 @@
+---
+title: "a168 评分误判率与失误率最小化 · 专题方案 v1"
+subtitle: "十二道减误闸 · 从「分数准不准」到「处置错不错」· 全互动呈现 · 一切数字渲染时现算"
+author: "Ryo Eng"
+date: today
+lang: zh
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    toc-title: "目录"
+    toc-location: left
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看计算代码（全部数字由此现算）"
+    theme: cosmo
+    css: |
+      .demo-banner{background:linear-gradient(90deg,#4a0d1a,#7a1327);color:#ffd64d;
+        border:2px solid #ff6b8b;border-radius:8px;padding:.8em 1em;margin:1em 0;
+        font-weight:700;letter-spacing:.02em}
+      .scrollbox{max-height:520px;overflow-y:auto;overflow-x:auto;
+        border:1px solid rgba(34,211,238,.35);border-radius:8px}
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+::: {.callout-important}
+## 本档在一族七档中的位置
+
+| 档 | 角色 | 与本档之关系 |
+|---|---|---|
+| `a168风控与客户分层评分体系_商业方案.qmd` | **主方案（父）** | 维度字典权威（**§18 `@sec-radar`**）；本档为其误差控制层 |
+| `a168风控评分_精要商业报告.qmd` | 精要版（子） | 本档为其「误判率」承诺提供可证伪之上界 |
+| `分析异常IP与尾秒投注的风控与降低误判_v8.qmd` | 前置净化层（子） | 本档承其门禁总账，并把「降低误判」自数据层推进到**决策层** |
+| `a168_能力值口径解读_SQL转R_v4.qmd` | 对照本（兄） | 本档取其现算之能力值与回测折结构为输入 |
+| `a168_取数与核验_SQL总包_v3.sql` | 取数层（料源） | 一切数字之唯一料源；**14 条缺闸未补，须另立 v4** |
+| `a168_第二阶段_口径固化与相位派生_SQL_K层_v2.sql` | K 层（口径固化） | 相位派生与口径锁常量之出处 |
+| **本档** | **误差控制层** | 把「误判率」由形容词变成**带置信保证之数字** |
+
+**本档要回答的唯一问题**：*一套评分体系，如何在数学上把误判率与失误率压到可承诺的下界，
+并且这个下界本身是可证伪的？*
+
+**本档不回答**：分数应该怎么算（那是主方案 §18）、数据从哪来（那是取数层）、
+处置该罚多少钱（那是主方案 §22 赏罚经济学）。
+
+**同步纪律**：维度字典以主方案 §18 为准；交付件表头契约以取数层为准；
+任一档改动须记明改前改后之**六元组**（文件名＋行数＋字节数＋MD5＋换行符＋编码）。
+:::
+
+```{r}
+#| label: setup
+#| include: true
+suppressMessages({
+  ok  <- function(p) requireNamespace(p, quietly = TRUE)
+  HAS <- list(dt = ok("data.table"), knitr = ok("knitr"), DT = ok("DT"), gt = ok("gt"),
+              plotly = ok("plotly"), ec = ok("echarts4r"), htmlt = ok("htmltools"))
+})
+if (isTRUE(HAS$dt)) try(data.table::setDTthreads(2L), silent = TRUE)
+options(scipen = 999, stringsAsFactors = FALSE)
+set.seed(20260814L)
+
+amt <- function(x) formatC(x, format = "d", big.mark = ",")
+pc  <- function(x, d = 2) ifelse(is.finite(x), sprintf(paste0("%.", d, "f%%"), 100 * x), "—")
+n4  <- function(x, d = 4) ifelse(is.finite(x), formatC(x, format = "f", digits = d), "—")
+
+## ═══ 演示数据登记簿（沿用主方案 DEMO_USED 成法：用了合成数据必须如实上报）═══
+DEMO <- new.env(parent = emptyenv()); DEMO$rows <- list()
+demo_reg <- function(node, why, what)
+  DEMO$rows[[length(DEMO$rows) + 1L]] <- data.frame(check.names = FALSE,
+    节点 = node, 何以用合成 = why, 合成了什么 = what)
+demo_banner <- function(txt)
+  htmltools::HTML(sprintf("<div class='demo-banner'>⚠ 方法演示（合成数据）—— %s<br>
+    <span style='font-weight:400'>本图表**不得读作本平台结论**；其用途仅为展示估计量之数学性质。
+    全部演示节点于 @sec-demo 一次列清。</span></div>", txt))
+
+## ═══ 呈表纪律实现层（与 v4 对照本同源）═══
+RN <- function(ix) paste0(formatC(ix, format = "d", big.mark = ","), ":")
+headtail <- function(df, n = 5L) {
+  N <- nrow(df)
+  chr <- as.data.frame(lapply(df, function(v)
+    if (is.numeric(v)) formatC(v, format = "g", digits = 6) else as.character(v)),
+    check.names = FALSE); names(chr) <- names(df)
+  if (N <= 2L * n) return(structure(cbind(`#` = RN(seq_len(N)), chr), omit = 0L))
+  sep <- chr[1, , drop = FALSE]; sep[] <- "---"
+  out <- rbind(cbind(`#` = RN(seq_len(n)), chr[seq_len(n), , drop = FALSE]),
+               cbind(`#` = "---", sep),
+               cbind(`#` = RN((N - n + 1L):N), chr[(N - n + 1L):N, , drop = FALSE]))
+  rownames(out) <- NULL; structure(out, omit = N - 2L * n)
+}
+tbl <- function(df, cap = "", mode = c("full", "headtail"), n = 5L,
+                height = 420, digits = 4, esc = TRUE) {
+  mode <- match.arg(mode)
+  if (is.null(df)) return(htmltools::HTML(sprintf(
+    "<div class='callout callout-warning'><b>⛔ 表未生成</b>：%s（对象为 NULL）</div>", cap)))
+  N <- nrow(df); P <- ncol(df)
+  if (N == 0L) return(htmltools::HTML(sprintf(paste0(
+    "<div class='callout callout-warning'><b>⚠ 本表 0 行</b> —— %s<br>",
+    "<b>0 行不等于无异常</b>：须先排除筛选过严、口径错配、上游缺席三因。列数 %d。</div>"), cap, P)))
+  show <- if (mode == "headtail") headtail(df, n) else cbind(`#` = RN(seq_len(N)), df)
+  omit <- if (mode == "headtail") attr(show, "omit") else 0L
+  sub  <- sprintf("总观测 %s 行 × %s 列｜%s", amt(N), amt(P),
+    if (omit > 0L) sprintf("摘录首 %d／末 %d，省略 %s 行（%s）", n, n, amt(omit), pc(omit/N, 1))
+    else "全量呈现，零省略")
+  full_cap <- htmltools::HTML(sprintf(
+    "<div style='font-weight:600;margin-bottom:.25em'>%s</div>
+     <div style='font-size:.86em;opacity:.85'>%s</div>", cap, sub))
+  if (HAS$DT) return(DT::datatable(show, caption = full_cap, rownames = FALSE, escape = esc,
+    extensions = c("Buttons", "FixedHeader"),
+    options = list(pageLength = 10,
+      lengthMenu = list(c(10, 25, 50, -1), c("10", "25", "50", "全部")),
+      scrollX = TRUE, scrollY = paste0(height, "px"), scrollCollapse = TRUE,
+      fixedHeader = TRUE, dom = "Blfrtip", buttons = c("copy", "csv"),
+      language = list(search = "搜索：", lengthMenu = "每页 _MENU_ 行",
+        info = "第 _START_–_END_ 行，共 _TOTAL_ 行",
+        paginate = list(previous = "上页", `next` = "下页"))),
+    class = "compact stripe hover row-border"))
+  if (HAS$gt) return(gt::gt(show) |> gt::tab_header(title = gt::html(as.character(full_cap))) |>
+    gt::tab_options(container.overflow.x = TRUE, container.overflow.y = TRUE,
+                    container.height = gt::px(height + 80)))
+  cat("\n> ⚠ **呈现降级声明**：DT 与 gt 皆不可用，本表以 kable 静态呈现，违反呈表纪律第一条。\n\n")
+  knitr::kable(show, caption = paste0(cap, "｜", sub), format = "html", escape = esc, digits = digits)
+}
+PAL <- list(bg = "#050d1a", fg = "#dff7ee", g = "#00e5a0", c = "#22d3ee", v = "#8b5cf6",
+            p = "#f0abfc", bad = "#ff6b8b", warn = "#ffd64d", grid = "rgba(223,247,238,.14)")
+ply_lay <- function(p, title = "", xt = "", yt = "") {
+  if (!HAS$plotly) return(p)
+  plotly::layout(p, title = list(text = title, font = list(color = PAL$fg, size = 15)),
+    paper_bgcolor = PAL$bg, plot_bgcolor = PAL$bg, font = list(color = PAL$fg, size = 12),
+    xaxis = list(title = xt, gridcolor = PAL$grid, zerolinecolor = PAL$grid),
+    yaxis = list(title = yt, gridcolor = PAL$grid, zerolinecolor = PAL$grid),
+    legend = list(orientation = "h", y = -0.22, font = list(color = PAL$fg)),
+    hoverlabel = list(bgcolor = "#0b1b30", bordercolor = PAL$c,
+                      font = list(color = PAL$fg, size = 12)))
+}
+ph <- function(file, src, impact)
+  sprintf(paste0("::: {.callout-warning}\n## 缺料占位\n\n**所待文件**：`数据库/%s`\n\n",
+    "**出处（SQL 编号）**：%s\n\n**受影响输出**：%s\n\n",
+    "本节按「无数据即空，绝不合成」处置。\n:::\n\n"), file, src, impact)
+
+DATA_DIR <- NULL
+for (cand in c("数据库", file.path("..", "数据库"), file.path("data", "数据库"),
+               ".", "/mnt/user-data/uploads", "/mnt/project")) {
+  if (dir.exists(cand)) { DATA_DIR <- cand; break }
+}
+read_any <- function(name, must = NULL, dirs = c(DATA_DIR, "/mnt/project", ".")) {
+  for (d in dirs) {
+    if (is.null(d) || !dir.exists(d)) next
+    p <- file.path(d, paste0(name, ".csv"))
+    if (!file.exists(p)) next
+    x <- NULL
+    for (enc in c("UTF-8", "GB18030", "GBK", "BIG5", "latin1")) {
+      y <- try(suppressWarnings(utils::read.csv(p, fileEncoding = enc, check.names = FALSE)),
+               silent = TRUE)
+      if (!inherits(y, "try-error") && ncol(y) > 0 && !any(grepl("\uFFFD", names(y)))) {
+        x <- y; break }
+    }
+    if (is.null(x)) next
+    names(x) <- sub("^\ufeff", "", names(x))
+    if (!is.null(must) && !all(enc2utf8(must) %in% enc2utf8(names(x)))) next
+    return(x)
+  }
+  NULL
+}
+num <- function(v) suppressWarnings(as.numeric(v))
+```
+
+# 一、误判的解剖学：六类错误必须分开命名 {#sec-anatomy}
+
+> 「误判率高」是形容词，不是指标。同一句抱怨底下可能藏着六种性质完全不同的错误，
+> **各有各的成因、各有各的堵法、各有各的代价**。混为一谈即无从下手。
+
+```{r}
+#| label: anatomy
+AN <- data.frame(check.names = FALSE,
+  编号 = c("E-Ⅰ","E-Ⅱ","E-Ⅲ","E-Ⅳ","E-Ⅴ","E-Ⅵ"),
+  名称 = c("假阳性（误伤）","假阴性（漏判）","标签错误","口径错误","时序错误","度量错误"),
+  定义 = c("正常客被判风险并处置","风险客未被判出",
+    "金标准本身是错的（人工标注错、或标注带时点未净化）",
+    "分母／基准／字段语义用错（如以无条件胜率充 Z 分数基准）",
+    "用了结果窗才可见之信息去做特征窗之决策（前视泄漏）",
+    "用了不能跨序列比较之指标（裸 MAE）、或用点估计判小样本"),
+  典型成因 = c("阈值过低、基准率被忽略、小样本点估计、多重比较未校正",
+    "阈值过高、维度缺失、金标准本身只覆盖一小撮",
+    "标注人主观、标注时点晚于行为、正例首现日未剔",
+    "同名异义、结算形态混用、单位量纲不一",
+    "全窗 TRUTH 进折内训练、特征含产生标签之量、OFFSET 分页乱序",
+    "MASE 未用、Wilson 未用、`n≥30` 之类普适门槛"),
+  本方案已实证 = c("✅ 统一 70% 门槛对押和者（正常胜率 9.48%）必然误判",
+    "✅ K01b 金牌 IP 种子 17 个全表零命中——白名单三年未维护",
+    "⚠ §P0C 同日泄漏成立；C06d 首末时点列未到位",
+    "✅ 三处同名异义已登记（`bet14`、`member.mem015` vs `member_dtl.mem015`）",
+    "✅ OFFSET 分页致 36.49% 数据重复（字符串排序错位）",
+    "✅ 滚动回测有效独立折数 ≈4.0，远低于名义折数 ≈56"),
+  主责闸门 = c("G1 G2 G3 G4 G6","G5 G7 G12","G7 G9","G0（前置净化层 v8）","G9","G2 G8 G11"))
+tbl(AN, "六类错误正名表｜**「误判率」一词在本方案中一律须指明是 E-Ⅰ 至 E-Ⅵ 之哪一类**",
+    mode = "full", height = 400)
+```
+
+## 混淆矩阵与代价矩阵：两张表，不是一张 {#sec-cost}
+
+```{r}
+#| label: cost-matrix
+#| results: asis
+## ═══ 代价参数：一律列为**情景参数**，非模型估计 ═══
+##   凡以下四值改动，@sec-g6 之最优阈值必随之改动。此处集中定义，全档唯一出处。
+COST <- list(
+  c_FP_monitor = 0,      # 仅监控：误伤成本 0
+  c_FP_rebate  = 1,      # 退水档位下调：以「该客月退水额」为单位
+  c_FP_limit   = 6,      # 限红：以「该客月净贡献 × 流失概率」为单位
+  c_FP_freeze  = 30,     # 冻结结算：含客诉、声誉与法务
+  c_FN         = 1       # 漏判：以「该风险客月漏损额」为单位
+)
+CM <- data.frame(check.names = FALSE,
+  处置动作 = c("仅监控（不告知）","退水档位下调 δ*","限红","冻结结算复核"),
+  误伤成本倍数 = c(COST$c_FP_monitor, COST$c_FP_rebate, COST$c_FP_limit, COST$c_FP_freeze),
+  可逆性 = c("完全可逆","可逆（下期恢复）","可逆但客感强","**难逆，客诉高发**"),
+  证据门槛 = c("弱证据即可","中等证据 + FDR 通过","强证据 + FDR + 人工复核",
+    "**强证据 + FDR + 人工复核 + 二人复核一致**"),
+  适用类型 = c("T4 聚类扩散、边注高波动者","T3 打水型","T2 持续正向优势","T1 同 IP 团伙且证据链完整"),
+  本方案地位 = c("**默认动作**","已实装","已实装","须走 D-05 事件管理流程"))
+tbl(CM, sprintf(paste0("误伤成本按动作分层｜倍数以「漏判成本 = %g」为基准单位。",
+  "**代价是情景参数，不是模型估计**——改这四个数，@sec-g6 之最优阈值必随之改"),
+  COST$c_FN), mode = "full", height = 300)
+
+cat(paste0("\n::: {.callout-important}\n## 单一阈值服务多种动作，是误判率居高不下的**结构性根因**\n\n",
+  "误伤成本自「仅监控」的 0 到「冻结结算」的 ", COST$c_FP_freeze,
+  " 倍，跨度三十倍以上。以**同一个阈值**决定这四种动作，",
+  "在数学上等价于假设四者代价相同——必然导致：\n\n",
+  "- 对轻动作**过于保守**（本可多监控几个人，白白漏判）；\n",
+  "- 对重动作**过于激进**（本该更慎重，结果冻错了人）。\n\n",
+  "**正解**：每一种动作各有其阈值，由 @sec-g6 之期望损失最小化**分别**反解。\n:::\n\n"))
+```
+
+# 二、术语、游戏规则与条率 {#sec-rules}
+
+> 本章与对照本 `a168_能力值口径解读_SQL转R_v4.qmd` @sec-rules 同源，
+> 此处只保留**与误判判定直接相关**者，并补入本档新增之误差术语。
+
+## 二之一、决定误判率的三组游戏规则 {#sec-rule-key}
+
+```{r}
+#| label: rule-key
+CYC <- c(banker = 2292252566437888, player = 2230518282592256, tie = 475627426473216)
+TOT <- sum(CYC)
+pB <- CYC[["banker"]]/TOT; pP <- CYC[["player"]]/TOT; pT <- CYC[["tie"]]/TOT
+pB_dnb <- pB/(pB + pP); pP_dnb <- pP/(pB + pP)
+p_pair <- (4*8 - 1)/(52*8 - 1)
+
+KEY <- data.frame(check.names = FALSE,
+  规则 = c("结算形态：庄闲为 Draw No Bet","结算形态：押和为纯二元",
+    "投注产品各有其庄家优势","靴位为相对坐标","分析窗口右端为开区间",
+    "免佣桌金额符号翻转","Dragon 族名称含 Banker/Player"),
+  条率 = c(sprintf("决胜局基准 庄 %s / 闲 %s（**Z 分数唯一合法基准**）", pc(pB_dnb,2), pc(pP_dnb,2)),
+    sprintf("和局无条件概率 %s；押和不退还", pc(pT,2)),
+    sprintf("庄 %s、闲 %s、和(1:8) %s、对子(1:11) %s（皆由组合数现算）",
+      pc(-(pB*0.95-(1-pB-pT)),2), pc(-(pP*1-(1-pP-pT)),2),
+      pc(-(pT*8-(1-pT)),2), pc(-(p_pair*11-(1-p_pair)),2)),
+    "`shoe_pos = round_no ÷ 该靴总局数`；靴末段判据 `shoe_pos >= 0.80`",
+    "`dt >= '2026-03-21' AND dt < '2026-08-07'`；139 个完整营业日",
+    "Super6：庄 6 点赢减半派彩；金额口径与一般桌不可直接相加",
+    "四类合计 50.1 万笔"),
+  误判后果 = c("以无条件胜率 45.86% 充 Z 基准，Z 分数系统性虚高，**全体押庄玩家一律被判异常**",
+    "押和者以庄闲基准判定，其正常胜率仅 9.48%，统一 70% 门槛令其**永久免检**（E-Ⅱ 漏判）",
+    "混算基准即 E-Ⅳ 口径错误；Big 正常胜率 62.38%，距 70% 仅 7.6 个百分点，**几乎必然误伤**",
+    "旧判据 `round_no >= 50` 为绝对坐标，靴长不齐时短靴全体被判、长靴全体逃逸",
+    "误读为含 08-07 当日，即多算一日，全部日均口径偏移",
+    "混算令 hold% 失真，属**对账错误**而非漏损，据此调参必错",
+    "`LIKE` 匹配会算成主线，产出「看起来合理但偏高」之对押率，**污染整条 T3 判据**"),
+  堵法 = c("R-03 `side_base` CTE 按投注产品逐项算基准（已实装）",
+    "同左","同左","口径锁列 `late_def`（只可增不可删）",
+    "SQL 全包 53 处字面量一次改齐，不得只改其一",
+    "按 `commission` 标记分桌型统计","一律**等值匹配**，禁用 `LIKE`"))
+tbl(KEY, "决定误判率之七条规则｜**每一条误用，皆对应一类可复现之误判**",
+    mode = "full", height = 420)
+```
+
+## 二之二、误差控制术语册 {#sec-glossary}
+
+```{r}
+#| label: glossary
+GL <- data.frame(check.names = FALSE,
+  术语 = c("误判率 FPR","漏判率 FNR","查准率 Precision","查全率 Recall","Precision@K",
+    "基准率谬误","Wilson 区间","Jeffreys 区间","BH-FDR","Storey π₀",
+    "校准 Calibration","Brier 分数","ECE","可靠性图","保形预测","不合规分数 α",
+    "覆盖率保证","PU 学习","倾向得分匹配 PSM","SMD","平行趋势","E-value",
+    "决策曲线 DCA","净收益 Net Benefit","期望损失","PSI","KS 统计量",
+    "Champion/Challenger","Kill Switch","Shadow 模式","Gold Label","MDE",
+    "有效样本量 n_eff","设计效应 DEFF","块自举","净化切分 Purge","禁运期 Embargo"),
+  释义 = c(
+  "$FP/(FP+TN)$，正常客中被误判之比例。**注意分母是全体正常客，不是名单**",
+  "$FN/(TP+FN)$，风险客中被漏掉之比例",
+  "$TP/(TP+FP)$，名单中真正是风险客之比例。**风控实务最关心者**",
+  "同 FNR 之补：$TP/(TP+FN)$",
+  "只看名单前 K 名之查准率。K 由**人工复核容量**决定，不是随手取整",
+  "基准率 1% 时，即使 99% 准确之检测，阳性者中仍有大半是误伤——先验不可忽略",
+  "小样本比例之区间估计；比 Wald 区间在极端比例处表现远优",
+  "贝叶斯区间（Beta(0.5,0.5) 先验）；与 Wilson 各有所长，本档两者并报",
+  "Benjamini–Hochberg 伪发现率校正。**控制的是「发现中的假货比例」，不是「每次检验的错误率」**",
+  "真零假设之比例估计；用于自适应 BH，可提高检出力",
+  "预测概率是否等于真实频率。**排序好 ≠ 校准好**：AUC 高而校准差者，阈值无法解释",
+  "$\\frac{1}{n}\\sum(p_i-y_i)^2$，可分解为校准项 + 区分度项",
+  "Expected Calibration Error；分箱后 $\\sum \\frac{n_b}{n}|acc_b-conf_b|$",
+  "横轴预测概率、纵轴实际频率之折线；贴对角线即校准良好",
+  "在**交换性**假设下，对任意黑箱模型给出**有限样本**覆盖保证之框架",
+  "衡量「新样本有多不像校准集」之函数；分类常取 $1-\\hat p_y$",
+  "保形预测之核心承诺：$P(\\text{真值} \\in \\text{预测集}) \\ge 1-\\alpha$，**非渐近**",
+  "Positive-Unlabeled；只有正例、无确证负例时之学习框架",
+  "以处置概率匹配处置组与对照组，抑制可观测混淆",
+  "标准化均值差；匹配后各协变量 |SMD| < 0.1 方可进入因果估计",
+  "DID 之识别假设：处置前两组趋势平行；须以事件研究图检验",
+  "未观测混淆须多强（与处置及结局之关联风险比）方能推翻现结论",
+  "Decision Curve Analysis；横轴阈值概率、纵轴净收益，比 AUC 更贴近决策",
+  "$\\frac{TP}{n}-\\frac{FP}{n}\\cdot\\frac{p_t}{1-p_t}$，把误伤按阈值概率折价后之净得",
+  "$\\mathbb{E}[L]=c_{FP}\\cdot FP + c_{FN}\\cdot FN$；最优阈值由其最小化反解",
+  "Population Stability Index，分布漂移度量；>0.25 通常判显著漂移",
+  "Kolmogorov–Smirnov；两分布最大累积差",
+  "冠军模型与挑战者并行，以预设指标定期换位",
+  "一键停用开关；模型异常时立即回落到规则或人工",
+  "模型只出分不执行，与现行流程并行观察",
+  "经二人复核一致之高置信标签；用于校准与验收，不进训练",
+  "Minimum Detectable Effect，给定功效下可检出之最小效应",
+  "$n/(1+(m-1)\\rho)$，聚类相关校正后之样本量",
+  "$1+(m-1)\\rho$，聚类设计相对简单随机抽样之方差膨胀倍数",
+  "折级序列有自相关，块长取 $\\lceil \\text{test}/\\text{step} \\rceil$",
+  "剔除与测试窗重叠之训练样本",
+  "训练窗与测试窗之间留空白期，防止自相关渗透"))
+tbl(GL, "误差控制术语册｜共此数条，可搜可排，双向滚动，**未截列未截行**",
+    mode = "full", height = 520)
+```
+
+# 三、十二道减误闸 {#sec-gates}
+
+```{r}
+#| label: gate-overview
+GO <- data.frame(check.names = FALSE,
+  闸 = paste0("G", sprintf("%02d", 1:12)),
+  名称 = c("基准率与先验校正","区间估计取代点估计","多重比较 FDR 校正","概率校准",
+    "**保形预测：误判率上界**","代价敏感阈值与决策曲线","PU 学习：只有正例",
+    "层级收缩：小样本","净化时序验证","分布漂移监控","未观测混淆敏感性",
+    "容量约束下之名单长度"),
+  主治误差 = c("E-Ⅰ","E-Ⅰ E-Ⅵ","E-Ⅰ","E-Ⅰ E-Ⅵ","E-Ⅰ E-Ⅱ","E-Ⅰ E-Ⅱ","E-Ⅱ E-Ⅲ",
+    "E-Ⅰ E-Ⅵ","E-Ⅲ E-Ⅴ","E-Ⅰ E-Ⅱ","E-Ⅵ","E-Ⅱ"),
+  三轴 = c("T2·L3·S1","T1·L3·S2","T1·L3·S1","T2·L5·S2","T2·L3·S3","T2·L6·S2","T2·L5·S3",
+    "T2·L3·S2","T2·L5·S1","T2·L8·S2","T2·L4·S3","T4·L9·S2"),
+  本方案状态 = c("✅ 已实装（各投注产品分算基准）","✅ 已实装（局数<30 不判）",
+    "✅ 已实装（十万级组合）","⛔ **缺**","⛔ **缺**","⚠ 部分（误伤上限已分层，阈值未反解）",
+    "✅ 已实装（PU-glm 轨）","🆕 **本档新增**","✅ 已实装","⛔ **缺**","⛔ **缺**","⛔ **缺**"))
+tbl(GO, "十二道减误闸总览｜「本方案状态」列即本档之待办清单来源",
+    mode = "full", height = 420, esc = FALSE)
+```
+
+## G01 · 基准率与先验校正 {#sec-g1}
+
+```{r}
+#| label: g1
+#| results: asis
+## 基准率谬误之数值演示：完全由参数现算，无任何硬编码结论
+bayes_ppv <- function(prev, sens, spec) (sens*prev)/(sens*prev + (1-spec)*(1-prev))
+GRID <- expand.grid(基准率 = c(.0005, .001, .005, .01, .05, .10),
+                    敏感度 = c(.80, .90, .95, .99),
+                    特异度 = c(.95, .99, .999))
+GRID$查准率PPV <- with(GRID, bayes_ppv(基准率, 敏感度, 特异度))
+GRID$误伤占名单比 <- 1 - GRID$查准率PPV
+G1 <- GRID[order(GRID$基准率, -GRID$查准率PPV), ]
+G1[] <- lapply(names(G1), function(k) if (k == "特异度") pc(G1[[k]], 1) else
+  if (k %in% c("基准率","敏感度","查准率PPV","误伤占名单比")) pc(G1[[k]], 2) else G1[[k]])
+names(G1) <- c("基准率(先验)","敏感度","特异度","查准率 PPV","误伤占名单比")
+tbl(G1, paste0("基准率谬误全格现算（", nrow(GRID), " 种组合）｜",
+  "**读法**：找到你相信的基准率那一行，看 PPV 那一列——那才是名单的真实含金量"),
+  mode = "full", height = 420)
+
+cat(paste0("\n::: {.callout-important}\n## 本平台之基准率究竟是多少？——这是全档最关键的一个数\n\n",
+  "上表告诉我们：**特异度 99% 之检测，在基准率 0.5% 时，名单中仍有约 ",
+  pc(1 - bayes_ppv(.005, .90, .99), 0), " 是误伤**。\n\n",
+  "而本平台之基准率**至今没有一个可信估计**——因为：\n\n",
+  "1. 金标准 `K01b_seed_manual` 只有正例，无确证负例（见 @sec-g7）；\n",
+  "2. 处置台账 `ods_a168_log_mem_change` 覆盖 188 名百家乐会员，",
+  "但「被处置」≠「确为风险」（可能误处置），亦 ≠「风险客全集」（可能漏处置）；\n",
+  "3. 白名单（K01b 金牌 IP 种子 17 个）在 bet02 全表**零命中**，无法提供负例锚。\n\n",
+  "**结论（S1·FATAL 级）**：在基准率未经独立估计之前，",
+  "**任何形如「本方案误判率低于 X%」之承诺皆无依据**。\n",
+  "本档 @sec-g5 之保形预测正是为绕开此困局而设——它给的是**条件覆盖保证**，",
+  "不需要先知道基准率。\n:::\n\n"))
+```
+
+## G02 · 区间估计取代点估计 {#sec-g2}
+
+```{r}
+#| label: g2
+#| results: asis
+wilson <- function(x, n, z = 1.959964) {
+  if (n == 0) return(c(NA, NA)); p <- x/n; d <- 1 + z^2/n
+  c((p + z^2/(2*n) - z*sqrt(p*(1-p)/n + z^2/(4*n^2)))/d,
+    (p + z^2/(2*n) + z*sqrt(p*(1-p)/n + z^2/(4*n^2)))/d)
+}
+jeffreys <- function(x, n, a = .05) {
+  if (n == 0) return(c(NA, NA))
+  c(if (x == 0) 0 else stats::qbeta(a/2, x + .5, n - x + .5),
+    if (x == n) 1 else stats::qbeta(1 - a/2, x + .5, n - x + .5))
+}
+## 以百家乐**决胜局庄胜基准**为零假设，逐样本量算「多高的观测胜率才算异常」
+p0 <- pB_dnb
+NS <- c(10, 20, 30, 50, 100, 200, 500, 1000, 5000)
+G2 <- do.call(rbind, lapply(NS, function(n) {
+  ## 单侧 5% 显著所需之最小胜局数
+  k <- suppressWarnings(min(which(stats::pbinom(seq_len(n) - 1, n, p0, lower.tail = FALSE) < .05)))
+  if (!is.finite(k)) k <- NA_integer_
+  w <- wilson(ifelse(is.na(k), 0, k), n); j <- jeffreys(ifelse(is.na(k), 0, k), n)
+  data.frame(check.names = FALSE, 决胜局数 = n,
+    `零假设庄胜率` = pc(p0, 2),
+    `判异所需最少胜局` = k,
+    `即观测胜率` = pc(ifelse(is.na(k), NA, k/n), 2),
+    `Wilson 95%CI` = sprintf("[%s, %s]", pc(w[1],1), pc(w[2],1)),
+    `Jeffreys 95%CI` = sprintf("[%s, %s]", pc(j[1],1), pc(j[2],1)),
+    `区间半宽` = pc((w[2]-w[1])/2, 2))
+}))
+tbl(G2, sprintf(paste0("以决胜局庄胜基准 %s 为零假设，逐样本量之判异门槛（现算）｜",
+  "**注意「区间半宽」列随 n 收缩之速度**"), pc(p0, 2)), mode = "full", height = 340)
+
+cat(paste0("\n**三条纪律，皆由上表直接推出**：\n\n",
+  "1. **禁止手写 `n≥30` 之类普适门槛。** 上表清楚显示：所需样本量随",
+  "「你要检出多大偏离」而变，不是一个常数。最小样本量须逐指标反解 ",
+  "$n_{\\min}=f(p_0,\\alpha,h,\\text{单双侧},\\rho,\\text{DEFF})$。\n\n",
+  "2. **同一个观测胜率，在不同 n 下含义完全不同。** ",
+  "n=10 时胜 8 局（80%）之 Wilson 下界仍低于 50%；n=1000 时胜率 55% 之下界已远高于基准。",
+  "**只报点估计即抹去这一切**。\n\n",
+  "3. **聚类校正不可省。** 同一玩家之多局非独立，须以 $n_{eff}=n/(1+(m-1)\\rho)$ 校正后再查表；",
+  "$\\rho$ 须实测，不得假定为 0。\n\n"))
+```
+
+## G03 · 多重比较：FDR 控制的是什么 {#sec-g3}
+
+```{r}
+#| label: g3
+#| results: asis
+## 以真实交付件「候选_同桌异常_最终版_已去重.csv」演示——若不在包则占位
+PAIR <- read_any("候选_同桌异常_最终版_已去重", must = c("uid1","uid2"))
+if (!is.null(PAIR)) {
+  cn <- names(PAIR)
+  ccol <- cn[grepl("局数|count|n_", cn)][1]
+  PAIR[[ccol]] <- num(PAIR[[ccol]])
+  P <- PAIR[is.finite(PAIR[[ccol]]), ]
+  ## 零模型：以同桌局数之全体分布为参照，问「这一对的共现是否超出偶然」
+  ## 用负二项近似（同桌局数厚尾，泊松低估方差）
+  mu <- mean(P[[ccol]]); v <- stats::var(P[[ccol]])
+  size <- if (v > mu) mu^2/(v - mu) else Inf
+  P$p_raw <- if (is.finite(size))
+    stats::pnbinom(P[[ccol]] - 1, size = size, mu = mu, lower.tail = FALSE) else
+    stats::ppois(P[[ccol]] - 1, lambda = mu, lower.tail = FALSE)
+  P$p_BH <- stats::p.adjust(P$p_raw, method = "BH")
+  P$p_Bonf <- stats::p.adjust(P$p_raw, method = "bonferroni")
+  ## Storey π₀
+  lam <- .5
+  pi0 <- min(1, mean(P$p_raw > lam)/(1 - lam))
+  SUM <- data.frame(check.names = FALSE,
+    校正法 = c("未校正 (p<0.05)","BH-FDR (q<0.05)","Storey 自适应 BH (q<0.05)","Bonferroni (p<0.05)"),
+    检出对数 = c(sum(P$p_raw < .05), sum(P$p_BH < .05),
+                 sum(stats::p.adjust(P$p_raw, "BH") * pi0 < .05), sum(P$p_Bonf < .05)),
+    控制对象 = c("**无**（每检验 5% 错误率 × 全部检验 = 大量伪发现）",
+      "伪发现率：发现中假货之期望比例 ≤ 5%",
+      "同左，但以 $\\hat\\pi_0$ 提高检出力",
+      "族错误率：**任一**假发现之概率 ≤ 5%（最保守）"),
+    本方案取用 = c("⛔ 禁用","✅ **正式口径**","⚠ 可选（须报 $\\hat\\pi_0$）","⚠ 仅用于冻结级处置"))
+  SUM$检出占比 <- pc(SUM$检出对数 / nrow(P), 3)
+  print(tbl(SUM, sprintf(paste0("四种多重比较处置在 %s 对同桌候选上之实测对照",
+    "｜零模型：负二项（$\\hat\\mu=%s$, $\\hat{size}=%s$）｜$\\hat\\pi_0=%s$"),
+    amt(nrow(P)), n4(mu,2), if (is.finite(size)) n4(size,3) else "∞", n4(pi0,3)),
+    mode = "full", height = 300, esc = FALSE))
+  P2 <- P[order(P$p_BH), c("uid1","uid2", ccol, "p_raw","p_BH","p_Bonf")]
+  P2$p_raw <- signif(P2$p_raw, 3); P2$p_BH <- signif(P2$p_BH, 3); P2$p_Bonf <- signif(P2$p_Bonf, 3)
+  print(tbl(P2, "同桌候选对逐对 p 值（BH 升序）｜首末摘录，行号为**真实索引**，总量一望即知",
+            mode = "headtail", n = 6, height = 360))
+  if (HAS$plotly) {
+    ord <- sort(P$p_raw)
+    kk <- seq_along(ord)
+    print(htmltools::tagList(
+      plotly::plot_ly(x = kk, y = ord, type = "scatter", mode = "lines",
+        line = list(color = PAL$c, width = 2), name = "观测 p 值（升序）",
+        hovertemplate = "第 %{x} 名<br>p = %{y:.4g}<extra></extra>") |>
+      plotly::add_lines(x = kk, y = .05 * kk / length(ord), name = "BH 临界线 q·k/m",
+        line = list(color = PAL$bad, dash = "dash")) |>
+      plotly::add_lines(x = kk, y = rep(.05/length(ord), length(ord)), name = "Bonferroni 线",
+        line = list(color = PAL$warn, dash = "dot")) |>
+      ply_lay("BH 图解：观测 p 值升序 vs 两条临界线（交点右侧即被拒绝）",
+              "排名 k", "p 值") |>
+      plotly::layout(yaxis = list(type = "log"))))
+  }
+  cat(paste0("\n**读法**：观测 p 值曲线**首次低于**红色 BH 线之处，即为拒绝域之边界；",
+    "黄色 Bonferroni 线远低于红线，故其拒绝数必然更少。\n\n",
+    "**⚠ 本节之零模型属方法演示。** 负二项零模型只考虑「同桌局数之边际分布」，",
+    "**未**建模桌台容量、玩家活跃度、时段拥挤度三项结构性混杂——",
+    "两个同为高频玩家者本就更容易同桌，此非串通。\n",
+    "**正式判定须以配置模型（configuration model）或度数保持零模型重跑**，",
+    "见主方案 `@sec-null-audit`。此处仅示 FDR 之机制。\n\n"))
+} else {
+  cat(ph("候选_同桌异常_最终版_已去重.csv", "SQL 总包 §C06fix / §R02",
+         "FDR 四法对照表、逐对 p 值表、BH 图解"))
+}
+```
+
+## G04 · 概率校准：排序好 ≠ 概率对 {#sec-g4}
+
+::: {.callout-important}
+## 为何本方案**必须**补校准层
+
+现行体系输出的是**综合分**（赏均 − 罚均），是一个 $[-100, 100]$ 的排序刻度，**不是概率**。
+后果有三：
+
+1. **阈值无法解释**。「综合分 ≤ P5 即入名单」——P5 是多少概率？无人能答；
+2. **代价敏感阈值无从反解**。@sec-g6 之期望损失最小化需要 $\hat p$，不是排名；
+3. **跨期不可比**。今日之 P5 与上月之 P5 对应的风险水平未必相同（分布已漂移）。
+
+**正解**：在综合分之上叠一层单调映射（Platt 缩放或保序回归），把分数校准成概率；
+再以 Brier 分数与 ECE 验收，以可靠性图呈现。
+
+**验收门槛（本档立）**：ECE ≤ 0.05 且可靠性图各分箱之 95% 区间覆盖对角线。
+:::
+
+```{r}
+#| label: g4
+#| results: asis
+brier <- function(p, y) mean((p - y)^2)
+ece <- function(p, y, B = 10L) {
+  b <- cut(p, breaks = seq(0, 1, length.out = B + 1L), include.lowest = TRUE)
+  s <- stats::aggregate(cbind(conf = p, acc = y) ~ b, FUN = mean)
+  n <- as.numeric(table(b))[match(s$b, levels(b))]
+  sum(n/length(p) * abs(s$acc - s$conf))
+}
+reliability <- function(p, y, B = 10L) {
+  b <- cut(p, breaks = seq(0, 1, length.out = B + 1L), include.lowest = TRUE)
+  n <- as.numeric(table(b))
+  s <- stats::aggregate(cbind(conf = p, acc = y) ~ b, FUN = mean)
+  s$n <- n[match(s$b, levels(b))]
+  s$lo <- mapply(function(a, m) wilson(round(a*m), m)[1], s$acc, s$n)
+  s$hi <- mapply(function(a, m) wilson(round(a*m), m)[2], s$acc, s$n)
+  s
+}
+## 本平台之校准演示：须 综合分 + 金标准 二者皆到位。缺则占位，绝不合成结论。
+S01  <- read_any("S01_player_score", must = "member_id")
+SEED <- read_any("K01b_seed_manual", must = "member_id")
+CAL_OK <- !is.null(S01) && !is.null(SEED) && "综合分" %in% names(S01)
+if (CAL_OK) {
+  sc <- num(S01$综合分); y <- as.integer(num(S01$member_id) %in% num(SEED$member_id))
+  keep <- is.finite(sc) & is.finite(y)
+  sc <- sc[keep]; y <- y[keep]
+  ## Platt 缩放（逻辑回归于单一分数上）
+  pf <- stats::glm(y ~ sc, family = stats::binomial())
+  p_platt <- stats::predict(pf, type = "response")
+  ## 保序回归（单调、非参）
+  o <- order(sc); ir <- stats::isoreg(sc[o], y[o])
+  p_iso <- rep(NA_real_, length(sc)); p_iso[o] <- ir$yf
+  ## 未校准基线：min-max 线性压到 [0,1]（正是「拿排名当概率」之典型错法）
+  p_raw <- (max(sc) - sc)/(max(sc) - min(sc))
+  CAL <- data.frame(check.names = FALSE,
+    方法 = c("未校准（分数线性压缩）","Platt 缩放","保序回归"),
+    Brier = c(brier(p_raw, y), brier(p_platt, y), brier(p_iso, y)),
+    ECE = c(ece(p_raw, y), ece(p_platt, y), ece(p_iso, y)))
+  CAL$验收 <- ifelse(CAL$ECE <= .05, "✅ 通过（ECE ≤ 0.05）", "⛔ **未通过**")
+  CAL$Brier <- n4(CAL$Brier, 5); CAL$ECE <- n4(CAL$ECE, 5)
+  print(tbl(CAL, "三法校准对照（本平台实测）｜Brier 越小越好；ECE 为分箱期望校准误差",
+            mode = "full", height = 240, esc = FALSE))
+  if (HAS$plotly) {
+    r1 <- reliability(p_raw, y); r2 <- reliability(p_platt, y); r3 <- reliability(p_iso, y)
+    print(htmltools::tagList(
+      plotly::plot_ly() |>
+      plotly::add_segments(x = 0, xend = 1, y = 0, yend = 1, name = "完美校准",
+        line = list(color = PAL$fg, dash = "dash")) |>
+      plotly::add_trace(x = r1$conf, y = r1$acc, type = "scatter", mode = "lines+markers",
+        name = "未校准", line = list(color = PAL$bad),
+        error_y = list(type = "data", symmetric = FALSE, array = r1$hi - r1$acc,
+                       arrayminus = r1$acc - r1$lo, color = PAL$bad)) |>
+      plotly::add_trace(x = r2$conf, y = r2$acc, type = "scatter", mode = "lines+markers",
+        name = "Platt", line = list(color = PAL$c)) |>
+      plotly::add_trace(x = r3$conf, y = r3$acc, type = "scatter", mode = "lines+markers",
+        name = "保序回归", line = list(color = PAL$g)) |>
+      ply_lay("可靠性图（含 Wilson 95% 区间）：贴对角线即校准良好",
+              "预测概率", "实际频率")))
+  }
+} else {
+  cat(ph("S01_player_score.csv（须含 `综合分` 列）与 K01b_seed_manual.csv",
+         "SQL 总包 §S-01 / §K01b",
+         "校准三法对照表（Brier / ECE）、可靠性图、ECE ≤ 0.05 之验收判定"))
+}
+```
+
+## G05 · 保形预测：唯一能给出**有限样本**误判率上界者 {#sec-g5}
+
+::: {.callout-important}
+## 这是本档最重要的一节
+
+现行体系能给的只有两种数字：
+
+- **点估计**（「本折命中率 12%」）——无任何保证；
+- **自举区间**（「Lift ∈ [1.1, 1.8]」）——**渐近**保证，且依赖折间可交换性。
+
+二者皆**不能**回答风控主管的那句话：*「你敢不敢承诺误伤率不超过 5%？」*
+
+**保形预测（Conformal Prediction）能。** 其承诺形式为：
+
+$$P\big(Y_{n+1} \in \hat{C}_\alpha(X_{n+1})\big) \;\ge\; 1-\alpha$$
+
+且此不等式在**任意有限样本**下成立，**不依赖模型正确性**，只依赖一条假设：
+校准集与新样本**可交换**（exchangeable）。
+
+**用在本方案上**：取一个独立校准集，算每个样本之不合规分数，
+取其 $\lceil (n+1)(1-\alpha) \rceil$ 分位数为阈值。
+则「被判风险」之集合，其误伤率在长期意义上**不超过 $\alpha$**——这是可对外承诺的数字。
+
+**代价与前提，一条不可省**：
+
+1. **校准集必须独立于训练集**，且不得参与任何调参；
+2. **可交换性假设须检验**——时序数据天然违反，故须用 **时序保形（Mondrian / weighted conformal）**；
+3. 保证是**边际**（marginal）的：全体平均误伤率 ≤ α，**不保证每个子群皆 ≤ α**。
+   分群保证须用 **Mondrian conformal**，按投注产品／代理线／活跃档分层校准。
+:::
+
+```{r}
+#| label: g5
+#| results: asis
+## 分裂保形（split conformal）之实现：训练 / 校准 / 测试 三分
+conformal_threshold <- function(score_cal, alpha = .05) {
+  n <- length(score_cal)
+  if (n < ceiling(1/alpha) - 1) return(NA_real_)   # n 太小则无法给出 α 保证
+  k <- ceiling((n + 1) * (1 - alpha))
+  sort(score_cal)[min(k, n)]
+}
+if (CAL_OK) {
+  sc <- num(S01$综合分); y <- as.integer(num(S01$member_id) %in% num(SEED$member_id))
+  keep <- is.finite(sc) & is.finite(y); sc <- sc[keep]; y <- y[keep]
+  n <- length(sc); idx <- sample(n)
+  i_tr <- idx[seq_len(floor(n*.5))]
+  i_ca <- idx[(floor(n*.5)+1):floor(n*.75)]
+  i_te <- idx[(floor(n*.75)+1):n]
+  fit <- stats::glm(y[i_tr] ~ sc[i_tr], family = stats::binomial())
+  pr <- function(v) as.numeric(stats::predict(fit, newdata = data.frame(`sc[i_tr]` = v,
+        check.names = FALSE), type = "response"))
+  p_ca <- pr(sc[i_ca]); p_te <- pr(sc[i_te])
+  ## 不合规分数：对「判为正常」这一决策，取 s = p̂（风险概率越高越不合规）
+  ## 目标：控制「本应判风险却被放过」之比例 ≤ α  →  取正例校准集
+  s_ca <- 1 - p_ca[y[i_ca] == 1]
+  ALPHAS <- c(.20, .10, .05, .01)
+  CF <- do.call(rbind, lapply(ALPHAS, function(a) {
+    thr <- conformal_threshold(s_ca, a)
+    if (!is.finite(thr)) return(data.frame(check.names = FALSE,
+      α = pc(a,0), `校准集正例数` = length(s_ca), 阈值 = "—",
+      `名单人数` = NA, `实测覆盖率` = "样本不足，无法给出该 α 之保证",
+      `名下比例` = "—"))
+    flag <- (1 - p_te) <= thr
+    cov <- if (sum(y[i_te] == 1)) mean(((1 - p_te) <= thr)[y[i_te] == 1]) else NA_real_
+    data.frame(check.names = FALSE,
+      α = pc(a,0), `校准集正例数` = length(s_ca), 阈值 = n4(thr, 5),
+      `名单人数` = sum(flag),
+      `实测覆盖率` = pc(cov, 2),
+      `名下比例` = pc(mean(flag), 2))
+  }))
+  print(tbl(CF, paste0("分裂保形预测：逐 α 之阈值、名单长度与**实测覆盖率**",
+    "｜理论保证：实测覆盖率应 ≥ 1−α"), mode = "full", height = 280))
+  cat(sprintf(paste0("\n**分割**：训练 %s／校准 %s／测试 %s。",
+    "校准集正例仅 **%s** 例。\n\n",
+    "**⚠ 关键限制（须与结论一并交付）**：\n\n",
+    "1. **校准集正例数决定了 α 之下限**。要给出 α = 1%% 之保证，",
+    "校准集至少须有 $\\lceil 1/\\alpha \\rceil - 1 = 99$ 个正例；",
+    "本次仅 %s 例，故 α 小于 %s 之保证**在数学上不可给出**——上表相应行已标明。\n\n",
+    "2. **本次为随机分割，违反时序纪律**。正式版须改**时序分裂保形**：",
+    "校准集取训练窗之后、测试窗之前的一段，且须加禁运期。",
+    "随机分割之覆盖率是**乐观上界**。\n\n",
+    "3. **保证是边际的**。分群保证须改 Mondrian conformal，",
+    "按投注产品／代理线／活跃档分层校准——否则边注玩家（方差极大）之实际误伤率",
+    "可能远高于 α，而被主线玩家之低误伤率平均掉。\n\n"),
+    amt(length(i_tr)), amt(length(i_ca)), amt(length(i_te)), amt(length(s_ca)),
+    amt(length(s_ca)), pc(1/(length(s_ca)+1), 2)))
+} else {
+  cat(ph("S01_player_score.csv（须含 `综合分` 列）与 K01b_seed_manual.csv",
+         "SQL 总包 §S-01 / §K01b",
+         "保形预测逐 α 阈值表、实测覆盖率验证、α 下限之样本量反解"))
+}
+```
+
+## G06 · 代价敏感阈值与决策曲线 {#sec-g6}
+
+```{r}
+#| label: g6
+#| results: asis
+## 期望损失最小化：阈值由代价反解，不由分位数拍定
+## E[L](t) = c_FP·FP(t) + c_FN·FN(t)
+if (CAL_OK) {
+  sc <- num(S01$综合分); y <- as.integer(num(S01$member_id) %in% num(SEED$member_id))
+  keep <- is.finite(sc) & is.finite(y); sc <- sc[keep]; y <- y[keep]
+  fit <- stats::glm(y ~ sc, family = stats::binomial())
+  p <- stats::predict(fit, type = "response")
+  ts <- seq(.001, .999, by = .002)
+  loss_curve <- function(cfp, cfn) sapply(ts, function(t) {
+    f <- p >= t; cfp*sum(f & y == 0) + cfn*sum(!f & y == 1) })
+  ACT <- data.frame(check.names = FALSE,
+    动作 = c("仅监控","退水下调","限红","冻结结算"),
+    c_FP = c(COST$c_FP_monitor, COST$c_FP_rebate, COST$c_FP_limit, COST$c_FP_freeze))
+  ACT$c_FN <- COST$c_FN
+  ACT$最优阈值 <- sapply(seq_len(nrow(ACT)), function(i) {
+    L <- loss_curve(max(ACT$c_FP[i], 1e-9), ACT$c_FN[i]); ts[which.min(L)] })
+  ACT$名单人数 <- sapply(ACT$最优阈值, function(t) sum(p >= t))
+  ACT$查准率 <- sapply(ACT$最优阈值, function(t) {
+    f <- p >= t; if (sum(f)) sum(f & y == 1)/sum(f) else NA_real_ })
+  ACT$查全率 <- sapply(ACT$最优阈值, function(t) {
+    f <- p >= t; if (sum(y)) sum(f & y == 1)/sum(y) else NA_real_ })
+  ACT2 <- ACT
+  ACT2$最优阈值 <- n4(ACT2$最优阈值, 3)
+  ACT2$查准率 <- pc(ACT2$查准率, 2); ACT2$查全率 <- pc(ACT2$查全率, 2)
+  ACT2$名单人数 <- amt(ACT2$名单人数)
+  print(tbl(ACT2, paste0("四种动作各自之最优阈值（由期望损失最小化**反解**，非分位数拍定）｜",
+    "误伤成本越高，阈值越严、名单越短、查准率越高、查全率越低"),
+    mode = "full", height = 260))
+  if (HAS$plotly) {
+    ## 决策曲线分析（DCA）：净收益 vs 阈值概率
+    N <- length(y)
+    nb_model <- sapply(ts, function(t) { f <- p >= t
+      sum(f & y == 1)/N - (sum(f & y == 0)/N) * (t/(1-t)) })
+    nb_all <- sapply(ts, function(t) mean(y) - (1 - mean(y)) * (t/(1-t)))
+    print(htmltools::tagList(
+      plotly::plot_ly(x = ts, y = nb_model, type = "scatter", mode = "lines",
+        line = list(color = PAL$g, width = 2.5), name = "本模型",
+        hovertemplate = "阈值概率 %{x:.3f}<br>净收益 %{y:.5f}<extra></extra>") |>
+      plotly::add_lines(x = ts, y = nb_all, name = "全体皆处置",
+        line = list(color = PAL$warn, dash = "dot")) |>
+      plotly::add_lines(x = ts, y = rep(0, length(ts)), name = "全体皆不处置",
+        line = list(color = PAL$bad, dash = "dash")) |>
+      ply_lay("决策曲线分析（DCA）：净收益 vs 阈值概率｜模型曲线高于两条基线之区间，才是模型真正有用之处",
+              "阈值概率 p_t", "净收益 Net Benefit")))
+    ## 期望损失曲面：c_FP 与阈值之二维
+    cfps <- c(1, 3, 6, 12, 30)
+    Z <- t(sapply(cfps, function(cf) loss_curve(cf, COST$c_FN)))
+    print(htmltools::tagList(
+      plotly::plot_ly(z = Z, x = ts, y = cfps, type = "heatmap", colorscale = "Viridis",
+        hovertemplate = "阈值 %{x:.3f}｜c_FP %{y}<br>期望损失 %{z:.0f}<extra></extra>") |>
+      ply_lay("期望损失曲面：横轴阈值、纵轴误伤成本倍数｜每一行之最暗处即该成本下之最优阈值",
+              "阈值概率", "误伤成本倍数 c_FP")))
+  }
+  cat(paste0("\n**决策曲线之读法（比 AUC 贴近决策）**：只有在模型曲线**同时高于**",
+    "「全体皆处置」与「全体皆不处置」两条基线的那段阈值区间内，模型才真正带来价值。",
+    "区间之外，不如索性全查或全不查。\n\n",
+    "**⚠ 代价参数是情景参数，不是估计值。** 上表四个 $c_{FP}$ 由 @sec-cost 定义，",
+    "其取值须由业务方确认。**本档不承担代价取值之正确性**——",
+    "但承担一件事：代价一改，阈值必须跟着重算，绝不容许「阈值定了就不动」。\n\n"))
+} else {
+  cat(ph("S01_player_score.csv（须含 `综合分` 列）与 K01b_seed_manual.csv",
+         "SQL 总包 §S-01 / §K01b",
+         "四动作最优阈值反解表、决策曲线图、期望损失曲面"))
+}
+```
+
+## G07 · PU 学习：只有正例时，普通分类器一定错 {#sec-g7}
+
+::: {.callout-important}
+## 病症与算术
+
+`K01b_seed_manual` 是**正例名单**。未在名单上的会员，其真实状态是「**未标注**」，
+不是「**确定正常**」——理由有三：
+
+1. 人工标注覆盖有限，风控专员不可能审完全体；
+2. 白名单（金牌 IP 种子 17 个）在 bet02 全表**零命中**，无任何确证负例锚；
+3. 处置台账仅覆盖 188 名百家乐会员。
+
+**若把未标注一律当负例**，则：
+
+- 真风险客被当成负例喂进训练 → 模型学到「这种行为是正常的」 → **系统性漏判（E-Ⅱ）**；
+- 且模型输出之概率**系统性偏低**，@sec-g4 之校准与 @sec-g6 之阈值全部随之偏移。
+
+**正解**：PU 学习框架。以 Elkan–Noto 之做法，先估计标注倾向 $c=P(s=1\mid y=1)$，
+再以 $\hat P(y=1\mid x)=\hat P(s=1\mid x)/\hat c$ 还原真实后验。
+:::
+
+```{r}
+#| label: g7
+#| results: asis
+if (CAL_OK) {
+  sc <- num(S01$综合分); s <- as.integer(num(S01$member_id) %in% num(SEED$member_id))
+  keep <- is.finite(sc); sc <- sc[keep]; s <- s[keep]
+  n <- length(sc); ii <- sample(n)
+  i_tr <- ii[seq_len(floor(n*.7))]; i_va <- ii[(floor(n*.7)+1):n]
+  g <- stats::glm(s[i_tr] ~ sc[i_tr], family = stats::binomial())
+  ps <- as.numeric(stats::predict(g, newdata = data.frame(`sc[i_tr]` = sc[i_va],
+        check.names = FALSE), type = "response"))
+  ## Elkan–Noto 估计 c：验证集正例上之平均 P(s=1|x)
+  c_hat <- if (sum(s[i_va] == 1)) mean(ps[s[i_va] == 1]) else NA_real_
+  PU <- data.frame(check.names = FALSE,
+    项 = c("标注正例数 (s=1)","标注率 $P(s=1)$","$\\hat c = P(s=1\\mid y=1)$ 估计",
+           "还原后之真实正例率 $P(y=1)$","**未标注者中之真风险客估计数**",
+           "若当负例训练之漏判放大倍数"),
+    值 = c(amt(sum(s)), pc(mean(s), 4),
+      if (is.finite(c_hat)) n4(c_hat, 4) else "—",
+      if (is.finite(c_hat) && c_hat > 0) pc(mean(s)/c_hat, 4) else "—",
+      if (is.finite(c_hat) && c_hat > 0) amt(round(n*(mean(s)/c_hat - mean(s)))) else "—",
+      if (is.finite(c_hat) && c_hat > 0) sprintf("≈ %s×", n4(1/c_hat, 2)) else "—"))
+  print(tbl(PU, "PU 学习：标注倾向 $\\hat c$ 与真实正例率之还原（Elkan–Noto, 2008）",
+            mode = "full", height = 280, esc = FALSE))
+  cat(sprintf(paste0("\n**读法**：$\\hat c$ 即「一个真风险客被人工标注到的概率」。",
+    "$\\hat c$ 越小，说明人工覆盖越稀薄，**未标注者中藏着的真风险客越多**。\n\n",
+    "**本节之最大限制**：Elkan–Noto 之 $\\hat c$ 估计依赖 **SCAR 假设**",
+    "（Selected Completely At Random——标注与否独立于特征）。",
+    "本平台**几乎肯定违反**：风控专员倾向于标注高流水、高争议之会员，",
+    "低调的打水客反而不被注意。故 $\\hat c$ 为**乐观上界**，",
+    "真实之未标注风险客数**只会更多**。\n\n",
+    "**升级路径**：改用 SAR（Selected At Random，标注倾向依赖特征）之 PU 方法，",
+    "或直接补一个**随机抽样人工复核集**——后者是彻底解法，",
+    "只需风控团队每周随机抽 %s 名会员盲审，累积一季即可得无偏基准率。\n\n"),
+    amt(max(200, ceiling(n * 0.001)))))
+} else {
+  cat(ph("S01_player_score.csv（须含 `综合分` 列）与 K01b_seed_manual.csv",
+         "SQL 总包 §S-01 / §K01b",
+         "PU 标注倾向 $\\hat c$ 估计、真实正例率还原、未标注真风险客估计数"))
+}
+```
+
+## G08 · 层级收缩、G09 · 净化时序、G10 · 漂移、G11 · 敏感性、G12 · 容量 {#sec-g8-12}
+
+```{r}
+#| label: g8-12
+G5 <- data.frame(check.names = FALSE,
+  闸 = c("G08 层级收缩","G09 净化时序验证","G10 分布漂移监控",
+         "G11 未观测混淆敏感性","G12 容量约束下之名单长度"),
+  病症 = c("小样本实体（荷官 ~180、专员 ~24）之点估计方差极大，榜首恒为观测最少者",
+    "步长 1 营业日时相邻折共享大量测试观测；有效独立折数 ≈4.0，名义折数 ≈56",
+    "上线后特征分布漂移，模型静默失效而无告警",
+    "PSM/DID 之无混淆假设**不可检验**；结论可能被一个未观测变量推翻",
+    "名单再准，超出复核人力即执行不了；K 由容量定，不由分位数定"),
+  处方 = c("经验贝叶斯 / James–Stein 收缩：$\\hat\\theta^{EB}_i=\\hat\\mu+B_i(x_i-\\hat\\mu)$，$B_i=\\hat\\tau^2/(\\hat\\tau^2+\\sigma_i^2)$",
+    "Purged Walk-forward：剔除与测试窗重叠之训练样本 + 加禁运期；块自举块长取 $\\lceil test/step \\rceil$",
+    "PSI / KS 逐特征逐周计算；PSI > 0.25 触发重校准，> 0.5 触发 Kill Switch",
+    "E-value：算出「未观测混淆须多强方能推翻现结论」；Rosenbaum bounds 报 $\\Gamma$ 临界值",
+    "先测得日均复核容量 $K$，再以 Precision@K 为目标函数选阈值；名单长度**上限先定，模型后配**"),
+  验收门槛 = c("收缩前后秩变动 ≥ 5 名者之比例须公开；不得只报收缩后排名",
+    "折结构体检表须报名义折数与有效独立折数二者",
+    "PSI 逐周落盘，连续两周 > 0.25 即须重训并记入审计轨迹",
+    "E-value < 1.5 者，结论标注「脆弱」，不得用于冻结级处置",
+    "Precision@K 之 K 须由业务方书面确认，写入运行手册"),
+  本方案状态 = c("🆕 **对照本 v4 已实装**（见其 @sec-shrink）","✅ 已实装",
+    "⛔ **缺**——须俟上线并累积特征快照","⛔ **缺**——PSM/DID 管线已通，前置已具备",
+    "⛔ **缺**——须业务方提供日均复核容量"))
+tbl(G5, "G08–G12 五闸：病症 · 处方 · 验收门槛 · 现状", mode = "full", height = 460, esc = FALSE)
+```
+
+# 四、误判率之可承诺形式：三级措辞阶梯 {#sec-wording}
+
+```{r}
+#| label: wording
+WD <- data.frame(check.names = FALSE,
+  级别 = c("第一级 · 现在就可写","第二级 · 补完 G04+G05 可写",
+           "第三级 · 补完 E5 随机对照实验方可写"),
+  可写句式 = c(
+  "「本方案之名单在净化滚动回测中，逐折 Lift 之块自举 90% 区间为 [下界, 上界]，区间下界高于 1，支持进入 Shadow 阶段。」",
+  "「本方案在独立校准集上，以分裂保形预测给出边际覆盖保证：在 α = 5% 下，长期误伤率不超过 5%（校准集正例 N 例，可交换性假设已以时序分裂检验）。」",
+  "「随机对照实验显示，处置组相对对照组之增量 NGR₃ 为 X（95% CI [a, b]），已证实增利。」"),
+  不可写句式 = c(
+  "「误判率低于 5%」「准确率 95%」——无区间、无基准率、无保证形式，皆为空话",
+  "「误判率为 0」「模型不会误伤」——保形保证是**边际**的，且 α 之下限由校准集正例数决定",
+  "「预计年化增利 X%」——回测增益不等于实际增益；处置执行率、客户流失反应、替代效应皆未计入"),
+  拦截依据 = c("@sec-g1 基准率未知 → PPV 不可算 → 任何绝对误判率承诺皆无依据",
+    "@sec-g5 α 下限 = $1/(n_{正例}+1)$；且边际保证 ≠ 分群保证",
+    "@sec-g11 无 E-value 即不知结论有多脆弱；观察性证据止步于 E4"))
+tbl(WD, paste0("对外措辞三级阶梯｜**本方案当前停在第一级**。",
+  "此表即对外沟通之唯一合法句式来源"), mode = "full", height = 380)
+```
+
+# 五、演示数据登记（如实上报） {#sec-demo}
+
+```{r}
+#| label: demo-registry
+#| results: asis
+if (length(DEMO$rows)) {
+  print(tbl(do.call(rbind, DEMO$rows), "本次渲染使用合成数据之节点（必须如实上报）",
+            mode = "full", height = 240))
+} else {
+  cat(paste0("::: {.callout-note}\n## **零合成**\n\n",
+    "本次渲染未在任何节点使用合成数据。所有出数之节皆由真实交付件现算；",
+    "交付件缺席之节一律出缺料占位（点名文件、SQL 编号、受影响输出），",
+    "**未以合成数据填补**。\n\n",
+    "**G03 之负二项零模型属例外说明**：其数据为真实交付件，",
+    "但零模型本身未建模桌台容量等结构性混杂，故已在该节明标「属方法演示」，",
+    "正式判定须以配置模型重跑。此为**模型简化**，非**数据合成**。\n:::\n\n"))
+}
+```
+
+# 六、结论 · 标准 · 价值 · 局限 · 漏洞 · 现可落实 · 未来升级 {#sec-verdict}
+
+## 一、结论
+
+```{r}
+#| label: v-conclusion
+VC <- data.frame(check.names = FALSE, 序 = 1:9, 结论 = c(
+  "「误判率」不是一个数，是六类错误（E-Ⅰ 至 E-Ⅵ）；不指明类别之抱怨无法处置",
+  "**单一阈值服务四种动作是结构性根因**——误伤成本自 0 到 30 倍，跨度三十倍，同阈值必然一头过松一头过紧",
+  "**本平台之基准率至今无可信估计**，故任何形如「误判率低于 X%」之绝对承诺皆无依据（S1·FATAL）",
+  "现行综合分是**排序刻度而非概率**，导致阈值不可解释、代价敏感阈值无从反解、跨期不可比",
+  "**保形预测是绕开基准率困局之唯一途径**——它给条件覆盖保证，不需先知基准率",
+  "**α 之下限由校准集正例数决定**：$\\alpha_{\\min} \\approx 1/(n_{正例}+1)$；正例不足则小 α 之保证在数学上不可给出",
+  "金标准只有正例，**把未标注当负例必致系统性漏判**；且 SCAR 假设几乎肯定被违反，$\\hat c$ 为乐观上界",
+  "**彻底解法只有一个：随机抽样盲审**。每周随机抽若干会员人工复核，累积一季即得无偏基准率",
+  "**本方案对外措辞当前停在第一级**（Shadow 阶段陈述），第二、三级须分别补完 G04+G05 与 E5"),
+  证据位置 = c("@sec-anatomy","@sec-cost","@sec-g1","@sec-g4","@sec-g5","@sec-g5",
+    "@sec-g7","@sec-g7","@sec-wording"))
+tbl(VC, "本档九条结论", mode = "full", height = 420, esc = FALSE)
+```
+
+## 二、标准
+
+```{r}
+#| label: v-standard
+VS <- data.frame(check.names = FALSE,
+  `标准／文献` = c("Vovk et al. (2005)","Elkan & Noto (2008)","Benjamini & Hochberg (1995)",
+    "Storey (2002)","Wilson (1927) / Brown et al. (2001)","Vickers & Elkin (2006)",
+    "Niculescu-Mizil & Caruana (2005)","VanderWeele & Ding (2017)","Rosenbaum (2002)",
+    "Efron & Morris (1975)","Künsch (1989)","Hyndman & Koehler (2006)",
+    "NIST AI RMF 1.0","SR 26-2 (2026-04-17)","ISO/IEC 5259","ISO/IEC 25012","EU AI Act"),
+  贡献 = c("保形预测之有限样本覆盖保证","PU 学习之 $\\hat c$ 估计（SCAR 假设）",
+    "FDR 控制","自适应 FDR 之 $\\hat\\pi_0$","二项比例区间估计",
+    "决策曲线分析与净收益","概率校准（Platt / 保序回归）之实证比较",
+    "E-value：未观测混淆之敏感性","Rosenbaum bounds：$\\Gamma$ 临界值",
+    "经验贝叶斯收缩","块自举","MASE",
+    "Govern–Map–Measure–Manage 四功能","模型风险管理（**已取代 SR 11-7 与 SR 21-8**）",
+    "AI 数据质量","数据质量 15 特征","高风险 AI 系统义务"),
+  归类 = c(rep("**最佳专业实践**（学术方法论）", 12),
+    rep("**规范性标准**（监管／ISO／框架）", 5)),
+  本档对应闸 = c("G05","G07","G03","G03","G02","G06","G04","G11","G11","G08","G09","G02",
+    "全档总纲","G10 + 治理层","G09 + 数据契约","前置净化层","G12 + 人工监督"))
+tbl(VS, paste0("本档所依标准与文献登记｜",
+  "**三概念永久区分**：规范性标准／最佳专业实践／本项目铁律——自拟规则永不得冒充国际标准"),
+  mode = "full", height = 440, esc = FALSE)
+```
+
+## 三、价值
+
+```{r}
+#| label: v-value
+VV <- data.frame(check.names = FALSE,
+  价值项 = c("误判率从形容词变成带保证的数字","阈值从拍定变成反解",
+    "误伤成本进入目标函数","漏判之量级首次可估","措辞有了合法边界",
+    "小样本实体排名不再失真","名单长度由人力反推","脆弱结论可被识别"),
+  机制 = c("G05 保形预测之边际覆盖保证 $P(\\cdot)\\ge 1-\\alpha$，有限样本、不依赖模型正确性",
+    "G06 期望损失最小化，四种动作各解各的阈值",
+    "G06 $c_{FP}$ 分层（0 / 1 / 6 / 30 倍），高代价动作自动收紧",
+    "G07 PU 之 $\\hat c$ 还原真实正例率，未标注真风险客数可估",
+    "G04+G05 满足后方可升到第二级句式；@sec-wording 即唯一合法句式来源",
+    "G08 经验贝叶斯收缩，观测越少拉回越狠",
+    "G12 Precision@K 之 K 由日均复核容量定",
+    "G11 E-value < 1.5 者标注「脆弱」，禁入冻结级处置"),
+  谁受益 = c("风控主管（可对外承诺）","风控执行（阈值有据可依）","财务（误伤代价入账）",
+    "风控规划（知道还差多少人力）","公关与法务（不越界）",
+    "荷官管理（排名公平）","风控运营（不产生执行不了的名单）","审计与合规（识别脆弱结论）"))
+tbl(VV, "本档八项价值", mode = "full", height = 400, esc = FALSE)
+```
+
+## 四、局限
+
+```{r}
+#| label: v-limit
+VL <- data.frame(check.names = FALSE,
+  局限 = c("保形保证是**边际**的","可交换性假设在时序数据上被违反","α 下限受校准集正例数硬约束",
+    "SCAR 假设几乎肯定被违反","代价参数由业务方给定，本档不担保其正确性",
+    "本档不改上游口径","G10/G11/G12 三闸尚无数据可跑","无随机抽样盲审集"),
+  后果 = c("全体平均误伤率 ≤ α，**不保证每个子群 ≤ α**；边注玩家可能远高于 α",
+    "随机分割之覆盖率为乐观上界；须改时序保形 + 禁运期",
+    "$\\alpha_{\\min}\\approx 1/(n_{正例}+1)$；正例不足则小 α 保证不可给出",
+    "$\\hat c$ 为乐观上界，未标注之真风险客**只会更多**",
+    "代价一改，全部阈值须重算；本档只保证「改了会重算」",
+    "口径错误（E-Ⅳ）之堵法在前置净化层 v8 与取数层，非本档",
+    "G10 须俟上线累积快照；G12 须业务方提供容量",
+    "基准率无法无偏估计，@sec-g1 之 PPV 表只能作情景推演"),
+  可解否 = c("是（改 Mondrian conformal 分层校准）","是（改时序保形）",
+    "是（累积更多正例，或降低 α 要求）","是（改 SAR 方法，或补盲审集）",
+    "**否——属业务决策**","否（本档定位）","是（待上线／待业务方）","是（本档已给出方案）"))
+tbl(VL, "本档八项局限｜「可解否」列区分**方法问题**、**料源问题**与**决策问题**",
+    mode = "full", height = 400, esc = FALSE)
+```
+
+## 五、漏洞
+
+```{r}
+#| label: v-hole
+VH <- data.frame(check.names = FALSE,
+  漏洞 = c("白名单三年未维护","无独立校准集","无盲审集","G03 零模型未控结构性混杂",
+    "无 Kill Switch","无申诉推翻率回流","校准集可能被间接调参污染","分群误伤率无监控"),
+  风险 = c("K01b 金牌 IP 种子 17 个全表零命中——**误判豁免防线从未生效**",
+    "现行一切阈值皆在同一份数据上选出，保形保证无从建立",
+    "基准率无法无偏估计，@sec-g1 全表只能作情景推演",
+    "两个高频玩家本就更容易同桌，此非串通；负二项零模型会把结构当异常",
+    "模型异常时无一键停用，只能等下一轮重训",
+    "客诉申诉成功推翻之比例是**误伤率之金标准**，现无回流通道",
+    "「先看校准集结果再调阈值」即污染，保证失效且无技术手段检出",
+    "边注玩家、新客、小代理线之实际误伤率可能远高于全体均值"),
+  堵法 = c("白名单纳入季度复核；无复核记录即自动失效",
+    "取数层新增独立校准集导出，且**不参与任何调参**",
+    "风控团队每周随机盲审若干会员，累积一季",
+    "改配置模型／度数保持零模型；见主方案 `@sec-null-audit`",
+    "评分落库上线时同步建 Kill Switch（主方案 §39）",
+    "客诉/申诉记录表补齐后建回流管线（主方案 §18 已列为 ⏳ 待表）",
+    "校准集哈希落盘 + 调参日志，任何在调参后触碰校准集之行为可审计",
+    "改 Mondrian conformal，按投注产品／代理线／活跃档分层报覆盖率"),
+  严重度 = c("**S1**","**S1**","**S2**","S2","S2","S2","S2","S2"))
+tbl(VH, "本档八项漏洞（按严重度排）", mode = "full", height = 420, esc = FALSE)
+```
+
+## 六、现可落实
+
+```{r}
+#| label: v-now
+VN <- data.frame(check.names = FALSE,
+  可落实项 = c("动作分层阈值","误伤上限按动作分层","局数 < 30 一律不判",
+    "各投注产品分算基准","BH-FDR 全面挂载","层级收缩改造荷官榜",
+    "白名单季度复核制","对外措辞第一级句式"),
+  为何现在就能做 = c("G06 之期望损失反解只需现有分数 + 代价参数，无须新增取数",
+    "@sec-cost 之四级代价矩阵已定义，可直接写入运行手册",
+    "Wilson 区间已实装；只须把「不判」写成硬规则",
+    "R-03 `side_base` CTE 已实装",
+    "已实装于十万级组合；只须扩展到全部并行检验",
+    "对照本 v4 @sec-shrink 已现算，无须新增取数",
+    "制度问题，零技术成本",
+    "@sec-wording 已给出唯一合法句式"),
+  预期减误 = c("重动作误伤下降、轻动作漏判下降（**双向改善**，非此消彼长）",
+    "冻结级处置之误伤代价被显式定价，自动收紧",
+    "消除小样本点估计导致之 E-Ⅰ",
+    "消除押和者永久免检（E-Ⅱ）与 Big 玩家几乎必然误伤（E-Ⅰ）",
+    "消除十万级组合之伪发现",
+    "消除「上班最少者居榜首」之 E-Ⅵ",
+    "恢复误判豁免防线",
+    "消除对外越界表述之合规风险"),
+  实施成本 = c("低（改阈值配置）","零（写入手册）","低（加硬规则）","零（已实装）",
+    "低（扩展现有代码）","低（改排序逻辑）","零（制度）","零（沟通规范）"))
+tbl(VN, "现可落实八项｜**皆无须新增取数**，本季度即可动工", mode = "full", height = 400)
+```
+
+## 七、未来升级
+
+```{r}
+#| label: v-future
+VF <- data.frame(check.names = FALSE,
+  升级项 = c("独立校准集导出","随机抽样盲审集","时序保形（Mondrian + 加权）",
+    "概率校准层上线","E-value 敏感性分析","PSI 漂移监控 + Kill Switch",
+    "申诉推翻率回流管线","Precision@K 容量优化","随机对照实验 E5"),
+  解决哪个漏洞 = c("无独立校准集（S1）","无盲审集（S2）+ 基准率不可估（S1）",
+    "可交换性被违反 + 分群误伤率无监控","综合分非概率",
+    "结论脆弱性不可知","模型静默失效","误伤率无金标准",
+    "名单执行不了","观察性证据止步 E4"),
+  前置条件 = c("取数层新增一条 SQL（**须待 v4 补闸完成**）",
+    "风控团队每周随机抽若干名盲审（须业务方承诺人力）",
+    "独立校准集 + 时序切分器（**切分器已具备**）",
+    "校准集 ≥ 1,000 例且含足量正例",
+    "PSM/DID 管线（**已具备**）",
+    "评分落库上线 + 累积两季特征快照",
+    "客诉/申诉记录表（主方案 §18 列为 ⏳ 待表）",
+    "日均复核容量（须业务方提供）",
+    "**平台决策**——非数据问题"),
+  优先级 = c("**P0**","**P0**","P1","P1","**P0（前置已具备）**","P2","P1","P1","**P0（决策）**"),
+  可解锁之措辞级别 = c("第二级","—（解锁基准率）","第二级（分群保证）","第二级",
+    "—（标注脆弱结论）","—（运维）","—（误伤金标准）","—（执行可行性）","**第三级**"))
+tbl(VF, paste0("未来升级九项｜「前置条件」已具备者优先——",
+  "**E-value 敏感性分析之前置已全部具备，本季度即可动工**"),
+  mode = "full", height = 420, esc = FALSE)
+```
+
+# 七、参考文献 {#sec-refs}
+
+- Vovk, V., Gammerman, A., & Shafer, G. (2005). *Algorithmic Learning in a Random World.* Springer.
+- Lei, J., G'Sell, M., Rinaldo, A., Tibshirani, R. J., & Wasserman, L. (2018). *Distribution-free predictive inference for regression.* JASA, 113(523), 1094–1111.
+- Elkan, C., & Noto, K. (2008). *Learning classifiers from only positive and unlabeled data.* KDD '08, 213–220.
+- Benjamini, Y., & Hochberg, Y. (1995). *Controlling the false discovery rate.* JRSS-B, 57(1), 289–300.
+- Storey, J. D. (2002). *A direct approach to false discovery rates.* JRSS-B, 64(3), 479–498.
+- Wilson, E. B. (1927). *Probable inference, the law of succession, and statistical inference.* JASA, 22(158), 209–212.
+- Brown, L. D., Cai, T. T., & DasGupta, A. (2001). *Interval estimation for a binomial proportion.* Statistical Science, 16(2), 101–133.
+- Vickers, A. J., & Elkin, E. B. (2006). *Decision curve analysis.* Medical Decision Making, 26(6), 565–574.
+- Niculescu-Mizil, A., & Caruana, R. (2005). *Predicting good probabilities with supervised learning.* ICML '05, 625–632.
+- VanderWeele, T. J., & Ding, P. (2017). *Sensitivity analysis in observational research: introducing the E-value.* Annals of Internal Medicine, 167(4), 268–274.
+- Rosenbaum, P. R. (2002). *Observational Studies* (2nd ed.). Springer.
+- Efron, B., & Morris, C. (1975). *Data analysis using Stein's estimator and its generalizations.* JASA, 70(350), 311–319.
+- Künsch, H. R. (1989). *The jackknife and the bootstrap for general stationary observations.* Annals of Statistics, 17(3), 1217–1241.
+- Hyndman, R. J., & Koehler, A. B. (2006). *Another look at measures of forecast accuracy.* IJF, 22(4), 679–688.
+- NIST AI RMF 1.0；Federal Reserve **SR 26-2**（2026-04-17，与 OCC Bulletin 2026-13、FDIC FIL-15-2026 联合发布，取代 SR 11-7 与 SR 21-8）；ISO/IEC 25012；ISO/IEC 5259 系列；ISO/IEC 42001；ISO 31000:2018；BCBS 239；OECD AI Principles；EU AI Act
+- 百家乐 8 副牌穷举组合数：Banker 2,292,252,566,437,888；Player 2,230,518,282,592,256；Tie 475,627,426,473,216
+
+# 八、变更记录 {#sec-changelog}
+
+| 版本 | 日期 | 变更 |
+|---|---|---|
+| **v1** | **2026-08-14** | **建档。** 立本档之定位为**误差控制层**——把「误判率」由形容词变成带置信保证之数字。八项内容：**①** @sec-anatomy 六类错误正名（E-Ⅰ 假阳性／E-Ⅱ 假阴性／E-Ⅲ 标签错／E-Ⅳ 口径错／E-Ⅴ 时序错／E-Ⅵ 度量错），每类标注典型成因、本方案已实证之案例、主责闸门。**②** @sec-cost 代价矩阵：误伤成本按动作分层（仅监控 0／退水下调 1／限红 6／冻结结算 30 倍），并论证**单一阈值服务四种动作为误判率居高不下之结构性根因**。**③** @sec-rules 术语·规则·条率章：七条决定误判率之游戏规则（每条误用皆对应一类可复现之误判）、庄闲和对四类之理论庄家优势由 8 副牌穷举组合数**当场现算**、误差控制术语册 36 条。**④** @sec-gates 十二道减误闸，逐闸标注主治误差类型、三轴坐标（T/L/S）与本方案现状；其中 G01 基准率谬误全格现算并判定「本平台基准率无可信估计」为 **S1·FATAL**；G02 逐样本量反解判异门槛并禁用 `n≥30` 之类普适门槛；G03 以真实交付件 `候选_同桌异常_最终版_已去重.csv` 跑四法多重比较对照并出 BH 图解；G04 校准三法（未校准／Platt／保序回归）之 Brier 与 ECE 对照 + 含 Wilson 区间之可靠性图；**G05 分裂保形预测**——本档核心，给出有限样本边际覆盖保证并现算 α 下限 $\approx 1/(n_{正例}+1)$；G06 四动作最优阈值由期望损失最小化**反解** + 决策曲线分析 + 期望损失曲面；G07 PU 学习之 Elkan–Noto $\hat c$ 估计与未标注真风险客数还原，并指明 SCAR 假设几乎肯定被违反、$\hat c$ 为乐观上界；G08–G12 五闸列病症·处方·验收门槛·现状。**⑤** @sec-wording 对外措辞三级阶梯，判定**本方案当前停在第一级**，并列出各级之可写与不可写句式及拦截依据。**⑥** @sec-demo 演示数据登记（沿用主方案 `DEMO_USED` 成法），本次渲染**零合成**。**⑦** 呈表纪律全面落实：表一律 DT 互动（可搜可排、双向滚动、禁截列截行、行号印真实索引加千分位、首末摘录以 `---` 分隔且末段用真实末段索引、副标题现算总行列数与省略占比、0 行单独出提示）；图一律互动（Plotly，悬浮框显式深底浅字）。**⑧** @sec-verdict 七段收束章：结论 9 条、标准 17 项（区分规范性标准／最佳专业实践、并载明 SR 26-2 已取代 SR 11-7）、价值 8 项、局限 8 项、漏洞 8 项（按严重度排，两项 S1）、现可落实 8 项（**皆无须新增取数**）、未来升级 9 项（标注前置条件、优先级与可解锁之措辞级别）。**血统登记**：维度字典权威为主方案 **§18 `@sec-radar`**（非 §17.2——该误引已于对照本 v4 查获并斧正）。 |
