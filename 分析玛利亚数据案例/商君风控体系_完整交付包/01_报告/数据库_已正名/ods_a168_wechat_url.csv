@@ -1,0 +1,9 @@
+源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,"",_1,"0:使用,1:禁用",使用次數,来源库,来源表,ODS表名,同步时间
+c9f0f895fb98ab9159f51fd0297e236d,2026-07-23,8,https://wmtc2.ybtlm.cn/,1,441259,a168,wechat_url,ods_a168_wechat_url,2026-07-23T04:30:19Z
+45c48cce2e2d7fbdea1afc51c7c6ad26,2026-07-23,9,https://wmtw.s5t4c.cn/,1,42,a168,wechat_url,ods_a168_wechat_url,2026-07-23T04:30:19Z
+c51ce410c124a10e0db5e4b97fc2af39,2026-07-23,13,https://wmtw.m8810.com,0,6094751,a168,wechat_url,ods_a168_wechat_url,2026-07-23T04:30:19Z
+d3d9446802a44259755d38e6d163e820,2026-07-23,10,https://2ibti.521tao.cn,1,856936,a168,wechat_url,ods_a168_wechat_url,2026-07-23T04:30:19Z
+6512bd43d9caa6e02c990b0a82652dca,2026-07-23,11,http://wmtc.bigweike.com,1,34,a168,wechat_url,ods_a168_wechat_url,2026-07-23T04:30:19Z
+8f14e45fceea167a5a36dedd4bea2543,2026-07-23,7,https://wmtc.dy6bk.cn/,1,117744,a168,wechat_url,ods_a168_wechat_url,2026-07-23T04:30:19Z
+c20ad4d76fe97759aa27a0c99bff6710,2026-07-23,12,https://wmtc.bigweike.com/,1,804694,a168,wechat_url,ods_a168_wechat_url,2026-07-23T04:30:19Z
+1679091c5a880faf6fb5e6087eb1b2dc,2026-07-23,6,https://wmtc.s5t4c.cn/,1,942810,a168,wechat_url,ods_a168_wechat_url,2026-07-23T04:30:19Z

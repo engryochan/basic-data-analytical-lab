@@ -1,0 +1,17 @@
+﻿TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,DATA_TYPE,COLUMN_COMMENT
+ods_mariadb_2b,ods_a168_RedPacketSetup,uid,varchar,source_type=int(11); 操作者id
+ods_mariadb_2b,ods_a168_agent,membermax,varchar,source_type=int(11); 會員總數
+ods_mariadb_2b,ods_a168_agent_bak20250610,membermax,varchar,source_type=int(11); 會員總數
+ods_mariadb_2b,ods_a168_agent_test,membermax,varchar,source_type=int(11); 會員總數
+ods_mariadb_2b,ods_a168_ban_bet_area,account_type,varchar,source_type=varchar(1); 
+ods_mariadb_2b,ods_a168_close_tip_list,game_user,varchar,source_type=varchar(30); 
+ods_mariadb_2b,ods_a168_employee,account,varchar,source_type=varchar(20); 
+ods_mariadb_2b,ods_a168_employee,servicemember,varchar,source_type=int(11); 服務會員
+ods_mariadb_2b,ods_a168_game_log,user_agent,varchar,source_type=text; 
+ods_mariadb_2b,ods_a168_iphistory,uid,varchar,source_type=varchar(20); 
+ods_mariadb_2b,ods_a168_member_partner_account,username,varchar,source_type=varchar(30); 第三方遊戲帳號
+ods_mariadb_2b,ods_a168_member_url,account,varchar,source_type=varchar(48); 會員帳號
+ods_mariadb_2b,ods_a168_passiplist,account,varchar,source_type=varchar(30); 
+ods_mariadb_2b,ods_a168_realtimelog,betmember,varchar,source_type=int(11); 本日累計投注人數
+ods_mariadb_2b,ods_a168_sms_setting,username,varchar,source_type=varchar(20); 帳號
+ods_mariadb_2b,ods_a168_wallet_dtl,user,varchar,source_type=varchar(30); 

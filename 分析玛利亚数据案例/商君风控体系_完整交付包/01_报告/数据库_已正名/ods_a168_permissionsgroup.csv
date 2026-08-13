@@ -1,0 +1,11 @@
+源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,"",權限群組名稱,是否啟用 0:禁止;1:啟用,顯示權限群組名稱,排序,_1,圖示,来源库,来源表,ODS表名,同步时间
+8f14e45fceea167a5a36dedd4bea2543,2016-06-22,7,message,1,讯息管理,2,2016-06-22T11:38:45Z,fa-arrows-h,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19T18:56:54Z
+e4da3b7fbbce2345d7772b0674a318d5,2016-06-23,5,market,1,市场管理,3,2016-06-23T18:45:05Z,fa-building-o,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19T18:56:54Z
+eccbc87e4b5ce2fe28308fd9f2a7baf3,2016-06-17,3,game,1,游戏管理,4,2016-06-17T18:02:16Z,fa-arrows,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19T18:56:54Z
+c81e728d9d4c2f636f067f89cc14862c,2016-06-24,2,user,1,用户管理,1,2016-06-24T14:53:41Z,fa-beer,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19T18:56:54Z
+d3d9446802a44259755d38e6d163e820,2021-12-29,10,preferential,1,优惠管理,10,2021-12-29T15:24:14Z,fa-bell,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-20T07:15:17Z
+c9f0f895fb98ab9159f51fd0297e236d,2017-11-13,8,telmanage,1,电投管理,7,2017-11-13T15:02:57Z,fa-phone,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19T18:56:54Z
+45c48cce2e2d7fbdea1afc51c7c6ad26,2019-10-24,9,logmanage,1,日志管理,8,2019-10-24T17:50:45Z,fa-book,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19T18:56:54Z
+a87ff679a2f3e71d9181a67b7542122c,2016-06-23,4,money,1,财务管理,5,2016-06-23T18:51:31Z,fa-certificate,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19T18:56:54Z
+c4ca4238a0b923820dcc509a6f75849b,2019-10-24,1,system,1,系统管理,9,2019-10-24T17:29:23Z,fa-anchor,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19T18:56:54Z
+1679091c5a880faf6fb5e6087eb1b2dc,2016-06-23,6,moniter,1,风险控管,6,2016-06-23T18:51:31Z,fa-bolt,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19T18:56:54Z

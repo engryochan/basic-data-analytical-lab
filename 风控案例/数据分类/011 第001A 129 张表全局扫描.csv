@@ -1,0 +1,2292 @@
+﻿TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,DATA_TYPE,COLUMN_COMMENT,ORDINAL_POSITION
+ods_mariadb_2b,ods_a168_RedPacketSetup,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_RedPacketSetup,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_RedPacketSetup,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_RedPacketSetup,agent_id,varchar,source_type=int(11); 代理id,4
+ods_mariadb_2b,ods_a168_RedPacketSetup,status,varchar,"source_type=tinyint(1); 活动状态:0:关闭,1:开启",5
+ods_mariadb_2b,ods_a168_RedPacketSetup,start_time,varchar,source_type=datetime; 開始活动时间,6
+ods_mariadb_2b,ods_a168_RedPacketSetup,end_time,varchar,source_type=datetime; 結束活动时间,7
+ods_mariadb_2b,ods_a168_RedPacketSetup,total_money_updating,varchar,source_type=tinyint(1); 紅包雨更新鎖,8
+ods_mariadb_2b,ods_a168_RedPacketSetup,total_money,varchar,source_type=int(11); 紅包雨總金額,9
+ods_mariadb_2b,ods_a168_RedPacketSetup,single_money_from,varchar,source_type=int(11); 單次紅包雨總金額範圍,10
+ods_mariadb_2b,ods_a168_RedPacketSetup,single_money_to,varchar,source_type=int(11); 單次紅包雨總金額範圍,11
+ods_mariadb_2b,ods_a168_RedPacketSetup,single_interval,varchar,"source_type=int(8); 点击红包时间间隔(秒), 0代表无时间间隔",12
+ods_mariadb_2b,ods_a168_RedPacketSetup,single_available_times,varchar,source_type=int(10); 单次红包雨可领取次数(20211223 不使用rex),13
+ods_mariadb_2b,ods_a168_RedPacketSetup,setting,varchar,source_type=text; 紅包雨gid配置,14
+ods_mariadb_2b,ods_a168_RedPacketSetup,duration,varchar,source_type=int(10); 持續時間,15
+ods_mariadb_2b,ods_a168_RedPacketSetup,need_valid,varchar,source_type=tinyint(1); 活動獎金是否需要打碼,16
+ods_mariadb_2b,ods_a168_RedPacketSetup,need_valid_percent,varchar,"source_type=int(3); 需打碼時,獎金的%數",17
+ods_mariadb_2b,ods_a168_RedPacketSetup,rules,varchar,source_type=text; 活動規則,18
+ods_mariadb_2b,ods_a168_RedPacketSetup,black_list,varchar,source_type=text; 黑名單帳號(逗號隔開)(不使用),19
+ods_mariadb_2b,ods_a168_RedPacketSetup,utp,varchar,source_type=char(1); 操作者類型,20
+ods_mariadb_2b,ods_a168_RedPacketSetup,uid,varchar,source_type=int(11); 操作者id,21
+ods_mariadb_2b,ods_a168_RedPacketSetup,update_time,varchar,source_type=datetime; 操作時間,22
+ods_mariadb_2b,ods_a168_RedPacketSetup,source_db,varchar,来源库,23
+ods_mariadb_2b,ods_a168_RedPacketSetup,source_table,varchar,来源表,24
+ods_mariadb_2b,ods_a168_RedPacketSetup,ods_table_name,varchar,ODS表名,25
+ods_mariadb_2b,ods_a168_RedPacketSetup,sync_time,datetime,同步时间,26
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,red_id,varchar,source_type=int(11); 紅包設定id,4
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,currency,varchar,source_type=int(3); 幣別,5
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,gtype,varchar,source_type=int(4); 遊戲id,6
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,sync,varchar,"source_type=tinyint(1); 同步sync.0:否,1:是",7
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,bet_count,varchar,source_type=int(10); 投注局數,8
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,bet_amount,varchar,"source_type=decimal(16,2); 單筆下注金額",9
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,money_from,varchar,"source_type=decimal(16,2); 紅包金額範圍",10
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,money_to,varchar,"source_type=decimal(16,2); 紅包金額範圍",11
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,percent,varchar,source_type=int(3); 概率,12
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,source_db,varchar,来源库,13
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,source_table,varchar,来源表,14
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,ods_table_name,varchar,ODS表名,15
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,sync_time,datetime,同步时间,16
+ods_mariadb_2b,ods_a168_RedPacket_No,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_RedPacket_No,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_RedPacket_No,id,varchar,source_type=bigint(20); ,3
+ods_mariadb_2b,ods_a168_RedPacket_No,source_db,varchar,来源库,4
+ods_mariadb_2b,ods_a168_RedPacket_No,source_table,varchar,来源表,5
+ods_mariadb_2b,ods_a168_RedPacket_No,ods_table_name,varchar,ODS表名,6
+ods_mariadb_2b,ods_a168_RedPacket_No,sync_time,datetime,同步时间,7
+ods_mariadb_2b,ods_a168_RedPacket_Order,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_RedPacket_Order,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_RedPacket_Order,id,varchar,source_type=bigint(20); ,3
+ods_mariadb_2b,ods_a168_RedPacket_Order,mid,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_RedPacket_Order,gameid,varchar,source_type=int(11); 遊戲,5
+ods_mariadb_2b,ods_a168_RedPacket_Order,currency,varchar,source_type=int(11); ,6
+ods_mariadb_2b,ods_a168_RedPacket_Order,rate,varchar,"source_type=decimal(8,4); ",7
+ods_mariadb_2b,ods_a168_RedPacket_Order,money,varchar,"source_type=decimal(16,4); 中獎金額",8
+ods_mariadb_2b,ods_a168_RedPacket_Order,status,varchar,"source_type=enum(''Y'',''N''); Y:已領取,N:未領取",9
+ods_mariadb_2b,ods_a168_RedPacket_Order,lv1percent,varchar,"source_type=decimal(16,4); ",10
+ods_mariadb_2b,ods_a168_RedPacket_Order,lv2percent,varchar,"source_type=decimal(16,4); ",11
+ods_mariadb_2b,ods_a168_RedPacket_Order,lv3percent,varchar,"source_type=decimal(16,4); ",12
+ods_mariadb_2b,ods_a168_RedPacket_Order,lv4percent,varchar,"source_type=decimal(16,4); ",13
+ods_mariadb_2b,ods_a168_RedPacket_Order,lv5percent,varchar,"source_type=decimal(16,4); ",14
+ods_mariadb_2b,ods_a168_RedPacket_Order,addtime,varchar,source_type=datetime; gs寫單時間,15
+ods_mariadb_2b,ods_a168_RedPacket_Order,receivetime,varchar,source_type=datetime; 領取時間,16
+ods_mariadb_2b,ods_a168_RedPacket_Order,source_db,varchar,来源库,17
+ods_mariadb_2b,ods_a168_RedPacket_Order,source_table,varchar,来源表,18
+ods_mariadb_2b,ods_a168_RedPacket_Order,ods_table_name,varchar,ODS表名,19
+ods_mariadb_2b,ods_a168_RedPacket_Order,sync_time,datetime,同步时间,20
+ods_mariadb_2b,ods_a168_SMR_log,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_SMR_log,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_SMR_log,sn,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_SMR_log,bet02,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_SMR_log,bet03,varchar,"source_type=decimal(12,0); ",5
+ods_mariadb_2b,ods_a168_SMR_log,bet04,varchar,source_type=int(11); ,6
+ods_mariadb_2b,ods_a168_SMR_log,bet22,varchar,source_type=int(11); ,7
+ods_mariadb_2b,ods_a168_SMR_log,category,varchar,source_type=int(11); ,8
+ods_mariadb_2b,ods_a168_SMR_log,receivetime,varchar,source_type=datetime; ,9
+ods_mariadb_2b,ods_a168_SMR_log,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_SMR_log,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_SMR_log,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_SMR_log,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_age_login,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_age_login,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_age_login,alg001,varchar,source_type=int(11); age_id,3
+ods_mariadb_2b,ods_a168_age_login,alg002,varchar,source_type=int(11); site,4
+ods_mariadb_2b,ods_a168_age_login,alg003,varchar,source_type=varchar(50); sid,5
+ods_mariadb_2b,ods_a168_age_login,alg004,varchar,source_type=timestamp; this_login,6
+ods_mariadb_2b,ods_a168_age_login,alg005,varchar,source_type=timestamp; last_login,7
+ods_mariadb_2b,ods_a168_age_login,alg006,varchar,source_type=text; ip,8
+ods_mariadb_2b,ods_a168_age_login,alg007,varchar,source_type=text; info,9
+ods_mariadb_2b,ods_a168_age_login,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_age_login,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_age_login,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_age_login,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_age_sub_login,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_age_sub_login,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_age_sub_login,asl001,varchar,source_type=int(11); sub_id,3
+ods_mariadb_2b,ods_a168_age_sub_login,asl002,varchar,source_type=int(11); site,4
+ods_mariadb_2b,ods_a168_age_sub_login,asl003,varchar,source_type=varchar(50); sid,5
+ods_mariadb_2b,ods_a168_age_sub_login,asl004,varchar,source_type=datetime; this_login,6
+ods_mariadb_2b,ods_a168_age_sub_login,asl005,varchar,source_type=datetime; last_login,7
+ods_mariadb_2b,ods_a168_age_sub_login,asl006,varchar,source_type=text; ip,8
+ods_mariadb_2b,ods_a168_age_sub_login,asl007,varchar,source_type=text; info,9
+ods_mariadb_2b,ods_a168_age_sub_login,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_age_sub_login,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_age_sub_login,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_age_sub_login,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_agent,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_agent,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_agent,age001,varchar,source_type=int(11); sn,3
+ods_mariadb_2b,ods_a168_agent,age002,varchar,source_type=varchar(30); ,4
+ods_mariadb_2b,ods_a168_agent,age003,varchar,source_type=varchar(50); ,5
+ods_mariadb_2b,ods_a168_agent,age004,varchar,source_type=varchar(30); ,6
+ods_mariadb_2b,ods_a168_agent,age005,varchar,source_type=timestamp; ,7
+ods_mariadb_2b,ods_a168_agent,age006,varchar,source_type=int(11); ,8
+ods_mariadb_2b,ods_a168_agent,age007,varchar,source_type=int(11); ,9
+ods_mariadb_2b,ods_a168_agent,age008,varchar,source_type=int(11); ,10
+ods_mariadb_2b,ods_a168_agent,age009,varchar,source_type=int(11); ,11
+ods_mariadb_2b,ods_a168_agent,age010,varchar,source_type=int(11); ,12
+ods_mariadb_2b,ods_a168_agent,age011,varchar,source_type=int(11); ,13
+ods_mariadb_2b,ods_a168_agent,age012,varchar,source_type=timestamp; ,14
+ods_mariadb_2b,ods_a168_agent,age013,varchar,source_type=text; ,15
+ods_mariadb_2b,ods_a168_agent,age014,varchar,source_type=int(11); 風險重置開關,16
+ods_mariadb_2b,ods_a168_agent,age015,varchar,"source_type=enum(''Y'',''N''); 啟停用狀態",17
+ods_mariadb_2b,ods_a168_agent,age016,varchar,"source_type=enum(''Y'',''N''); 啟停押狀態",18
+ods_mariadb_2b,ods_a168_agent,age017,varchar,"source_type=enum(''Y'',''N''); ",19
+ods_mariadb_2b,ods_a168_agent,age018,varchar,"source_type=enum(''Y'',''N''); ",20
+ods_mariadb_2b,ods_a168_agent,age019,varchar,source_type=int(11); 結算報表開關,21
+ods_mariadb_2b,ods_a168_agent,age020,varchar,source_type=int(11); 結算報表格式,22
+ods_mariadb_2b,ods_a168_agent,age021,varchar,source_type=int(11); 結算報表語系,23
+ods_mariadb_2b,ods_a168_agent,age022,varchar,source_type=int(11); 測試線判別,24
+ods_mariadb_2b,ods_a168_agent,age023,varchar,source_type=char(1); ,25
+ods_mariadb_2b,ods_a168_agent,age024,varchar,source_type=varchar(30); 備註,26
+ods_mariadb_2b,ods_a168_agent,credit,varchar,"source_type=decimal(15,4); ",27
+ods_mariadb_2b,ods_a168_agent,cash,varchar,"source_type=decimal(15,4); ",28
+ods_mariadb_2b,ods_a168_agent,type,varchar,source_type=int(11); ,29
+ods_mariadb_2b,ods_a168_agent,currency,varchar,source_type=int(11); ,30
+ods_mariadb_2b,ods_a168_agent,tip,varchar,"source_type=enum(''Y'',''N''); ",31
+ods_mariadb_2b,ods_a168_agent,red,varchar,"source_type=enum(''N'',''Y''); 紅包開關",32
+ods_mariadb_2b,ods_a168_agent,prefix_add,varchar,"source_type=enum(''Y'',''N''); ",33
+ods_mariadb_2b,ods_a168_agent,prefix_acc,varchar,source_type=varchar(12); 前綴碼,34
+ods_mariadb_2b,ods_a168_agent,receipt_acc,varchar,source_type=int(3); 收款帳號,35
+ods_mariadb_2b,ods_a168_agent,notification,varchar,source_type=int(11); 通知帳號,36
+ods_mariadb_2b,ods_a168_agent,sacc,varchar,source_type=varchar(30); 顯示帳號,37
+ods_mariadb_2b,ods_a168_agent,opengame,varchar,source_type=varchar(255); ,38
+ods_mariadb_2b,ods_a168_agent,site,varchar,source_type=varchar(60); ,39
+ods_mariadb_2b,ods_a168_agent,membermax,varchar,source_type=int(11); 會員總數,40
+ods_mariadb_2b,ods_a168_agent,profitmax,varchar,source_type=varchar(11); 最大利潤,41
+ods_mariadb_2b,ods_a168_agent,promotecode,varchar,source_type=char(6); 推廣代碼,42
+ods_mariadb_2b,ods_a168_agent,kickperiod,varchar,source_type=int(3); 踢出局數,43
+ods_mariadb_2b,ods_a168_agent,identity,varchar,source_type=int(11); 0:信用;1:API,44
+ods_mariadb_2b,ods_a168_agent,chkKey,varchar,source_type=varchar(100); ,45
+ods_mariadb_2b,ods_a168_agent,chkLock,varchar,"source_type=enum(''Y'',''N''); 是否鎖定",46
+ods_mariadb_2b,ods_a168_agent,last_chpsw,varchar,source_type=timestamp; 上次修改密碼時間,47
+ods_mariadb_2b,ods_a168_agent,source_db,varchar,来源库,48
+ods_mariadb_2b,ods_a168_agent,source_table,varchar,来源表,49
+ods_mariadb_2b,ods_a168_agent,ods_table_name,varchar,ODS表名,50
+ods_mariadb_2b,ods_a168_agent,sync_time,datetime,同步时间,51
+ods_mariadb_2b,ods_a168_agent_bak20250610,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_agent_bak20250610,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_agent_bak20250610,age001,varchar,source_type=int(11); sn,3
+ods_mariadb_2b,ods_a168_agent_bak20250610,age002,varchar,source_type=varchar(30); ,4
+ods_mariadb_2b,ods_a168_agent_bak20250610,age003,varchar,source_type=varchar(50); ,5
+ods_mariadb_2b,ods_a168_agent_bak20250610,age004,varchar,source_type=varchar(30); ,6
+ods_mariadb_2b,ods_a168_agent_bak20250610,age005,varchar,source_type=timestamp; ,7
+ods_mariadb_2b,ods_a168_agent_bak20250610,age006,varchar,source_type=int(11); ,8
+ods_mariadb_2b,ods_a168_agent_bak20250610,age007,varchar,source_type=int(11); ,9
+ods_mariadb_2b,ods_a168_agent_bak20250610,age008,varchar,source_type=int(11); ,10
+ods_mariadb_2b,ods_a168_agent_bak20250610,age009,varchar,source_type=int(11); ,11
+ods_mariadb_2b,ods_a168_agent_bak20250610,age010,varchar,source_type=int(11); ,12
+ods_mariadb_2b,ods_a168_agent_bak20250610,age011,varchar,source_type=int(11); ,13
+ods_mariadb_2b,ods_a168_agent_bak20250610,age012,varchar,source_type=timestamp; ,14
+ods_mariadb_2b,ods_a168_agent_bak20250610,age013,varchar,source_type=text; ,15
+ods_mariadb_2b,ods_a168_agent_bak20250610,age014,varchar,source_type=int(11); 風險重置開關,16
+ods_mariadb_2b,ods_a168_agent_bak20250610,age015,varchar,"source_type=enum(''Y'',''N''); 啟停用狀態",17
+ods_mariadb_2b,ods_a168_agent_bak20250610,age016,varchar,"source_type=enum(''Y'',''N''); 啟停押狀態",18
+ods_mariadb_2b,ods_a168_agent_bak20250610,age017,varchar,"source_type=enum(''Y'',''N''); ",19
+ods_mariadb_2b,ods_a168_agent_bak20250610,age018,varchar,"source_type=enum(''Y'',''N''); ",20
+ods_mariadb_2b,ods_a168_agent_bak20250610,age019,varchar,source_type=int(11); 結算報表開關,21
+ods_mariadb_2b,ods_a168_agent_bak20250610,age020,varchar,source_type=int(11); 結算報表格式,22
+ods_mariadb_2b,ods_a168_agent_bak20250610,age021,varchar,source_type=int(11); 結算報表語系,23
+ods_mariadb_2b,ods_a168_agent_bak20250610,age022,varchar,source_type=int(11); 測試線判別,24
+ods_mariadb_2b,ods_a168_agent_bak20250610,age023,varchar,source_type=char(1); ,25
+ods_mariadb_2b,ods_a168_agent_bak20250610,age024,varchar,source_type=varchar(30); 備註,26
+ods_mariadb_2b,ods_a168_agent_bak20250610,credit,varchar,"source_type=decimal(15,4); ",27
+ods_mariadb_2b,ods_a168_agent_bak20250610,cash,varchar,"source_type=decimal(15,4); ",28
+ods_mariadb_2b,ods_a168_agent_bak20250610,type,varchar,source_type=int(11); ,29
+ods_mariadb_2b,ods_a168_agent_bak20250610,currency,varchar,source_type=int(11); ,30
+ods_mariadb_2b,ods_a168_agent_bak20250610,tip,varchar,"source_type=enum(''Y'',''N''); ",31
+ods_mariadb_2b,ods_a168_agent_bak20250610,red,varchar,"source_type=enum(''N'',''Y''); 紅包開關",32
+ods_mariadb_2b,ods_a168_agent_bak20250610,prefix_add,varchar,"source_type=enum(''Y'',''N''); ",33
+ods_mariadb_2b,ods_a168_agent_bak20250610,prefix_acc,varchar,source_type=varchar(12); 前綴碼,34
+ods_mariadb_2b,ods_a168_agent_bak20250610,receipt_acc,varchar,source_type=int(3); 收款帳號,35
+ods_mariadb_2b,ods_a168_agent_bak20250610,notification,varchar,source_type=int(11); 通知帳號,36
+ods_mariadb_2b,ods_a168_agent_bak20250610,sacc,varchar,source_type=varchar(30); 顯示帳號,37
+ods_mariadb_2b,ods_a168_agent_bak20250610,opengame,varchar,source_type=varchar(255); ,38
+ods_mariadb_2b,ods_a168_agent_bak20250610,site,varchar,source_type=varchar(60); ,39
+ods_mariadb_2b,ods_a168_agent_bak20250610,membermax,varchar,source_type=int(11); 會員總數,40
+ods_mariadb_2b,ods_a168_agent_bak20250610,profitmax,varchar,source_type=varchar(11); 最大利潤,41
+ods_mariadb_2b,ods_a168_agent_bak20250610,promotecode,varchar,source_type=char(6); 推廣代碼,42
+ods_mariadb_2b,ods_a168_agent_bak20250610,kickperiod,varchar,source_type=int(3); 踢出局數,43
+ods_mariadb_2b,ods_a168_agent_bak20250610,identity,varchar,source_type=int(11); 0:信用;1:API,44
+ods_mariadb_2b,ods_a168_agent_bak20250610,chkKey,varchar,source_type=varchar(100); ,45
+ods_mariadb_2b,ods_a168_agent_bak20250610,chkLock,varchar,"source_type=enum(''Y'',''N''); 是否鎖定",46
+ods_mariadb_2b,ods_a168_agent_bak20250610,last_chpsw,varchar,source_type=timestamp; 上次修改密碼時間,47
+ods_mariadb_2b,ods_a168_agent_bak20250610,source_db,varchar,来源库,48
+ods_mariadb_2b,ods_a168_agent_bak20250610,source_table,varchar,来源表,49
+ods_mariadb_2b,ods_a168_agent_bak20250610,ods_table_name,varchar,ODS表名,50
+ods_mariadb_2b,ods_a168_agent_bak20250610,sync_time,datetime,同步时间,51
+ods_mariadb_2b,ods_a168_agent_dtl,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_agent_dtl,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_agent_dtl,ag001,varchar,source_type=int(11); id,3
+ods_mariadb_2b,ods_a168_agent_dtl,ag002,varchar,source_type=int(11); 類別,4
+ods_mariadb_2b,ods_a168_agent_dtl,ag003,varchar,"source_type=decimal(16,2); 退水",5
+ods_mariadb_2b,ods_a168_agent_dtl,ag004,varchar,source_type=int(11); 最小押分,6
+ods_mariadb_2b,ods_a168_agent_dtl,ag005,varchar,source_type=int(11); 最大押分,7
+ods_mariadb_2b,ods_a168_agent_dtl,ag006,varchar,source_type=int(11); 押分倍數,8
+ods_mariadb_2b,ods_a168_agent_dtl,ag007,varchar,source_type=int(11); 最大押分02,9
+ods_mariadb_2b,ods_a168_agent_dtl,ag008,varchar,source_type=int(11); 最大押分03,10
+ods_mariadb_2b,ods_a168_agent_dtl,ag009,varchar,source_type=int(11); 最大押分04,11
+ods_mariadb_2b,ods_a168_agent_dtl,ag010,varchar,source_type=int(11); 最大押分05,12
+ods_mariadb_2b,ods_a168_agent_dtl,ag011,varchar,source_type=int(11); 最大押分06,13
+ods_mariadb_2b,ods_a168_agent_dtl,ag012,varchar,"source_type=decimal(16,2); 佔成",14
+ods_mariadb_2b,ods_a168_agent_dtl,ag013,varchar,source_type=int(11); 選則限紅（BIT）,15
+ods_mariadb_2b,ods_a168_agent_dtl,ag014,varchar,source_type=varchar(300); 新版限額,16
+ods_mariadb_2b,ods_a168_agent_dtl,ag015,varchar,"source_type=decimal(16,2); 電投退水",17
+ods_mariadb_2b,ods_a168_agent_dtl,ag016,varchar,source_type=int(3); 電投佔成,18
+ods_mariadb_2b,ods_a168_agent_dtl,source_db,varchar,来源库,19
+ods_mariadb_2b,ods_a168_agent_dtl,source_table,varchar,来源表,20
+ods_mariadb_2b,ods_a168_agent_dtl,ods_table_name,varchar,ODS表名,21
+ods_mariadb_2b,ods_a168_agent_dtl,sync_time,datetime,同步时间,22
+ods_mariadb_2b,ods_a168_agent_dtl_test,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_agent_dtl_test,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag001,varchar,source_type=int(11); id,3
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag002,varchar,source_type=int(11); 類別,4
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag003,varchar,"source_type=decimal(16,2); 退水",5
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag004,varchar,source_type=int(11); 最小押分,6
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag005,varchar,source_type=int(11); 最大押分,7
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag006,varchar,source_type=int(11); 押分倍數,8
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag007,varchar,source_type=int(11); 最大押分02,9
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag008,varchar,source_type=int(11); 最大押分03,10
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag009,varchar,source_type=int(11); 最大押分04,11
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag010,varchar,source_type=int(11); 最大押分05,12
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag011,varchar,source_type=int(11); 最大押分06,13
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag012,varchar,"source_type=decimal(16,2); 佔成",14
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag013,varchar,source_type=int(11); 選則限紅（BIT）,15
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag014,varchar,source_type=varchar(300); 新版限額,16
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag015,varchar,"source_type=decimal(16,2); 電投退水",17
+ods_mariadb_2b,ods_a168_agent_dtl_test,ag016,varchar,source_type=int(3); 電投佔成,18
+ods_mariadb_2b,ods_a168_agent_dtl_test,source_db,varchar,来源库,19
+ods_mariadb_2b,ods_a168_agent_dtl_test,source_table,varchar,来源表,20
+ods_mariadb_2b,ods_a168_agent_dtl_test,ods_table_name,varchar,ODS表名,21
+ods_mariadb_2b,ods_a168_agent_dtl_test,sync_time,datetime,同步时间,22
+ods_mariadb_2b,ods_a168_agent_elec,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_agent_elec,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_agent_elec,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_agent_elec,gid,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_agent_elec,profitRate,varchar,"source_type=decimal(3,2); ",5
+ods_mariadb_2b,ods_a168_agent_elec,pot,varchar,"source_type=decimal(16,4); ",6
+ods_mariadb_2b,ods_a168_agent_elec,potLock,varchar,source_type=tinyint(1); ,7
+ods_mariadb_2b,ods_a168_agent_elec,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_agent_elec,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_agent_elec,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_agent_elec,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,agent_id,varchar,source_type=int(11); 代理 id,3
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,code,varchar,source_type=int(11); 第三方遊戲代碼,4
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,gamelist_id,varchar,source_type=int(11); 第三方遊戲 id,5
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,status,varchar,source_type=int(11); 開關,6
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,orders,varchar,source_type=int(11); 順序,7
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_agent_permissionrole,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_agent_permissionrole,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_agent_permissionrole,id,varchar,source_type=int(11); id,3
+ods_mariadb_2b,ods_a168_agent_permissionrole,permissionid,varchar,source_type=int(11); t_permission id,4
+ods_mariadb_2b,ods_a168_agent_permissionrole,status,varchar,source_type=int(11); 0:禁用;1啟用,5
+ods_mariadb_2b,ods_a168_agent_permissionrole,lv1,varchar,source_type=bit(1); ,6
+ods_mariadb_2b,ods_a168_agent_permissionrole,lv2,varchar,source_type=bit(1); ,7
+ods_mariadb_2b,ods_a168_agent_permissionrole,lv3,varchar,source_type=bit(1); ,8
+ods_mariadb_2b,ods_a168_agent_permissionrole,lv4,varchar,source_type=bit(1); ,9
+ods_mariadb_2b,ods_a168_agent_permissionrole,lv5,varchar,source_type=bit(1); ,10
+ods_mariadb_2b,ods_a168_agent_permissionrole,lastmodifytime,varchar,source_type=timestamp; 最後修改時間,11
+ods_mariadb_2b,ods_a168_agent_permissionrole,source_db,varchar,来源库,12
+ods_mariadb_2b,ods_a168_agent_permissionrole,source_table,varchar,来源表,13
+ods_mariadb_2b,ods_a168_agent_permissionrole,ods_table_name,varchar,ODS表名,14
+ods_mariadb_2b,ods_a168_agent_permissionrole,sync_time,datetime,同步时间,15
+ods_mariadb_2b,ods_a168_agent_sub,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_agent_sub,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_agent_sub,ags001,varchar,source_type=int(11); sn,3
+ods_mariadb_2b,ods_a168_agent_sub,ags002,varchar,source_type=varchar(30); aid,4
+ods_mariadb_2b,ods_a168_agent_sub,ags003,varchar,source_type=varchar(50); password,5
+ods_mariadb_2b,ods_a168_agent_sub,ags004,varchar,source_type=varchar(30); name,6
+ods_mariadb_2b,ods_a168_agent_sub,ags005,varchar,source_type=datetime; add_time,7
+ods_mariadb_2b,ods_a168_agent_sub,ags006,varchar,source_type=int(11); lv,8
+ods_mariadb_2b,ods_a168_agent_sub,ags007,varchar,source_type=int(11); lv1,9
+ods_mariadb_2b,ods_a168_agent_sub,ags008,varchar,source_type=datetime; last_login,10
+ods_mariadb_2b,ods_a168_agent_sub,ags009,varchar,source_type=text; last_ip,11
+ods_mariadb_2b,ods_a168_agent_sub,ags010,varchar,source_type=int(11); login_err,12
+ods_mariadb_2b,ods_a168_agent_sub,ags011,varchar,"source_type=enum(''Y'',''N''); can_login",13
+ods_mariadb_2b,ods_a168_agent_sub,ags012,varchar,"source_type=enum(''Y'',''N''); change_password",14
+ods_mariadb_2b,ods_a168_agent_sub,ags013,varchar,source_type=text; ,15
+ods_mariadb_2b,ods_a168_agent_sub,chkKey,varchar,source_type=varchar(100); ,16
+ods_mariadb_2b,ods_a168_agent_sub,chkLock,varchar,"source_type=enum(''Y'',''N''); 是否鎖定",17
+ods_mariadb_2b,ods_a168_agent_sub,last_chpsw,varchar,source_type=timestamp; 上次修改密碼時間,18
+ods_mariadb_2b,ods_a168_agent_sub,source_db,varchar,来源库,19
+ods_mariadb_2b,ods_a168_agent_sub,source_table,varchar,来源表,20
+ods_mariadb_2b,ods_a168_agent_sub,ods_table_name,varchar,ODS表名,21
+ods_mariadb_2b,ods_a168_agent_sub,sync_time,datetime,同步时间,22
+ods_mariadb_2b,ods_a168_agent_test,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_agent_test,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_agent_test,age001,varchar,source_type=int(11); sn,3
+ods_mariadb_2b,ods_a168_agent_test,age002,varchar,source_type=varchar(30); ,4
+ods_mariadb_2b,ods_a168_agent_test,age003,varchar,source_type=varchar(50); ,5
+ods_mariadb_2b,ods_a168_agent_test,age004,varchar,source_type=varchar(30); ,6
+ods_mariadb_2b,ods_a168_agent_test,age005,varchar,source_type=timestamp; ,7
+ods_mariadb_2b,ods_a168_agent_test,age006,varchar,source_type=int(11); ,8
+ods_mariadb_2b,ods_a168_agent_test,age007,varchar,source_type=int(11); ,9
+ods_mariadb_2b,ods_a168_agent_test,age008,varchar,source_type=int(11); ,10
+ods_mariadb_2b,ods_a168_agent_test,age009,varchar,source_type=int(11); ,11
+ods_mariadb_2b,ods_a168_agent_test,age010,varchar,source_type=int(11); ,12
+ods_mariadb_2b,ods_a168_agent_test,age011,varchar,source_type=int(11); ,13
+ods_mariadb_2b,ods_a168_agent_test,age012,varchar,source_type=timestamp; ,14
+ods_mariadb_2b,ods_a168_agent_test,age013,varchar,source_type=char(15); ,15
+ods_mariadb_2b,ods_a168_agent_test,age014,varchar,source_type=int(11); 風險重置開關,16
+ods_mariadb_2b,ods_a168_agent_test,age015,varchar,"source_type=enum(''Y'',''N''); 啟停用狀態",17
+ods_mariadb_2b,ods_a168_agent_test,age016,varchar,"source_type=enum(''Y'',''N''); 啟停押狀態",18
+ods_mariadb_2b,ods_a168_agent_test,age017,varchar,"source_type=enum(''Y'',''N''); ",19
+ods_mariadb_2b,ods_a168_agent_test,age018,varchar,"source_type=enum(''Y'',''N''); ",20
+ods_mariadb_2b,ods_a168_agent_test,age019,varchar,source_type=int(11); 結算報表開關,21
+ods_mariadb_2b,ods_a168_agent_test,age020,varchar,source_type=int(11); 結算報表格式,22
+ods_mariadb_2b,ods_a168_agent_test,age021,varchar,source_type=int(11); 結算報表語系,23
+ods_mariadb_2b,ods_a168_agent_test,age022,varchar,source_type=int(11); 測試線判別,24
+ods_mariadb_2b,ods_a168_agent_test,age023,varchar,source_type=char(1); ,25
+ods_mariadb_2b,ods_a168_agent_test,age024,varchar,source_type=varchar(30); 備註,26
+ods_mariadb_2b,ods_a168_agent_test,credit,varchar,"source_type=decimal(15,4); ",27
+ods_mariadb_2b,ods_a168_agent_test,cash,varchar,"source_type=decimal(15,4); ",28
+ods_mariadb_2b,ods_a168_agent_test,type,varchar,source_type=int(11); ,29
+ods_mariadb_2b,ods_a168_agent_test,currency,varchar,source_type=int(11); ,30
+ods_mariadb_2b,ods_a168_agent_test,tip,varchar,"source_type=enum(''Y'',''N''); ",31
+ods_mariadb_2b,ods_a168_agent_test,prefix_add,varchar,"source_type=enum(''Y'',''N''); ",32
+ods_mariadb_2b,ods_a168_agent_test,prefix_acc,varchar,source_type=varchar(12); 前綴碼,33
+ods_mariadb_2b,ods_a168_agent_test,receipt_acc,varchar,source_type=int(3); 收款帳號,34
+ods_mariadb_2b,ods_a168_agent_test,sacc,varchar,source_type=varchar(30); 顯示帳號,35
+ods_mariadb_2b,ods_a168_agent_test,opengame,varchar,source_type=varchar(255); ,36
+ods_mariadb_2b,ods_a168_agent_test,site,varchar,source_type=varchar(60); ,37
+ods_mariadb_2b,ods_a168_agent_test,membermax,varchar,source_type=int(11); 會員總數,38
+ods_mariadb_2b,ods_a168_agent_test,profitmax,varchar,source_type=varchar(11); 最大利潤,39
+ods_mariadb_2b,ods_a168_agent_test,promotecode,varchar,source_type=char(6); 推廣代碼,40
+ods_mariadb_2b,ods_a168_agent_test,kickperiod,varchar,source_type=int(3); 踢出局數,41
+ods_mariadb_2b,ods_a168_agent_test,identity,varchar,source_type=int(11); 0:信用;1:API,42
+ods_mariadb_2b,ods_a168_agent_test,chkKey,varchar,source_type=varchar(100); ,43
+ods_mariadb_2b,ods_a168_agent_test,chkLock,varchar,"source_type=enum(''Y'',''N''); 是否鎖定",44
+ods_mariadb_2b,ods_a168_agent_test,last_chpsw,varchar,source_type=timestamp; 上次修改密碼時間,45
+ods_mariadb_2b,ods_a168_agent_test,source_db,varchar,来源库,46
+ods_mariadb_2b,ods_a168_agent_test,source_table,varchar,来源表,47
+ods_mariadb_2b,ods_a168_agent_test,ods_table_name,varchar,ODS表名,48
+ods_mariadb_2b,ods_a168_agent_test,sync_time,datetime,同步时间,49
+ods_mariadb_2b,ods_a168_agents_LoginPass,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_agents_LoginPass,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_agents_LoginPass,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_agents_LoginPass,aid,varchar,source_type=int(5); agent_id,4
+ods_mariadb_2b,ods_a168_agents_LoginPass,vendorId,varchar,source_type=varchar(255); lv5 代理商,5
+ods_mariadb_2b,ods_a168_agents_LoginPass,signature,varchar,source_type=varchar(255); 密鑰,6
+ods_mariadb_2b,ods_a168_agents_LoginPass,signature2,varchar,source_type=varchar(255); 客戶密鑰,7
+ods_mariadb_2b,ods_a168_agents_LoginPass,password,varchar,source_type=varchar(255); ,8
+ods_mariadb_2b,ods_a168_agents_LoginPass,addtime,varchar,source_type=datetime; ,9
+ods_mariadb_2b,ods_a168_agents_LoginPass,url,varchar,source_type=varchar(255); 單一錢包回傳網址,10
+ods_mariadb_2b,ods_a168_agents_LoginPass,skyname,varchar,source_type=varchar(255); ,11
+ods_mariadb_2b,ods_a168_agents_LoginPass,type,varchar,"source_type=enum(''c'',''w''); c:一般,w:單一",12
+ods_mariadb_2b,ods_a168_agents_LoginPass,lang,varchar,"source_type=tinyint(1); 0:中文 ,1:英文",13
+ods_mariadb_2b,ods_a168_agents_LoginPass,betfeedback,varchar,"source_type=tinyint(1); 異常鎖定,0:N;1:Y",14
+ods_mariadb_2b,ods_a168_agents_LoginPass,Gateway_url,varchar,source_type=varchar(1000); 正機白名單使用的url,15
+ods_mariadb_2b,ods_a168_agents_LoginPass,whiteList,varchar,source_type=text; 白名單,16
+ods_mariadb_2b,ods_a168_agents_LoginPass,operator,varchar,source_type=varchar(25); ,17
+ods_mariadb_2b,ods_a168_agents_LoginPass,modify_time,varchar,source_type=timestamp; ,18
+ods_mariadb_2b,ods_a168_agents_LoginPass,object,varchar,"source_type=int(3); 0:呼叫php,1:呼叫客戶",19
+ods_mariadb_2b,ods_a168_agents_LoginPass,settle,varchar,source_type=int(3); 單一錢包結算,20
+ods_mariadb_2b,ods_a168_agents_LoginPass,co,varchar,source_type=varchar(10); ,21
+ods_mariadb_2b,ods_a168_agents_LoginPass,prefix_switch,varchar,"source_type=enum(''Y'',''N''); 前綴碼開關",22
+ods_mariadb_2b,ods_a168_agents_LoginPass,openGame_url,varchar,source_type=varchar(255); 指定網址,23
+ods_mariadb_2b,ods_a168_agents_LoginPass,subdomain,varchar,source_type=varchar(255); ,24
+ods_mariadb_2b,ods_a168_agents_LoginPass,source_db,varchar,来源库,25
+ods_mariadb_2b,ods_a168_agents_LoginPass,source_table,varchar,来源表,26
+ods_mariadb_2b,ods_a168_agents_LoginPass,ods_table_name,varchar,ODS表名,27
+ods_mariadb_2b,ods_a168_agents_LoginPass,sync_time,datetime,同步时间,28
+ods_mariadb_2b,ods_a168_aggregate_setting,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_aggregate_setting,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_aggregate_setting,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_aggregate_setting,code,varchar,source_type=varchar(12); 廠商代號,4
+ods_mariadb_2b,ods_a168_aggregate_setting,currency,varchar,source_type=tinyint(2); 幣別,5
+ods_mariadb_2b,ods_a168_aggregate_setting,agent_id,varchar,source_type=int(11); 代理 id,6
+ods_mariadb_2b,ods_a168_aggregate_setting,status,varchar,source_type=tinyint(1); 啟停用,7
+ods_mariadb_2b,ods_a168_aggregate_setting,type,varchar,source_type=varchar(20); 資料類型,8
+ods_mariadb_2b,ods_a168_aggregate_setting,data,varchar,source_type=text; 資料,9
+ods_mariadb_2b,ods_a168_aggregate_setting,remark,varchar,source_type=varchar(100); 備註,10
+ods_mariadb_2b,ods_a168_aggregate_setting,source_db,varchar,来源库,11
+ods_mariadb_2b,ods_a168_aggregate_setting,source_table,varchar,来源表,12
+ods_mariadb_2b,ods_a168_aggregate_setting,ods_table_name,varchar,ODS表名,13
+ods_mariadb_2b,ods_a168_aggregate_setting,sync_time,datetime,同步时间,14
+ods_mariadb_2b,ods_a168_aggregate_token,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_aggregate_token,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_aggregate_token,code,varchar,source_type=varchar(12); ,3
+ods_mariadb_2b,ods_a168_aggregate_token,mid,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_aggregate_token,token,varchar,source_type=text; ,5
+ods_mariadb_2b,ods_a168_aggregate_token,create_at,varchar,source_type=datetime; ,6
+ods_mariadb_2b,ods_a168_aggregate_token,update_at,varchar,source_type=datetime; ,7
+ods_mariadb_2b,ods_a168_aggregate_token,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_aggregate_token,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_aggregate_token,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_aggregate_token,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_aggregate_transaction,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_aggregate_transaction,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_aggregate_transaction,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_aggregate_transaction,code,varchar,source_type=varchar(12); 廠商代碼,4
+ods_mariadb_2b,ods_a168_aggregate_transaction,mid,varchar,source_type=int(11); 會員 mid,5
+ods_mariadb_2b,ods_a168_aggregate_transaction,gid,varchar,source_type=int(6); 遊戲,6
+ods_mariadb_2b,ods_a168_aggregate_transaction,game_no,varchar,source_type=varchar(32); 遊戲_期数_局号,7
+ods_mariadb_2b,ods_a168_aggregate_transaction,action,varchar,"source_type=enum(''PointInout'',''TimeoutBetReturn''); 動作",8
+ods_mariadb_2b,ods_a168_aggregate_transaction,deal_id,varchar,source_type=bigint(32); wm 交易单号,9
+ods_mariadb_2b,ods_a168_aggregate_transaction,type,varchar,source_type=tinyint(1);  0:电子游戏结算 1:加点 2:扣点 3:重对加点 4:重对扣点 5:重新派彩,10
+ods_mariadb_2b,ods_a168_aggregate_transaction,trade_id,varchar,source_type=varchar(128); 對方的交易id,11
+ods_mariadb_2b,ods_a168_aggregate_transaction,money,varchar,"source_type=decimal(16,4); 處理金額 (有正負值)",12
+ods_mariadb_2b,ods_a168_aggregate_transaction,balance,varchar,"source_type=decimal(16,4); 對方餘額",13
+ods_mariadb_2b,ods_a168_aggregate_transaction,status,varchar,"source_type=tinyint(1); 呼叫狀態 0:未處理,1:成功,2:失敗,3:回滾,4:處理中",14
+ods_mariadb_2b,ods_a168_aggregate_transaction,remark,varchar,source_type=varchar(255); 備註,15
+ods_mariadb_2b,ods_a168_aggregate_transaction,ops_token,varchar,source_type=text; 廠商ops當下使用的token,16
+ods_mariadb_2b,ods_a168_aggregate_transaction,create_at,varchar,source_type=datetime; 建立時間,17
+ods_mariadb_2b,ods_a168_aggregate_transaction,update_at,varchar,source_type=datetime; 更新時間,18
+ods_mariadb_2b,ods_a168_aggregate_transaction,source_db,varchar,来源库,19
+ods_mariadb_2b,ods_a168_aggregate_transaction,source_table,varchar,来源表,20
+ods_mariadb_2b,ods_a168_aggregate_transaction,ods_table_name,varchar,ODS表名,21
+ods_mariadb_2b,ods_a168_aggregate_transaction,sync_time,datetime,同步时间,22
+ods_mariadb_2b,ods_a168_aisetting,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_aisetting,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_aisetting,sn,varchar,source_type=int(3); ,3
+ods_mariadb_2b,ods_a168_aisetting,gid,varchar,source_type=int(3); ,4
+ods_mariadb_2b,ods_a168_aisetting,content,varchar,source_type=text; ,5
+ods_mariadb_2b,ods_a168_aisetting,source_db,varchar,来源库,6
+ods_mariadb_2b,ods_a168_aisetting,source_table,varchar,来源表,7
+ods_mariadb_2b,ods_a168_aisetting,ods_table_name,varchar,ODS表名,8
+ods_mariadb_2b,ods_a168_aisetting,sync_time,datetime,同步时间,9
+ods_mariadb_2b,ods_a168_alarmMessage,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_alarmMessage,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_alarmMessage,id,varchar,source_type=int(11); 流水號,3
+ods_mariadb_2b,ods_a168_alarmMessage,time,varchar,source_type=datetime; ,4
+ods_mariadb_2b,ods_a168_alarmMessage,parentID,varchar,source_type=bigint(20); ,5
+ods_mariadb_2b,ods_a168_alarmMessage,mid,varchar,source_type=int(11); ,6
+ods_mariadb_2b,ods_a168_alarmMessage,type,varchar,source_type=int(11); ,7
+ods_mariadb_2b,ods_a168_alarmMessage,content,varchar,source_type=text; ,8
+ods_mariadb_2b,ods_a168_alarmMessage,status,varchar,source_type=int(11); ,9
+ods_mariadb_2b,ods_a168_alarmMessage,is_send,varchar,source_type=int(1); 發送 tg 0: 未發送 1:已發送,10
+ods_mariadb_2b,ods_a168_alarmMessage,source_db,varchar,来源库,11
+ods_mariadb_2b,ods_a168_alarmMessage,source_table,varchar,来源表,12
+ods_mariadb_2b,ods_a168_alarmMessage,ods_table_name,varchar,ODS表名,13
+ods_mariadb_2b,ods_a168_alarmMessage,sync_time,datetime,同步时间,14
+ods_mariadb_2b,ods_a168_alertMessage,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_alertMessage,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_alertMessage,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_alertMessage,mid,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_alertMessage,message,varchar,source_type=text; ,5
+ods_mariadb_2b,ods_a168_alertMessage,errorTime,varchar,source_type=datetime; ,6
+ods_mariadb_2b,ods_a168_alertMessage,unierrorTime,varchar,source_type=int(11); ,7
+ods_mariadb_2b,ods_a168_alertMessage,operator,varchar,source_type=varchar(40); 操作者,8
+ods_mariadb_2b,ods_a168_alertMessage,status,varchar,source_type=tinyint(1); 0:未處理1:已處理,9
+ods_mariadb_2b,ods_a168_alertMessage,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_alertMessage,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_alertMessage,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_alertMessage,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_alert_ip_setting,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_alert_ip_setting,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_alert_ip_setting,id,varchar,source_type=int(8); ,3
+ods_mariadb_2b,ods_a168_alert_ip_setting,ip,varchar,source_type=varchar(128); ,4
+ods_mariadb_2b,ods_a168_alert_ip_setting,creator,varchar,source_type=varchar(8); ,5
+ods_mariadb_2b,ods_a168_alert_ip_setting,addtime,varchar,source_type=datetime; ,6
+ods_mariadb_2b,ods_a168_alert_ip_setting,remarks,varchar,source_type=varchar(1000); ,7
+ods_mariadb_2b,ods_a168_alert_ip_setting,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_alert_ip_setting,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_alert_ip_setting,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_alert_ip_setting,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_apiurl,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_apiurl,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_apiurl,id,varchar,source_type=int(3); 序号,3
+ods_mariadb_2b,ods_a168_apiurl,code,varchar,source_type=int(3); 参数,4
+ods_mariadb_2b,ods_a168_apiurl,url,varchar,source_type=varchar(50); 网址,5
+ods_mariadb_2b,ods_a168_apiurl,source_db,varchar,来源库,6
+ods_mariadb_2b,ods_a168_apiurl,source_table,varchar,来源表,7
+ods_mariadb_2b,ods_a168_apiurl,ods_table_name,varchar,ODS表名,8
+ods_mariadb_2b,ods_a168_apiurl,sync_time,datetime,同步时间,9
+ods_mariadb_2b,ods_a168_ban_bet_area,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_ban_bet_area,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_ban_bet_area,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_ban_bet_area,account_type,varchar,source_type=varchar(1); ,4
+ods_mariadb_2b,ods_a168_ban_bet_area,gid,varchar,source_type=int(11); ,5
+ods_mariadb_2b,ods_a168_ban_bet_area,area,varchar,source_type=varchar(100); 下注區,6
+ods_mariadb_2b,ods_a168_ban_bet_area,parentid,varchar,source_type=int(11); 上層ID,7
+ods_mariadb_2b,ods_a168_ban_bet_area,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_ban_bet_area,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_ban_bet_area,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_ban_bet_area,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_bet,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_bet,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_bet,bet001,varchar,source_type=int(11); sn,3
+ods_mariadb_2b,ods_a168_bet,bet002,varchar,"source_type=enum(''Y'',''N''); is_cancel",4
+ods_mariadb_2b,ods_a168_bet,bet003,varchar,source_type=timestamp; bet_time,5
+ods_mariadb_2b,ods_a168_bet,bet004,varchar,source_type=int(11); org_site,6
+ods_mariadb_2b,ods_a168_bet,bet005,varchar,source_type=int(11); mid,7
+ods_mariadb_2b,ods_a168_bet,bet006,varchar,"source_type=enum(''Y'',''N''); is_test",8
+ods_mariadb_2b,ods_a168_bet,bet007,varchar,source_type=int(11); lv1,9
+ods_mariadb_2b,ods_a168_bet,bet008,varchar,source_type=int(11); lv2,10
+ods_mariadb_2b,ods_a168_bet,bet009,varchar,source_type=int(11); lv3,11
+ods_mariadb_2b,ods_a168_bet,bet010,varchar,source_type=int(11); lv4,12
+ods_mariadb_2b,ods_a168_bet,bet011,varchar,source_type=int(11); lv5,13
+ods_mariadb_2b,ods_a168_bet,bet012,varchar,source_type=int(11); lv6,14
+ods_mariadb_2b,ods_a168_bet,bet013,varchar,source_type=char(15); ip,15
+ods_mariadb_2b,ods_a168_bet,bet014,varchar,source_type=char(30); chk_number,16
+ods_mariadb_2b,ods_a168_bet,bet015,varchar,source_type=int(11); seq_id,17
+ods_mariadb_2b,ods_a168_bet,bet016,varchar,source_type=varchar(15); seq_name,18
+ods_mariadb_2b,ods_a168_bet,bet017,varchar,source_type=int(11); play_type,19
+ods_mariadb_2b,ods_a168_bet,bet018,varchar,"source_type=double(10,2); rto1",20
+ods_mariadb_2b,ods_a168_bet,bet019,varchar,"source_type=double(10,2); rto2",21
+ods_mariadb_2b,ods_a168_bet,bet020,varchar,"source_type=double(10,2); rto3",22
+ods_mariadb_2b,ods_a168_bet,bet021,varchar,source_type=varchar(30); bet_string,23
+ods_mariadb_2b,ods_a168_bet,bet022,varchar,source_type=int(11); bet_amt,24
+ods_mariadb_2b,ods_a168_bet,bet023,varchar,"source_type=double(5,2); rto_m1",25
+ods_mariadb_2b,ods_a168_bet,bet024,varchar,"source_type=double(5,2); rto_m2",26
+ods_mariadb_2b,ods_a168_bet,bet025,varchar,"source_type=double(5,2); rto_m3",27
+ods_mariadb_2b,ods_a168_bet,bet026,varchar,"source_type=enum(''Y'',''N''); dual",28
+ods_mariadb_2b,ods_a168_bet,bet027,varchar,"source_type=double(10,2); result",29
+ods_mariadb_2b,ods_a168_bet,bet028,varchar,source_type=smallint(6); prt_lv1,30
+ods_mariadb_2b,ods_a168_bet,bet029,varchar,source_type=smallint(6); prt_lv2,31
+ods_mariadb_2b,ods_a168_bet,bet030,varchar,source_type=smallint(6); prt_lv3,32
+ods_mariadb_2b,ods_a168_bet,bet031,varchar,source_type=smallint(6); prt_lv4,33
+ods_mariadb_2b,ods_a168_bet,bet032,varchar,source_type=smallint(6); prt_lv5,34
+ods_mariadb_2b,ods_a168_bet,bet033,varchar,source_type=smallint(6); prt_lv6,35
+ods_mariadb_2b,ods_a168_bet,bet034,varchar,"source_type=double(10,2); prt_amt_0",36
+ods_mariadb_2b,ods_a168_bet,bet035,varchar,"source_type=double(10,2); prt_amt_1",37
+ods_mariadb_2b,ods_a168_bet,bet036,varchar,"source_type=double(10,2); prt_amt_2",38
+ods_mariadb_2b,ods_a168_bet,bet037,varchar,"source_type=double(10,2); prt_amt_3",39
+ods_mariadb_2b,ods_a168_bet,bet038,varchar,"source_type=double(10,2); prt_amt_4",40
+ods_mariadb_2b,ods_a168_bet,bet039,varchar,"source_type=double(10,2); prt_amt_5",41
+ods_mariadb_2b,ods_a168_bet,bet040,varchar,"source_type=double(10,2); prt_amt_6",42
+ods_mariadb_2b,ods_a168_bet,bet041,varchar,"source_type=enum(''Y'',''N''); is_lottery",43
+ods_mariadb_2b,ods_a168_bet,bet042,varchar,source_type=int(11); org_sn,44
+ods_mariadb_2b,ods_a168_bet,bet043,varchar,source_type=float; Base_Water,45
+ods_mariadb_2b,ods_a168_bet,bet044,varchar,source_type=float; LV1_Water_Mny,46
+ods_mariadb_2b,ods_a168_bet,bet045,varchar,source_type=float; LV2_Water_Mny,47
+ods_mariadb_2b,ods_a168_bet,bet046,varchar,source_type=float; LV3_Water_Mny,48
+ods_mariadb_2b,ods_a168_bet,bet047,varchar,source_type=float; LV4_Water_Mny,49
+ods_mariadb_2b,ods_a168_bet,bet048,varchar,source_type=float; LV5_Water_Mny,50
+ods_mariadb_2b,ods_a168_bet,bet049,varchar,source_type=float; LV6_Water_Mny,51
+ods_mariadb_2b,ods_a168_bet,bet050,varchar,source_type=float; ,52
+ods_mariadb_2b,ods_a168_bet,bet051,varchar,"source_type=double(10,2); rto4",53
+ods_mariadb_2b,ods_a168_bet,bet052,varchar,"source_type=double(5,2); ",54
+ods_mariadb_2b,ods_a168_bet,bet053,varchar,source_type=tinyint(4); ,55
+ods_mariadb_2b,ods_a168_bet,bet054,varchar,source_type=timestamp; ,56
+ods_mariadb_2b,ods_a168_bet,source_db,varchar,来源库,57
+ods_mariadb_2b,ods_a168_bet,source_table,varchar,来源表,58
+ods_mariadb_2b,ods_a168_bet,ods_table_name,varchar,ODS表名,59
+ods_mariadb_2b,ods_a168_bet,sync_time,datetime,同步时间,60
+ods_mariadb_2b,ods_a168_bet01,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_bet01,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_bet01,bet01,varchar,source_type=bigint(20); 注單編號,3
+ods_mariadb_2b,ods_a168_bet01,bet02,varchar,source_type=int(11); 遊戲類別編號,4
+ods_mariadb_2b,ods_a168_bet01,bet03,varchar,"source_type=decimal(12,0); 場次編號",5
+ods_mariadb_2b,ods_a168_bet01,bet04,varchar,source_type=int(11); 子場次編號,6
+ods_mariadb_2b,ods_a168_bet01,bet05,varchar,source_type=int(11); 會員編號,7
+ods_mariadb_2b,ods_a168_bet01,bet06,varchar,source_type=datetime; 開局時間,8
+ods_mariadb_2b,ods_a168_bet01,bet07,varchar,source_type=date; 帳務日期,9
+ods_mariadb_2b,ods_a168_bet01,bet08,varchar,source_type=datetime; 下注時間,10
+ods_mariadb_2b,ods_a168_bet01,bet09,varchar,source_type=varchar(100); 下注內容,11
+ods_mariadb_2b,ods_a168_bet01,bet10,varchar,source_type=int(11); 幣別,12
+ods_mariadb_2b,ods_a168_bet01,bet11,varchar,"source_type=decimal(16,4); 匯率",13
+ods_mariadb_2b,ods_a168_bet01,bet12,varchar,"source_type=decimal(16,4); 起始點數",14
+ods_mariadb_2b,ods_a168_bet01,bet12a,varchar,"source_type=decimal(16,4); 起始籌碼",15
+ods_mariadb_2b,ods_a168_bet01,bet13,varchar,"source_type=decimal(16,4); 下注金額",16
+ods_mariadb_2b,ods_a168_bet01,bet14,varchar,"source_type=decimal(16,4); 退水％數",17
+ods_mariadb_2b,ods_a168_bet01,bet15,varchar,source_type=int(11); LV1ID,18
+ods_mariadb_2b,ods_a168_bet01,bet16,varchar,source_type=int(11); LV2ID,19
+ods_mariadb_2b,ods_a168_bet01,bet17,varchar,source_type=int(11); LV3ID,20
+ods_mariadb_2b,ods_a168_bet01,bet18,varchar,source_type=int(11); LV4ID,21
+ods_mariadb_2b,ods_a168_bet01,bet19,varchar,source_type=int(11); LV5ID,22
+ods_mariadb_2b,ods_a168_bet01,bet20,varchar,"source_type=decimal(16,4); LV1佔成",23
+ods_mariadb_2b,ods_a168_bet01,bet21,varchar,"source_type=decimal(16,4); LV2佔成",24
+ods_mariadb_2b,ods_a168_bet01,bet22,varchar,"source_type=decimal(16,4); LV3佔成",25
+ods_mariadb_2b,ods_a168_bet01,bet23,varchar,"source_type=decimal(16,4); LV4佔成",26
+ods_mariadb_2b,ods_a168_bet01,bet24,varchar,"source_type=decimal(16,4); LV5佔成",27
+ods_mariadb_2b,ods_a168_bet01,bet25,varchar,"source_type=decimal(16,4); LV1退水%數",28
+ods_mariadb_2b,ods_a168_bet01,bet26,varchar,"source_type=decimal(16,4); LV2退水%數",29
+ods_mariadb_2b,ods_a168_bet01,bet27,varchar,"source_type=decimal(16,4); LV3退水%數",30
+ods_mariadb_2b,ods_a168_bet01,bet28,varchar,"source_type=decimal(16,4); LV4退水%數",31
+ods_mariadb_2b,ods_a168_bet01,bet29,varchar,"source_type=decimal(16,4); LV5退水%數",32
+ods_mariadb_2b,ods_a168_bet01,bet30,varchar,"source_type=enum(''Y'',''N''); 取消單",33
+ods_mariadb_2b,ods_a168_bet01,bet31,varchar,source_type=int(11); 桌子編號(Table ID),34
+ods_mariadb_2b,ods_a168_bet01,bet32,varchar,source_type=int(11); 房間編號(Room ID),35
+ods_mariadb_2b,ods_a168_bet01,betwalletid,varchar,source_type=text; 下注單一錢包用,36
+ods_mariadb_2b,ods_a168_bet01,gametype,varchar,source_type=int(11); 1:網投、2:電投,37
+ods_mariadb_2b,ods_a168_bet01,commission,varchar,"source_type=int(11); 0.一般,1,免傭",38
+ods_mariadb_2b,ods_a168_bet01,category,varchar,"source_type=int(11); 1.一般,2.小費",39
+ods_mariadb_2b,ods_a168_bet01,eid,varchar,source_type=int(11); 荷官,40
+ods_mariadb_2b,ods_a168_bet01,serid,varchar,source_type=int(11); 服務編號,41
+ods_mariadb_2b,ods_a168_bet01,ip,varchar,source_type=varchar(15); 下注IP,42
+ods_mariadb_2b,ods_a168_bet01,partnerBetId,varchar,source_type=varchar(50); 第三方注單編號,43
+ods_mariadb_2b,ods_a168_bet01,gameId,varchar,source_type=varchar(20); 第三方遊戲代碼,44
+ods_mariadb_2b,ods_a168_bet01,updatetime,varchar,source_type=datetime; 更新時間,45
+ods_mariadb_2b,ods_a168_bet01,source_db,varchar,来源库,46
+ods_mariadb_2b,ods_a168_bet01,source_table,varchar,来源表,47
+ods_mariadb_2b,ods_a168_bet01,ods_table_name,varchar,ODS表名,48
+ods_mariadb_2b,ods_a168_bet01,sync_time,datetime,同步时间,49
+ods_mariadb_2b,ods_a168_bet02,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_bet02,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_bet02,bet01,varchar,source_type=bigint(20); 注單編號,3
+ods_mariadb_2b,ods_a168_bet02,bet02,varchar,source_type=int(11); 遊戲類別編號,4
+ods_mariadb_2b,ods_a168_bet02,bet03,varchar,"source_type=decimal(12,0); 場次編號",5
+ods_mariadb_2b,ods_a168_bet02,bet04,varchar,source_type=int(11); 子場次編號,6
+ods_mariadb_2b,ods_a168_bet02,bet05,varchar,source_type=int(11); 會員編號,7
+ods_mariadb_2b,ods_a168_bet02,bet06,varchar,source_type=datetime; 開局時間,8
+ods_mariadb_2b,ods_a168_bet02,bet07,varchar,source_type=date; 帳務日期,9
+ods_mariadb_2b,ods_a168_bet02,bet08,varchar,source_type=datetime; 下注時間,10
+ods_mariadb_2b,ods_a168_bet02,bet09,varchar,source_type=varchar(100); 下注內容,11
+ods_mariadb_2b,ods_a168_bet02,bet10,varchar,source_type=int(11); 幣別,12
+ods_mariadb_2b,ods_a168_bet02,bet11,varchar,"source_type=decimal(16,4); 匯率",13
+ods_mariadb_2b,ods_a168_bet02,bet12,varchar,"source_type=decimal(16,4); 起始點數",14
+ods_mariadb_2b,ods_a168_bet02,bet12a,varchar,"source_type=decimal(16,4); 起始籌碼",15
+ods_mariadb_2b,ods_a168_bet02,bet13,varchar,"source_type=decimal(16,4); 下注金額",16
+ods_mariadb_2b,ods_a168_bet02,bet14,varchar,"source_type=decimal(16,4); 派彩",17
+ods_mariadb_2b,ods_a168_bet02,bet15,varchar,"source_type=decimal(16,4); 退水％數",18
+ods_mariadb_2b,ods_a168_bet02,bet16,varchar,"source_type=decimal(16,4); 退水金額",19
+ods_mariadb_2b,ods_a168_bet02,bet17,varchar,"source_type=decimal(16,4); 結果",20
+ods_mariadb_2b,ods_a168_bet02,bet18,varchar,source_type=int(11); LV1ID,21
+ods_mariadb_2b,ods_a168_bet02,bet19,varchar,source_type=int(11); LV2ID,22
+ods_mariadb_2b,ods_a168_bet02,bet20,varchar,source_type=int(11); LV3ID,23
+ods_mariadb_2b,ods_a168_bet02,bet21,varchar,source_type=int(11); LV4ID,24
+ods_mariadb_2b,ods_a168_bet02,bet22,varchar,source_type=int(11); LV5ID,25
+ods_mariadb_2b,ods_a168_bet02,bet23,varchar,"source_type=decimal(16,4); LV1佔成",26
+ods_mariadb_2b,ods_a168_bet02,bet24,varchar,"source_type=decimal(16,4); LV2佔成",27
+ods_mariadb_2b,ods_a168_bet02,bet25,varchar,"source_type=decimal(16,4); LV3佔成",28
+ods_mariadb_2b,ods_a168_bet02,bet26,varchar,"source_type=decimal(16,4); LV4佔成",29
+ods_mariadb_2b,ods_a168_bet02,bet27,varchar,"source_type=decimal(16,4); LV5佔成",30
+ods_mariadb_2b,ods_a168_bet02,bet28,varchar,"source_type=decimal(16,4); LV1退水%數",31
+ods_mariadb_2b,ods_a168_bet02,bet29,varchar,"source_type=decimal(16,4); LV2退水%數",32
+ods_mariadb_2b,ods_a168_bet02,bet30,varchar,"source_type=decimal(16,4); LV3退水%數",33
+ods_mariadb_2b,ods_a168_bet02,bet31,varchar,"source_type=decimal(16,4); LV4退水%數",34
+ods_mariadb_2b,ods_a168_bet02,bet32,varchar,"source_type=decimal(16,4); LV5退水%數",35
+ods_mariadb_2b,ods_a168_bet02,bet33,varchar,"source_type=decimal(16,4); LV1結果",36
+ods_mariadb_2b,ods_a168_bet02,bet34,varchar,"source_type=decimal(16,4); LV2結果",37
+ods_mariadb_2b,ods_a168_bet02,bet35,varchar,"source_type=decimal(16,4); LV3結果",38
+ods_mariadb_2b,ods_a168_bet02,bet36,varchar,"source_type=decimal(16,4); LV4結果",39
+ods_mariadb_2b,ods_a168_bet02,bet37,varchar,"source_type=decimal(16,4); LV5結果",40
+ods_mariadb_2b,ods_a168_bet02,bet38,varchar,"source_type=enum(''Y'',''N''); 重對",41
+ods_mariadb_2b,ods_a168_bet02,bet39,varchar,source_type=int(11); 桌子編號,42
+ods_mariadb_2b,ods_a168_bet02,bet40,varchar,source_type=int(11); 房間編號,43
+ods_mariadb_2b,ods_a168_bet02,bet41,varchar,"source_type=decimal(16,4); 下注退水金額",44
+ods_mariadb_2b,ods_a168_bet02,betwalletid,varchar,source_type=text; 下注單一錢包用,45
+ods_mariadb_2b,ods_a168_bet02,resultwalletid,varchar,source_type=varchar(50); 結算單一錢包用,46
+ods_mariadb_2b,ods_a168_bet02,validbet,varchar,"source_type=decimal(16,4); 有效投注",47
+ods_mariadb_2b,ods_a168_bet02,gametype,varchar,source_type=int(11); 1:網投、2:電投、3 電投網投模式、4 電投電投模式,48
+ods_mariadb_2b,ods_a168_bet02,commission,varchar,"source_type=int(11); 0.一般,1,免傭",49
+ods_mariadb_2b,ods_a168_bet02,category,varchar,"source_type=int(11); 1.一般,2.小費",50
+ods_mariadb_2b,ods_a168_bet02,eid,varchar,source_type=int(11); 荷官,51
+ods_mariadb_2b,ods_a168_bet02,serid,varchar,source_type=int(11); 服務編號,52
+ods_mariadb_2b,ods_a168_bet02,ip,varchar,source_type=varchar(15); 下注IP,53
+ods_mariadb_2b,ods_a168_bet02,updatetime,varchar,source_type=datetime; 更新時間,54
+ods_mariadb_2b,ods_a168_bet02,source_db,varchar,来源库,55
+ods_mariadb_2b,ods_a168_bet02,source_table,varchar,来源表,56
+ods_mariadb_2b,ods_a168_bet02,ods_table_name,varchar,ODS表名,57
+ods_mariadb_2b,ods_a168_bet02,sync_time,datetime,同步时间,58
+ods_mariadb_2b,ods_a168_bet_No,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_bet_No,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_bet_No,bet01,varchar,source_type=bigint(20); ,3
+ods_mariadb_2b,ods_a168_bet_No,source_db,varchar,来源库,4
+ods_mariadb_2b,ods_a168_bet_No,source_table,varchar,来源表,5
+ods_mariadb_2b,ods_a168_bet_No,ods_table_name,varchar,ODS表名,6
+ods_mariadb_2b,ods_a168_bet_No,sync_time,datetime,同步时间,7
+ods_mariadb_2b,ods_a168_bet_limit_default,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_bet_limit_default,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_bet_limit_default,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_bet_limit_default,gtype,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_bet_limit_default,set01,varchar,source_type=varchar(20); ,5
+ods_mariadb_2b,ods_a168_bet_limit_default,set02,varchar,source_type=varchar(20); ,6
+ods_mariadb_2b,ods_a168_bet_limit_default,set03,varchar,source_type=varchar(20); ,7
+ods_mariadb_2b,ods_a168_bet_limit_default,set04,varchar,source_type=varchar(20); ,8
+ods_mariadb_2b,ods_a168_bet_limit_default,set05,varchar,source_type=varchar(20); ,9
+ods_mariadb_2b,ods_a168_bet_limit_default,set06,varchar,source_type=varchar(20); ,10
+ods_mariadb_2b,ods_a168_bet_limit_default,set07,varchar,source_type=varchar(20); ,11
+ods_mariadb_2b,ods_a168_bet_limit_default,set08,varchar,source_type=varchar(20); ,12
+ods_mariadb_2b,ods_a168_bet_limit_default,set09,varchar,source_type=varchar(20); ,13
+ods_mariadb_2b,ods_a168_bet_limit_default,set10,varchar,source_type=varchar(20); ,14
+ods_mariadb_2b,ods_a168_bet_limit_default,set11,varchar,source_type=varchar(20); ,15
+ods_mariadb_2b,ods_a168_bet_limit_default,set12,varchar,source_type=varchar(20); ,16
+ods_mariadb_2b,ods_a168_bet_limit_default,set13,varchar,source_type=varchar(20); ,17
+ods_mariadb_2b,ods_a168_bet_limit_default,set14,varchar,source_type=varchar(20); ,18
+ods_mariadb_2b,ods_a168_bet_limit_default,status,varchar,source_type=int(11); ,19
+ods_mariadb_2b,ods_a168_bet_limit_default,sort,varchar,source_type=int(11); 排序,20
+ods_mariadb_2b,ods_a168_bet_limit_default,source_db,varchar,来源库,21
+ods_mariadb_2b,ods_a168_bet_limit_default,source_table,varchar,来源表,22
+ods_mariadb_2b,ods_a168_bet_limit_default,ods_table_name,varchar,ODS表名,23
+ods_mariadb_2b,ods_a168_bet_limit_default,sync_time,datetime,同步时间,24
+ods_mariadb_2b,ods_a168_bet_partner,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_bet_partner,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_bet_partner,bet01,varchar,source_type=bigint(11); 注單編號,3
+ods_mariadb_2b,ods_a168_bet_partner,gid,varchar,source_type=int(11); 遊戲編號,4
+ods_mariadb_2b,ods_a168_bet_partner,mid,varchar,source_type=int(11); 會員編號,5
+ods_mariadb_2b,ods_a168_bet_partner,betTime,varchar,source_type=datetime; 下注時間,6
+ods_mariadb_2b,ods_a168_bet_partner,settleTime,varchar,source_type=date; 帳務日期,7
+ods_mariadb_2b,ods_a168_bet_partner,partnerBetId,varchar,source_type=varchar(100); ,8
+ods_mariadb_2b,ods_a168_bet_partner,gameId,varchar,source_type=varchar(64); ,9
+ods_mariadb_2b,ods_a168_bet_partner,updateTime,varchar,source_type=datetime; 更新時間,10
+ods_mariadb_2b,ods_a168_bet_partner,bet_result,varchar,source_type=text; 開獎結果,11
+ods_mariadb_2b,ods_a168_bet_partner,source_db,varchar,来源库,12
+ods_mariadb_2b,ods_a168_bet_partner,source_table,varchar,来源表,13
+ods_mariadb_2b,ods_a168_bet_partner,ods_table_name,varchar,ODS表名,14
+ods_mariadb_2b,ods_a168_bet_partner,sync_time,datetime,同步时间,15
+ods_mariadb_2b,ods_a168_betchange_log,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_betchange_log,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_betchange_log,log_id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_betchange_log,operation_type,varchar,source_type=varchar(32); ,4
+ods_mariadb_2b,ods_a168_betchange_log,change_time,varchar,source_type=datetime; ,5
+ods_mariadb_2b,ods_a168_betchange_log,old_bet01,varchar,source_type=bigint(20); ,6
+ods_mariadb_2b,ods_a168_betchange_log,new_bet01,varchar,source_type=bigint(20); ,7
+ods_mariadb_2b,ods_a168_betchange_log,old_bet05,varchar,source_type=int(11); ,8
+ods_mariadb_2b,ods_a168_betchange_log,new_bet05,varchar,source_type=int(11); ,9
+ods_mariadb_2b,ods_a168_betchange_log,old_bet09,varchar,source_type=text; ,10
+ods_mariadb_2b,ods_a168_betchange_log,new_bet09,varchar,source_type=text; ,11
+ods_mariadb_2b,ods_a168_betchange_log,old_ip,varchar,source_type=text; ,12
+ods_mariadb_2b,ods_a168_betchange_log,new_ip,varchar,source_type=text; ,13
+ods_mariadb_2b,ods_a168_betchange_log,is_send,varchar,source_type=int(1); 是否已發送,14
+ods_mariadb_2b,ods_a168_betchange_log,source_db,varchar,来源库,15
+ods_mariadb_2b,ods_a168_betchange_log,source_table,varchar,来源表,16
+ods_mariadb_2b,ods_a168_betchange_log,ods_table_name,varchar,ODS表名,17
+ods_mariadb_2b,ods_a168_betchange_log,sync_time,datetime,同步时间,18
+ods_mariadb_2b,ods_a168_category,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_category,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_category,sn,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_category,level,varchar,source_type=int(11); 層級等級，status為1時修改為sn,4
+ods_mariadb_2b,ods_a168_category,aid,varchar,source_type=int(11); 代理編號,5
+ods_mariadb_2b,ods_a168_category,name,varchar,source_type=varchar(30); 層級名稱,6
+ods_mariadb_2b,ods_a168_category,isdefault,varchar,"source_type=enum(''Y'',''N''); 預設層級 ",7
+ods_mariadb_2b,ods_a168_category,isjoin,varchar,"source_type=enum(''Y'',''N''); 加入升降級",8
+ods_mariadb_2b,ods_a168_category,in_single_mix,varchar,"source_type=decimal(16,4); 單筆最低存款限額, 0為不限制",9
+ods_mariadb_2b,ods_a168_category,in_single_max,varchar,"source_type=decimal(16,4); 單筆最高存款限額, 0為不限制",10
+ods_mariadb_2b,ods_a168_category,singleday_in_times,varchar,"source_type=int(11); 單日最高存款次數, 0為不限制",11
+ods_mariadb_2b,ods_a168_category,out_single_mix,varchar,"source_type=decimal(16,4); 單筆最低提款限額, 0為不限制",12
+ods_mariadb_2b,ods_a168_category,out_single_max,varchar,"source_type=decimal(16,4); 單筆最高提款限額, 0為不限制",13
+ods_mariadb_2b,ods_a168_category,out_singleday_max,varchar,"source_type=decimal(16,4); 單日最高提款總額, 0為不限制",14
+ods_mariadb_2b,ods_a168_category,singleday_out_times,varchar,"source_type=decimal(16,4); 單日最高提款次數, 0為不限制",15
+ods_mariadb_2b,ods_a168_category,out_platform_fee_rate,varchar,"source_type=decimal(15,4); 提款平台處理費%",16
+ods_mariadb_2b,ods_a168_category,out_fee_times,varchar,source_type=tinyint(1); 提款手續費免費次數,17
+ods_mariadb_2b,ods_a168_category,out_fee_rate,varchar,"source_type=decimal(15,4); 提款手續費%",18
+ods_mariadb_2b,ods_a168_category,feedback_type,varchar,"source_type=enum(''hall'',''game''); 返水範圍",19
+ods_mariadb_2b,ods_a168_category,feedback_rate,varchar,"source_type=text; ""有效返水%  feedback_type:hall→{""""LIVE"""":[{""""gamecode"""":""""1,2"""",""""rate"""":""""0.3%""""}],""""SPORT"""":[{""""gamecode"""":""""5002,5006"""",""""rate"""":""""0.1%""""}],""""SLOT"""":[{""""gamecode"""":""""5003,5004,5005"""",""""rate"""":""""0.4%""""}]} feedback_type:game,→{""""LIVE"""":[{""""code"""":""""101,201(EX:AG百家)"""",""""rate"""":""""0.1%""""},{""""code"""":""""102,202(EX:AG龍虎)"""",""""rate"""":""""0.3%""""},{""""code"""":""""103"""",""""rate"""":""""0.4%""""},{""""code"""":""""104"""",""""rate"""":""""0.4%""""},{""""code"""":""""105"""",""""rate"""":""""0.2%""""},{""""code"""":""""107"""",""""rate"""":""""0.5%""""},{""""code"""":""""108"""",""""rate"""":""""0.3%""""},{""""code"""":""""110"""",""""rate"""":""""0.2%""""},{""""code"""":""""111"""",""""rate"""":""""0.5%""""},{""""code"""":""""112"""",""""rate"""":""""0.5%""""},{""""code"""":""""113"""",""""rate"""":""""0.5%""""},{""""code"""":""""117"""",""""rate"""":""""0.4%""""},{""""code"""":""""121"""",""""rate"""":""""0.3%""""}],""""SPORT"""":[{""""code"""":""""133,233(EX:IBC串關)",20
+ods_mariadb_2b,ods_a168_category,upgrade,varchar,"source_type=text; 升級{""vaild"":""100000"",""deposit"":""100000""}",21
+ods_mariadb_2b,ods_a168_category,keep,varchar,"source_type=text; 保級{""vaild"":""10000"",""deposit"":""10000""}",22
+ods_mariadb_2b,ods_a168_category,status,varchar,source_type=tinyint(1); 軟刪除設定 1:軟刪除 ，因為level和aid是索引唯一，所以軟刪除也請把該筆level1更新成sn,23
+ods_mariadb_2b,ods_a168_category,remark,varchar,source_type=text; 備註,24
+ods_mariadb_2b,ods_a168_category,op_lv,varchar,source_type=int(11); 操作者層級,25
+ods_mariadb_2b,ods_a168_category,op_id,varchar,source_type=int(11); 操作者ID,26
+ods_mariadb_2b,ods_a168_category,op_ip,varchar,source_type=varchar(50); 操作者IP,27
+ods_mariadb_2b,ods_a168_category,settingtime,varchar,source_type=timestamp; 建立時間,28
+ods_mariadb_2b,ods_a168_category,updatetime,varchar,source_type=timestamp; 最後操作時間,29
+ods_mariadb_2b,ods_a168_category,source_db,varchar,来源库,30
+ods_mariadb_2b,ods_a168_category,source_table,varchar,来源表,31
+ods_mariadb_2b,ods_a168_category,ods_table_name,varchar,ODS表名,32
+ods_mariadb_2b,ods_a168_category,sync_time,datetime,同步时间,33
+ods_mariadb_2b,ods_a168_categoryLevel,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_categoryLevel,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_categoryLevel,lv_id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_categoryLevel,level,varchar,source_type=int(11); 層級等級,4
+ods_mariadb_2b,ods_a168_categoryLevel,name,varchar,source_type=varchar(20); 層級名稱,5
+ods_mariadb_2b,ods_a168_categoryLevel,isDefalut,varchar,"source_type=enum(''Y'',''N''); 預設層級",6
+ods_mariadb_2b,ods_a168_categoryLevel,status,varchar,source_type=int(11); 狀態,7
+ods_mariadb_2b,ods_a168_categoryLevel,depositLimitMin,varchar,"source_type=decimal(16,4); 最低存款限額, 0為不限制",8
+ods_mariadb_2b,ods_a168_categoryLevel,depositLimitMax,varchar,"source_type=decimal(16,4); 最高存款限額, 0為不限制",9
+ods_mariadb_2b,ods_a168_categoryLevel,withdrawLimitMin,varchar,"source_type=decimal(16,4); 最低提款限額, 0為不限制",10
+ods_mariadb_2b,ods_a168_categoryLevel,withdrawLimitMax,varchar,"source_type=decimal(16,4); 最高提款限額, 0為不限制",11
+ods_mariadb_2b,ods_a168_categoryLevel,upgradeCondition,varchar,source_type=varchar(20); 晉級條件,12
+ods_mariadb_2b,ods_a168_categoryLevel,keepCondition,varchar,source_type=varchar(20); 保級條件,13
+ods_mariadb_2b,ods_a168_categoryLevel,build_time,varchar,source_type=timestamp; 建立時間,14
+ods_mariadb_2b,ods_a168_categoryLevel,remark,varchar,source_type=varchar(20); 備註,15
+ods_mariadb_2b,ods_a168_categoryLevel,op_level,varchar,source_type=int(11); 操作者層級,16
+ods_mariadb_2b,ods_a168_categoryLevel,op_mid,varchar,source_type=int(11); 操作者編號,17
+ods_mariadb_2b,ods_a168_categoryLevel,source_db,varchar,来源库,18
+ods_mariadb_2b,ods_a168_categoryLevel,source_table,varchar,来源表,19
+ods_mariadb_2b,ods_a168_categoryLevel,ods_table_name,varchar,ODS表名,20
+ods_mariadb_2b,ods_a168_categoryLevel,sync_time,datetime,同步时间,21
+ods_mariadb_2b,ods_a168_change_log,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_change_log,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_change_log,id,varchar,source_type=int(11); 序號,3
+ods_mariadb_2b,ods_a168_change_log,function,varchar,source_type=varchar(30); 功能,4
+ods_mariadb_2b,ods_a168_change_log,content,varchar,source_type=varchar(500); 指令,5
+ods_mariadb_2b,ods_a168_change_log,lv,varchar,source_type=int(11); 操作者層級,6
+ods_mariadb_2b,ods_a168_change_log,operator,varchar,source_type=int(11); 操作者,7
+ods_mariadb_2b,ods_a168_change_log,optime,varchar,source_type=datetime; 操作時間,8
+ods_mariadb_2b,ods_a168_change_log,ip,varchar,source_type=varchar(255); 操作者ip,9
+ods_mariadb_2b,ods_a168_change_log,utp,varchar,source_type=varchar(1); 操作者utp,10
+ods_mariadb_2b,ods_a168_change_log,source_db,varchar,来源库,11
+ods_mariadb_2b,ods_a168_change_log,source_table,varchar,来源表,12
+ods_mariadb_2b,ods_a168_change_log,ods_table_name,varchar,ODS表名,13
+ods_mariadb_2b,ods_a168_change_log,sync_time,datetime,同步时间,14
+ods_mariadb_2b,ods_a168_close_tip_list,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_close_tip_list,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_close_tip_list,game_user,varchar,source_type=varchar(30); ,3
+ods_mariadb_2b,ods_a168_close_tip_list,source_db,varchar,来源库,4
+ods_mariadb_2b,ods_a168_close_tip_list,source_table,varchar,来源表,5
+ods_mariadb_2b,ods_a168_close_tip_list,ods_table_name,varchar,ODS表名,6
+ods_mariadb_2b,ods_a168_close_tip_list,sync_time,datetime,同步时间,7
+ods_mariadb_2b,ods_a168_control,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_control,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_control,con001,varchar,source_type=int(11); sn,3
+ods_mariadb_2b,ods_a168_control,con002,varchar,source_type=varchar(30); id,4
+ods_mariadb_2b,ods_a168_control,con003,varchar,source_type=varchar(50); pw,5
+ods_mariadb_2b,ods_a168_control,con004,varchar,source_type=varchar(30); name,6
+ods_mariadb_2b,ods_a168_control,con005,varchar,source_type=char(10); power,7
+ods_mariadb_2b,ods_a168_control,con006,varchar,source_type=timestamp; last_login,8
+ods_mariadb_2b,ods_a168_control,con007,varchar,source_type=char(15); last_ip,9
+ods_mariadb_2b,ods_a168_control,con008,varchar,"source_type=enum(''Y'',''N''); enable",10
+ods_mariadb_2b,ods_a168_control,con009,varchar,source_type=int(11); login_error,11
+ods_mariadb_2b,ods_a168_control,rolesId,varchar,source_type=int(11); 角色ID,12
+ods_mariadb_2b,ods_a168_control,chkKey,varchar,source_type=varchar(100); ,13
+ods_mariadb_2b,ods_a168_control,chkLock,varchar,"source_type=enum(''Y'',''N''); 是否鎖定",14
+ods_mariadb_2b,ods_a168_control,last_chpsw,varchar,source_type=timestamp; 上次修改密碼時間,15
+ods_mariadb_2b,ods_a168_control,source_db,varchar,来源库,16
+ods_mariadb_2b,ods_a168_control,source_table,varchar,来源表,17
+ods_mariadb_2b,ods_a168_control,ods_table_name,varchar,ODS表名,18
+ods_mariadb_2b,ods_a168_control,sync_time,datetime,同步时间,19
+ods_mariadb_2b,ods_a168_control_login,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_control_login,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_control_login,clg001,varchar,source_type=int(11); ctl_id,3
+ods_mariadb_2b,ods_a168_control_login,clg002,varchar,source_type=int(11); site,4
+ods_mariadb_2b,ods_a168_control_login,clg003,varchar,source_type=varchar(50); sid,5
+ods_mariadb_2b,ods_a168_control_login,clg004,varchar,source_type=timestamp; this_login,6
+ods_mariadb_2b,ods_a168_control_login,clg005,varchar,source_type=timestamp; last_login,7
+ods_mariadb_2b,ods_a168_control_login,clg006,varchar,source_type=char(15); ip,8
+ods_mariadb_2b,ods_a168_control_login,clg007,varchar,source_type=text; info,9
+ods_mariadb_2b,ods_a168_control_login,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_control_login,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_control_login,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_control_login,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_conversion,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_conversion,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_conversion,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_conversion,mid,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_conversion,type,varchar,source_type=int(11); 0:出碼，1:轉碼,5
+ods_mariadb_2b,ods_a168_conversion,money,varchar,"source_type=decimal(10,4); 金額",6
+ods_mariadb_2b,ods_a168_conversion,curmoney,varchar,"source_type=decimal(10,4); 當前額度",7
+ods_mariadb_2b,ods_a168_conversion,etype,varchar,source_type=int(11); 1:帳房提出2:接線員提出,8
+ods_mariadb_2b,ods_a168_conversion,employee1,varchar,source_type=int(11); 碼房人員,9
+ods_mariadb_2b,ods_a168_conversion,employee1name,varchar,source_type=varchar(20); ,10
+ods_mariadb_2b,ods_a168_conversion,employee2,varchar,source_type=int(11); 接線人員,11
+ods_mariadb_2b,ods_a168_conversion,employee2name,varchar,source_type=varchar(20); ,12
+ods_mariadb_2b,ods_a168_conversion,updatetime,varchar,source_type=datetime; ,13
+ods_mariadb_2b,ods_a168_conversion,addtime,varchar,source_type=datetime; ,14
+ods_mariadb_2b,ods_a168_conversion,status,varchar,"source_type=int(11); 1:申請,2:完成,9:失敗",15
+ods_mariadb_2b,ods_a168_conversion,iom_id,varchar,source_type=int(11); ,16
+ods_mariadb_2b,ods_a168_conversion,phonenumber,varchar,source_type=varchar(20); ,17
+ods_mariadb_2b,ods_a168_conversion,source_db,varchar,来源库,18
+ods_mariadb_2b,ods_a168_conversion,source_table,varchar,来源表,19
+ods_mariadb_2b,ods_a168_conversion,ods_table_name,varchar,ODS表名,20
+ods_mariadb_2b,ods_a168_conversion,sync_time,datetime,同步时间,21
+ods_mariadb_2b,ods_a168_ctl_rto,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_ctl_rto,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_ctl_rto,ctl001,varchar,source_type=int(11); play,3
+ods_mariadb_2b,ods_a168_ctl_rto,ctl002,varchar,source_type=int(11); item,4
+ods_mariadb_2b,ods_a168_ctl_rto,ctl003,varchar,source_type=varchar(10); ctl,5
+ods_mariadb_2b,ods_a168_ctl_rto,source_db,varchar,来源库,6
+ods_mariadb_2b,ods_a168_ctl_rto,source_table,varchar,来源表,7
+ods_mariadb_2b,ods_a168_ctl_rto,ods_table_name,varchar,ODS表名,8
+ods_mariadb_2b,ods_a168_ctl_rto,sync_time,datetime,同步时间,9
+ods_mariadb_2b,ods_a168_currency,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_currency,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_currency,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_currency,code,varchar,source_type=varchar(5); ,4
+ods_mariadb_2b,ods_a168_currency,name,varchar,source_type=varchar(20); ,5
+ods_mariadb_2b,ods_a168_currency,origin_rate,varchar,"source_type=decimal(8,4); 修改之前匯率",6
+ods_mariadb_2b,ods_a168_currency,rate,varchar,"source_type=decimal(8,4); 匯率",7
+ods_mariadb_2b,ods_a168_currency,base,varchar,source_type=bit(1); 預設,8
+ods_mariadb_2b,ods_a168_currency,edittime,varchar,source_type=datetime; 最後修改時間,9
+ods_mariadb_2b,ods_a168_currency,iplocation,varchar,source_type=text; 允許地區,10
+ods_mariadb_2b,ods_a168_currency,source_db,varchar,来源库,11
+ods_mariadb_2b,ods_a168_currency,source_table,varchar,来源表,12
+ods_mariadb_2b,ods_a168_currency,ods_table_name,varchar,ODS表名,13
+ods_mariadb_2b,ods_a168_currency,sync_time,datetime,同步时间,14
+ods_mariadb_2b,ods_a168_dailyreport,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_dailyreport,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_dailyreport,id,varchar,source_type=bigint(20); ,3
+ods_mariadb_2b,ods_a168_dailyreport,time,varchar,source_type=date; 日期,4
+ods_mariadb_2b,ods_a168_dailyreport,bet02,varchar,source_type=int(11); 遊戲編號,5
+ods_mariadb_2b,ods_a168_dailyreport,bet05,varchar,source_type=int(11); 會員編號,6
+ods_mariadb_2b,ods_a168_dailyreport,bet13,varchar,"source_type=decimal(16,4); 下注金額",7
+ods_mariadb_2b,ods_a168_dailyreport,bet14,varchar,"source_type=decimal(16,4); 派彩金額",8
+ods_mariadb_2b,ods_a168_dailyreport,bet15,varchar,"source_type=decimal(16,4); 會員退水%數",9
+ods_mariadb_2b,ods_a168_dailyreport,bet41,varchar,"source_type=decimal(16,4); 有效投注",10
+ods_mariadb_2b,ods_a168_dailyreport,bet18,varchar,source_type=int(11); LV1ID,11
+ods_mariadb_2b,ods_a168_dailyreport,bet19,varchar,source_type=int(11); LV2ID,12
+ods_mariadb_2b,ods_a168_dailyreport,bet20,varchar,source_type=int(11); LV3ID,13
+ods_mariadb_2b,ods_a168_dailyreport,bet21,varchar,source_type=int(11); LV4ID,14
+ods_mariadb_2b,ods_a168_dailyreport,bet22,varchar,source_type=int(11); LV5ID,15
+ods_mariadb_2b,ods_a168_dailyreport,bet23,varchar,"source_type=decimal(16,4); LV1佔成",16
+ods_mariadb_2b,ods_a168_dailyreport,bet24,varchar,"source_type=decimal(16,4); LV2佔成",17
+ods_mariadb_2b,ods_a168_dailyreport,bet25,varchar,"source_type=decimal(16,4); LV3佔成",18
+ods_mariadb_2b,ods_a168_dailyreport,bet26,varchar,"source_type=decimal(16,4); LV4佔成",19
+ods_mariadb_2b,ods_a168_dailyreport,bet27,varchar,"source_type=decimal(16,4); LV5佔成",20
+ods_mariadb_2b,ods_a168_dailyreport,bet28,varchar,"source_type=decimal(16,4); LV1退水",21
+ods_mariadb_2b,ods_a168_dailyreport,bet29,varchar,"source_type=decimal(16,4); LV2退水",22
+ods_mariadb_2b,ods_a168_dailyreport,bet30,varchar,"source_type=decimal(16,4); LV3退水",23
+ods_mariadb_2b,ods_a168_dailyreport,bet31,varchar,"source_type=decimal(16,4); LV4退水",24
+ods_mariadb_2b,ods_a168_dailyreport,bet32,varchar,"source_type=decimal(16,4); LV5退水",25
+ods_mariadb_2b,ods_a168_dailyreport,bet39,varchar,source_type=int(11); ,26
+ods_mariadb_2b,ods_a168_dailyreport,bet10,varchar,source_type=int(11); 幣別,27
+ods_mariadb_2b,ods_a168_dailyreport,bet11,varchar,"source_type=decimal(16,4); 匯率",28
+ods_mariadb_2b,ods_a168_dailyreport,category,varchar,source_type=int(11); ,29
+ods_mariadb_2b,ods_a168_dailyreport,count,varchar,source_type=int(11); 筆數,30
+ods_mariadb_2b,ods_a168_dailyreport,source_db,varchar,来源库,31
+ods_mariadb_2b,ods_a168_dailyreport,source_table,varchar,来源表,32
+ods_mariadb_2b,ods_a168_dailyreport,ods_table_name,varchar,ODS表名,33
+ods_mariadb_2b,ods_a168_dailyreport,sync_time,datetime,同步时间,34
+ods_mariadb_2b,ods_a168_dailyreport2,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_dailyreport2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_dailyreport2,id,varchar,source_type=bigint(20); ,3
+ods_mariadb_2b,ods_a168_dailyreport2,time,varchar,source_type=date; 日期,4
+ods_mariadb_2b,ods_a168_dailyreport2,bet02,varchar,source_type=int(11); 遊戲編號,5
+ods_mariadb_2b,ods_a168_dailyreport2,bet05,varchar,source_type=int(11); 會員編號,6
+ods_mariadb_2b,ods_a168_dailyreport2,bet13,varchar,"source_type=decimal(16,4); 下注金額",7
+ods_mariadb_2b,ods_a168_dailyreport2,bet14,varchar,"source_type=decimal(16,4); 派彩金額",8
+ods_mariadb_2b,ods_a168_dailyreport2,bet15,varchar,"source_type=decimal(16,4); 會員退水%數",9
+ods_mariadb_2b,ods_a168_dailyreport2,bet41,varchar,"source_type=decimal(16,4); 有效投注",10
+ods_mariadb_2b,ods_a168_dailyreport2,bet18,varchar,source_type=int(11); LV1ID,11
+ods_mariadb_2b,ods_a168_dailyreport2,bet19,varchar,source_type=int(11); LV2ID,12
+ods_mariadb_2b,ods_a168_dailyreport2,bet20,varchar,source_type=int(11); LV3ID,13
+ods_mariadb_2b,ods_a168_dailyreport2,bet21,varchar,source_type=int(11); LV4ID,14
+ods_mariadb_2b,ods_a168_dailyreport2,bet22,varchar,source_type=int(11); LV5ID,15
+ods_mariadb_2b,ods_a168_dailyreport2,bet23,varchar,"source_type=decimal(16,4); LV1佔成",16
+ods_mariadb_2b,ods_a168_dailyreport2,bet24,varchar,"source_type=decimal(16,4); LV2佔成",17
+ods_mariadb_2b,ods_a168_dailyreport2,bet25,varchar,"source_type=decimal(16,4); LV3佔成",18
+ods_mariadb_2b,ods_a168_dailyreport2,bet26,varchar,"source_type=decimal(16,4); LV4佔成",19
+ods_mariadb_2b,ods_a168_dailyreport2,bet27,varchar,"source_type=decimal(16,4); LV5佔成",20
+ods_mariadb_2b,ods_a168_dailyreport2,bet28,varchar,"source_type=decimal(16,4); LV1退水",21
+ods_mariadb_2b,ods_a168_dailyreport2,bet29,varchar,"source_type=decimal(16,4); LV2退水",22
+ods_mariadb_2b,ods_a168_dailyreport2,bet30,varchar,"source_type=decimal(16,4); LV3退水",23
+ods_mariadb_2b,ods_a168_dailyreport2,bet31,varchar,"source_type=decimal(16,4); LV4退水",24
+ods_mariadb_2b,ods_a168_dailyreport2,bet32,varchar,"source_type=decimal(16,4); LV5退水",25
+ods_mariadb_2b,ods_a168_dailyreport2,bet39,varchar,source_type=int(11); ,26
+ods_mariadb_2b,ods_a168_dailyreport2,bet10,varchar,source_type=int(11); 幣別,27
+ods_mariadb_2b,ods_a168_dailyreport2,bet11,varchar,"source_type=decimal(16,4); 匯率",28
+ods_mariadb_2b,ods_a168_dailyreport2,category,varchar,source_type=int(11); ,29
+ods_mariadb_2b,ods_a168_dailyreport2,count,varchar,source_type=int(11); 筆數,30
+ods_mariadb_2b,ods_a168_dailyreport2,risk,varchar,source_type=tinyint(1); 風險單1:是,31
+ods_mariadb_2b,ods_a168_dailyreport2,source_db,varchar,来源库,32
+ods_mariadb_2b,ods_a168_dailyreport2,source_table,varchar,来源表,33
+ods_mariadb_2b,ods_a168_dailyreport2,ods_table_name,varchar,ODS表名,34
+ods_mariadb_2b,ods_a168_dailyreport2,sync_time,datetime,同步时间,35
+ods_mariadb_2b,ods_a168_dailyreport_member,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_dailyreport_member,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_dailyreport_member,id,varchar,source_type=bigint(20); ,3
+ods_mariadb_2b,ods_a168_dailyreport_member,time,varchar,source_type=date; 日期,4
+ods_mariadb_2b,ods_a168_dailyreport_member,bet02,varchar,source_type=int(11); 遊戲編號,5
+ods_mariadb_2b,ods_a168_dailyreport_member,bet05,varchar,source_type=int(11); 會員編號,6
+ods_mariadb_2b,ods_a168_dailyreport_member,bet13,varchar,"source_type=decimal(16,4); 下注金額",7
+ods_mariadb_2b,ods_a168_dailyreport_member,bet14,varchar,"source_type=decimal(16,4); 派彩金額",8
+ods_mariadb_2b,ods_a168_dailyreport_member,bet15,varchar,"source_type=decimal(16,4); 會員退水%數",9
+ods_mariadb_2b,ods_a168_dailyreport_member,bet41,varchar,"source_type=decimal(16,4); 有效投注",10
+ods_mariadb_2b,ods_a168_dailyreport_member,bet18,varchar,source_type=int(11); LV1ID,11
+ods_mariadb_2b,ods_a168_dailyreport_member,bet19,varchar,source_type=int(11); LV2ID,12
+ods_mariadb_2b,ods_a168_dailyreport_member,bet20,varchar,source_type=int(11); LV3ID,13
+ods_mariadb_2b,ods_a168_dailyreport_member,bet21,varchar,source_type=int(11); LV4ID,14
+ods_mariadb_2b,ods_a168_dailyreport_member,bet22,varchar,source_type=int(11); LV5ID,15
+ods_mariadb_2b,ods_a168_dailyreport_member,bet23,varchar,"source_type=decimal(16,4); LV1占成",16
+ods_mariadb_2b,ods_a168_dailyreport_member,bet24,varchar,"source_type=decimal(16,4); LV2占成",17
+ods_mariadb_2b,ods_a168_dailyreport_member,bet25,varchar,"source_type=decimal(16,4); LV3占成",18
+ods_mariadb_2b,ods_a168_dailyreport_member,bet26,varchar,"source_type=decimal(16,4); LV4占成",19
+ods_mariadb_2b,ods_a168_dailyreport_member,bet27,varchar,"source_type=decimal(16,4); LV5占成",20
+ods_mariadb_2b,ods_a168_dailyreport_member,bet28,varchar,"source_type=decimal(16,4); LV1退水",21
+ods_mariadb_2b,ods_a168_dailyreport_member,bet29,varchar,"source_type=decimal(16,4); LV2退水",22
+ods_mariadb_2b,ods_a168_dailyreport_member,bet30,varchar,"source_type=decimal(16,4); LV3退水",23
+ods_mariadb_2b,ods_a168_dailyreport_member,bet31,varchar,"source_type=decimal(16,4); LV4退水",24
+ods_mariadb_2b,ods_a168_dailyreport_member,bet32,varchar,"source_type=decimal(16,4); LV5退水",25
+ods_mariadb_2b,ods_a168_dailyreport_member,bet10,varchar,source_type=int(11); 幣別,26
+ods_mariadb_2b,ods_a168_dailyreport_member,bet11,varchar,"source_type=decimal(16,4); 匯率",27
+ods_mariadb_2b,ods_a168_dailyreport_member,category,varchar,"source_type=int(11); 1:一般,2:小費",28
+ods_mariadb_2b,ods_a168_dailyreport_member,count,varchar,source_type=int(11); 筆數,29
+ods_mariadb_2b,ods_a168_dailyreport_member,risk,varchar,source_type=tinyint(1); 風險單 1:是,30
+ods_mariadb_2b,ods_a168_dailyreport_member,orders,varchar,source_type=tinyint(1); 劃單 1:是,31
+ods_mariadb_2b,ods_a168_dailyreport_member,source_db,varchar,来源库,32
+ods_mariadb_2b,ods_a168_dailyreport_member,source_table,varchar,来源表,33
+ods_mariadb_2b,ods_a168_dailyreport_member,ods_table_name,varchar,ODS表名,34
+ods_mariadb_2b,ods_a168_dailyreport_member,sync_time,datetime,同步时间,35
+ods_mariadb_2b,ods_a168_dailyreport_table,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_dailyreport_table,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_dailyreport_table,id,varchar,source_type=bigint(20); ,3
+ods_mariadb_2b,ods_a168_dailyreport_table,time,varchar,source_type=date; 日期,4
+ods_mariadb_2b,ods_a168_dailyreport_table,bet02,varchar,source_type=int(11); 遊戲編號,5
+ods_mariadb_2b,ods_a168_dailyreport_table,bet10,varchar,source_type=int(11); 幣別,6
+ods_mariadb_2b,ods_a168_dailyreport_table,bet11,varchar,"source_type=decimal(16,4); 匯率",7
+ods_mariadb_2b,ods_a168_dailyreport_table,bet13,varchar,"source_type=decimal(16,4); 下注金額",8
+ods_mariadb_2b,ods_a168_dailyreport_table,bet14,varchar,"source_type=decimal(16,4); 派彩金額",9
+ods_mariadb_2b,ods_a168_dailyreport_table,bet18,varchar,source_type=int(11); LV1ID,10
+ods_mariadb_2b,ods_a168_dailyreport_table,bet23,varchar,"source_type=decimal(16,4); LV1占成",11
+ods_mariadb_2b,ods_a168_dailyreport_table,bet28,varchar,"source_type=decimal(16,4); LV1退水%數",12
+ods_mariadb_2b,ods_a168_dailyreport_table,bet39,varchar,source_type=int(11); 桌子編號,13
+ods_mariadb_2b,ods_a168_dailyreport_table,bet41,varchar,"source_type=decimal(16,4); 下注退水金額",14
+ods_mariadb_2b,ods_a168_dailyreport_table,validbet,varchar,"source_type=decimal(16,4); 有效投注",15
+ods_mariadb_2b,ods_a168_dailyreport_table,category,varchar,"source_type=int(11); 1:一般,2:小費",16
+ods_mariadb_2b,ods_a168_dailyreport_table,count,varchar,source_type=int(11); 筆數,17
+ods_mariadb_2b,ods_a168_dailyreport_table,risk,varchar,source_type=tinyint(1); 風險單 1:是,18
+ods_mariadb_2b,ods_a168_dailyreport_table,orders,varchar,source_type=tinyint(1); 劃單 1:是,19
+ods_mariadb_2b,ods_a168_dailyreport_table,source_db,varchar,来源库,20
+ods_mariadb_2b,ods_a168_dailyreport_table,source_table,varchar,来源表,21
+ods_mariadb_2b,ods_a168_dailyreport_table,ods_table_name,varchar,ODS表名,22
+ods_mariadb_2b,ods_a168_dailyreport_table,sync_time,datetime,同步时间,23
+ods_mariadb_2b,ods_a168_dailyreport_usercount,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_dailyreport_usercount,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_dailyreport_usercount,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_dailyreport_usercount,time,varchar,source_type=date; 日期,4
+ods_mariadb_2b,ods_a168_dailyreport_usercount,bet05,varchar,source_type=int(11); 會員編號,5
+ods_mariadb_2b,ods_a168_dailyreport_usercount,bet02,varchar,source_type=int(11); 遊戲編號,6
+ods_mariadb_2b,ods_a168_dailyreport_usercount,bet39,varchar,source_type=int(11); 桌號,7
+ods_mariadb_2b,ods_a168_dailyreport_usercount,bet18,varchar,source_type=int(11); LV1ID,8
+ods_mariadb_2b,ods_a168_dailyreport_usercount,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_dailyreport_usercount,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_dailyreport_usercount,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_dailyreport_usercount,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_emp_login,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_emp_login,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_emp_login,eid,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_emp_login,sid,varchar,source_type=varchar(50); ,4
+ods_mariadb_2b,ods_a168_emp_login,logintime,varchar,source_type=datetime; ,5
+ods_mariadb_2b,ods_a168_emp_login,loginip,varchar,source_type=varchar(20); ,6
+ods_mariadb_2b,ods_a168_emp_login,status,varchar,source_type=int(11); ,7
+ods_mariadb_2b,ods_a168_emp_login,remark,varchar,source_type=varchar(50); ,8
+ods_mariadb_2b,ods_a168_emp_login,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_emp_login,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_emp_login,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_emp_login,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_employee,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_employee,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_employee,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_employee,account,varchar,source_type=varchar(20); ,4
+ods_mariadb_2b,ods_a168_employee,password,varchar,source_type=varchar(20); ,5
+ods_mariadb_2b,ods_a168_employee,name,varchar,source_type=varchar(30); ,6
+ods_mariadb_2b,ods_a168_employee,type,varchar,source_type=int(11); 1:帳房人員;2:接線員;3:荷官,7
+ods_mariadb_2b,ods_a168_employee,roles,varchar,source_type=int(11); 權限,8
+ods_mariadb_2b,ods_a168_employee,phone,varchar,source_type=varchar(13); ,9
+ods_mariadb_2b,ods_a168_employee,email,varchar,source_type=varchar(30); ,10
+ods_mariadb_2b,ods_a168_employee,qq,varchar,source_type=varchar(20); ,11
+ods_mariadb_2b,ods_a168_employee,enable,varchar,"source_type=enum(''Y'',''N'');  停啟用",12
+ods_mariadb_2b,ods_a168_employee,status,varchar,"source_type=int(11); 0:下線中,1:上線中,2:連結中,3:己連線,4:暫時離開",13
+ods_mariadb_2b,ods_a168_employee,servicemember,varchar,source_type=int(11); 服務會員,14
+ods_mariadb_2b,ods_a168_employee,lasttime,varchar,source_type=datetime; ,15
+ods_mariadb_2b,ods_a168_employee,lastip,varchar,source_type=varchar(20); ,16
+ods_mariadb_2b,ods_a168_employee,addtime,varchar,source_type=datetime; ,17
+ods_mariadb_2b,ods_a168_employee,addip,varchar,source_type=varchar(20); ,18
+ods_mariadb_2b,ods_a168_employee,image,varchar,source_type=varchar(50); 圖檔名,19
+ods_mariadb_2b,ods_a168_employee,image2,varchar,source_type=varchar(50); ,20
+ods_mariadb_2b,ods_a168_employee,source_db,varchar,来源库,21
+ods_mariadb_2b,ods_a168_employee,source_table,varchar,来源表,22
+ods_mariadb_2b,ods_a168_employee,ods_table_name,varchar,ODS表名,23
+ods_mariadb_2b,ods_a168_employee,sync_time,datetime,同步时间,24
+ods_mariadb_2b,ods_a168_func_counter,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_func_counter,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_func_counter,date,varchar,source_type=date; ,3
+ods_mariadb_2b,ods_a168_func_counter,ui,varchar,source_type=varchar(255); ,4
+ods_mariadb_2b,ods_a168_func_counter,function,varchar,source_type=varchar(255); ,5
+ods_mariadb_2b,ods_a168_func_counter,counts,varchar,source_type=int(8) unsigned; ,6
+ods_mariadb_2b,ods_a168_func_counter,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_func_counter,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_func_counter,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_func_counter,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_game_No,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_No,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_No,gameNo,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_game_No,gid,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_game_No,table_no,varchar,source_type=int(11); ,5
+ods_mariadb_2b,ods_a168_game_No,cdate,varchar,source_type=timestamp; ,6
+ods_mariadb_2b,ods_a168_game_No,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_game_No,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_game_No,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_game_No,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_game_callwebapi,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_callwebapi,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_callwebapi,id,varchar,source_type=bigint(20); 流水號,3
+ods_mariadb_2b,ods_a168_game_callwebapi,name,varchar,source_type=varchar(20); 名稱,4
+ods_mariadb_2b,ods_a168_game_callwebapi,url,varchar,source_type=text; 網址,5
+ods_mariadb_2b,ods_a168_game_callwebapi,param,varchar,source_type=text; 參數,6
+ods_mariadb_2b,ods_a168_game_callwebapi,status,varchar,source_type=int(11); 0:待處理 1:處理中 2:完成,7
+ods_mariadb_2b,ods_a168_game_callwebapi,addtime,varchar,source_type=datetime; ,8
+ods_mariadb_2b,ods_a168_game_callwebapi,updatetime,varchar,source_type=datetime; ,9
+ods_mariadb_2b,ods_a168_game_callwebapi,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_game_callwebapi,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_game_callwebapi,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_game_callwebapi,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_game_demoipsetting,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_demoipsetting,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_demoipsetting,ip,varchar,source_type=varchar(20); ,3
+ods_mariadb_2b,ods_a168_game_demoipsetting,allow,varchar,"source_type=tinyint(1); 0:黑名單,1:白名單",4
+ods_mariadb_2b,ods_a168_game_demoipsetting,enable,varchar,"source_type=tinyint(1); 0:停用,1:啟用",5
+ods_mariadb_2b,ods_a168_game_demoipsetting,comment,varchar,source_type=text; ,6
+ods_mariadb_2b,ods_a168_game_demoipsetting,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_game_demoipsetting,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_game_demoipsetting,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_game_demoipsetting,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_game_info,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_info,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_info,gi001,varchar,source_type=int(11); 遊戲類別,3
+ods_mariadb_2b,ods_a168_game_info,gi002,varchar,"source_type=decimal(12,0); 場次編號",4
+ods_mariadb_2b,ods_a168_game_info,gi003,varchar,source_type=int(11); 子場次編號,5
+ods_mariadb_2b,ods_a168_game_info,gi004,varchar,source_type=datetime; 開局時間,6
+ods_mariadb_2b,ods_a168_game_info,gi005,varchar,"source_type=decimal(16,4); 總下注金額",7
+ods_mariadb_2b,ods_a168_game_info,gi006,varchar,source_type=datetime; 開獎時間,8
+ods_mariadb_2b,ods_a168_game_info,gi007,varchar,source_type=text; 開獎內容,9
+ods_mariadb_2b,ods_a168_game_info,gi008,varchar,"source_type=decimal(16,4); 輸贏",10
+ods_mariadb_2b,ods_a168_game_info,gi009,varchar,"source_type=decimal(16,4); 總退水",11
+ods_mariadb_2b,ods_a168_game_info,gi010,varchar,"source_type=decimal(16,4); 結果：贏得＋退水－下注",12
+ods_mariadb_2b,ods_a168_game_info,gi011,varchar,source_type=int(11); Table ID,13
+ods_mariadb_2b,ods_a168_game_info,gi012,varchar,source_type=int(11); result,14
+ods_mariadb_2b,ods_a168_game_info,gi013,varchar,"source_type=int(11); 狀態：0:未開,1:己開,2:重對,9:取消",15
+ods_mariadb_2b,ods_a168_game_info,eid,varchar,source_type=int(11); 荷官,16
+ods_mariadb_2b,ods_a168_game_info,serid,varchar,source_type=int(11); 服務編號,17
+ods_mariadb_2b,ods_a168_game_info,3rdno,varchar,source_type=varchar(30); ,18
+ods_mariadb_2b,ods_a168_game_info,is_lock,varchar,source_type=char(1); 鎖定,19
+ods_mariadb_2b,ods_a168_game_info,source_db,varchar,来源库,20
+ods_mariadb_2b,ods_a168_game_info,source_table,varchar,来源表,21
+ods_mariadb_2b,ods_a168_game_info,ods_table_name,varchar,ODS表名,22
+ods_mariadb_2b,ods_a168_game_info,sync_time,datetime,同步时间,23
+ods_mariadb_2b,ods_a168_game_info_verify,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_info_verify,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_info_verify,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_game_info_verify,action,varchar,source_type=varchar(12); ,4
+ods_mariadb_2b,ods_a168_game_info_verify,gid,varchar,source_type=int(11); 遊戲類別,5
+ods_mariadb_2b,ods_a168_game_info_verify,gi002,varchar,"source_type=decimal(12,0); 場次編號",6
+ods_mariadb_2b,ods_a168_game_info_verify,gi003,varchar,source_type=int(11); 子場次編號,7
+ods_mariadb_2b,ods_a168_game_info_verify,code,varchar,source_type=varchar(6); 驗證碼,8
+ods_mariadb_2b,ods_a168_game_info_verify,send_at,varchar,source_type=datetime; 發送時間,9
+ods_mariadb_2b,ods_a168_game_info_verify,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_game_info_verify,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_game_info_verify,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_game_info_verify,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_game_log,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_log,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_log,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_game_log,mid,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_game_log,user_agent,varchar,source_type=text; ,5
+ods_mariadb_2b,ods_a168_game_log,web_address,varchar,source_type=text; ,6
+ods_mariadb_2b,ods_a168_game_log,web_url,varchar,source_type=text; 遊戲網址,7
+ods_mariadb_2b,ods_a168_game_log,website_delay_time,varchar,source_type=int(11); ,8
+ods_mariadb_2b,ods_a168_game_log,url_index,varchar,source_type=int(11); ,9
+ods_mariadb_2b,ods_a168_game_log,api_delay_time,varchar,source_type=int(11); ,10
+ods_mariadb_2b,ods_a168_game_log,load_html_id,varchar,source_type=int(11); ,11
+ods_mariadb_2b,ods_a168_game_log,load_html_time,varchar,source_type=int(11); ,12
+ods_mariadb_2b,ods_a168_game_log,server_id,varchar,source_type=int(11); ,13
+ods_mariadb_2b,ods_a168_game_log,server_delay_time,varchar,source_type=int(11); ,14
+ods_mariadb_2b,ods_a168_game_log,video_type,varchar,source_type=varchar(5); ,15
+ods_mariadb_2b,ods_a168_game_log,video_delay_time,varchar,source_type=int(11); ,16
+ods_mariadb_2b,ods_a168_game_log,addtime,varchar,source_type=datetime; ,17
+ods_mariadb_2b,ods_a168_game_log,ip,varchar,source_type=varchar(100); 登入IP,18
+ods_mariadb_2b,ods_a168_game_log,country_code,varchar,source_type=varchar(10); 國家代碼,19
+ods_mariadb_2b,ods_a168_game_log,region,varchar,source_type=varchar(30); 國家,20
+ods_mariadb_2b,ods_a168_game_log,city,varchar,source_type=varchar(30); 城市,21
+ods_mariadb_2b,ods_a168_game_log,ISP,varchar,source_type=varchar(100); 電信商,22
+ods_mariadb_2b,ods_a168_game_log,source_db,varchar,来源库,23
+ods_mariadb_2b,ods_a168_game_log,source_table,varchar,来源表,24
+ods_mariadb_2b,ods_a168_game_log,ods_table_name,varchar,ODS表名,25
+ods_mariadb_2b,ods_a168_game_log,sync_time,datetime,同步时间,26
+ods_mariadb_2b,ods_a168_game_parame,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_parame,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_parame,gpm001,varchar,source_type=int(11); SN,3
+ods_mariadb_2b,ods_a168_game_parame,gpm002,varchar,source_type=varchar(50); parame_name,4
+ods_mariadb_2b,ods_a168_game_parame,gpm003,varchar,source_type=text; parame_value,5
+ods_mariadb_2b,ods_a168_game_parame,gpm004,varchar,source_type=varchar(25); memo,6
+ods_mariadb_2b,ods_a168_game_parame,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_game_parame,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_game_parame,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_game_parame,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_game_result,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_result,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_result,gid,varchar,source_type=int(11); 遊戲類別,3
+ods_mariadb_2b,ods_a168_game_result,gameNo,varchar,"source_type=decimal(12,0); 場次編號",4
+ods_mariadb_2b,ods_a168_game_result,gameNoRound,varchar,source_type=int(11); 子場次編號,5
+ods_mariadb_2b,ods_a168_game_result,result,varchar,source_type=varchar(512); 結果,6
+ods_mariadb_2b,ods_a168_game_result,date,varchar,source_type=timestamp; 時間,7
+ods_mariadb_2b,ods_a168_game_result,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_game_result,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_game_result,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_game_result,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_game_statistics,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_statistics,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_statistics,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_game_statistics,gid,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_game_statistics,t_number,varchar,source_type=int(11); ,5
+ods_mariadb_2b,ods_a168_game_statistics,people,varchar,source_type=int(11); ,6
+ods_mariadb_2b,ods_a168_game_statistics,time,varchar,source_type=datetime; ,7
+ods_mariadb_2b,ods_a168_game_statistics,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_game_statistics,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_game_statistics,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_game_statistics,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_game_tip,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_tip,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_tip,currency_code,varchar,source_type=varchar(10); ,3
+ods_mariadb_2b,ods_a168_game_tip,amount_list,varchar,source_type=text; ,4
+ods_mariadb_2b,ods_a168_game_tip,source_db,varchar,来源库,5
+ods_mariadb_2b,ods_a168_game_tip,source_table,varchar,来源表,6
+ods_mariadb_2b,ods_a168_game_tip,ods_table_name,varchar,ODS表名,7
+ods_mariadb_2b,ods_a168_game_tip,sync_time,datetime,同步时间,8
+ods_mariadb_2b,ods_a168_game_transfer,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_transfer,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_transfer,tcpsocketport,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_game_transfer,websocketport,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_game_transfer,gid,varchar,source_type=int(11); 遊戲ID,5
+ods_mariadb_2b,ods_a168_game_transfer,tablelist,varchar,"source_type=text; 傳送的桌子列表,留空代表所有桌都送",6
+ods_mariadb_2b,ods_a168_game_transfer,enable,varchar,source_type=tinyint(4); 啟停用,7
+ods_mariadb_2b,ods_a168_game_transfer,comment,varchar,source_type=text; 註解,8
+ods_mariadb_2b,ods_a168_game_transfer,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_game_transfer,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_game_transfer,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_game_transfer,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_game_type,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_game_type,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_game_type,code,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_game_type,twname,varchar,source_type=varchar(20); ,4
+ods_mariadb_2b,ods_a168_game_type,cnname,varchar,source_type=varchar(20); ,5
+ods_mariadb_2b,ods_a168_game_type,enname,varchar,source_type=varchar(20); ,6
+ods_mariadb_2b,ods_a168_game_type,inname,varchar,source_type=varchar(20); ,7
+ods_mariadb_2b,ods_a168_game_type,janame,varchar,source_type=varchar(20); ,8
+ods_mariadb_2b,ods_a168_game_type,koname,varchar,source_type=varchar(20); ,9
+ods_mariadb_2b,ods_a168_game_type,thname,varchar,source_type=varchar(20); ,10
+ods_mariadb_2b,ods_a168_game_type,viname,varchar,source_type=varchar(20); ,11
+ods_mariadb_2b,ods_a168_game_type,hiname,varchar,source_type=varchar(20); ,12
+ods_mariadb_2b,ods_a168_game_type,msname,varchar,source_type=varchar(20); ,13
+ods_mariadb_2b,ods_a168_game_type,esname,varchar,source_type=varchar(20); ,14
+ods_mariadb_2b,ods_a168_game_type,status,varchar,source_type=int(11); ,15
+ods_mariadb_2b,ods_a168_game_type,ps003,varchar,"source_type=decimal(16,2); ",16
+ods_mariadb_2b,ods_a168_game_type,ps004,varchar,source_type=int(11); ,17
+ods_mariadb_2b,ods_a168_game_type,ps005,varchar,source_type=int(11); ,18
+ods_mariadb_2b,ods_a168_game_type,ps006,varchar,source_type=int(11); ,19
+ods_mariadb_2b,ods_a168_game_type,ps007,varchar,source_type=int(11); ,20
+ods_mariadb_2b,ods_a168_game_type,ps008,varchar,source_type=int(11); ,21
+ods_mariadb_2b,ods_a168_game_type,ps009,varchar,source_type=int(11); ,22
+ods_mariadb_2b,ods_a168_game_type,ps010,varchar,source_type=int(11); ,23
+ods_mariadb_2b,ods_a168_game_type,ps011,varchar,source_type=int(11); ,24
+ods_mariadb_2b,ods_a168_game_type,source_db,varchar,来源库,25
+ods_mariadb_2b,ods_a168_game_type,source_table,varchar,来源表,26
+ods_mariadb_2b,ods_a168_game_type,ods_table_name,varchar,ODS表名,27
+ods_mariadb_2b,ods_a168_game_type,sync_time,datetime,同步时间,28
+ods_mariadb_2b,ods_a168_in_out_m,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_in_out_m,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_in_out_m,iom001,varchar,source_type=bigint(20); sn,3
+ods_mariadb_2b,ods_a168_in_out_m,iom002,varchar,source_type=timestamp; time,4
+ods_mariadb_2b,ods_a168_in_out_m,iom003,varchar,source_type=int(11); member,5
+ods_mariadb_2b,ods_a168_in_out_m,iom004,varchar,"source_type=double(20,4); money",6
+ods_mariadb_2b,ods_a168_in_out_m,iom005,varchar,source_type=varchar(5); op_code,7
+ods_mariadb_2b,ods_a168_in_out_m,iom006,varchar,source_type=int(11); op_lv,8
+ods_mariadb_2b,ods_a168_in_out_m,iom007,varchar,source_type=int(11); op_aid,9
+ods_mariadb_2b,ods_a168_in_out_m,iom008,varchar,source_type=varchar(64); memo,10
+ods_mariadb_2b,ods_a168_in_out_m,iom009,varchar,source_type=int(11); site,11
+ods_mariadb_2b,ods_a168_in_out_m,iom010,varchar,"source_type=double(20,4); subtotal",12
+ods_mariadb_2b,ods_a168_in_out_m,source_db,varchar,来源库,13
+ods_mariadb_2b,ods_a168_in_out_m,source_table,varchar,来源表,14
+ods_mariadb_2b,ods_a168_in_out_m,ods_table_name,varchar,ODS表名,15
+ods_mariadb_2b,ods_a168_in_out_m,sync_time,datetime,同步时间,16
+ods_mariadb_2b,ods_a168_in_out_m_chip,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_in_out_m_chip,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_in_out_m_chip,iom001,varchar,source_type=bigint(20); sn,3
+ods_mariadb_2b,ods_a168_in_out_m_chip,iom002,varchar,source_type=timestamp; time,4
+ods_mariadb_2b,ods_a168_in_out_m_chip,iom003,varchar,source_type=int(11); member,5
+ods_mariadb_2b,ods_a168_in_out_m_chip,iom004,varchar,"source_type=double(20,4); money",6
+ods_mariadb_2b,ods_a168_in_out_m_chip,iom005,varchar,source_type=varchar(5); op_code,7
+ods_mariadb_2b,ods_a168_in_out_m_chip,iom006,varchar,source_type=int(11); op_lv,8
+ods_mariadb_2b,ods_a168_in_out_m_chip,iom007,varchar,source_type=int(11); op_aid,9
+ods_mariadb_2b,ods_a168_in_out_m_chip,iom008,varchar,source_type=text; memo,10
+ods_mariadb_2b,ods_a168_in_out_m_chip,iom009,varchar,source_type=int(11); site,11
+ods_mariadb_2b,ods_a168_in_out_m_chip,iom010,varchar,"source_type=double(20,4); subtotal",12
+ods_mariadb_2b,ods_a168_in_out_m_chip,source_db,varchar,来源库,13
+ods_mariadb_2b,ods_a168_in_out_m_chip,source_table,varchar,来源表,14
+ods_mariadb_2b,ods_a168_in_out_m_chip,ods_table_name,varchar,ODS表名,15
+ods_mariadb_2b,ods_a168_in_out_m_chip,sync_time,datetime,同步时间,16
+ods_mariadb_2b,ods_a168_ipblacklist,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_ipblacklist,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_ipblacklist,id,varchar,source_type=int(8); ,3
+ods_mariadb_2b,ods_a168_ipblacklist,ip,varchar,source_type=varchar(16); ,4
+ods_mariadb_2b,ods_a168_ipblacklist,creator,varchar,source_type=varchar(50); ,5
+ods_mariadb_2b,ods_a168_ipblacklist,page,varchar,"source_type=enum(''A'',''F'',''B''); A=全部,F=前台,B=後台",6
+ods_mariadb_2b,ods_a168_ipblacklist,addtime,varchar,source_type=datetime; ,7
+ods_mariadb_2b,ods_a168_ipblacklist,remarks,varchar,source_type=varchar(1000); ,8
+ods_mariadb_2b,ods_a168_ipblacklist,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_ipblacklist,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_ipblacklist,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_ipblacklist,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_iphistory,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_iphistory,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_iphistory,id,varchar,source_type=int(8); ,3
+ods_mariadb_2b,ods_a168_iphistory,type,varchar,source_type=varchar(4); ,4
+ods_mariadb_2b,ods_a168_iphistory,uid,varchar,source_type=varchar(20); ,5
+ods_mariadb_2b,ods_a168_iphistory,ulv,varchar,source_type=varchar(4); ,6
+ods_mariadb_2b,ods_a168_iphistory,ip,varchar,source_type=varchar(16); ,7
+ods_mariadb_2b,ods_a168_iphistory,datetime,varchar,source_type=datetime; ,8
+ods_mariadb_2b,ods_a168_iphistory,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_iphistory,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_iphistory,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_iphistory,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_jackpot,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_jackpot,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_jackpot,id,varchar,source_type=int(11); 序號,3
+ods_mariadb_2b,ods_a168_jackpot,gid,varchar,source_type=int(11); 遊戲id,4
+ods_mariadb_2b,ods_a168_jackpot,starttime,varchar,source_type=datetime; 開始時間,5
+ods_mariadb_2b,ods_a168_jackpot,min,varchar,source_type=int(11); 最小值,6
+ods_mariadb_2b,ods_a168_jackpot,max,varchar,source_type=int(11); 最大值,7
+ods_mariadb_2b,ods_a168_jackpot,percent,varchar,source_type=int(11); 機率,8
+ods_mariadb_2b,ods_a168_jackpot,frequency,varchar,source_type=int(11); 次數,9
+ods_mariadb_2b,ods_a168_jackpot,remaining,varchar,source_type=int(11); ,10
+ods_mariadb_2b,ods_a168_jackpot,status,varchar,source_type=int(11); 狀態,11
+ods_mariadb_2b,ods_a168_jackpot,operator,varchar,source_type=int(11); 最後操作人,12
+ods_mariadb_2b,ods_a168_jackpot,optime,varchar,source_type=datetime; 最後操作時間,13
+ods_mariadb_2b,ods_a168_jackpot,source_db,varchar,来源库,14
+ods_mariadb_2b,ods_a168_jackpot,source_table,varchar,来源表,15
+ods_mariadb_2b,ods_a168_jackpot,ods_table_name,varchar,ODS表名,16
+ods_mariadb_2b,ods_a168_jackpot,sync_time,datetime,同步时间,17
+ods_mariadb_2b,ods_a168_keyserver_command,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_keyserver_command,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_keyserver_command,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_keyserver_command,time,varchar,source_type=timestamp; ,4
+ods_mariadb_2b,ods_a168_keyserver_command,gameID,varchar,source_type=int(11); ,5
+ods_mariadb_2b,ods_a168_keyserver_command,tableID,varchar,source_type=int(11); ,6
+ods_mariadb_2b,ods_a168_keyserver_command,protocol,varchar,source_type=text; ,7
+ods_mariadb_2b,ods_a168_keyserver_command,data,varchar,source_type=text; ,8
+ods_mariadb_2b,ods_a168_keyserver_command,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_keyserver_command,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_keyserver_command,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_keyserver_command,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_log_age_cash_change,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_log_age_cash_change,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc01,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc02,varchar,source_type=int(11); LV,4
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc03,varchar,source_type=int(11); ID,5
+ods_mariadb_2b,ods_a168_log_age_cash_change,op_utp,varchar,source_type=char(1); 操作者類型,6
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc04,varchar,source_type=int(11); OPLV,7
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc05,varchar,source_type=int(11); OPID,8
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc06,varchar,"source_type=decimal(15,4); 異動金額",9
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc07,varchar,source_type=datetime; 操作時間,10
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc08,varchar,source_type=varchar(20); 備註,11
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc09,varchar,"source_type=decimal(15,4); 異動前金額",12
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc10,varchar,source_type=int(11); upid,13
+ods_mariadb_2b,ods_a168_log_age_cash_change,lacc11,varchar,"source_type=decimal(15,4); 上層異動前金額",14
+ods_mariadb_2b,ods_a168_log_age_cash_change,pointtype,varchar,source_type=int(11); 0:現金;1:信用;,15
+ods_mariadb_2b,ods_a168_log_age_cash_change,source_db,varchar,来源库,16
+ods_mariadb_2b,ods_a168_log_age_cash_change,source_table,varchar,来源表,17
+ods_mariadb_2b,ods_a168_log_age_cash_change,ods_table_name,varchar,ODS表名,18
+ods_mariadb_2b,ods_a168_log_age_cash_change,sync_time,datetime,同步时间,19
+ods_mariadb_2b,ods_a168_log_mem_change,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_log_mem_change,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_log_mem_change,lmc01,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_log_mem_change,lmc02,varchar,source_type=int(11); ID,4
+ods_mariadb_2b,ods_a168_log_mem_change,lmc03,varchar,source_type=int(11); LV,5
+ods_mariadb_2b,ods_a168_log_mem_change,lmc04,varchar,"source_type=enum(''add'',''edit'',''changestatus''); 類別(新增，修改）",6
+ods_mariadb_2b,ods_a168_log_mem_change,lmc05,varchar,source_type=varchar(1000); 內容,7
+ods_mariadb_2b,ods_a168_log_mem_change,lmc06,varchar,source_type=int(11); 操作者,8
+ods_mariadb_2b,ods_a168_log_mem_change,lmc07,varchar,source_type=int(11); 操作者LV,9
+ods_mariadb_2b,ods_a168_log_mem_change,lmc08,varchar,source_type=datetime; 異動時間,10
+ods_mariadb_2b,ods_a168_log_mem_change,lmc09,varchar,source_type=varchar(1000); SQL,11
+ods_mariadb_2b,ods_a168_log_mem_change,lmc10,varchar,source_type=varchar(20); IP,12
+ods_mariadb_2b,ods_a168_log_mem_change,lmc11,varchar,source_type=varchar(1); 操做者utp,13
+ods_mariadb_2b,ods_a168_log_mem_change,source_db,varchar,来源库,14
+ods_mariadb_2b,ods_a168_log_mem_change,source_table,varchar,来源表,15
+ods_mariadb_2b,ods_a168_log_mem_change,ods_table_name,varchar,ODS表名,16
+ods_mariadb_2b,ods_a168_log_mem_change,sync_time,datetime,同步时间,17
+ods_mariadb_2b,ods_a168_log_realtimebet,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_log_realtimebet,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_log_realtimebet,mid,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_log_realtimebet,gid,varchar,source_type=int(6); ,4
+ods_mariadb_2b,ods_a168_log_realtimebet,gameNo,varchar,source_type=int(11); ,5
+ods_mariadb_2b,ods_a168_log_realtimebet,gameNoRound,varchar,source_type=int(11); ,6
+ods_mariadb_2b,ods_a168_log_realtimebet,betTime,varchar,source_type=datetime; ,7
+ods_mariadb_2b,ods_a168_log_realtimebet,totalBetMoney,varchar,"source_type=decimal(16,4); ",8
+ods_mariadb_2b,ods_a168_log_realtimebet,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_log_realtimebet,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_log_realtimebet,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_log_realtimebet,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_mem_login,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_mem_login,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_mem_login,mlg001,varchar,source_type=int(11); mem_id,3
+ods_mariadb_2b,ods_a168_mem_login,mlg002,varchar,source_type=int(11); site,4
+ods_mariadb_2b,ods_a168_mem_login,mlg003,varchar,source_type=varchar(50); sid,5
+ods_mariadb_2b,ods_a168_mem_login,mlg004,varchar,source_type=timestamp; this_login,6
+ods_mariadb_2b,ods_a168_mem_login,mlg005,varchar,source_type=timestamp; last_login,7
+ods_mariadb_2b,ods_a168_mem_login,mlg006,varchar,source_type=char(15); ip,8
+ods_mariadb_2b,ods_a168_mem_login,mlg007,varchar,source_type=text; info,9
+ods_mariadb_2b,ods_a168_mem_login,mlg008,varchar,source_type=tinyint(4); on_line,10
+ods_mariadb_2b,ods_a168_mem_login,source_db,varchar,来源库,11
+ods_mariadb_2b,ods_a168_mem_login,source_table,varchar,来源表,12
+ods_mariadb_2b,ods_a168_mem_login,ods_table_name,varchar,ODS表名,13
+ods_mariadb_2b,ods_a168_mem_login,sync_time,datetime,同步时间,14
+ods_mariadb_2b,ods_a168_member,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_member,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_member,mem001,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_member,mem002,varchar,source_type=varchar(48); ,4
+ods_mariadb_2b,ods_a168_member,mem003,varchar,source_type=varchar(65); ,5
+ods_mariadb_2b,ods_a168_member,mem004,varchar,source_type=varchar(48); ,6
+ods_mariadb_2b,ods_a168_member,mem005,varchar,source_type=timestamp; ,7
+ods_mariadb_2b,ods_a168_member,mem006,varchar,source_type=int(11); ,8
+ods_mariadb_2b,ods_a168_member,mem007,varchar,source_type=int(11); ,9
+ods_mariadb_2b,ods_a168_member,mem008,varchar,source_type=int(11); ,10
+ods_mariadb_2b,ods_a168_member,mem009,varchar,source_type=int(11); ,11
+ods_mariadb_2b,ods_a168_member,mem010,varchar,source_type=int(11); ,12
+ods_mariadb_2b,ods_a168_member,mem011,varchar,source_type=int(11); ,13
+ods_mariadb_2b,ods_a168_member,mem012,varchar,source_type=int(11); ,14
+ods_mariadb_2b,ods_a168_member,mem013,varchar,source_type=timestamp; ,15
+ods_mariadb_2b,ods_a168_member,mem014,varchar,source_type=char(15); ,16
+ods_mariadb_2b,ods_a168_member,mem015,varchar,source_type=int(11); login_error,17
+ods_mariadb_2b,ods_a168_member,mem016,varchar,"source_type=enum(''Y'',''N''); enable",18
+ods_mariadb_2b,ods_a168_member,mem017,varchar,"source_type=enum(''Y'',''N''); canbet",19
+ods_mariadb_2b,ods_a168_member,mem018,varchar,"source_type=enum(''Y'',''N''); chg_pw",20
+ods_mariadb_2b,ods_a168_member,mem019,varchar,"source_type=enum(''Y'',''N''); is_test",21
+ods_mariadb_2b,ods_a168_member,mem020,varchar,"source_type=enum(''Y'',''N''); be_traded",22
+ods_mariadb_2b,ods_a168_member,mem021,varchar,source_type=int(11); ,23
+ods_mariadb_2b,ods_a168_member,mem022,varchar,source_type=varchar(20); 電話,24
+ods_mariadb_2b,ods_a168_member,mem022a,varchar,source_type=int(6); 電話簡碼,25
+ods_mariadb_2b,ods_a168_member,mem023,varchar,source_type=tinyint(4); ,26
+ods_mariadb_2b,ods_a168_member,mem024,varchar,source_type=int(11); mem_risk,27
+ods_mariadb_2b,ods_a168_member,mem026,varchar,source_type=int(11); ,28
+ods_mariadb_2b,ods_a168_member,mem028,varchar,source_type=varchar(20); 備註,29
+ods_mariadb_2b,ods_a168_member,type,varchar,source_type=int(11); 0:現金;1:信用;2:電投,30
+ods_mariadb_2b,ods_a168_member,currency,varchar,source_type=int(11); 幣別,31
+ods_mariadb_2b,ods_a168_member,cash,varchar,"source_type=decimal(15,4); 現金",32
+ods_mariadb_2b,ods_a168_member,money,varchar,"source_type=decimal(10,4); 己出碼額度",33
+ods_mariadb_2b,ods_a168_member,lockmoney,varchar,"source_type=decimal(10,4); 鎖定金額",34
+ods_mariadb_2b,ods_a168_member,head,varchar,source_type=int(11); 頭像ID,35
+ods_mariadb_2b,ods_a168_member,chips,varchar,source_type=varchar(500); 籌碼選擇,36
+ods_mariadb_2b,ods_a168_member,follow1,varchar,source_type=varchar(1000); 注關會員,37
+ods_mariadb_2b,ods_a168_member,follow2,varchar,source_type=varchar(3000); 關注荷官,38
+ods_mariadb_2b,ods_a168_member,tip,varchar,"source_type=enum(''Y'',''N''); ",39
+ods_mariadb_2b,ods_a168_member,red,varchar,"source_type=enum(''N'',''Y''); 紅包開關",40
+ods_mariadb_2b,ods_a168_member,wallet,varchar,"source_type=enum(''Y'',''N''); ",41
+ods_mariadb_2b,ods_a168_member,opengame,varchar,source_type=varchar(255); 輸入要開啟的種類,42
+ods_mariadb_2b,ods_a168_member,site,varchar,source_type=varchar(60); ,43
+ods_mariadb_2b,ods_a168_member,kickperiod,varchar,source_type=int(3); 踢出局數,44
+ods_mariadb_2b,ods_a168_member,identity,varchar,"source_type=int(11); 0:信用,1:api",45
+ods_mariadb_2b,ods_a168_member,singlebetprompt,varchar,"source_type=decimal(15,0); 單注金額告警",46
+ods_mariadb_2b,ods_a168_member,conwinprompt,varchar,source_type=int(3); 連贏局數告警,47
+ods_mariadb_2b,ods_a168_member,winlossprompt,varchar,"source_type=enum(''0'',''1''); 最大可輸可贏提示",48
+ods_mariadb_2b,ods_a168_member,onlineprompt,varchar,"source_type=enum(''0'',''1''); 上線提示",49
+ods_mariadb_2b,ods_a168_member,source_db,varchar,来源库,50
+ods_mariadb_2b,ods_a168_member,source_table,varchar,来源表,51
+ods_mariadb_2b,ods_a168_member,ods_table_name,varchar,ODS表名,52
+ods_mariadb_2b,ods_a168_member,sync_time,datetime,同步时间,53
+ods_mariadb_2b,ods_a168_member_category,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_member_category,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_member_category,mid,varchar,source_type=int(11); 會員編號,3
+ods_mariadb_2b,ods_a168_member_category,lv_id,varchar,source_type=int(11); 階層編號,4
+ods_mariadb_2b,ods_a168_member_category,build_time,varchar,source_type=timestamp; 建立時間,5
+ods_mariadb_2b,ods_a168_member_category,remark,varchar,source_type=varchar(50); 備注,6
+ods_mariadb_2b,ods_a168_member_category,op_time,varchar,source_type=timestamp; 更新時間,7
+ods_mariadb_2b,ods_a168_member_category,op_level,varchar,source_type=int(11); 操作者層級,8
+ods_mariadb_2b,ods_a168_member_category,op_mid,varchar,source_type=int(11); 操作者編號,9
+ods_mariadb_2b,ods_a168_member_category,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_member_category,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_member_category,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_member_category,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_member_click_counter,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_member_click_counter,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_member_click_counter,date,varchar,source_type=date; ,3
+ods_mariadb_2b,ods_a168_member_click_counter,mid,varchar,source_type=int(10) unsigned; ,4
+ods_mariadb_2b,ods_a168_member_click_counter,ui,varchar,source_type=varchar(255); ,5
+ods_mariadb_2b,ods_a168_member_click_counter,function,varchar,source_type=varchar(255); ,6
+ods_mariadb_2b,ods_a168_member_click_counter,counts,varchar,source_type=int(10) unsigned; ,7
+ods_mariadb_2b,ods_a168_member_click_counter,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_member_click_counter,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_member_click_counter,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_member_click_counter,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_member_dtl,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_member_dtl,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_member_dtl,mem001,varchar,source_type=int(11); mid,3
+ods_mariadb_2b,ods_a168_member_dtl,mem002,varchar,source_type=int(11); 類別,4
+ods_mariadb_2b,ods_a168_member_dtl,mem003,varchar,"source_type=decimal(16,2); 退水",5
+ods_mariadb_2b,ods_a168_member_dtl,mem004,varchar,source_type=int(11); LV1ID,6
+ods_mariadb_2b,ods_a168_member_dtl,mem005,varchar,source_type=int(11); LV2ID,7
+ods_mariadb_2b,ods_a168_member_dtl,mem006,varchar,source_type=int(11); LV3ID,8
+ods_mariadb_2b,ods_a168_member_dtl,mem007,varchar,source_type=int(11); LV4ID,9
+ods_mariadb_2b,ods_a168_member_dtl,mem008,varchar,source_type=int(11); LV5ID,10
+ods_mariadb_2b,ods_a168_member_dtl,mem009,varchar,source_type=int(11); 最大押分05,11
+ods_mariadb_2b,ods_a168_member_dtl,mem010,varchar,source_type=int(11); 最大押分06,12
+ods_mariadb_2b,ods_a168_member_dtl,mem011,varchar,source_type=int(11); ,13
+ods_mariadb_2b,ods_a168_member_dtl,mem012,varchar,source_type=int(11); 最大可贏金額,14
+ods_mariadb_2b,ods_a168_member_dtl,mem013,varchar,source_type=datetime; 可贏可輸起算時間點,15
+ods_mariadb_2b,ods_a168_member_dtl,mem014,varchar,source_type=int(11); 最大可輸金額,16
+ods_mariadb_2b,ods_a168_member_dtl,mem015,varchar,source_type=varchar(300); 新版限額,17
+ods_mariadb_2b,ods_a168_member_dtl,mem016,varchar,"source_type=decimal(16,2); 電投退水",18
+ods_mariadb_2b,ods_a168_member_dtl,source_db,varchar,来源库,19
+ods_mariadb_2b,ods_a168_member_dtl,source_table,varchar,来源表,20
+ods_mariadb_2b,ods_a168_member_dtl,ods_table_name,varchar,ODS表名,21
+ods_mariadb_2b,ods_a168_member_dtl,sync_time,datetime,同步时间,22
+ods_mariadb_2b,ods_a168_member_explosion_setting,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_member_explosion_setting,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_member_explosion_setting,sn,varchar,source_type=int(5); ,3
+ods_mariadb_2b,ods_a168_member_explosion_setting,gid,varchar,source_type=int(3); ,4
+ods_mariadb_2b,ods_a168_member_explosion_setting,tableid,varchar,source_type=int(5); ,5
+ods_mariadb_2b,ods_a168_member_explosion_setting,people,varchar,source_type=int(11); ,6
+ods_mariadb_2b,ods_a168_member_explosion_setting,setting_time,varchar,source_type=int(3); ,7
+ods_mariadb_2b,ods_a168_member_explosion_setting,editor,varchar,source_type=varchar(30); ,8
+ods_mariadb_2b,ods_a168_member_explosion_setting,modif_time,varchar,source_type=timestamp; ,9
+ods_mariadb_2b,ods_a168_member_explosion_setting,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_member_explosion_setting,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_member_explosion_setting,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_member_explosion_setting,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_member_odds,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_member_odds,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_member_odds,mid,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_member_odds,gid,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_member_odds,area,varchar,source_type=varchar(100); 下注區,5
+ods_mariadb_2b,ods_a168_member_odds,odds,varchar,"source_type=decimal(10,4); 賠率",6
+ods_mariadb_2b,ods_a168_member_odds,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_member_odds,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_member_odds,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_member_odds,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_member_partner_account,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_member_partner_account,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_member_partner_account,mid,varchar,source_type=int(11); 會員,3
+ods_mariadb_2b,ods_a168_member_partner_account,code,varchar,source_type=int(8); 遊戲代碼,4
+ods_mariadb_2b,ods_a168_member_partner_account,username,varchar,source_type=varchar(30); 第三方遊戲帳號,5
+ods_mariadb_2b,ods_a168_member_partner_account,password,varchar,source_type=varchar(32); 第三方遊戲密碼,6
+ods_mariadb_2b,ods_a168_member_partner_account,enable,varchar,"source_type=enum(''Y'',''N''); 啟停用",7
+ods_mariadb_2b,ods_a168_member_partner_account,createTime,varchar,source_type=timestamp; 建立時間,8
+ods_mariadb_2b,ods_a168_member_partner_account,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_member_partner_account,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_member_partner_account,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_member_partner_account,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_member_partner_gamelist,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_member_partner_gamelist,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_member_partner_gamelist,mid,varchar,source_type=int(11); 會員 id,3
+ods_mariadb_2b,ods_a168_member_partner_gamelist,code,varchar,source_type=int(11); 第三方遊戲代碼,4
+ods_mariadb_2b,ods_a168_member_partner_gamelist,gamelist_id,varchar,source_type=int(11); 第三方遊戲 id,5
+ods_mariadb_2b,ods_a168_member_partner_gamelist,status,varchar,source_type=int(11); 開關,6
+ods_mariadb_2b,ods_a168_member_partner_gamelist,orders,varchar,source_type=int(11); 順序,7
+ods_mariadb_2b,ods_a168_member_partner_gamelist,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_member_partner_gamelist,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_member_partner_gamelist,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_member_partner_gamelist,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_member_url,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_member_url,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_member_url,mid,varchar,source_type=int(11); 會員編號,3
+ods_mariadb_2b,ods_a168_member_url,account,varchar,source_type=varchar(48); 會員帳號,4
+ods_mariadb_2b,ods_a168_member_url,url,varchar,source_type=varchar(255); 指定網址,5
+ods_mariadb_2b,ods_a168_member_url,remark,varchar,source_type=varchar(255); 備註,6
+ods_mariadb_2b,ods_a168_member_url,operator,varchar,source_type=varchar(25); 最後異動者,7
+ods_mariadb_2b,ods_a168_member_url,modify_time,varchar,source_type=timestamp; 最後異動時間,8
+ods_mariadb_2b,ods_a168_member_url,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_member_url,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_member_url,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_member_url,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_news,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_news,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_news,new001,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_news,new002,varchar,source_type=timestamp; ,4
+ods_mariadb_2b,ods_a168_news,new003,varchar,source_type=text; ,5
+ods_mariadb_2b,ods_a168_news,new004,varchar,source_type=int(11); ,6
+ods_mariadb_2b,ods_a168_news,new005,varchar,"source_type=enum(''A'',''E'',''W''); ",7
+ods_mariadb_2b,ods_a168_news,new006,varchar,"source_type=enum(''N'',''M''); ",8
+ods_mariadb_2b,ods_a168_news,new007,varchar,"source_type=enum(''Y'',''N''); ",9
+ods_mariadb_2b,ods_a168_news,new008,varchar,source_type=varchar(10); ,10
+ods_mariadb_2b,ods_a168_news,source_db,varchar,来源库,11
+ods_mariadb_2b,ods_a168_news,source_table,varchar,来源表,12
+ods_mariadb_2b,ods_a168_news,ods_table_name,varchar,ODS表名,13
+ods_mariadb_2b,ods_a168_news,sync_time,datetime,同步时间,14
+ods_mariadb_2b,ods_a168_odds_default,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_odds_default,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_odds_default,id,varchar,source_type=int(3); ,3
+ods_mariadb_2b,ods_a168_odds_default,gid,varchar,source_type=int(3); ,4
+ods_mariadb_2b,ods_a168_odds_default,area,varchar,source_type=varchar(100); 下注區,5
+ods_mariadb_2b,ods_a168_odds_default,odds,varchar,source_type=text; 賠率,6
+ods_mariadb_2b,ods_a168_odds_default,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_odds_default,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_odds_default,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_odds_default,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_opengame_log,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_opengame_log,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_opengame_log,aid,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_opengame_log,opengame,varchar,source_type=varchar(255); ,4
+ods_mariadb_2b,ods_a168_opengame_log,time,varchar,source_type=timestamp; ,5
+ods_mariadb_2b,ods_a168_opengame_log,source_db,varchar,来源库,6
+ods_mariadb_2b,ods_a168_opengame_log,source_table,varchar,来源表,7
+ods_mariadb_2b,ods_a168_opengame_log,ods_table_name,varchar,ODS表名,8
+ods_mariadb_2b,ods_a168_opengame_log,sync_time,datetime,同步时间,9
+ods_mariadb_2b,ods_a168_orderslist,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_orderslist,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_orderslist,bet01,varchar,source_type=bigint(20); 注單編號,3
+ods_mariadb_2b,ods_a168_orderslist,op,varchar,source_type=int(11); 操作者(管理員),4
+ods_mariadb_2b,ods_a168_orderslist,optime,varchar,source_type=datetime; 操作時間,5
+ods_mariadb_2b,ods_a168_orderslist,source_db,varchar,来源库,6
+ods_mariadb_2b,ods_a168_orderslist,source_table,varchar,来源表,7
+ods_mariadb_2b,ods_a168_orderslist,ods_table_name,varchar,ODS表名,8
+ods_mariadb_2b,ods_a168_orderslist,sync_time,datetime,同步时间,9
+ods_mariadb_2b,ods_a168_partner_bng_token,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_partner_bng_token,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_partner_bng_token,mid,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_partner_bng_token,token,varchar,source_type=varchar(50); ,4
+ods_mariadb_2b,ods_a168_partner_bng_token,version,varchar,source_type=int(11); balance version,5
+ods_mariadb_2b,ods_a168_partner_bng_token,op_time,varchar,source_type=timestamp; ,6
+ods_mariadb_2b,ods_a168_partner_bng_token,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_partner_bng_token,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_partner_bng_token,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_partner_bng_token,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_partner_gamelist,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_partner_gamelist,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_partner_gamelist,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_partner_gamelist,code,varchar,source_type=int(11); 第三方遊戲商代號,4
+ods_mariadb_2b,ods_a168_partner_gamelist,cnname,varchar,source_type=varchar(50); ,5
+ods_mariadb_2b,ods_a168_partner_gamelist,twname,varchar,source_type=varchar(20); ,6
+ods_mariadb_2b,ods_a168_partner_gamelist,enname,varchar,source_type=varchar(50); ,7
+ods_mariadb_2b,ods_a168_partner_gamelist,inname,varchar,source_type=varchar(50); ,8
+ods_mariadb_2b,ods_a168_partner_gamelist,janame,varchar,source_type=varchar(50); ,9
+ods_mariadb_2b,ods_a168_partner_gamelist,koname,varchar,source_type=varchar(50); ,10
+ods_mariadb_2b,ods_a168_partner_gamelist,thname,varchar,source_type=varchar(50); ,11
+ods_mariadb_2b,ods_a168_partner_gamelist,viname,varchar,source_type=varchar(50); ,12
+ods_mariadb_2b,ods_a168_partner_gamelist,hiname,varchar,source_type=varchar(50); ,13
+ods_mariadb_2b,ods_a168_partner_gamelist,msname,varchar,source_type=varchar(50); ,14
+ods_mariadb_2b,ods_a168_partner_gamelist,gameid,varchar,source_type=varchar(20); 開遊戲代碼or編號,15
+ods_mariadb_2b,ods_a168_partner_gamelist,reportCode,varchar,source_type=varchar(20); 寫單代碼or編號,16
+ods_mariadb_2b,ods_a168_partner_gamelist,gameType,varchar,source_type=varchar(10); 遊戲類型,17
+ods_mariadb_2b,ods_a168_partner_gamelist,gameGroup,varchar,"source_type=varchar(10); 遊戲群組,1.老虎機 2.捕魚機 3.棋牌 4. crash 5. 小遊戲 6. 賓果 99.其他遊戲",18
+ods_mariadb_2b,ods_a168_partner_gamelist,isFree,varchar,"source_type=enum(''Y'',''N''); 是否可試玩",19
+ods_mariadb_2b,ods_a168_partner_gamelist,isWeb,varchar,"source_type=enum(''Y'',''N''); 支援裝置-PC",20
+ods_mariadb_2b,ods_a168_partner_gamelist,isMobile,varchar,"source_type=enum(''Y'',''N''); 手機裝置",21
+ods_mariadb_2b,ods_a168_partner_gamelist,isMaintain,varchar,"source_type=enum(''N'',''Y''); 是否維護",22
+ods_mariadb_2b,ods_a168_partner_gamelist,tag,varchar,"source_type=varchar(50); 標籤 (熱門,推薦..etc)",23
+ods_mariadb_2b,ods_a168_partner_gamelist,status,varchar,source_type=int(1); 狀態,24
+ods_mariadb_2b,ods_a168_partner_gamelist,status_mobile,varchar,source_type=int(1); 手機版狀態,25
+ods_mariadb_2b,ods_a168_partner_gamelist,status_lock,varchar,source_type=tinyint(1); 開關鎖,26
+ods_mariadb_2b,ods_a168_partner_gamelist,onlineTime,varchar,source_type=datetime; 上架時間,27
+ods_mariadb_2b,ods_a168_partner_gamelist,offlineTime,varchar,source_type=datetime; 下架時間,28
+ods_mariadb_2b,ods_a168_partner_gamelist,orders,varchar,source_type=tinyint(3); 順序,29
+ods_mariadb_2b,ods_a168_partner_gamelist,demo_url,varchar,source_type=text; 試玩網址,30
+ods_mariadb_2b,ods_a168_partner_gamelist,series,varchar,source_type=varchar(10); 系列,31
+ods_mariadb_2b,ods_a168_partner_gamelist,series_web,varchar,source_type=varchar(12); 系列 (前端用),32
+ods_mariadb_2b,ods_a168_partner_gamelist,remark,varchar,source_type=varchar(32); 備註,33
+ods_mariadb_2b,ods_a168_partner_gamelist,source_db,varchar,来源库,34
+ods_mariadb_2b,ods_a168_partner_gamelist,source_table,varchar,来源表,35
+ods_mariadb_2b,ods_a168_partner_gamelist,ods_table_name,varchar,ODS表名,36
+ods_mariadb_2b,ods_a168_partner_gamelist,sync_time,datetime,同步时间,37
+ods_mariadb_2b,ods_a168_partner_reportTime,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_partner_reportTime,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_partner_reportTime,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_partner_reportTime,code,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_partner_reportTime,type,varchar,source_type=int(2); 1: 一般報表 ,5
+ods_mariadb_2b,ods_a168_partner_reportTime,offset,varchar,source_type=int(10); 時間間隔(秒) or 一次Ｎ筆,6
+ods_mariadb_2b,ods_a168_partner_reportTime,data,varchar,source_type=varchar(30); 時間 or 其他,7
+ods_mariadb_2b,ods_a168_partner_reportTime,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_partner_reportTime,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_partner_reportTime,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_partner_reportTime,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_partner_setting,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_partner_setting,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_partner_setting,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_partner_setting,code,varchar,source_type=int(11); 遊戲代碼,4
+ods_mariadb_2b,ods_a168_partner_setting,currency,varchar,source_type=tinyint(4); 幣別,5
+ods_mariadb_2b,ods_a168_partner_setting,agent_id,varchar,source_type=int(11); 代理 id,6
+ods_mariadb_2b,ods_a168_partner_setting,type,varchar,source_type=varchar(20); 資料類型,7
+ods_mariadb_2b,ods_a168_partner_setting,data,varchar,source_type=text; 資料,8
+ods_mariadb_2b,ods_a168_partner_setting,remark,varchar,source_type=varchar(100); 備註,9
+ods_mariadb_2b,ods_a168_partner_setting,create_at,varchar,source_type=datetime; ,10
+ods_mariadb_2b,ods_a168_partner_setting,update_at,varchar,source_type=datetime; ,11
+ods_mariadb_2b,ods_a168_partner_setting,source_db,varchar,来源库,12
+ods_mariadb_2b,ods_a168_partner_setting,source_table,varchar,来源表,13
+ods_mariadb_2b,ods_a168_partner_setting,ods_table_name,varchar,ODS表名,14
+ods_mariadb_2b,ods_a168_partner_setting,sync_time,datetime,同步时间,15
+ods_mariadb_2b,ods_a168_partner_transation,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_partner_transation,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_partner_transation,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_partner_transation,action,varchar,"source_type=enum(''bet'',''settle'',''cancel'',''rollback'',''betSuccess'',''refund'',''rewardDeduct'',''bouns'',''free'',''tip''); 動作",4
+ods_mariadb_2b,ods_a168_partner_transation,agent_id,varchar,source_type=int(11); 代理 id,5
+ods_mariadb_2b,ods_a168_partner_transation,mid,varchar,source_type=int(11); ,6
+ods_mariadb_2b,ods_a168_partner_transation,code,varchar,source_type=int(4); ,7
+ods_mariadb_2b,ods_a168_partner_transation,round_id,varchar,source_type=varchar(50); ,8
+ods_mariadb_2b,ods_a168_partner_transation,transId,varchar,source_type=varchar(100); 第三方交易流水號,9
+ods_mariadb_2b,ods_a168_partner_transation,wallet_id,varchar,source_type=bigint(20); wallet_dtl 處理 id,10
+ods_mariadb_2b,ods_a168_partner_transation,iom_id,varchar,source_type=bigint(20); in_out_m 處理 id,11
+ods_mariadb_2b,ods_a168_partner_transation,requestDate,varchar,source_type=datetime; 第三方請求時間,12
+ods_mariadb_2b,ods_a168_partner_transation,money,varchar,"source_type=decimal(15,4); 金額",13
+ods_mariadb_2b,ods_a168_partner_transation,balance,varchar,"source_type=decimal(16,4); 交易前餘額",14
+ods_mariadb_2b,ods_a168_partner_transation,type,varchar,source_type=tinyint(1); 1:加點 2:扣點 3:重對加點 4:重對扣點 5:重新派彩  6: 和局 0: 無任何動作,15
+ods_mariadb_2b,ods_a168_partner_transation,status,varchar,"source_type=tinyint(1); 0:未處理,1:成功,2:失敗,3:回滾,4:處理中",16
+ods_mariadb_2b,ods_a168_partner_transation,isFinish,varchar,"source_type=enum(''Y'',''N'',''X''); ",17
+ods_mariadb_2b,ods_a168_partner_transation,remark,varchar,source_type=varchar(255); ,18
+ods_mariadb_2b,ods_a168_partner_transation,source_db,varchar,来源库,19
+ods_mariadb_2b,ods_a168_partner_transation,source_table,varchar,来源表,20
+ods_mariadb_2b,ods_a168_partner_transation,ods_table_name,varchar,ODS表名,21
+ods_mariadb_2b,ods_a168_partner_transation,sync_time,datetime,同步时间,22
+ods_mariadb_2b,ods_a168_partner_transation_log,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_partner_transation_log,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_partner_transation_log,trans_id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_partner_transation_log,text,varchar,source_type=text; ,4
+ods_mariadb_2b,ods_a168_partner_transation_log,created_at,varchar,source_type=datetime; ,5
+ods_mariadb_2b,ods_a168_partner_transation_log,source_db,varchar,来源库,6
+ods_mariadb_2b,ods_a168_partner_transation_log,source_table,varchar,来源表,7
+ods_mariadb_2b,ods_a168_partner_transation_log,ods_table_name,varchar,ODS表名,8
+ods_mariadb_2b,ods_a168_partner_transation_log,sync_time,datetime,同步时间,9
+ods_mariadb_2b,ods_a168_partner_type,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_partner_type,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_partner_type,code,varchar,source_type=int(11); 第三方遊戲商代號,3
+ods_mariadb_2b,ods_a168_partner_type,codename,varchar,source_type=varchar(10); 簡稱,4
+ods_mariadb_2b,ods_a168_partner_type,twname,varchar,source_type=varchar(20); ,5
+ods_mariadb_2b,ods_a168_partner_type,cnname,varchar,source_type=varchar(20); ,6
+ods_mariadb_2b,ods_a168_partner_type,enname,varchar,source_type=varchar(20); ,7
+ods_mariadb_2b,ods_a168_partner_type,inname,varchar,source_type=varchar(20); ,8
+ods_mariadb_2b,ods_a168_partner_type,janame,varchar,source_type=varchar(20); ,9
+ods_mariadb_2b,ods_a168_partner_type,koname,varchar,source_type=varchar(20); ,10
+ods_mariadb_2b,ods_a168_partner_type,thname,varchar,source_type=varchar(20); ,11
+ods_mariadb_2b,ods_a168_partner_type,viname,varchar,source_type=varchar(20); ,12
+ods_mariadb_2b,ods_a168_partner_type,hiname,varchar,source_type=varchar(20); ,13
+ods_mariadb_2b,ods_a168_partner_type,msname,varchar,source_type=varchar(20); ,14
+ods_mariadb_2b,ods_a168_partner_type,status,varchar,source_type=int(11); 0: 關閉 1: 開放,15
+ods_mariadb_2b,ods_a168_partner_type,maintain,varchar,"source_type=enum(''Y'',''N''); 是否維修",16
+ods_mariadb_2b,ods_a168_partner_type,ps003,varchar,"source_type=decimal(16,2); 退水",17
+ods_mariadb_2b,ods_a168_partner_type,ps004,varchar,source_type=int(11); 最小押分,18
+ods_mariadb_2b,ods_a168_partner_type,ps005,varchar,source_type=int(11); 最大押分,19
+ods_mariadb_2b,ods_a168_partner_type,ps006,varchar,source_type=int(11); 押分倍數,20
+ods_mariadb_2b,ods_a168_partner_type,ps007,varchar,source_type=int(11); 最大押分02,21
+ods_mariadb_2b,ods_a168_partner_type,ps008,varchar,source_type=int(11); 最大押分03,22
+ods_mariadb_2b,ods_a168_partner_type,ps009,varchar,source_type=int(11); 最大押分04,23
+ods_mariadb_2b,ods_a168_partner_type,ps010,varchar,source_type=int(11); 最大押分05,24
+ods_mariadb_2b,ods_a168_partner_type,ps011,varchar,source_type=int(11); 最大押分06,25
+ods_mariadb_2b,ods_a168_partner_type,source_db,varchar,来源库,26
+ods_mariadb_2b,ods_a168_partner_type,source_table,varchar,来源表,27
+ods_mariadb_2b,ods_a168_partner_type,ods_table_name,varchar,ODS表名,28
+ods_mariadb_2b,ods_a168_partner_type,sync_time,datetime,同步时间,29
+ods_mariadb_2b,ods_a168_passiplist,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_passiplist,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_passiplist,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_passiplist,agentid,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_passiplist,lv,varchar,source_type=int(11); ,5
+ods_mariadb_2b,ods_a168_passiplist,account,varchar,source_type=varchar(30); ,6
+ods_mariadb_2b,ods_a168_passiplist,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_passiplist,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_passiplist,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_passiplist,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_payment_bank,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_payment_bank,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_payment_bank,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_payment_bank,currency,varchar,source_type=varchar(8); 幣別,4
+ods_mariadb_2b,ods_a168_payment_bank,code,varchar,source_type=int(11); 平台id,5
+ods_mariadb_2b,ods_a168_payment_bank,bank_id,varchar,source_type=varchar(20); 銀行代碼,6
+ods_mariadb_2b,ods_a168_payment_bank,name,varchar,source_type=varchar(50); 名稱,7
+ods_mariadb_2b,ods_a168_payment_bank,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_payment_bank,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_payment_bank,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_payment_bank,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_payment_method,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_payment_method,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_payment_method,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_payment_method,code,varchar,source_type=int(11); 平台id,4
+ods_mariadb_2b,ods_a168_payment_method,name,varchar,source_type=varchar(20); ,5
+ods_mariadb_2b,ods_a168_payment_method,data,varchar,source_type=varchar(20); ,6
+ods_mariadb_2b,ods_a168_payment_method,type,varchar,source_type=varchar(20); 支付類型,7
+ods_mariadb_2b,ods_a168_payment_method,device,varchar,"source_type=enum(''web'',''mobile'',''all''); 裝置",8
+ods_mariadb_2b,ods_a168_payment_method,status,varchar,source_type=int(1); 狀態,9
+ods_mariadb_2b,ods_a168_payment_method,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_payment_method,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_payment_method,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_payment_method,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_payment_order,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_payment_order,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_payment_order,id,varchar,source_type=int(11); 流水號,3
+ods_mariadb_2b,ods_a168_payment_order,ps_id,varchar,source_type=int(6); 第三方支付設定,4
+ods_mariadb_2b,ods_a168_payment_order,orderId,varchar,source_type=varchar(50); 訂單編號,5
+ods_mariadb_2b,ods_a168_payment_order,mid,varchar,source_type=int(20); 會員 mid,6
+ods_mariadb_2b,ods_a168_payment_order,orderTime,varchar,source_type=timestamp; 訂單時間,7
+ods_mariadb_2b,ods_a168_payment_order,paymentOrderId,varchar,source_type=varchar(50); 第三方支付訂單編號,8
+ods_mariadb_2b,ods_a168_payment_order,currency,varchar,source_type=varchar(3); 幣別,9
+ods_mariadb_2b,ods_a168_payment_order,amount,varchar,"source_type=decimal(16,4); 金額",10
+ods_mariadb_2b,ods_a168_payment_order,real_amount,varchar,"source_type=decimal(16,4); 實際交易金額",11
+ods_mariadb_2b,ods_a168_payment_order,fee,varchar,"source_type=decimal(16,4); 手續費",12
+ods_mariadb_2b,ods_a168_payment_order,fee_tax,varchar,"source_type=decimal(16,2); 手續費(%)",13
+ods_mariadb_2b,ods_a168_payment_order,status,varchar,"source_type=int(11); 0:未處理, 1:支付&加點成功, 2:支付成功;加點失敗, -1: 線上支付失敗, 999: 訂單處理中",14
+ods_mariadb_2b,ods_a168_payment_order,wallet_id,varchar,source_type=int(11); wallet_dtl 處理 id,15
+ods_mariadb_2b,ods_a168_payment_order,iom_id,varchar,source_type=int(11); in_out_m 處理 id,16
+ods_mariadb_2b,ods_a168_payment_order,cbtime,varchar,source_type=timestamp; 回call時間,17
+ods_mariadb_2b,ods_a168_payment_order,ip,varchar,source_type=varchar(128); 會員 IP,18
+ods_mariadb_2b,ods_a168_payment_order,remark,varchar,source_type=varchar(100); 備註,19
+ods_mariadb_2b,ods_a168_payment_order,source_db,varchar,来源库,20
+ods_mariadb_2b,ods_a168_payment_order,source_table,varchar,来源表,21
+ods_mariadb_2b,ods_a168_payment_order,ods_table_name,varchar,ODS表名,22
+ods_mariadb_2b,ods_a168_payment_order,sync_time,datetime,同步时间,23
+ods_mariadb_2b,ods_a168_payment_platform,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_payment_platform,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_payment_platform,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_payment_platform,code,varchar,source_type=int(11); 代碼,4
+ods_mariadb_2b,ods_a168_payment_platform,name,varchar,source_type=varchar(20); 支付平台名稱,5
+ods_mariadb_2b,ods_a168_payment_platform,url,varchar,source_type=varchar(200); API網址,6
+ods_mariadb_2b,ods_a168_payment_platform,queryURL,varchar,source_type=varchar(200); 訂單查詢網址,7
+ods_mariadb_2b,ods_a168_payment_platform,return_url,varchar,source_type=varchar(200); 前端通知網址,8
+ods_mariadb_2b,ods_a168_payment_platform,notice_url,varchar,source_type=varchar(200); 異步通知網址,9
+ods_mariadb_2b,ods_a168_payment_platform,type,varchar,source_type=int(1); 類型 1:存 2:提,10
+ods_mariadb_2b,ods_a168_payment_platform,status,varchar,source_type=int(1); 啟停用,11
+ods_mariadb_2b,ods_a168_payment_platform,remark,varchar,source_type=varchar(20); 備註,12
+ods_mariadb_2b,ods_a168_payment_platform,build_time,varchar,source_type=timestamp; 建立時間,13
+ods_mariadb_2b,ods_a168_payment_platform,op_utp,varchar,source_type=varchar(1); 操作者utp,14
+ods_mariadb_2b,ods_a168_payment_platform,op_level,varchar,source_type=int(11); 操作者層級,15
+ods_mariadb_2b,ods_a168_payment_platform,op_mid,varchar,source_type=int(11); 操作者編號,16
+ods_mariadb_2b,ods_a168_payment_platform,op_time,varchar,source_type=datetime; 操作時間,17
+ods_mariadb_2b,ods_a168_payment_platform,op_ip,varchar,source_type=varchar(128); 操作者ip,18
+ods_mariadb_2b,ods_a168_payment_platform,source_db,varchar,来源库,19
+ods_mariadb_2b,ods_a168_payment_platform,source_table,varchar,来源表,20
+ods_mariadb_2b,ods_a168_payment_platform,ods_table_name,varchar,ODS表名,21
+ods_mariadb_2b,ods_a168_payment_platform,sync_time,datetime,同步时间,22
+ods_mariadb_2b,ods_a168_payment_setting,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_payment_setting,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_payment_setting,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_payment_setting,code,varchar,source_type=int(11); 平台代碼,4
+ods_mariadb_2b,ods_a168_payment_setting,lv_id,varchar,source_type=int(11); ,5
+ods_mariadb_2b,ods_a168_payment_setting,pm_id,varchar,source_type=int(11); payment_method id,6
+ods_mariadb_2b,ods_a168_payment_setting,name,varchar,source_type=varchar(20); 支付名稱,7
+ods_mariadb_2b,ods_a168_payment_setting,currency,varchar,source_type=varchar(8); 幣別,8
+ods_mariadb_2b,ods_a168_payment_setting,MerchantID,varchar,source_type=varchar(50); 商戶號,9
+ods_mariadb_2b,ods_a168_payment_setting,MerchantKeyPub,varchar,source_type=text; 商戶公鑰,10
+ods_mariadb_2b,ods_a168_payment_setting,MerchantKey,varchar,source_type=text; 商戶密鑰,11
+ods_mariadb_2b,ods_a168_payment_setting,single_min,varchar,"source_type=decimal(16,2); 單筆最低金額",12
+ods_mariadb_2b,ods_a168_payment_setting,single_max,varchar,"source_type=decimal(16,2); 單筆最高金額",13
+ods_mariadb_2b,ods_a168_payment_setting,extra,varchar,source_type=text; 其他資料 (json),14
+ods_mariadb_2b,ods_a168_payment_setting,status,varchar,source_type=int(1); 啟停用,15
+ods_mariadb_2b,ods_a168_payment_setting,remark,varchar,source_type=varchar(20); 備註,16
+ods_mariadb_2b,ods_a168_payment_setting,build_time,varchar,source_type=timestamp; 建立時間,17
+ods_mariadb_2b,ods_a168_payment_setting,op_utp,varchar,source_type=varchar(1); 操作utp,18
+ods_mariadb_2b,ods_a168_payment_setting,op_level,varchar,source_type=int(11); 操作者層級,19
+ods_mariadb_2b,ods_a168_payment_setting,op_mid,varchar,source_type=int(11); 操作者編號,20
+ods_mariadb_2b,ods_a168_payment_setting,op_time,varchar,source_type=datetime; 操作時間,21
+ods_mariadb_2b,ods_a168_payment_setting,op_ip,varchar,source_type=varchar(128); 操作者ip,22
+ods_mariadb_2b,ods_a168_payment_setting,source_db,varchar,来源库,23
+ods_mariadb_2b,ods_a168_payment_setting,source_table,varchar,来源表,24
+ods_mariadb_2b,ods_a168_payment_setting,ods_table_name,varchar,ODS表名,25
+ods_mariadb_2b,ods_a168_payment_setting,sync_time,datetime,同步时间,26
+ods_mariadb_2b,ods_a168_payment_type,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_payment_type,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_payment_type,type,varchar,source_type=varchar(10); ,3
+ods_mariadb_2b,ods_a168_payment_type,cnname,varchar,source_type=varchar(20); ,4
+ods_mariadb_2b,ods_a168_payment_type,twname,varchar,source_type=varchar(20); ,5
+ods_mariadb_2b,ods_a168_payment_type,enname,varchar,source_type=varchar(20); ,6
+ods_mariadb_2b,ods_a168_payment_type,inname,varchar,source_type=varchar(20); ,7
+ods_mariadb_2b,ods_a168_payment_type,janame,varchar,source_type=varchar(20); ,8
+ods_mariadb_2b,ods_a168_payment_type,koname,varchar,source_type=varchar(20); ,9
+ods_mariadb_2b,ods_a168_payment_type,thname,varchar,source_type=varchar(20); ,10
+ods_mariadb_2b,ods_a168_payment_type,viname,varchar,source_type=varchar(20); ,11
+ods_mariadb_2b,ods_a168_payment_type,hiname,varchar,source_type=varchar(20); ,12
+ods_mariadb_2b,ods_a168_payment_type,msname,varchar,source_type=varchar(20); ,13
+ods_mariadb_2b,ods_a168_payment_type,source_db,varchar,来源库,14
+ods_mariadb_2b,ods_a168_payment_type,source_table,varchar,来源表,15
+ods_mariadb_2b,ods_a168_payment_type,ods_table_name,varchar,ODS表名,16
+ods_mariadb_2b,ods_a168_payment_type,sync_time,datetime,同步时间,17
+ods_mariadb_2b,ods_a168_permissionrole,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_permissionrole,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_permissionrole,roleid,varchar,source_type=int(11); t_roles id,3
+ods_mariadb_2b,ods_a168_permissionrole,permissionid,varchar,source_type=int(11); t_permission id,4
+ods_mariadb_2b,ods_a168_permissionrole,status,varchar,source_type=int(11); 0:禁用;1啟用,5
+ods_mariadb_2b,ods_a168_permissionrole,lastmodifytime,varchar,source_type=timestamp; 最後修改時間,6
+ods_mariadb_2b,ods_a168_permissionrole,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_permissionrole,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_permissionrole,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_permissionrole,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_permissions,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_permissions,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_permissions,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_permissions,permissiongroupid,varchar,source_type=int(11); t_permissions_group id,4
+ods_mariadb_2b,ods_a168_permissions,name,varchar,source_type=varchar(50); 權限名稱,5
+ods_mariadb_2b,ods_a168_permissions,status,varchar,source_type=int(11); 是否啟用 0:禁止;1:啟用,6
+ods_mariadb_2b,ods_a168_permissions,mobilestatus,varchar,source_type=int(11); 手機板開關,7
+ods_mariadb_2b,ods_a168_permissions,displayname,varchar,source_type=varchar(50); 顯示權限名稱,8
+ods_mariadb_2b,ods_a168_permissions,ordered,varchar,source_type=int(11); 顯示的順序,9
+ods_mariadb_2b,ods_a168_permissions,url,varchar,source_type=varchar(50); 程式連結,10
+ods_mariadb_2b,ods_a168_permissions,lastmodifytime,varchar,source_type=timestamp; 最後修改時間,11
+ods_mariadb_2b,ods_a168_permissions,allow_control,varchar,"source_type=varchar(128); 只開放的管理帳號id (123,456)",12
+ods_mariadb_2b,ods_a168_permissions,source_db,varchar,来源库,13
+ods_mariadb_2b,ods_a168_permissions,source_table,varchar,来源表,14
+ods_mariadb_2b,ods_a168_permissions,ods_table_name,varchar,ODS表名,15
+ods_mariadb_2b,ods_a168_permissions,sync_time,datetime,同步时间,16
+ods_mariadb_2b,ods_a168_permissionsPage,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_permissionsPage,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_permissionsPage,id,varchar,source_type=int(3); ,3
+ods_mariadb_2b,ods_a168_permissionsPage,page,varchar,source_type=varchar(50); 頁面 url,4
+ods_mariadb_2b,ods_a168_permissionsPage,pageName,varchar,source_type=varchar(12); 頁面名稱,5
+ods_mariadb_2b,ods_a168_permissionsPage,element,varchar,source_type=varchar(32); 綁定的 element name,6
+ods_mariadb_2b,ods_a168_permissionsPage,elementName,varchar,source_type=varchar(12); 顯示名稱 (吃語系),7
+ods_mariadb_2b,ods_a168_permissionsPage,status,varchar,"source_type=enum(''Y'',''N''); 預設開關",8
+ods_mariadb_2b,ods_a168_permissionsPage,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_permissionsPage,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_permissionsPage,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_permissionsPage,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_permissionsPageRoles,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_permissionsPageRoles,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_permissionsPageRoles,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_permissionsPageRoles,rolesId,varchar,source_type=int(3); ,4
+ods_mariadb_2b,ods_a168_permissionsPageRoles,pageId,varchar,source_type=int(5); ,5
+ods_mariadb_2b,ods_a168_permissionsPageRoles,status,varchar,"source_type=enum(''Y'',''N''); 啟/停用",6
+ods_mariadb_2b,ods_a168_permissionsPageRoles,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_permissionsPageRoles,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_permissionsPageRoles,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_permissionsPageRoles,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_permissionsgroup,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_permissionsgroup,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_permissionsgroup,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_permissionsgroup,name,varchar,source_type=varchar(50); 權限群組名稱,4
+ods_mariadb_2b,ods_a168_permissionsgroup,status,varchar,source_type=int(11); 是否啟用 0:禁止;1:啟用,5
+ods_mariadb_2b,ods_a168_permissionsgroup,displayname,varchar,source_type=varchar(50); 顯示權限群組名稱,6
+ods_mariadb_2b,ods_a168_permissionsgroup,ordered,varchar,source_type=int(11); 排序,7
+ods_mariadb_2b,ods_a168_permissionsgroup,lastmodifytime,varchar,source_type=timestamp; ,8
+ods_mariadb_2b,ods_a168_permissionsgroup,icon,varchar,source_type=varchar(30); 圖示,9
+ods_mariadb_2b,ods_a168_permissionsgroup,source_db,varchar,来源库,10
+ods_mariadb_2b,ods_a168_permissionsgroup,source_table,varchar,来源表,11
+ods_mariadb_2b,ods_a168_permissionsgroup,ods_table_name,varchar,ODS表名,12
+ods_mariadb_2b,ods_a168_permissionsgroup,sync_time,datetime,同步时间,13
+ods_mariadb_2b,ods_a168_play_set,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_play_set,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_play_set,ps001,varchar,source_type=int(11); id,3
+ods_mariadb_2b,ods_a168_play_set,ps002,varchar,source_type=int(11); 類別,4
+ods_mariadb_2b,ods_a168_play_set,ps003,varchar,"source_type=decimal(16,2); 退水",5
+ods_mariadb_2b,ods_a168_play_set,ps004,varchar,source_type=int(11); 最小押分,6
+ods_mariadb_2b,ods_a168_play_set,ps005,varchar,source_type=int(11); 最大押分,7
+ods_mariadb_2b,ods_a168_play_set,ps006,varchar,source_type=int(11); 押分倍數,8
+ods_mariadb_2b,ods_a168_play_set,ps007,varchar,source_type=int(11); 最大押分02,9
+ods_mariadb_2b,ods_a168_play_set,ps008,varchar,source_type=int(11); 最大押分03,10
+ods_mariadb_2b,ods_a168_play_set,ps009,varchar,source_type=int(11); 最大押分04,11
+ods_mariadb_2b,ods_a168_play_set,ps010,varchar,source_type=int(11); 最大押分05,12
+ods_mariadb_2b,ods_a168_play_set,ps011,varchar,source_type=int(11); 最大押分06,13
+ods_mariadb_2b,ods_a168_play_set,displayname,varchar,source_type=varchar(50); 遊戲顯示名,14
+ods_mariadb_2b,ods_a168_play_set,source_db,varchar,来源库,15
+ods_mariadb_2b,ods_a168_play_set,source_table,varchar,来源表,16
+ods_mariadb_2b,ods_a168_play_set,ods_table_name,varchar,ODS表名,17
+ods_mariadb_2b,ods_a168_play_set,sync_time,datetime,同步时间,18
+ods_mariadb_2b,ods_a168_realtimebet,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_realtimebet,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_realtimebet,rtb01,varchar,source_type=int(11); mid,3
+ods_mariadb_2b,ods_a168_realtimebet,rtb02,varchar,source_type=int(11); gid,4
+ods_mariadb_2b,ods_a168_realtimebet,rtb03,varchar,source_type=int(11); 場次,5
+ods_mariadb_2b,ods_a168_realtimebet,rtb04,varchar,source_type=int(11); 子場次,6
+ods_mariadb_2b,ods_a168_realtimebet,rtb05,varchar,source_type=int(11); 桌號,7
+ods_mariadb_2b,ods_a168_realtimebet,rtb06,varchar,source_type=varchar(20); IP,8
+ods_mariadb_2b,ods_a168_realtimebet,rtb07,varchar,source_type=datetime; 登入時間,9
+ods_mariadb_2b,ods_a168_realtimebet,rtb08,varchar,"source_type=decimal(15,2); 下注金額",10
+ods_mariadb_2b,ods_a168_realtimebet,rtb09,varchar,source_type=varchar(500); 下注內容,11
+ods_mariadb_2b,ods_a168_realtimebet,rtb10,varchar,"source_type=decimal(15,4); 目前額度",12
+ods_mariadb_2b,ods_a168_realtimebet,rtb11,varchar,source_type=text; user_agent,13
+ods_mariadb_2b,ods_a168_realtimebet,rtb12,varchar,source_type=int(11); 連續未下注次數,14
+ods_mariadb_2b,ods_a168_realtimebet,source_db,varchar,来源库,15
+ods_mariadb_2b,ods_a168_realtimebet,source_table,varchar,来源表,16
+ods_mariadb_2b,ods_a168_realtimebet,ods_table_name,varchar,ODS表名,17
+ods_mariadb_2b,ods_a168_realtimebet,sync_time,datetime,同步时间,18
+ods_mariadb_2b,ods_a168_realtimelobby,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_realtimelobby,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_realtimelobby,rtl01,varchar,source_type=int(11); mid,3
+ods_mariadb_2b,ods_a168_realtimelobby,rtl02,varchar,source_type=varchar(20); IP,4
+ods_mariadb_2b,ods_a168_realtimelobby,rtl03,varchar,source_type=datetime; 登入時間,5
+ods_mariadb_2b,ods_a168_realtimelobby,rtl04,varchar,"source_type=decimal(15,2); 目前額度",6
+ods_mariadb_2b,ods_a168_realtimelobby,rtl05,varchar,source_type=text; user_agent,7
+ods_mariadb_2b,ods_a168_realtimelobby,rtl06,varchar,source_type=varchar(36); 主機識別編號,8
+ods_mariadb_2b,ods_a168_realtimelobby,source_db,varchar,来源库,9
+ods_mariadb_2b,ods_a168_realtimelobby,source_table,varchar,来源表,10
+ods_mariadb_2b,ods_a168_realtimelobby,ods_table_name,varchar,ODS表名,11
+ods_mariadb_2b,ods_a168_realtimelobby,sync_time,datetime,同步时间,12
+ods_mariadb_2b,ods_a168_realtimelog,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_realtimelog,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_realtimelog,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_realtimelog,total,varchar,source_type=int(11); ,4
+ods_mariadb_2b,ods_a168_realtimelog,gameTotal,varchar,source_type=text; 遊戲總人數,5
+ods_mariadb_2b,ods_a168_realtimelog,currencyTotal,varchar,source_type=text; 幣別總人數,6
+ods_mariadb_2b,ods_a168_realtimelog,reset,varchar,source_type=int(11); ,7
+ods_mariadb_2b,ods_a168_realtimelog,cancel,varchar,source_type=int(11); ,8
+ods_mariadb_2b,ods_a168_realtimelog,betmember,varchar,source_type=int(11); 本日累計投注人數,9
+ods_mariadb_2b,ods_a168_realtimelog,betamount,varchar,"source_type=decimal(11,2); 本日累計投注金額",10
+ods_mariadb_2b,ods_a168_realtimelog,time,varchar,source_type=datetime; ,11
+ods_mariadb_2b,ods_a168_realtimelog,source_db,varchar,来源库,12
+ods_mariadb_2b,ods_a168_realtimelog,source_table,varchar,来源表,13
+ods_mariadb_2b,ods_a168_realtimelog,ods_table_name,varchar,ODS表名,14
+ods_mariadb_2b,ods_a168_realtimelog,sync_time,datetime,同步时间,15
+ods_mariadb_2b,ods_a168_risklist,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_risklist,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_risklist,bet01,varchar,source_type=bigint(20); 注單編號,3
+ods_mariadb_2b,ods_a168_risklist,op,varchar,source_type=int(11); 操作者(管理員),4
+ods_mariadb_2b,ods_a168_risklist,optime,varchar,source_type=datetime; 操作時間,5
+ods_mariadb_2b,ods_a168_risklist,source_db,varchar,来源库,6
+ods_mariadb_2b,ods_a168_risklist,source_table,varchar,来源表,7
+ods_mariadb_2b,ods_a168_risklist,ods_table_name,varchar,ODS表名,8
+ods_mariadb_2b,ods_a168_risklist,sync_time,datetime,同步时间,9
+ods_mariadb_2b,ods_a168_roles,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_roles,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_roles,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_roles,name,varchar,source_type=varchar(50); 角色名稱,4
+ods_mariadb_2b,ods_a168_roles,displayname,varchar,source_type=varchar(50); 顯示的名稱,5
+ods_mariadb_2b,ods_a168_roles,lastmodifytime,varchar,source_type=timestamp; ,6
+ods_mariadb_2b,ods_a168_roles,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_roles,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_roles,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_roles,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_shuffle_gid,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_shuffle_gid,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_shuffle_gid,gid,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_shuffle_gid,name,varchar,source_type=varchar(100); ,4
+ods_mariadb_2b,ods_a168_shuffle_gid,source_db,varchar,来源库,5
+ods_mariadb_2b,ods_a168_shuffle_gid,source_table,varchar,来源表,6
+ods_mariadb_2b,ods_a168_shuffle_gid,ods_table_name,varchar,ODS表名,7
+ods_mariadb_2b,ods_a168_shuffle_gid,sync_time,datetime,同步时间,8
+ods_mariadb_2b,ods_a168_shuffle_info,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_shuffle_info,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_shuffle_info,id,varchar,source_type=bigint(20); ,3
+ods_mariadb_2b,ods_a168_shuffle_info,roomTable,varchar,source_type=varchar(20); ,4
+ods_mariadb_2b,ods_a168_shuffle_info,addtime,varchar,source_type=datetime; ,5
+ods_mariadb_2b,ods_a168_shuffle_info,status,varchar,source_type=int(11); 0:洗牌中 1:可上桌 2:上桌中 3:已上桌 4:已完成,6
+ods_mariadb_2b,ods_a168_shuffle_info,gid,varchar,source_type=int(11); ,7
+ods_mariadb_2b,ods_a168_shuffle_info,tableid,varchar,source_type=int(11); ,8
+ods_mariadb_2b,ods_a168_shuffle_info,frequency,varchar,source_type=int(11); ,9
+ods_mariadb_2b,ods_a168_shuffle_info,log,varchar,source_type=text; ,10
+ods_mariadb_2b,ods_a168_shuffle_info,shoe,varchar,source_type=varchar(20); ,11
+ods_mariadb_2b,ods_a168_shuffle_info,shoeTime,varchar,source_type=datetime; ,12
+ods_mariadb_2b,ods_a168_shuffle_info,shuffler1,varchar,source_type=varchar(20); ,13
+ods_mariadb_2b,ods_a168_shuffle_info,shuffler1Time,varchar,source_type=datetime; ,14
+ods_mariadb_2b,ods_a168_shuffle_info,sup1,varchar,source_type=varchar(20); ,15
+ods_mariadb_2b,ods_a168_shuffle_info,sup1Time,varchar,source_type=datetime; ,16
+ods_mariadb_2b,ods_a168_shuffle_info,shuffler2,varchar,source_type=varchar(20); ,17
+ods_mariadb_2b,ods_a168_shuffle_info,shuffler2Time,varchar,source_type=datetime; ,18
+ods_mariadb_2b,ods_a168_shuffle_info,sup2,varchar,source_type=varchar(20); ,19
+ods_mariadb_2b,ods_a168_shuffle_info,sup2Time,varchar,source_type=datetime; ,20
+ods_mariadb_2b,ods_a168_shuffle_info,style,varchar,source_type=varchar(10); ,21
+ods_mariadb_2b,ods_a168_shuffle_info,styleTime,varchar,source_type=datetime; ,22
+ods_mariadb_2b,ods_a168_shuffle_info,supCheckIn,varchar,source_type=varchar(20); ,23
+ods_mariadb_2b,ods_a168_shuffle_info,supCheckInTime,varchar,source_type=datetime; ,24
+ods_mariadb_2b,ods_a168_shuffle_info,dealerCheckIn,varchar,source_type=varchar(20); ,25
+ods_mariadb_2b,ods_a168_shuffle_info,dealerCheckInTime,varchar,source_type=datetime; ,26
+ods_mariadb_2b,ods_a168_shuffle_info,supCheckOut,varchar,source_type=varchar(20); ,27
+ods_mariadb_2b,ods_a168_shuffle_info,supCheckOutTime,varchar,source_type=datetime; ,28
+ods_mariadb_2b,ods_a168_shuffle_info,dealerCheckOut,varchar,source_type=varchar(20); ,29
+ods_mariadb_2b,ods_a168_shuffle_info,dealerCheckOutTime,varchar,source_type=datetime; ,30
+ods_mariadb_2b,ods_a168_shuffle_info,source_db,varchar,来源库,31
+ods_mariadb_2b,ods_a168_shuffle_info,source_table,varchar,来源表,32
+ods_mariadb_2b,ods_a168_shuffle_info,ods_table_name,varchar,ODS表名,33
+ods_mariadb_2b,ods_a168_shuffle_info,sync_time,datetime,同步时间,34
+ods_mariadb_2b,ods_a168_site,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_site,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_site,sn,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_site,value,varchar,source_type=varchar(50); ,4
+ods_mariadb_2b,ods_a168_site,source_db,varchar,来源库,5
+ods_mariadb_2b,ods_a168_site,source_table,varchar,来源表,6
+ods_mariadb_2b,ods_a168_site,ods_table_name,varchar,ODS表名,7
+ods_mariadb_2b,ods_a168_site,sync_time,datetime,同步时间,8
+ods_mariadb_2b,ods_a168_sms_setting,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_sms_setting,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_sms_setting,id,varchar,source_type=int(11); 編號,3
+ods_mariadb_2b,ods_a168_sms_setting,name,varchar,source_type=varchar(20); 名稱,4
+ods_mariadb_2b,ods_a168_sms_setting,code,varchar,source_type=varchar(10); 代碼,5
+ods_mariadb_2b,ods_a168_sms_setting,username,varchar,source_type=varchar(20); 帳號,6
+ods_mariadb_2b,ods_a168_sms_setting,password,varchar,source_type=varchar(20); 密碼,7
+ods_mariadb_2b,ods_a168_sms_setting,apikey,varchar,source_type=varchar(50); api key,8
+ods_mariadb_2b,ods_a168_sms_setting,content,varchar,source_type=varchar(1000); 傳送文本內容,9
+ods_mariadb_2b,ods_a168_sms_setting,length,varchar,source_type=int(2); 驗證碼長度,10
+ods_mariadb_2b,ods_a168_sms_setting,format,varchar,source_type=int(1); 驗證碼的格式 1:英文+數字 2:英文 3:數字,11
+ods_mariadb_2b,ods_a168_sms_setting,expireTime,varchar,source_type=int(4); 驗證碼有效時間,12
+ods_mariadb_2b,ods_a168_sms_setting,limitTime,varchar,"source_type=int(4); 時間內不可重新發送的秒數, 0:不限制",13
+ods_mariadb_2b,ods_a168_sms_setting,noticeNumber,varchar,source_type=varchar(20); 接收提醒號碼,14
+ods_mariadb_2b,ods_a168_sms_setting,noticeBalance,varchar,"source_type=decimal(4,2); 提醒餘額",15
+ods_mariadb_2b,ods_a168_sms_setting,source_db,varchar,来源库,16
+ods_mariadb_2b,ods_a168_sms_setting,source_table,varchar,来源表,17
+ods_mariadb_2b,ods_a168_sms_setting,ods_table_name,varchar,ODS表名,18
+ods_mariadb_2b,ods_a168_sms_setting,sync_time,datetime,同步时间,19
+ods_mariadb_2b,ods_a168_stream,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_stream,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_stream,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_stream,secretKey,varchar,source_type=varchar(50); ,4
+ods_mariadb_2b,ods_a168_stream,validitySecond,varchar,source_type=int(11); ,5
+ods_mariadb_2b,ods_a168_stream,source_db,varchar,来源库,6
+ods_mariadb_2b,ods_a168_stream,source_table,varchar,来源表,7
+ods_mariadb_2b,ods_a168_stream,ods_table_name,varchar,ODS表名,8
+ods_mariadb_2b,ods_a168_stream,sync_time,datetime,同步时间,9
+ods_mariadb_2b,ods_a168_subagent_permissionrole,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_subagent_permissionrole,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_subagent_permissionrole,id,varchar,source_type=int(11); id,3
+ods_mariadb_2b,ods_a168_subagent_permissionrole,permissionid,varchar,source_type=int(11); t_permission id,4
+ods_mariadb_2b,ods_a168_subagent_permissionrole,status,varchar,source_type=int(11); 0:禁用;1啟用,5
+ods_mariadb_2b,ods_a168_subagent_permissionrole,lv1,varchar,source_type=bit(1); ,6
+ods_mariadb_2b,ods_a168_subagent_permissionrole,lv2,varchar,source_type=bit(1); ,7
+ods_mariadb_2b,ods_a168_subagent_permissionrole,lv3,varchar,source_type=bit(1); ,8
+ods_mariadb_2b,ods_a168_subagent_permissionrole,lv4,varchar,source_type=bit(1); ,9
+ods_mariadb_2b,ods_a168_subagent_permissionrole,lv5,varchar,source_type=bit(1); ,10
+ods_mariadb_2b,ods_a168_subagent_permissionrole,lastmodifytime,varchar,source_type=timestamp; 最後修改時間,11
+ods_mariadb_2b,ods_a168_subagent_permissionrole,source_db,varchar,来源库,12
+ods_mariadb_2b,ods_a168_subagent_permissionrole,source_table,varchar,来源表,13
+ods_mariadb_2b,ods_a168_subagent_permissionrole,ods_table_name,varchar,ODS表名,14
+ods_mariadb_2b,ods_a168_subagent_permissionrole,sync_time,datetime,同步时间,15
+ods_mariadb_2b,ods_a168_symbol,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_symbol,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_symbol,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_symbol,code,varchar,source_type=varchar(15); ,4
+ods_mariadb_2b,ods_a168_symbol,name,varchar,source_type=varchar(20); ,5
+ods_mariadb_2b,ods_a168_symbol,path,varchar,source_type=varchar(50); ,6
+ods_mariadb_2b,ods_a168_symbol,filename,varchar,source_type=varchar(50); ,7
+ods_mariadb_2b,ods_a168_symbol,source_db,varchar,来源库,8
+ods_mariadb_2b,ods_a168_symbol,source_table,varchar,来源表,9
+ods_mariadb_2b,ods_a168_symbol,ods_table_name,varchar,ODS表名,10
+ods_mariadb_2b,ods_a168_symbol,sync_time,datetime,同步时间,11
+ods_mariadb_2b,ods_a168_tablelimit,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_tablelimit,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_tablelimit,sn,varchar,source_type=int(5); ,3
+ods_mariadb_2b,ods_a168_tablelimit,gid,varchar,source_type=int(3); ,4
+ods_mariadb_2b,ods_a168_tablelimit,tableid,varchar,source_type=int(3); ,5
+ods_mariadb_2b,ods_a168_tablelimit,netgroupname,varchar,source_type=varchar(50); ,6
+ods_mariadb_2b,ods_a168_tablelimit,telgroupname,varchar,source_type=varchar(50); ,7
+ods_mariadb_2b,ods_a168_tablelimit,tablename,varchar,source_type=varchar(50); ,8
+ods_mariadb_2b,ods_a168_tablelimit,setvalue,varchar,source_type=int(25); ,9
+ods_mariadb_2b,ods_a168_tablelimit,alertvalue,varchar,source_type=int(25); 告警數值,10
+ods_mariadb_2b,ods_a168_tablelimit,minbet,varchar,source_type=int(11); 最小下注(電投用),11
+ods_mariadb_2b,ods_a168_tablelimit,maxbet,varchar,source_type=int(11); 最大下注(電投用),12
+ods_mariadb_2b,ods_a168_tablelimit,tieminbet,varchar,source_type=int(11); ,13
+ods_mariadb_2b,ods_a168_tablelimit,tiemaxbet,varchar,source_type=int(11); ,14
+ods_mariadb_2b,ods_a168_tablelimit,pairminbet,varchar,source_type=int(11); ,15
+ods_mariadb_2b,ods_a168_tablelimit,pairmaxbet,varchar,source_type=int(11); ,16
+ods_mariadb_2b,ods_a168_tablelimit,modifyname,varchar,source_type=varchar(25); ,17
+ods_mariadb_2b,ods_a168_tablelimit,modifydate,varchar,source_type=datetime; ,18
+ods_mariadb_2b,ods_a168_tablelimit,tabletype,varchar,source_type=int(3); 桌子類型,19
+ods_mariadb_2b,ods_a168_tablelimit,bettime,varchar,source_type=int(3); 下注時間,20
+ods_mariadb_2b,ods_a168_tablelimit,stinttime,varchar,source_type=int(3); 限制時間,21
+ods_mariadb_2b,ods_a168_tablelimit,status,varchar,"source_type=int(1); 状态.0暂停,1正常",22
+ods_mariadb_2b,ods_a168_tablelimit,status_lock,varchar,source_type=tinyint(1); 開關鎖,23
+ods_mariadb_2b,ods_a168_tablelimit,nettype,varchar,source_type=int(3); 0關1不可下2可下,24
+ods_mariadb_2b,ods_a168_tablelimit,teltype,varchar,source_type=int(3); 0關1不可下2可下,25
+ods_mariadb_2b,ods_a168_tablelimit,sort,varchar,source_type=int(3); ,26
+ods_mariadb_2b,ods_a168_tablelimit,sort2,varchar,source_type=int(3); ,27
+ods_mariadb_2b,ods_a168_tablelimit,source_db,varchar,来源库,28
+ods_mariadb_2b,ods_a168_tablelimit,source_table,varchar,来源表,29
+ods_mariadb_2b,ods_a168_tablelimit,ods_table_name,varchar,ODS表名,30
+ods_mariadb_2b,ods_a168_tablelimit,sync_time,datetime,同步时间,31
+ods_mariadb_2b,ods_a168_tablelimit_third,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_tablelimit_third,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_tablelimit_third,id,varchar,source_type=int(5); ,3
+ods_mariadb_2b,ods_a168_tablelimit_third,gid,varchar,source_type=int(3); 遊戲編號,4
+ods_mariadb_2b,ods_a168_tablelimit_third,tableid,varchar,source_type=int(3); wm桌號,5
+ods_mariadb_2b,ods_a168_tablelimit_third,name_third,varchar,source_type=varchar(32); 第三方桌台號/名稱,6
+ods_mariadb_2b,ods_a168_tablelimit_third,vendor,varchar,source_type=varchar(16); 廠商,7
+ods_mariadb_2b,ods_a168_tablelimit_third,tableid_third,varchar,source_type=varchar(32); 第三方桌號,8
+ods_mariadb_2b,ods_a168_tablelimit_third,status,varchar,source_type=int(1); 第三方狀態,9
+ods_mariadb_2b,ods_a168_tablelimit_third,is_open,varchar,source_type=tinyint(1); 是否已開桌,10
+ods_mariadb_2b,ods_a168_tablelimit_third,stream_url,varchar,source_type=text; 串流網址,11
+ods_mariadb_2b,ods_a168_tablelimit_third,dealer_name,varchar,source_type=varchar(32); 荷官名字,12
+ods_mariadb_2b,ods_a168_tablelimit_third,dealer_image,varchar,source_type=text; 荷官圖片,13
+ods_mariadb_2b,ods_a168_tablelimit_third,create_at,varchar,source_type=datetime; 建立時間,14
+ods_mariadb_2b,ods_a168_tablelimit_third,update_at,varchar,source_type=datetime; 更新時間,15
+ods_mariadb_2b,ods_a168_tablelimit_third,source_db,varchar,来源库,16
+ods_mariadb_2b,ods_a168_tablelimit_third,source_table,varchar,来源表,17
+ods_mariadb_2b,ods_a168_tablelimit_third,ods_table_name,varchar,ODS表名,18
+ods_mariadb_2b,ods_a168_tablelimit_third,sync_time,datetime,同步时间,19
+ods_mariadb_2b,ods_a168_temp_id_list,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_temp_id_list,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_temp_id_list,id,varchar,source_type=varchar(255); ,3
+ods_mariadb_2b,ods_a168_temp_id_list,source_db,varchar,来源库,4
+ods_mariadb_2b,ods_a168_temp_id_list,source_table,varchar,来源表,5
+ods_mariadb_2b,ods_a168_temp_id_list,ods_table_name,varchar,ODS表名,6
+ods_mariadb_2b,ods_a168_temp_id_list,sync_time,datetime,同步时间,7
+ods_mariadb_2b,ods_a168_tip,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_tip,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_tip,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_tip,name,varchar,source_type=varchar(20); ,4
+ods_mariadb_2b,ods_a168_tip,price,varchar,source_type=int(11); ,5
+ods_mariadb_2b,ods_a168_tip,addtime,varchar,source_type=datetime; ,6
+ods_mariadb_2b,ods_a168_tip,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_tip,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_tip,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_tip,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_urllist,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_urllist,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_urllist,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_urllist,code,varchar,source_type=varchar(50); ,4
+ods_mariadb_2b,ods_a168_urllist,co,varchar,source_type=varchar(100); ,5
+ods_mariadb_2b,ods_a168_urllist,www,varchar,source_type=varchar(50); ,6
+ods_mariadb_2b,ods_a168_urllist,api,varchar,source_type=text; ,7
+ods_mariadb_2b,ods_a168_urllist,api3rd,varchar,source_type=text; ,8
+ods_mariadb_2b,ods_a168_urllist,rtmp,varchar,source_type=text; ,9
+ods_mariadb_2b,ods_a168_urllist,flv,varchar,source_type=text; ,10
+ods_mariadb_2b,ods_a168_urllist,hls,varchar,source_type=text; ,11
+ods_mariadb_2b,ods_a168_urllist,ws,varchar,source_type=text; ,12
+ods_mariadb_2b,ods_a168_urllist,gs,varchar,source_type=varchar(50); ,13
+ods_mariadb_2b,ods_a168_urllist,tb,varchar,source_type=text; 桌子設定,14
+ods_mariadb_2b,ods_a168_urllist,lang,varchar,source_type=varchar(5); ,15
+ods_mariadb_2b,ods_a168_urllist,register,varchar,source_type=int(1); ,16
+ods_mariadb_2b,ods_a168_urllist,ui,varchar,source_type=varchar(1); ,17
+ods_mariadb_2b,ods_a168_urllist,apkbutton,varchar,source_type=int(11); ,18
+ods_mariadb_2b,ods_a168_urllist,apkurl,varchar,source_type=text; ,19
+ods_mariadb_2b,ods_a168_urllist,source_db,varchar,来源库,20
+ods_mariadb_2b,ods_a168_urllist,source_table,varchar,来源表,21
+ods_mariadb_2b,ods_a168_urllist,ods_table_name,varchar,ODS表名,22
+ods_mariadb_2b,ods_a168_urllist,sync_time,datetime,同步时间,23
+ods_mariadb_2b,ods_a168_wallet_dtl,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_wallet_dtl,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_wallet_dtl,id,varchar,source_type=bigint(20); ,3
+ods_mariadb_2b,ods_a168_wallet_dtl,user,varchar,source_type=varchar(30); ,4
+ods_mariadb_2b,ods_a168_wallet_dtl,requestDate,varchar,source_type=datetime; 我方請求時間,5
+ods_mariadb_2b,ods_a168_wallet_dtl,responseDate,varchar,source_type=timestamp; 對方回應時間,6
+ods_mariadb_2b,ods_a168_wallet_dtl,money,varchar,"source_type=decimal(15,4); 處理金錢",7
+ods_mariadb_2b,ods_a168_wallet_dtl,cash,varchar,"source_type=decimal(15,4); 當前金額",8
+ods_mariadb_2b,ods_a168_wallet_dtl,type,varchar,source_type=tinyint(1); 0:取餘額 1:加點 2:扣點,9
+ods_mariadb_2b,ods_a168_wallet_dtl,game_detail,varchar,source_type=varchar(200); 遊戲伺服器註解,10
+ods_mariadb_2b,ods_a168_wallet_dtl,bet_detail,varchar,source_type=text; ,11
+ods_mariadb_2b,ods_a168_wallet_dtl,detail,varchar,source_type=text; ,12
+ods_mariadb_2b,ods_a168_wallet_dtl,status,varchar,source_type=tinyint(1); 0:未處理 1:成功 2:失敗  3.回滾,13
+ods_mariadb_2b,ods_a168_wallet_dtl,feedback_id,varchar,source_type=int(11); ,14
+ods_mariadb_2b,ods_a168_wallet_dtl,gtype,varchar,source_type=int(3); ,15
+ods_mariadb_2b,ods_a168_wallet_dtl,feedback_status,varchar,"source_type=tinyint(1); 0,未處理 1,成功 2,失敗",16
+ods_mariadb_2b,ods_a168_wallet_dtl,source_db,varchar,来源库,17
+ods_mariadb_2b,ods_a168_wallet_dtl,source_table,varchar,来源表,18
+ods_mariadb_2b,ods_a168_wallet_dtl,ods_table_name,varchar,ODS表名,19
+ods_mariadb_2b,ods_a168_wallet_dtl,sync_time,datetime,同步时间,20
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,dealid,varchar,source_type=bigint(20); 交易流水號,4
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,money,varchar,"source_type=decimal(12,4); ",5
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,type,varchar,source_type=int(1); 1:加點2:扣點,6
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,retry,varchar,source_type=int(1); 重試次數,7
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,errorCode,varchar,source_type=int(11); ,8
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,errorMessage,varchar,source_type=varchar(255); 錯誤訊息,9
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,wirteLogDate,varchar,source_type=datetime; ,10
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,success,varchar,"source_type=enum(''Y'',''N''); ",11
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,source_db,varchar,来源库,12
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,source_table,varchar,来源表,13
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,ods_table_name,varchar,ODS表名,14
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,sync_time,datetime,同步时间,15
+ods_mariadb_2b,ods_a168_wallet_reporter,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_wallet_reporter,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_wallet_reporter,id,varchar,source_type=int(11); 序號	,3
+ods_mariadb_2b,ods_a168_wallet_reporter,bet02,varchar,source_type=int(11); 遊戲類別,4
+ods_mariadb_2b,ods_a168_wallet_reporter,bet03,varchar,source_type=int(11); 期數,5
+ods_mariadb_2b,ods_a168_wallet_reporter,bet04,varchar,source_type=int(11); 局號,6
+ods_mariadb_2b,ods_a168_wallet_reporter,bet22,varchar,source_type=int(11); 代理,7
+ods_mariadb_2b,ods_a168_wallet_reporter,category,varchar,source_type=int(11); 類型,8
+ods_mariadb_2b,ods_a168_wallet_reporter,time,varchar,source_type=datetime; 紀錄時間,9
+ods_mariadb_2b,ods_a168_wallet_reporter,status,varchar,"source_type=enum(''Y'',''N'',''P'',''X''); 狀態 N:未處理,Y:已處理,P:處理中, X: 處理失敗",10
+ods_mariadb_2b,ods_a168_wallet_reporter,reason,varchar,source_type=int(3); 原因,11
+ods_mariadb_2b,ods_a168_wallet_reporter,error_times,varchar,source_type=int(3); 錯誤次數,12
+ods_mariadb_2b,ods_a168_wallet_reporter,update_at,varchar,source_type=datetime; 更新時間,13
+ods_mariadb_2b,ods_a168_wallet_reporter,source_db,varchar,来源库,14
+ods_mariadb_2b,ods_a168_wallet_reporter,source_table,varchar,来源表,15
+ods_mariadb_2b,ods_a168_wallet_reporter,ods_table_name,varchar,ODS表名,16
+ods_mariadb_2b,ods_a168_wallet_reporter,sync_time,datetime,同步时间,17
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,id,varchar,source_type=int(11); 序號	,3
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,bet02,varchar,source_type=int(11); 遊戲類別,4
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,bet03,varchar,source_type=int(11); 期數,5
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,bet04,varchar,source_type=int(11); 局號,6
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,bet22,varchar,source_type=int(11); 代理,7
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,category,varchar,source_type=int(11); 類型,8
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,time,varchar,source_type=datetime; 紀錄時間,9
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,status,varchar,"source_type=enum(''Y'',''N'',''P'',''X''); 狀態 N:未處理,Y:已處理,P:處理中, X: 處理失敗",10
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,reason,varchar,source_type=int(3); 原因,11
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,error_times,varchar,source_type=int(3); 錯誤次數,12
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,update_at,varchar,source_type=datetime; 更新時間,13
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,source_db,varchar,来源库,14
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,source_table,varchar,来源表,15
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,ods_table_name,varchar,ODS表名,16
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,sync_time,datetime,同步时间,17
+ods_mariadb_2b,ods_a168_wechat_url,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_wechat_url,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_wechat_url,id,varchar,source_type=int(11); ,3
+ods_mariadb_2b,ods_a168_wechat_url,url,varchar,source_type=varchar(255); ,4
+ods_mariadb_2b,ods_a168_wechat_url,status,varchar,"source_type=tinyint(1); 0:使用,1:禁用",5
+ods_mariadb_2b,ods_a168_wechat_url,usecount,varchar,source_type=int(11); 使用次數,6
+ods_mariadb_2b,ods_a168_wechat_url,source_db,varchar,来源库,7
+ods_mariadb_2b,ods_a168_wechat_url,source_table,varchar,来源表,8
+ods_mariadb_2b,ods_a168_wechat_url,ods_table_name,varchar,ODS表名,9
+ods_mariadb_2b,ods_a168_wechat_url,sync_time,datetime,同步时间,10
+ods_mariadb_2b,ods_a168_white_list,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,1
+ods_mariadb_2b,ods_a168_white_list,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,2
+ods_mariadb_2b,ods_a168_white_list,id,varchar,source_type=int(5); ,3
+ods_mariadb_2b,ods_a168_white_list,aid,varchar,source_type=varchar(30); ,4
+ods_mariadb_2b,ods_a168_white_list,type,varchar,"source_type=enum(''A'',''S'',''M'',''C''); A:agent,S:agentsub",5
+ods_mariadb_2b,ods_a168_white_list,white_list,varchar,source_type=mediumtext; ,6
+ods_mariadb_2b,ods_a168_white_list,operator,varchar,source_type=varchar(30); ,7
+ods_mariadb_2b,ods_a168_white_list,add_time,varchar,source_type=datetime; ,8
+ods_mariadb_2b,ods_a168_white_list,update_time,varchar,source_type=datetime; ,9
+ods_mariadb_2b,ods_a168_white_list,add_unix_time,varchar,source_type=int(10); ,10
+ods_mariadb_2b,ods_a168_white_list,update_unix_time,varchar,source_type=int(10); ,11
+ods_mariadb_2b,ods_a168_white_list,source_db,varchar,来源库,12
+ods_mariadb_2b,ods_a168_white_list,source_table,varchar,来源表,13
+ods_mariadb_2b,ods_a168_white_list,ods_table_name,varchar,ODS表名,14
+ods_mariadb_2b,ods_a168_white_list,sync_time,datetime,同步时间,15
+ods_mariadb_2b,sync_checkpoint,task_name,varchar,同步任务名,1
+ods_mariadb_2b,sync_checkpoint,source_db,varchar,来源库,2
+ods_mariadb_2b,sync_checkpoint,source_table,varchar,来源表,3
+ods_mariadb_2b,sync_checkpoint,target_table,varchar,目标表,4
+ods_mariadb_2b,sync_checkpoint,sync_mode,varchar,同步模式,5
+ods_mariadb_2b,sync_checkpoint,last_sync_time,datetime,时间增量断点,6
+ods_mariadb_2b,sync_checkpoint,last_sync_id,varchar,ID/复合键断点,7
+ods_mariadb_2b,sync_checkpoint,updated_at,datetime,更新时间,8
+ods_mariadb_2b,sync_checkpoint,last_key1,varchar,断点字段1,9
+ods_mariadb_2b,sync_checkpoint,last_key2,varchar,断点字段2,10
+ods_mariadb_2b,sync_checkpoint,last_key3,varchar,断点字段3,11
+ods_mariadb_2b,sync_checkpoint,last_key4,varchar,断点字段4,12
+ods_mariadb_2b,sync_checkpoint,last_key5,varchar,断点字段5,13

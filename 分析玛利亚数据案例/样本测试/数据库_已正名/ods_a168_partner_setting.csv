@@ -1,0 +1,438 @@
+源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,"",遊戲代碼,幣別,代理 id,資料類型,資料,備註,_1,_2,来源库,来源表,ODS表名,同步时间
+2f55707d4193dc27118a0f19a1985716,2022-03-08,493,5011,34,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:25Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+877a9ba7a98f75b90a9d49f53f15a858,2022-03-08,468,5011,28,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:10Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b7b16ecf8ca53723593894116071700c,2022-03-08,398,5011,14,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:34Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+beed13602b9b0e6ecb5b568ff5058f07,2022-03-08,383,5011,4,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:28Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d07e70efcfab08731a97e7b91be644de,2022-03-08,458,5011,26,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:04Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e1e32e235eee1f970470a3a6658dfdd5,2022-03-08,483,5011,32,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:18Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+44c4c17332cace2124a1a836d9fc4b6f,2023-11-10,606,5031,27,0,agent_name,wmc_php,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+605ff764c617d3cd28dbbdd72be8f9a2,2023-11-10,586,5031,0,0,platform,wmc,platform (共用),2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+acc3e0404646c57502b480dc052c4fe1,2023-11-10,593,5031,14,0,agent_name,wmc_hkd,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b2eeb7362ef83deff5c7813a67e14f0a,2023-11-10,596,5031,17,0,agent_name,wmc_idr,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+daca41214b39c5dc66674d09081940f0,2023-11-10,588,5031,0,0,lang,cn,預設語系 (共用),2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+dc82d632c9fcecb0778afbc7924494a6,2023-11-10,607,5031,28,0,agent_name,wmc_inr,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1651cf0d2f737d7adeab84d339dbabd3,2022-03-08,438,5011,22,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:55Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+851ddf5058cf22df63d3344ad89919cf,2023-11-10,614,5031,36,0,agent_name,wmc_bnd,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+08c5433a60135c32e34f46a71175850c,2023-11-10,597,5031,18,0,agent_name,wmc_krw,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+58d4d1e7b1e97b258c9ed0b37e02d087,2023-11-10,615,5031,39,0,agent_name,wmc_clp,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b2f627fff19fda463cb386442eac2b3d,2023-11-10,601,5031,22,0,agent_name,wmc_aud,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+cdc0d6e63aa8e41c89689f54970bb35f,2023-11-10,619,5031,0,0,username_format,wm_{username},帳號格式 (共用),2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+eb6fdc36b281b7d5eabf33396c2683a2,2023-11-10,618,5031,43,0,agent_name,wmc_brl,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f76a89f0cb91bc419542ce9fa43902dc,2023-11-10,612,5031,34,0,agent_name,wmc_lak,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+072b030ba126b2f4b2374f342be9ed44,2021-07-08,60,5008,21,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+0e01938fc48a2cfb5f2217fbfb00722d,2021-07-08,285,5010,15,0,operator_code,wmslotjpy,營運商代碼(JPY),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+0f28b5d49b3020afeecd95b4009adf4c,2021-07-08,141,5008,39,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+0f49c89d1e7298bb9930789c8ed59d48,2021-07-08,283,5010,15,0,key,d4db4621474ca745,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+10a7cdd970fe135cf4f7bb55c0e3b59f,2021-07-08,512,5011,39,0,password,wmslotclp,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+138bb0696595b338afbab333c555292a,2021-07-08,353,5010,33,0,operator_code,wmslotzar,營運商代碼(ZAR),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+13fe9d84310e77f13a6d184dbf1232f3,2021-07-08,224,5009,29,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+182be0c5cdcd5072bb1864cdee4d3d6e,2021-07-08,33,5008,16,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1a5b1e4daae265b790965a275b53ae50,2021-07-08,446,5011,23,0,username,wmslotvnd,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1d7f7abc18fcb43975065399b0d1e48e,2021-07-08,154,5009,8,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2421fcb1263b9530df88f7f002e78ea5,2021-07-08,436,5011,21,0,username,wmslotnzd,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+250cf8b51c773f3f8dc8b4be867a9a02,2021-07-08,456,5011,25,0,username,wmslotmmk,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+25b2822c2f5a3230abfadd476e8b04c9,2021-07-08,425,5011,19,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+26337353b7962f533d78c762373b3318,2021-07-08,470,5011,28,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+26e359e83860db1d11b6acca57d8ea88,2021-07-08,298,5010,19,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2d6cc4b2d139a53512fb8cbb3086ae2e,2021-07-08,507,5011,38,0,password,wmslotntddn,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+33e75ff09dd601bbe69f351039152189,2021-07-08,28,5008,15,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+44f683a84163b3523afe57c2e008bc8c,2021-07-08,62,5008,22,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+45c48cce2e2d7fbdea1afc51c7c6ad26,2021-07-08,9,5008,4,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+4f4adcbf8c6f66dcfc8a3282ac2bf10a,2021-07-08,404,5011,15,0,SECURE_CODE,1ccee5dd-1cf2-4ca5-a582-e5c710ccf564,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+54229abfcfa5649e7003b83dd4755294,2021-07-08,91,5008,28,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+559cb990c9dffd8675f6bc2186971dc2,2021-07-08,491,5011,33,0,username,wmslotzar,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+642e92efb79421734881b53e1e1b18b6,2021-07-08,48,5008,19,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6855456e2fe46a9d49d3d3af4f57443d,2021-07-08,336,5010,28,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6883966fd8f918a4aa29be29d2c386fb,2021-07-08,294,5010,18,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6faa8040da20ef399b63a72d0e4ab575,2021-07-08,329,5010,26,0,operator_code,wmslotmmkk,營運商代碼(MMKK),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+758874998f5bd0c393da094e1967a72b,2021-07-08,314,5010,23,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7f39f8317fbdb1988ef4c628eba02591,2021-07-08,61,5008,22,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7f6ffaa6bb0b408017b62254211691b5,2021-07-08,112,5008,33,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8e98d81f8217304975ccb23337bb5761,2021-07-08,307,5010,21,0,key,5e66472ff3179f7a,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8fe0093bb30d6f8c31474bd0764e6ac0,2021-07-08,416,5011,17,0,username,wmslotidr,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+918317b57931b6b7a7d29490fe5ec9f9,2021-07-08,287,5010,16,0,key,11f81fe99d05b369,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+92c8c96e4c37100777c7190b76d28233,2021-07-08,280,5010,14,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+92cc227532d17e56e07902b254dfad10,2021-07-08,92,5008,28,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9be40cee5b0eee1462c82c6964087ff9,2021-07-08,365,5010,36,0,operator_code,wmslotbnd,營運商代碼(BND),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9f61408e3afb633e50cdf1b20de6f466,2021-07-08,56,5008,21,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9fd81843ad7f202f26c1a174c7357585,2021-07-08,297,5010,18,0,operator_code,wmslotkrw,營運商代碼(KRW),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b337e84de8752b27eda3a12363109e80,2021-07-08,504,5011,38,0,SECURE_CODE,3d32b214-e4af-4ab5-81f9-b9a608767514,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b3967a0e938dc2a6340e258630febd5a,2021-07-08,344,5010,31,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b3e3e393c77e35a4a3f3cbd1e429b5dc,2021-07-08,153,5009,4,0,lang,en,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b534ba68236ba543ae44b22bd110a1d6,2021-07-08,496,5011,34,0,username,wmslotlak,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b5b41fac0361d157d9673ecb926af5ae,2021-07-08,502,5011,36,0,password,wmslotbnd,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c0e190d8267e36708f955d7ab048990d,2021-07-08,219,5009,28,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c16a5320fa475530d9583c34fd356ef5,2021-07-08,31,5008,16,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c51ce410c124a10e0db5e4b97fc2af39,2021-07-08,13,5008,8,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d395771085aab05244a4fb8fd91bf4ee,2021-07-08,279,5010,14,0,key,eac7b74022fb3261,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d3d9446802a44259755d38e6d163e820,2021-07-08,10,5008,4,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d645920e395fedad7bbbed0eca3fe2e0,2021-07-08,40,5008,17,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d947bf06a885db0d477d707121934ff8,2021-07-08,274,5010,13,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e0c641195b27425bb056ac56f8953d24,2021-07-08,421,5011,18,0,username,wmslotkrw,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e96ed478dab8595a7dbda4cbcbee168f,2021-07-08,218,5009,28,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ea5d2f1c4608232e07d3aa3d998e5135,2021-07-08,64,5008,22,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f033ab37c30201f73f142449d037028d,2021-07-08,80,5008,25,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f2fc990265c712c49d51a18a32b39f0c,2021-07-08,324,5010,25,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f3f27a324736617f20abbf2ffd806f6d,2021-07-08,516,5009,23,0,lang,en,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f5f8590cd58a54e94377e6ae2eded4d9,2021-07-08,450,5011,24,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f90f2aca5c640289d0a29417bcb63a37,2021-07-08,290,5010,17,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f9b902fc3289af4dd08de5d1de54f68f,2021-07-08,335,5010,28,0,key,f4604ed782b4147c,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c361bc7b2c033a83d663b8d9fb4be56e,2023-11-13,605,50311,26,0,agent_name,wmc_mmk3,agent,2023-11-10T00:00:00Z,2023-11-13T11:36:41Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+11b9842e0a271ff252c1903e7132cd68,2021-07-08,303,5010,20,0,key,463f5e81586ce3a0,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+13f9896df61279c928f19721878fac41,2021-07-08,346,5010,32,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1543843a4723ed2ab08e18053ae6dc5b,2021-07-08,395,5011,13,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+18997733ec258a9fcaf239cc55d53363,2021-07-08,427,5011,19,0,password,wmslotidrk,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1c383cd30b7c298ab50293adfecb7b18,2021-07-08,35,5008,16,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2838023a778dfaecdc212708f721b788,2021-07-08,51,5008,20,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+28f0b864598a1291557bed248a998d4e,2021-07-08,394,5011,13,0,SECURE_CODE,6742c8ef-f3f8-4f20-a3b5-c32cec293fdf,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2a79ea27c279e471f4d180b08d62b00a,2021-07-08,155,5009,8,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2b24d495052a8ce66358eb576b8912c8,2021-07-08,145,5008,39,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2b44928ae11fb9384c4cf38708677c48,2021-07-08,115,5008,33,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3295c76acbf4caaed33c36b1b5fc2cb1,2021-07-08,66,5008,23,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+32bb90e8976aab5298d5da10fe66f21d,2021-07-08,72,5008,24,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+352fe25daf686bdb4edca223c921acea,2021-07-08,399,5011,14,0,SECURE_CODE,f46d2372-a25a-4e42-98f2-61eafe2cc431,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+37a749d808e46495a8da1e5352d03cae,2021-07-08,152,5009,4,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+37bc2f75bf1bcfe8450a1a41c200364c,2021-07-08,304,5010,20,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6364d3f0f495b6ab9dcf8d3b5c6e0b01,2021-07-08,32,5008,16,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+72b32a1f754ba1c09b3695e0cb6cde7f,2021-07-08,57,5008,21,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+75fc093c0ee742f6dddaa13fff98f104,2021-07-08,429,5011,20,0,SECURE_CODE,785c6bbf-bfd5-45ee-8842-9c7a9f13b50b,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7e7757b1e12abcb736ab9a754ffb617a,2021-07-08,166,5009,15,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7fe1f8abaad094e0b5cb1b01d712f708,2021-07-08,459,5011,26,0,SECURE_CODE,9dcb2988-01bb-42af-be19-3337593045b1,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+821fa74b50ba3f7cba1e6c53e8fa6845,2021-07-08,455,5011,25,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+839ab46820b524afda05122893c2fe8e,2021-07-08,289,5010,16,0,operator_code,wmslotmyr,營運商代碼(MYR),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8d5e957f297893487bd98fa830fa6413,2021-07-08,147,5009,1,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8e6b42f1644ecb1327dc03ab345e618b,2021-07-08,471,5011,28,0,username,wmslotinr,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+94f6d7e04a4d452035300f18b984988c,2021-07-08,300,5010,19,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+98b297950041a42470269d56260243a1,2021-07-08,460,5011,26,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+98dce83da57b0395e163467c9dae521b,2021-07-08,93,5008,28,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9a1158154dfa42caddbd0694a4e9bdc8,2021-07-08,52,5008,20,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9a96876e2f8f3dc4f3cf45f02c61c0c1,2021-07-08,447,5011,23,0,password,wmslotvnd,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a3f390d88e4c41f2747bfa2f1b5f87db,2021-07-08,68,5008,23,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a516a87cfcaef229b342c437fe2b95f7,2021-07-08,487,5011,32,0,password,wmslotsek,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a666587afda6e89aec274a3657558a27,2021-07-08,326,5010,26,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a684eceee76fc522773286a895bc8436,2021-07-08,54,5008,20,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a8abb4bb284b5b27aa7cb790dc20f80b,2021-07-08,440,5011,22,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ad13a2a07ca4b7642959dc0c4c740ab6,2021-07-08,315,5010,23,0,key,c6cef3896f6df545,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d82c8d1619ad8176d665453cfb2e55f0,2021-07-08,53,5008,20,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+dc912a253d1e9ba40e2c597ed2376640,2021-07-08,385,5011,4,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e2230b853516e7b05d79744fbd4c9c13,2021-07-08,509,5011,39,0,SECURE_CODE,50f8e623-ab7e-4338-a2ec-4dab26d3171f,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+eed5af6add95a9a6f1252739b1ad8c24,2021-07-08,439,5011,22,0,SECURE_CODE,366a176d-3c66-4f9d-8c00-36fb98bc401f,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f74909ace68e51891440e4da0b65a70c,2021-07-08,430,5011,20,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+045117b0e0a11a242b9765e79cbf113f,2021-07-08,180,5009,18,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+06138bc5af6023646ede0e1f7c1eac75,2021-07-08,269,5010,4,0,operator_code,wmslotusd,營運商代碼(USD),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+06eb61b839a0cefee4967c67ccb099dc,2021-07-08,310,5010,22,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+087408522c31eeb1f982bc0eaf81d35f,2021-07-08,510,5011,39,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1700002963a49da13542e0726b7bb758,2021-07-08,292,5010,17,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+25ddc0f8c9d3e22e03d3076f98d83cb2,2021-07-08,474,5011,29,0,SECURE_CODE,1faed7a3-0eec-4e4f-8329-03d3ada928c0,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+320722549d1751cf3f247855f937b982,2021-07-08,320,5010,24,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+34173cb38f07f89ddbebc2ac9128303f,2021-07-08,30,5008,15,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+34ed066df378efacc9b924ec161e7639,2021-07-08,301,5010,19,0,operator_code,wmslotidrk,營運商代碼(IDRK),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+38af86134b65d0f10fe33d30dd76442e,2021-07-08,176,5009,17,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+39461a19e9eddfb385ea76b26521ea48,2021-07-08,386,5011,4,0,username,wmslotusd,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3c7781a36bcd6cf08c11a970fbe0e2a6,2021-07-08,424,5011,19,0,SECURE_CODE,4e8817b5-6b51-4f10-94d7-d81b6d98daca,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3fe94a002317b5f9259f82690aeea4cd,2021-07-08,316,5010,23,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+42998cf32d552343bc8e460416382dca,2021-07-08,457,5011,25,0,password,wmslotmmk,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+51d92be1c60d1db1d2e5e7a07da55b26,2021-07-08,462,5011,26,0,password,wmslotmmkk,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+550a141f12de6341fba65b0ad0433500,2021-07-08,444,5011,23,0,SECURE_CODE,f153342b-01f9-40a9-8e60-80ee8bfb1dd4,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+5878a7ab84fb43402106c575658472fa,2021-07-08,167,5009,15,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+5a4b25aaed25c2ee1b74de72dc03c14e,2021-07-08,391,5011,8,0,username,wmslotntd,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+66f041e16a60928b05a7e228a89c3799,2021-07-08,58,5008,21,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+68ce199ec2c5517597ce0a4d89620f55,2021-07-08,465,5011,27,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6c524f9d5d7027454a783c841250ba71,2021-07-08,356,5010,34,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6ea9ab1baa0efb9e19094440c317e21b,2021-07-08,29,5008,15,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+816b112c6105b3ebd537828a39af4818,2021-07-08,401,5011,14,0,username,wmslothkd,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+854d9fca60b4bd07f9bb215d59ef5561,2021-07-08,489,5011,33,0,SECURE_CODE,1f42498d-91b8-40bb-a9a3-a8f37d412c2f,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8c19f571e251e61cb8dd3612f26d5ecf,2021-07-08,263,5010,1,0,key,0c5beaac34c5319a,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8f53295a73878494e9bc8dd6c3c7104f,2021-07-08,179,5009,18,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+941e1aaaba585b952b62c14a3a175a61,2021-07-08,451,5011,24,0,username,wmslotvndk,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+96da2f590cd7246bbde0051047b0d6f7,2021-07-08,177,5009,17,0,lang,en,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9dfcd5e558dfa04aaf37f137a1d9d3e5,2021-07-08,311,5010,22,0,key,acc188befefd2a4c,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a01a0380ca3c61428c26a231f0e49a09,2021-07-08,390,5011,8,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a3c65c2974270fd093ee8a9bf8ae7d0b,2021-07-08,108,5008,32,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ac627ab1ccbdb62ec96e702f07f6425b,2021-07-08,99,5008,29,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b53b3a3d6ab90ce0268229151c9bde11,2021-07-08,55,5008,20,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c058f544c737782deacefa532d9add4c,2021-07-08,359,5010,35,0,key,f210f762a490c196,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c0c7c76d30bd3dcaefc96f40275bdc0a,2021-07-08,50,5008,19,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c3e878e27f52e2a57ace4d9a76fd9acf,2021-07-08,362,5010,36,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c74d97b01eae257e44aa9d5bade97baf,2021-07-08,16,5008,13,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c9f0f895fb98ab9159f51fd0297e236d,2021-07-08,8,5008,4,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+cee631121c2ec9232f3a2f028ad5c89b,2021-07-08,500,5011,36,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d1c38a09acc34845c6be3a127a5aacaf,2021-07-08,225,5009,29,0,lang,en,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d34ab169b70c9dcd35e62896010cd9ff,2021-07-08,377,5010,39,0,operator_code,wmslotclp,營運商代碼(CLP),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+dc6a6489640ca02b0d42dabeb8e46bb7,2021-07-08,469,5011,28,0,SECURE_CODE,4e5998cf-a964-472f-b7bb-2d2dd58f0615,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e44fea3bec53bcea3b7513ccef5857ac,2021-07-08,454,5011,25,0,SECURE_CODE,51a765fe-28aa-4f94-8e37-4c77e7c8f120,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e46de7e1bcaaced9a54f1e9d0d2f800d,2021-07-08,397,5011,13,0,password,wmslotthb,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e4da3b7fbbce2345d7772b0674a318d5,2021-07-08,5,5008,1,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e7b24b112a44fdd9ee93bdf998c6ca0e,2021-07-08,360,5010,35,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e836d813fd184325132fca8edcdfb40e,2021-07-08,466,5011,27,0,username,wmslotphp,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+eccbc87e4b5ce2fe28308fd9f2a7baf3,2021-07-08,3,5008,1,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+eddea82ad2755b24c4e168c5fc2ebd40,2021-07-08,309,5010,21,0,operator_code,wmslotnzd,營運商代碼(NZD),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f8c1f23d6a8d8d7904fc0ea8e066b3bb,2021-07-08,396,5011,13,0,username,wmslotthb,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+fccb60fb512d13df5083790d64c4d5dd,2021-07-08,437,5011,21,0,password,wmslotnzd,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+05f971b5ec196b8c65b75d2ef8267331,2022-03-08,498,5011,36,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:27Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+0d0fd7c6e093f7b804fa0150b875b868,2022-03-08,408,5011,16,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:41Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+0deb1c54814305ca9ad266f53bc82511,2022-03-08,413,5011,17,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:43Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2050e03ca119580f74cca14cc6e97462,2022-03-08,473,5011,29,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:12Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+389bc7bb1e1c2a5e7e147703232a88f6,2022-03-08,508,5011,39,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:31Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9b70e8fe62e40c570a322f1b0b659098,2022-03-08,448,5011,24,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:59Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c3c59e5f8b3e9753913f4d435b53c308,2022-03-08,488,5011,33,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:17Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1068c6e4c8051cfd4e9ea8072e3189e2,2021-07-08,410,5011,16,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1679091c5a880faf6fb5e6087eb1b2dc,2021-07-08,6,5008,4,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+17e62166fc8586dfa4d1bc0e1742c08b,2021-07-08,43,5008,18,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+19ca14e7ea6328a42e0eb13d585e4c22,2021-07-08,36,5008,17,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1be3bc32e6564055d5ca3e5a354acbef,2021-07-08,494,5011,34,0,SECURE_CODE,ac10fb67-6a60-4845-af77-d0763e4f914e,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+20f07591c6fcb220ffe637cda29bb3f6,2021-07-08,277,5010,13,0,operator_code,wmslotthb,營運商代碼(THB),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2f2b265625d76a6704b08093c652fd79,2021-07-08,334,5010,28,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3636638817772e42b59d74cff571fbb3,2021-07-08,169,5009,15,0,lang,en,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+36660e59856b4de58a219bcf4e27eba3,2021-07-08,262,5010,1,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+39059724f73a9969845dfe4146c5660e,2021-07-08,270,5010,8,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3ad7c2ebb96fcba7cda0cf54a2e802f5,2021-07-08,343,5010,31,0,key,b81722f653b61aa5,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+42e7aaa88b48137a16a1acd04ed91125,2021-07-08,415,5011,17,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+4734ba6f3de83d861c3176a6273cac6d,2021-07-08,273,5010,8,0,operator_code,wmslotntd,營運商代碼(NTD),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+5f93f983524def3dca464469d2cf9f3e,2021-07-08,110,5008,32,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+66808e327dc79d135ba18e051673d906,2021-07-08,414,5011,17,0,SECURE_CODE,c21e5c4a-acc0-4ba2-a17e-a13cf550dd32,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7d04bbbe5494ae9d2f5a76aa1c00fa2f,2021-07-08,486,5011,32,0,username,wmslotsek,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7f100b7b36092fb9b06dfb4fac360931,2021-07-08,271,5010,8,0,key,71a2d5e0ebfca18d,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+812b4ba287f5ee0bc9d43bbf5bbe87fb,2021-07-08,95,5008,28,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+82cec96096d4281b7c95cd7e74623496,2021-07-08,355,5010,34,0,key,9703553bbff4fde9,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8613985ec49eb8f757ae6439e879bb2a,2021-07-08,90,5008,27,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8dd48d6a2e2cad213179a3992c0be53c,2021-07-08,354,5010,34,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8e296a067a37563370ded05f5a3bf3ec,2021-07-08,25,5008,14,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+903ce9225fca3e988c2af215d4e544d3,2021-07-08,143,5008,39,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+98f13708210194c475687be6106a3b84,2021-07-08,20,5008,13,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9bf31c7ff062936a96d3c8bd1f8f2ff3,2021-07-08,15,5008,8,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a5e00132373a7031000fd987a3c9f87b,2021-07-08,146,5009,1,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a97da629b098b75c294dffdc3e463904,2021-07-08,107,5008,32,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ad61ab143223efbc24c7d2583be69251,2021-07-08,74,5008,24,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+bcbe3365e6ac95ea2c0343a2395834dd,2021-07-08,222,5009,29,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c042f4db68f23406c6cecf84a7ebb0fe,2021-07-08,332,5010,27,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c203d8a151612acf12457e4d67635a95,2021-07-08,442,5011,22,0,password,wmslotaud,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e2c420d928d4bf8ce0ff2ec19b371514,2021-07-08,71,5008,24,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ec8956637a99787bd197eacd77acce5e,2021-07-08,102,5008,31,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ed3d2c21991e3bef5e069713af9fa6ca,2021-07-08,98,5008,29,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+eda80a3d5b344bc40f3bc04f65b7a357,2021-07-08,267,5010,4,0,key,e73cd2b19b3f4af5,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f2217062e9a397a1dca429e7d70bc6ca,2021-07-08,149,5009,1,0,lang,cn,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+fc221309746013ac554571fbd180e1c8,2021-07-08,181,5009,18,0,lang,en,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+00411460f7c92d2124a67ea0f4cb5f85,2021-07-08,363,5010,36,0,key,ee286c39fe0a8ff2,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+0353ab4cbed5beae847a7ff6e220b5cf,2021-07-08,461,5011,26,0,username,wmslotmmkk,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+04025959b191f8f9de3f924f0940515f,2021-07-08,339,5010,29,0,key,5e767d3ad950b7f8,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+0584ce565c824b7b7f50282d9a19945b,2021-07-08,384,5011,4,0,SECURE_CODE,f5614e85-dd9d-4577-8d79-c2245d9d1f35,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+093f65e080a295f8076b1c5722a46aa2,2021-07-08,59,5008,21,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+0a09c8844ba8f0936c20bd791130d6b6,2021-07-08,144,5008,39,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+140f6969d5213fd0ece03148e62e461e,2021-07-08,159,5009,13,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+142949df56ea8ae0be8b5306971900a4,2021-07-08,376,5010,39,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+149e9677a5989fd342ae44213df68868,2021-07-08,170,5009,16,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+14bfa6bb14875e45bba028a21ed38046,2021-07-08,69,5008,23,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+158f3069a435b314a80bdcb024f8e422,2021-07-08,313,5010,22,0,operator_code,wmslotaud,營運商代碼(AUD),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1c9ac0159c94d8d0cbedc973445af2da,2021-07-08,156,5009,8,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1f0e3dad99908345f7439f8ffabdffc4,2021-07-08,19,5008,13,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+218a0aefd1d1a4be65601cc6ddc1520e,2021-07-08,485,5011,32,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+28dd2c7955ce926456240b2ff0100bde,2021-07-08,77,5008,25,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2a38a4a9316c49e5a833517c45d31070,2021-07-08,88,5008,27,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+310dcbbf4cce62f762a2aaa148d556bd,2021-07-08,333,5010,27,0,operator_code,wmslotphp,營運商代碼(PHP),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3416a75f4cea9109507cacd8e2f2aefc,2021-07-08,41,5008,18,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+46ba9f2a6976570b0353203ec4474217,2021-07-08,284,5010,15,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+49182f81e6a13cf5eaa496d51fea6406,2021-07-08,295,5010,18,0,key,90d5588213f408cf,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+4e732ced3463d06de0ca9a15b6153677,2021-07-08,26,5008,15,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+577bcc914f9e55d5e4e4f82f9f00e7d4,2021-07-08,302,5010,20,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+5ef0b4eba35ab2d6180b0bca7e46b6f9,2021-07-08,475,5011,29,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+65b9eea6e1cc6bb9f0cd2a47751a186f,2021-07-08,105,5008,31,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+66368270ffd51418ec58bd793f2d9b1b,2021-07-08,431,5011,20,0,username,wmslotsgd,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6f4922f45568161a8cdf4ad2299f6d23,2021-07-08,18,5008,13,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+70efdf2ec9b086079795c442636b55fb,2021-07-08,17,5008,13,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+73278a4a86960eeb576a8fd4c9ec6997,2021-07-08,113,5008,33,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7380ad8a673226ae47fce7bff88e9c33,2021-07-08,497,5011,34,0,password,wmslotlak,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8d3bba7425e7c98c50f52ca1b52d3735,2021-07-08,319,5010,24,0,key,a4476ca91799471e,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8efb100a295c0c690931222ff4467bb8,2021-07-08,387,5011,4,0,password,wmslotusd,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9431c87f273e507e6040fcb07dcb4509,2021-07-08,452,5011,24,0,password,wmslotvndk,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+950a4152c2b4aa3ad78bdd6b366cc179,2021-07-08,312,5010,22,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9de6d14fff9806d4bcd1ef555be766cd,2021-07-08,350,5010,33,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a1d0c6e83f027327d8461063f4ac58a6,2021-07-08,42,5008,18,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a8baa56554f96369ab93e4f3bb068c22,2021-07-08,142,5008,39,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+bca82e41ee7b0833588399b1fcd177c7,2021-07-08,380,5011,1,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c7e1249ffc03eb9ded908c236bd1996d,2021-07-08,87,5008,27,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c86a7ee3d8ef0b551ed58e354a836f2b,2021-07-08,389,5011,8,0,SECURE_CODE,5e503c4b-66cf-48c8-a448-5b772f04aa51,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d67d8ab4f4c10bf22aa353e27879133c,2021-07-08,39,5008,17,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d6baf65e0b240ce177cf70da146c8dc8,2021-07-08,264,5010,1,0,lang,cn,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d81f9c1be2e08964bf9f24b15f0e4900,2021-07-08,345,5010,31,0,operator_code,wmslotgbp,營運商代碼(GBP),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e3796ae838835da0b6f6ea37bcf8bcb7,2021-07-08,281,5010,14,0,operator_code,wmslothkd,營運商代碼(HKD),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+eba0dc302bcd9a273f8bbb72be3a687b,2021-07-08,484,5011,32,0,SECURE_CODE,1c439370-6ce2-40d5-b6d9-99181bb8d2aa,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ef575e8837d065a1683c022d2077d342,2021-07-08,472,5011,28,0,password,wmslotinr,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f457c545a9ded88f18ecee47145a72c0,2021-07-08,49,5008,19,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+fe73f687e5bc5280214e0486b273a5f9,2021-07-08,330,5010,27,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ff4d5fbbafdf976cfdc032e3bde78de5,2021-07-08,506,5011,38,0,username,wmslotntddn,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+49ae49a23f67c759bf4fc791ba842aa2,2022-03-08,453,5011,25,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:02Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8d7d8ee069cb0cbbf816bbb65d56947e,2022-03-08,428,5011,20,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:50Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6aca97005c68f1206823815f66102863,2023-11-13,598,50311,19,0,agent_name,wmc_idr3,agent,2023-11-10T00:00:00Z,2023-11-13T11:36:35Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d86ea612dec96096c5e0fcc8dd42ab6d,2023-11-13,603,50311,24,0,agent_name,wmc_vnd3,agent,2023-11-10T00:00:00Z,2023-11-13T11:36:38Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+70c639df5e30bdee440e4cdf599fec2b,2022-03-08,393,5011,13,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:32Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d1f255a373a3cef72e03aa9d980c7eca,2022-03-08,418,5011,18,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:46Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+faa9afea49ef2ff029a833cccc778fd0,2022-03-08,423,5011,19,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:48Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+428fca9bc1921c25c5121f9da7815cde,2022-03-08,463,5011,27,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:07Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+bbf94b34eb32268ada57a3be5062fe7d,2022-03-08,403,5011,15,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:36Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+cfee398643cbc3dc5eefc89334cacdc1,2022-03-08,478,5011,31,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:14Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+766ebcd59621e305170616ba3d3dac32,2023-11-10,587,5031,0,0,hash_key,5Z36g25Ms9z5eDzZQiKc,hash_key (共用),2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9cf81d8026a9018052c429cc4e56739b,2023-11-10,604,5031,25,0,agent_name,wmc_mmk,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d490d7b4576290fa60eb31b5fc917ad1,2023-11-10,600,5031,21,0,agent_name,wmc_nzd,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+dbe272bab69f8e13f14b405e038deb64,2023-11-10,592,5031,13,0,agent_name,wmc_thb,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+00ac8ed3b4327bdd4ebbebcb2ba10a00,2023-11-10,610,5031,32,0,agent_name,wmc_sek,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+04ecb1fa28506ccb6f72b12c0245ddbc,2023-11-10,595,5031,16,0,agent_name,wmc_myr,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+076a0c97d09cf1a0ec3e19c7f2529f2b,2023-11-10,594,5031,15,0,agent_name,wmc_jpy,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3435c378bb76d4357324dd7e69f3cd18,2023-11-10,599,5031,20,0,agent_name,wmc_sgd,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+5d44ee6f2c3f71b73125876103c8f6c4,2023-11-10,617,5031,42,0,agent_name,wmc_gel,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7750ca3559e5b8e1f44210283368fc16,2023-11-10,616,5031,41,0,agent_name,wmc_usdt,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+996a7fa078cc36c46d02f9af3bef918b,2023-11-10,608,5031,29,0,agent_name,wmc_eur,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a9a1d5317a33ae8cef33961c34144f84,2023-11-10,585,5031,0,0,api,https://tx.api.egslot.cc/api/v1,api網址 (共用),2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+08b255a5d42b89b0585260b6f2360bdd,2023-11-10,590,5031,4,0,agent_name,wmc_usd,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d7a728a67d909e714c0774e22cb806f2,2023-11-10,609,5031,31,0,agent_name,wmc_gbp,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3493894fa4ea036cfc6433c3e2ee63b0,2023-11-10,591,5031,8,0,agent_name,wmc_twd,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8ebda540cbcc4d7336496819a46a1b68,2023-11-10,611,5031,33,0,agent_name,wmc_zar,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c3992e9a68c5ae12bd18488bc579b30d,2023-11-10,602,5031,23,0,agent_name,wmc_vnd,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+30bb3825e8f631cc6075c0f87bb4978c,2023-11-10,589,5031,1,0,agent_name,wmc_rmb,agent,2023-11-10T00:00:00Z,2023-11-10T00:00:00Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+019d385eb67632a7e958e23f24bd07d7,2022-03-08,433,5011,21,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:52Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+13f3cf8c531952d72e5847c4183e6910,2022-03-08,443,5011,23,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:58Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8bf1211fd4b7b94528899de0a43b9fb3,2022-03-08,378,5011,1,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:20Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+06409663226af2f3114485aa4e0a23b4,2021-07-08,158,5009,13,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+0bb4aec1710521c12ee76289d9440817,2021-07-08,349,5010,32,0,operator_code,wmslotsek,營運商代碼(SEK),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+17d63b1625c816c22647a73e1482372b,2021-07-08,411,5011,16,0,username,wmslotmyr,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+18d8042386b79e2c279fd162df0205c8,2021-07-08,400,5011,14,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1ff8a7b5dc7a7d1f0ed65aaa29c04b1e,2021-07-08,172,5009,16,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+26657d5ff9020d2abefe558796b99584,2021-07-08,96,5008,29,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2723d092b63885e0d7c260cc007e8b9d,2021-07-08,109,5008,32,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+371bce7dc83817b7893bcdeed13799b5,2021-07-08,352,5010,33,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3cf166c6b73f030b4f67eeaeba301103,2021-07-08,499,5011,36,0,SECURE_CODE,7603e270-0e32-4034-936f-936331ee7613,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3dd48ab31d016ffcbf3314df2b3cb9ce,2021-07-08,341,5010,29,0,operator_code,wmsloteur,營運商代碼(EUR),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+5737c6ec2e0716f3d8a7a5c4e0de0d9a,2021-07-08,322,5010,25,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+59b90e1005a220e2ebc542eb9d950b1e,2021-07-08,514,5009,23,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+5b8add2a5d98b1a652ea7fd72d942dac,2021-07-08,317,5010,23,0,operator_code,wmslotvnd,營運商代碼(VND),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6512bd43d9caa6e02c990b0a82652dca,2021-07-08,11,5008,8,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+67f7fb873eaf29526a11a9b7ac33bfac,2021-07-08,445,5011,23,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+69cb3ea317a32c4e6143e665fdb20b14,2021-07-08,402,5011,14,0,password,wmslothkd,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6a9aeddfc689c1d0e3b9ccc3ab651bc5,2021-07-08,282,5010,15,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6c8349cc7260ae62e3b1396831a8398f,2021-07-08,45,5008,18,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6da37dd3139aa4d9aa55b8d237ec5d4a,2021-07-08,331,5010,27,0,key,7ae5799204d86199,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6ea2ef7311b482724a9b7b0bc0dd85c6,2021-07-08,480,5011,31,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+74071a673307ca7459bcf75fbd024e09,2021-07-08,477,5011,29,0,password,wmsloteur,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7647966b7343c29048673252e490f736,2021-07-08,89,5008,27,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7a614fd06c325499f1680b9896beedeb,2021-07-08,272,5010,8,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+819f46e52c25763a55cc642422644317,2021-07-08,338,5010,29,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8cb22bdd0b7ba1ab13d742e22eed8da2,2021-07-08,406,5011,15,0,username,wmslotjpy,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8f121ce07d74717e0b1f21d122e04521,2021-07-08,268,5010,4,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8f14e45fceea167a5a36dedd4bea2543,2021-07-08,7,5008,4,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a02ffd91ece5e7efeb46db8f10a74059,2021-07-08,379,5011,1,0,SECURE_CODE,7f85bdfa-f18d-4f83-b46c-35a0ad3644c5,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a5771bce93e200c36f7cd9dfd0e5deaa,2021-07-08,38,5008,17,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a87ff679a2f3e71d9181a67b7542122c,2021-07-08,4,5008,1,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+aa942ab2bfa6ebda4840e7360ce6e7ef,2021-07-08,358,5010,35,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ad972f10e0800b49d76fed33a21f6698,2021-07-08,374,5010,39,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b6f0479ae87d244975439c6124592772,2021-07-08,420,5011,18,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b73ce398c39f506af761d2277d853a92,2021-07-08,160,5009,13,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+bbcbff5c1f1ded46c25d28119a85c6c2,2021-07-08,405,5011,15,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+bc6dc48b743dc5d013b1abaebd2faed2,2021-07-08,323,5010,25,0,key,270426066112e81b,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+bf8229696f7a3bb4700cfddef19fa23f,2021-07-08,174,5009,17,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c4ca4238a0b923820dcc509a6f75849b,2021-07-08,1,5008,1,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+caf1a3dfb505ffed0d024130f58c5cfa,2021-07-08,321,5010,24,0,operator_code,wmslotvndk,營運商代碼(VNDK),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+cd00692c3bfe59267d5ecfac5310286c,2021-07-08,328,5010,26,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d9d4f495e875a2e075a1a4a6e1b9770f,2021-07-08,46,5008,19,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ddb30680a691d157187ee1cf9e896d03,2021-07-08,435,5011,21,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e2ef524fbf3d9fe611d5a8e90fefdc9c,2021-07-08,97,5008,29,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ec8ce6abb3e952a85b8551ba726a1227,2021-07-08,220,5009,28,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f1b6f2857fb6d44dd73c7041e0aa0f19,2021-07-08,464,5011,27,0,SECURE_CODE,243a67c6-e1f1-4aa7-80b0-d8b1e947c1f3,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f4f6dce2f3a0f9dada0c2b5b66452017,2021-07-08,407,5011,15,0,password,wmslotjpy,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f61d6947467ccd3aa5af24db320235dd,2021-07-08,375,5010,39,0,key,e0dceed81ca8f3ea,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f7177163c833dff4b38fc8d2872f1ec6,2021-07-08,44,5008,18,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f7664060cc52bc6f3d620bcedc94a4b6,2021-07-08,266,5010,4,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f899139df5e1059396431415e770c6dd,2021-07-08,100,5008,29,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+fc490ca45c00b1249bbe3554a4fdf6fb,2021-07-08,65,5008,22,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+285e19f20beded7d215102b49d5c09a0,2022-03-08,503,5011,38,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:57:29Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d9fc5b73a8d78fad3d6dffe419384e70,2022-03-08,388,5011,8,0,api,https://backoffice.astrotechgaming.com/service,api 網址,2021-07-06T17:00:24Z,2022-03-08T15:56:30Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f29c21d4897f78948b91f03172341b7b,2023-11-13,613,50311,35,0,agent_name,wmc_lak3,agent,2023-11-10T00:00:00Z,2023-11-13T11:36:47Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+03afdbd66e7929b125f8597834fa83a4,2021-07-08,63,5008,22,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+060ad92489947d410d897474079c1477,2021-07-08,221,5009,28,0,lang,en,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+07cdfd23373b17c6b337251c22b7ea57,2021-07-08,278,5010,14,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+115f89503138416a242f40fb7d7f338e,2021-07-08,223,5009,29,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+16a5cdae362b8d27a1d8f8c7b78b4330,2021-07-08,286,5010,16,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+1ff1de774005f8da13f42943881c655f,2021-07-08,24,5008,14,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+37693cfc748049e45d87b8c7d8b9aacd,2021-07-08,23,5008,14,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3dc4876f3f08201c7c76cb71fa1da439,2021-07-08,513,5009,23,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+40008b9a5380fcacce3976bf7c08af5b,2021-07-08,340,5010,29,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+48aedb8880cab8c45637abc7493ecddd,2021-07-08,288,5010,16,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+55a7cf9c71f1c9c495413f934dd1a158,2021-07-08,492,5011,33,0,password,wmslotzar,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+598b3e71ec378bd83e0a727608b5db01,2021-07-08,476,5011,29,0,username,wmsloteur,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+5b69b9cb83065d403869739ae7f0995e,2021-07-08,501,5011,36,0,username,wmslotbnd,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+5fd0b37cd7dbbb00f97ba6ce92bf5add,2021-07-08,114,5008,33,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6974ce5ac660610b44d9b9fed0ff9548,2021-07-08,103,5008,31,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6ecbdd6ec859d284dc13885a37ce8d81,2021-07-08,426,5011,19,0,username,wmslotidrk,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7cbbc409ec990f19c78c75bd1e06f215,2021-07-08,70,5008,23,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7eacb532570ff6858afd2723755ff790,2021-07-08,419,5011,18,0,SECURE_CODE,134224a9-8b30-45dd-a321-3aec7c6b52e1,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+82161242827b703e6acf9c726942a1e4,2021-07-08,175,5009,17,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9c838d2e45b2ad1094d42f4ef36764f6,2021-07-08,291,5010,17,0,key,d3813cfd76f5e93e,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a49e9411d64ff53eccfdd09ad10a15b3,2021-07-08,434,5011,21,0,SECURE_CODE,daee7764-36e8-4afc-b180-7f8b7bddeb39,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a4a042cf4fd6bfb47701cbc8a1653ada,2021-07-08,171,5009,16,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a760880003e7ddedfef56acb3b09697f,2021-07-08,511,5011,39,0,username,wmslotclp,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a8c88a0055f636e4a163a5e3d16adab7,2021-07-08,308,5010,21,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a96b65a721e561e1e3de768ac819ffbb,2021-07-08,409,5011,16,0,SECURE_CODE,78ab0de2-43a8-4d34-ae9e-edcf85186f56,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+aab3238922bcc25a6f606eb525ffdc56,2021-07-08,14,5008,8,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ab817c9349cf9c4f6877e1894a1faa00,2021-07-08,467,5011,27,0,password,wmslotphp,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b83aac23b9528732c23cc7352950e880,2021-07-08,327,5010,26,0,key,e6339216f6b40f48,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+bac9162b47c56fc8a4d2a519803d51b3,2021-07-08,364,5010,36,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c20ad4d76fe97759aa27a0c99bff6710,2021-07-08,12,5008,8,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c410003ef13d451727aeff9082c29a5c,2021-07-08,490,5011,33,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c81e728d9d4c2f636f067f89cc14862c,2021-07-08,2,5008,1,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d09bf41544a3365a46c9077ebb5e35c3,2021-07-08,75,5008,24,0,project_id,1357,project_id,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d18f655c3fce66ca401d5f38b48c89af,2021-07-08,479,5011,31,0,SECURE_CODE,9ee9d20e-65b9-4ff7-bd46-0bd987675253,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d2ddea18f00665ce8623e36bd4e3c7c5,2021-07-08,73,5008,24,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d61e4bbd6393c9111e6526ea173a7c8b,2021-07-08,449,5011,24,0,SECURE_CODE,493d7b62-c936-4928-9566-32afffadcd70,密鑰 JWT token,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+db8e1af0cb3aca1ae2d0018624204529,2021-07-08,276,5010,13,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e369853df766fa44e1ed0ff613f563bd,2021-07-08,34,5008,16,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f0935e4cd5920aa6c7c996a5ee53a70f,2021-07-08,106,5008,32,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f73b76ce8949fe29bf2a537cfa420e8f,2021-07-08,392,5011,8,0,password,wmslotntd,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f7e6c85504ce6e82442c770f7c8606f0,2021-07-08,173,5009,16,0,lang,en,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+fb7b9ffa5462084c5f4e7e85a093e6d7,2021-07-08,357,5010,34,0,operator_code,wmslotlak,營運商代碼(LAK),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+006f52e9102a8d3be2fe5614f42ba989,2021-07-08,168,5009,15,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+00ec53c4682d36f5c4359f4ae7bd7ba1,2021-07-08,381,5011,1,0,username,wmslotrmb,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+01386bd6d8e091c2ab4c7c7de644d37b,2021-07-08,348,5010,32,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+02e74f10e0327ad868d138f2b4fdd6f0,2021-07-08,27,5008,15,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+15d4e891d784977cacbfcbb00c48f133,2021-07-08,441,5011,22,0,username,wmslotaud,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+248e844336797ec98478f85e7626de4a,2021-07-08,432,5011,20,0,password,wmslotsgd,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+2b8a61594b1f4c4db0902a8a395ced93,2021-07-08,515,5009,23,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+35051070e572e47d2c26c241ab88307f,2021-07-08,495,5011,34,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+357a6fdf7642bf815a88822c447d9dc4,2021-07-08,337,5010,28,0,operator_code,wmslotinr,營運商代碼(INR),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+35f4a8d465e6e1edc05f3d8ab658c551,2021-07-08,78,5008,25,0,key,e939d714ef9ec17b7502a25b7b200d44,key,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+38b3eff8baf56627478ec76a704e9b52,2021-07-08,101,5008,31,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+3c59dc048e8850243be8079a5c74d079,2021-07-08,21,5008,14,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+41ae36ecb9b3eee609d05b90c14222fb,2021-07-08,417,5011,17,0,password,wmslotidr,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+432aca3a1e345e339f35a30c8f65edce,2021-07-08,318,5010,24,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+47d1e990583c9c67424d369f3414728e,2021-07-08,148,5009,1,0,api,https://wm-game.sdegaming.com:9032/sd,key,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+496e05e1aea0a9c4655800e8a7b9ea28,2021-07-08,305,5010,20,0,operator_code,wmslotsgd,營運商代碼(SGD),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+4f6ffe13a5d75b2d6a3923922b3922e5,2021-07-08,382,5011,1,0,password,wmslotrmb,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+52720e003547c70561bf5e03b95aa99f,2021-07-08,361,5010,35,0,operator_code,wmslotlakk,營運商代碼(LAKK),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+53c3bce66e43be4f209556518c2fcb54,2021-07-08,293,5010,17,0,operator_code,wmslotidr,營運商代碼(IDR),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+58238e9ae2dd305d79c2ebc8c1883422,2021-07-08,342,5010,31,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+63923f49e5241343aa7acb6a06a751e7,2021-07-08,275,5010,13,0,key,f98b5f5cfb8e0cd7,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+67c6a1e7ce56d3d6fa748ab6d9af3fd7,2021-07-08,47,5008,19,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+698d51a19d8a121ce581499d7b701668,2021-07-08,111,5008,33,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+6c4b761a28b734fe93831e3fb400ce87,2021-07-08,157,5009,8,0,lang,en,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+735b90b4568125ed6c3f678819b6e058,2021-07-08,67,5008,23,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+7ef605fc8dba5425d6965fbd4c8fbe1f,2021-07-08,150,5009,4,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+89f0fd5c927d466d6ec9a21b9ac34ffa,2021-07-08,325,5010,25,0,operator_code,wmslotmmk,營運商代碼(MMK),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+8f85517967795eeef66c225f7883bdcb,2021-07-08,178,5009,18,0,agent,wm,代理,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+93db85ed909c13838ff95ccfa94cebd9,2021-07-08,86,5008,27,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+9461cce28ebe3e76fb4b931c35a169b0,2021-07-08,481,5011,31,0,username,wmslotgbp,代理帳號,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a5bfc9e07964f8dddeb95fc584cd965d,2021-07-08,37,5008,17,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+a8f15eda80c50adb0e71943adc8015cf,2021-07-08,151,5009,4,0,agentKey,17eb57d4238806ca47e808d550a42d2e,api_version,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b2eb7349035754953b57a32e2841bda5,2021-07-08,306,5010,21,0,api,https://api.msgaming.online,api 網址,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b6d767d2f8ed5d21a44b0e5886680cb9,2021-07-08,22,5008,14,0,api_version,1,api_version,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+b9228e0962a78b84f3d5d92f4faa000b,2021-07-08,412,5011,16,0,password,wmslotmyr,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+bd4c9ab730f5513206b999ec0d90d1fb,2021-07-08,161,5009,13,0,lang,en,lang,2021-07-06T14:23:27Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c5ff2543b53f4cc0ad3819a36752467b,2021-07-08,347,5010,32,0,key,dba709b0fd381704,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+c9e1074f5b3f9fc8ea15d152add07294,2021-07-08,104,5008,31,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d1fe173d08e959397adf34b1d77e88d7,2021-07-08,79,5008,25,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+d296c101daa88a51f6ca8cfc1ac79b50,2021-07-08,296,5010,18,0,lang,en,lang,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e56954b4f6347e897f954495eab16a88,2021-07-08,265,5010,1,0,operator_code,wmslotrmb,營運商代碼(RMB),2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+e8c0653fea13f91bf3c48159f7c24f78,2021-07-08,505,5011,38,0,lang,en,預設語系,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+ef0d3930a7b6c95bd2b32ed45989c61f,2021-07-08,299,5010,19,0,key,ffc373f4e72ee436,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+efe937780e95574250dabe07151bdc23,2021-07-08,351,5010,33,0,key,cb0c05898f4495c1,營運商 key,2021-07-06T15:21:30Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f4b9ec30ad9f68f89b29639786cb62ef,2021-07-08,94,5008,28,0,lang,en,lang,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f770b62bc8f42a0b66751fe636fc6eb0,2021-07-08,482,5011,31,0,password,wmslotgbp,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+f85454e8279be180185cac7d243c5eb3,2021-07-08,422,5011,18,0,password,wmslotkrw,代理密碼,2021-07-06T17:00:24Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z
+fbd7939d674997cdb4692d34de8633c4,2021-07-08,76,5008,25,0,api,https://api.8provider.com,api 網址,2021-07-06T14:12:04Z,2021-07-08T15:35:01Z,a168,partner_setting,ods_a168_partner_setting,2026-07-23T04:09:07Z

@@ -1,0 +1,130 @@
+表名,行数,列数,内存占用MB,列数与glimpse一致,语义覆盖率,最高缺失率列,最高缺失率,读取状态
+ods_a168_agent.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_agent_bak20250610.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_agent_permissionrole.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_agent_sub.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_agent_test.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_agents_LoginPass.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_aggregate_setting.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_aggregate_token.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_aggregate_transaction.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_aisetting.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_alarmMessage.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_alert_ip_setting.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_alertMessage.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_ban_bet_area.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_bet_limit_default.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_bet_partner.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_betchange_log.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_close_tip_list.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_control.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_conversion.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_currency.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_dailyreport_member.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_dailyreport_table.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_dailyreport_usercount.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_emp_login.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_employee.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_func_counter.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_game_callwebapi.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_game_demoipsetting.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_game_info.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_game_info_verify.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_game_log.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_game_No.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_game_statistics.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_game_tip.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_game_transfer.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_game_type.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_ipblacklist.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_iphistory.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_jackpot.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_keyserver_command.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_log_age_cash_change.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_log_mem_change.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_log_realtimebet.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_member.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_member_click_counter.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_member_dtl.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_member_explosion_setting.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_news.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_odds_default.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_opengame_log.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_partner_gamelist.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_partner_reportTime.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_partner_setting.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_partner_transation.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_partner_transation_log.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_partner_type.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_passiplist.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_payment_bank.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_payment_platform.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_payment_setting.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_payment_type.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_permissions.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_permissionsgroup.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_permissionsPage.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_permissionsPageRoles.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_realtimelog.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_RedPacketSetup.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_RedPacketSetup_setting.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_roles.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_shuffle_gid.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_site.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_SMR_log.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_stream.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_subagent_permissionrole.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_symbol.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_tablelimit.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_tablelimit_third.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_temp_id_list.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_tip.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_urllist.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_wallet_dtl.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_wallet_feedbackerr.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_wechat_url.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_white_list.csv,,,,,,,,失败: 不能用零长度变量名
+ods_a168_agent_dtl.csv,100000,22,21.14,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_bet01.csv,100000,49,33.68,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_bet02.csv,100000,58,40.38,TRUE,1,結算單一錢包用,0.0022,成功
+ods_a168_in_out_m.csv,100000,16,12.22,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_in_out_m_chip.csv,100000,16,24.04,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_mem_login.csv,100000,14,11.92,TRUE,1,sid,1,成功
+ods_a168_wallet_reporter.csv,100000,17,11.62,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_wallet_reporter_copy.csv,100000,17,18.92,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_change_log.csv,33696,14,8.66,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_age_login.csv,27339,13,8.33,TRUE,1,info,1,成功
+ods_a168_risklist.csv,9958,9,1.52,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_member_partner_account.csv,9109,12,2.05,TRUE,1,第三方遊戲密碼,1,成功
+ods_a168_age_sub_login.csv,9019,13,3.09,TRUE,1,info,1,成功
+ods_a168_realtimelobby.csv,4452,12,1.28,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_realtimebet.csv,3847,18,1.28,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_permissionrole.csv,944,10,0.14,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_control_login.csv,306,13,0.1,TRUE,1,info,1,成功
+ods_a168_member_partner_gamelist.csv,184,11,0.03,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_orderslist.csv,145,9,0.03,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+sync_checkpoint.csv,76,13,0.03,TRUE,1,断点字段1,1,成功
+ods_a168_agent_dtl_test.csv,57,22,0.02,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_member_url.csv,53,12,0.02,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_agent_partner_gamelist.csv,45,11,0.01,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_apiurl.csv,19,9,0.01,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_play_set.csv,16,18,0.01,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_ctl_rto.csv,8,9,0.01,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_game_parame.csv,6,10,0.01,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_sms_setting.csv,1,19,0.01,TRUE,1,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,0,成功
+ods_a168_agent_elec.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_bet.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_bet_No.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_category.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_categoryLevel.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_dailyreport.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_dailyreport2.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_game_result.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_member_category.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_member_odds.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_partner_bng_token.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_payment_method.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_payment_order.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_RedPacket_No.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_RedPacket_Order.csv,0,0,0,FALSE,,,-Inf,成功
+ods_a168_shuffle_info.csv,0,0,0,FALSE,,,-Inf,成功

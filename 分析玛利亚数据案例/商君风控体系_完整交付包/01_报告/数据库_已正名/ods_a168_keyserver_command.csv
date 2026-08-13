@@ -1,0 +1,7 @@
+源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,"",_1,_2,_3,_4,_5,来源库,来源表,ODS表名,同步时间
+73c7f51cc11fcfe48b44cf5e412fe1e4,2026-05-02,18936,2026-05-02T04:28:55Z,101,913,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-05-19T18:57:01Z
+2979158b9c1e72755a8961f03e3580f5,2026-06-01,19047,2026-06-01T11:09:32Z,101,0,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-06-02T07:15:00Z
+ad7b25e2374b423547e6783add6d7428,2026-06-01,19048,2026-06-01T11:13:52Z,102,0,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-06-02T07:15:00Z
+609ac774d3f0a0c93c19040f2c6eb105,2026-05-01,18934,2026-05-01T20:02:35Z,101,902,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-05-19T18:57:01Z
+e90acf987b0389430374a954671dc4bf,2026-05-01,18935,2026-05-01T20:17:09Z,101,911,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-05-19T18:57:01Z
+ae9402b067df450afb7e5e9cbeeb77ea,2026-04-28,18906,2026-04-28T00:07:12Z,101,913,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-05-19T18:57:01Z

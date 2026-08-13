@@ -1,0 +1,9 @@
+源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,"",_1,下注區,賠率,来源库,来源表,ODS表名,同步时间
+8f14e45fceea167a5a36dedd4bea2543,2026-07-23,7,102,tiger,1,a168,odds_default,ods_a168_odds_default,2026-07-23T04:29:42Z
+a87ff679a2f3e71d9181a67b7542122c,2026-07-23,4,101,bpair,11,a168,odds_default,ods_a168_odds_default,2026-07-23T04:29:42Z
+c4ca4238a0b923820dcc509a6f75849b,2026-07-23,1,101,banker,0.95,a168,odds_default,ods_a168_odds_default,2026-07-23T04:29:42Z
+c81e728d9d4c2f636f067f89cc14862c,2026-07-23,2,101,player,1,a168,odds_default,ods_a168_odds_default,2026-07-23T04:29:42Z
+c9f0f895fb98ab9159f51fd0297e236d,2026-07-23,8,102,tie,8,a168,odds_default,ods_a168_odds_default,2026-07-23T04:29:42Z
+e4da3b7fbbce2345d7772b0674a318d5,2026-07-23,5,101,ppair,11,a168,odds_default,ods_a168_odds_default,2026-07-23T04:29:42Z
+eccbc87e4b5ce2fe28308fd9f2a7baf3,2026-07-23,3,101,tie,8,a168,odds_default,ods_a168_odds_default,2026-07-23T04:29:42Z
+1679091c5a880faf6fb5e6087eb1b2dc,2026-07-23,6,102,dragon,1,a168,odds_default,ods_a168_odds_default,2026-07-23T04:29:42Z

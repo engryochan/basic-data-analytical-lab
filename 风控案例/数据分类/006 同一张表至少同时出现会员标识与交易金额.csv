@@ -1,0 +1,12 @@
+﻿TABLE_SCHEMA,TABLE_NAME,has_member_key,has_money_field,has_cashflow_field,has_profit_field,has_cost_field,financial_signal_score
+ods_mariadb_2b,ods_a168_bet02,1,1,0,1,1,4
+ods_mariadb_2b,ods_a168_agent,1,1,0,1,0,3
+ods_mariadb_2b,ods_a168_agent_bak20250610,1,1,0,1,0,3
+ods_mariadb_2b,ods_a168_agent_test,1,1,0,1,0,3
+ods_mariadb_2b,ods_a168_aggregate_transaction,1,1,0,1,0,3
+ods_mariadb_2b,ods_a168_bet01,1,1,0,0,1,3
+ods_mariadb_2b,ods_a168_dailyreport,1,1,0,1,0,3
+ods_mariadb_2b,ods_a168_dailyreport2,1,1,0,1,0,3
+ods_mariadb_2b,ods_a168_dailyreport_member,1,1,0,1,0,3
+ods_mariadb_2b,ods_a168_member,1,1,0,1,0,3
+ods_mariadb_2b,ods_a168_bet_partner,1,0,0,1,0,2

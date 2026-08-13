@@ -1,0 +1,54 @@
+﻿COLUMN_NAME,DATA_TYPE,COLUMN_COMMENT
+__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+mem001,varchar,source_type=int(11); 
+mem002,varchar,source_type=varchar(48); 
+mem003,varchar,source_type=varchar(65); 
+mem004,varchar,source_type=varchar(48); 
+mem005,varchar,source_type=timestamp; 
+mem006,varchar,source_type=int(11); 
+mem007,varchar,source_type=int(11); 
+mem008,varchar,source_type=int(11); 
+mem009,varchar,source_type=int(11); 
+mem010,varchar,source_type=int(11); 
+mem011,varchar,source_type=int(11); 
+mem012,varchar,source_type=int(11); 
+mem013,varchar,source_type=timestamp; 
+mem014,varchar,source_type=char(15); 
+mem015,varchar,source_type=int(11); login_error
+mem016,varchar,"source_type=enum(''Y'',''N''); enable"
+mem017,varchar,"source_type=enum(''Y'',''N''); canbet"
+mem018,varchar,"source_type=enum(''Y'',''N''); chg_pw"
+mem019,varchar,"source_type=enum(''Y'',''N''); is_test"
+mem020,varchar,"source_type=enum(''Y'',''N''); be_traded"
+mem021,varchar,source_type=int(11); 
+mem022,varchar,source_type=varchar(20); 電話
+mem022a,varchar,source_type=int(6); 電話簡碼
+mem023,varchar,source_type=tinyint(4); 
+mem024,varchar,source_type=int(11); mem_risk
+mem026,varchar,source_type=int(11); 
+mem028,varchar,source_type=varchar(20); 備註
+type,varchar,source_type=int(11); 0:現金;1:信用;2:電投
+currency,varchar,source_type=int(11); 幣別
+cash,varchar,"source_type=decimal(15,4); 現金"
+money,varchar,"source_type=decimal(10,4); 己出碼額度"
+lockmoney,varchar,"source_type=decimal(10,4); 鎖定金額"
+head,varchar,source_type=int(11); 頭像ID
+chips,varchar,source_type=varchar(500); 籌碼選擇
+follow1,varchar,source_type=varchar(1000); 注關會員
+follow2,varchar,source_type=varchar(3000); 關注荷官
+tip,varchar,"source_type=enum(''Y'',''N''); "
+red,varchar,"source_type=enum(''N'',''Y''); 紅包開關"
+wallet,varchar,"source_type=enum(''Y'',''N''); "
+opengame,varchar,source_type=varchar(255); 輸入要開啟的種類
+site,varchar,source_type=varchar(60); 
+kickperiod,varchar,source_type=int(3); 踢出局數
+identity,varchar,"source_type=int(11); 0:信用,1:api"
+singlebetprompt,varchar,"source_type=decimal(15,0); 單注金額告警"
+conwinprompt,varchar,source_type=int(3); 連贏局數告警
+winlossprompt,varchar,"source_type=enum(''0'',''1''); 最大可輸可贏提示"
+onlineprompt,varchar,"source_type=enum(''0'',''1''); 上線提示"
+source_db,varchar,来源库
+source_table,varchar,来源表
+ods_table_name,varchar,ODS表名
+sync_time,datetime,同步时间

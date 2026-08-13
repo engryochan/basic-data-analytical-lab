@@ -1,0 +1,36 @@
+﻿COLUMN_NAME,DATA_TYPE,COLUMN_COMMENT
+__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+id,varchar,source_type=bigint(20); 
+time,varchar,source_type=date; 日期
+bet02,varchar,source_type=int(11); 遊戲編號
+bet05,varchar,source_type=int(11); 會員編號
+bet13,varchar,"source_type=decimal(16,4); 下注金額"
+bet14,varchar,"source_type=decimal(16,4); 派彩金額"
+bet15,varchar,"source_type=decimal(16,4); 會員退水%數"
+bet41,varchar,"source_type=decimal(16,4); 有效投注"
+bet18,varchar,source_type=int(11); LV1ID
+bet19,varchar,source_type=int(11); LV2ID
+bet20,varchar,source_type=int(11); LV3ID
+bet21,varchar,source_type=int(11); LV4ID
+bet22,varchar,source_type=int(11); LV5ID
+bet23,varchar,"source_type=decimal(16,4); LV1占成"
+bet24,varchar,"source_type=decimal(16,4); LV2占成"
+bet25,varchar,"source_type=decimal(16,4); LV3占成"
+bet26,varchar,"source_type=decimal(16,4); LV4占成"
+bet27,varchar,"source_type=decimal(16,4); LV5占成"
+bet28,varchar,"source_type=decimal(16,4); LV1退水"
+bet29,varchar,"source_type=decimal(16,4); LV2退水"
+bet30,varchar,"source_type=decimal(16,4); LV3退水"
+bet31,varchar,"source_type=decimal(16,4); LV4退水"
+bet32,varchar,"source_type=decimal(16,4); LV5退水"
+bet10,varchar,source_type=int(11); 幣別
+bet11,varchar,"source_type=decimal(16,4); 匯率"
+category,varchar,"source_type=int(11); 1:一般,2:小費"
+count,varchar,source_type=int(11); 筆數
+risk,varchar,source_type=tinyint(1); 風險單 1:是
+orders,varchar,source_type=tinyint(1); 劃單 1:是
+source_db,varchar,来源库
+source_table,varchar,来源表
+ods_table_name,varchar,ODS表名
+sync_time,datetime,同步时间

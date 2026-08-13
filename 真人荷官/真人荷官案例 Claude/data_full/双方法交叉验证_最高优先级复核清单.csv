@@ -1,0 +1,1 @@
+player_a,player_b,same_round_count,player_a_rounds,player_b_rounds,same_rate,first_game_time,last_game_time,created_time,update_time,log_a_rounds,log_b_rounds,expected_bayes_batch,expected_bayes,resid_ratio,p_raw,p_bonferroni,sig_p005,sig_p001,duration_days,days_since_last,event,cox_risk_score,xgb_risk_score,rsf_risk_score,ae_recon_error,ae_top1pct

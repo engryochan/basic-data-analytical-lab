@@ -1,0 +1,50 @@
+﻿TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,DATA_TYPE,COLUMN_COMMENT
+ods_mariadb_2b,ods_a168_bet01,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_mariadb_2b,ods_a168_bet01,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_mariadb_2b,ods_a168_bet01,bet01,varchar,source_type=bigint(20); 注單編號
+ods_mariadb_2b,ods_a168_bet01,bet02,varchar,source_type=int(11); 遊戲類別編號
+ods_mariadb_2b,ods_a168_bet01,bet03,varchar,"source_type=decimal(12,0); 場次編號"
+ods_mariadb_2b,ods_a168_bet01,bet04,varchar,source_type=int(11); 子場次編號
+ods_mariadb_2b,ods_a168_bet01,bet05,varchar,source_type=int(11); 會員編號
+ods_mariadb_2b,ods_a168_bet01,bet06,varchar,source_type=datetime; 開局時間
+ods_mariadb_2b,ods_a168_bet01,bet07,varchar,source_type=date; 帳務日期
+ods_mariadb_2b,ods_a168_bet01,bet08,varchar,source_type=datetime; 下注時間
+ods_mariadb_2b,ods_a168_bet01,bet09,varchar,source_type=varchar(100); 下注內容
+ods_mariadb_2b,ods_a168_bet01,bet10,varchar,source_type=int(11); 幣別
+ods_mariadb_2b,ods_a168_bet01,bet11,varchar,"source_type=decimal(16,4); 匯率"
+ods_mariadb_2b,ods_a168_bet01,bet12,varchar,"source_type=decimal(16,4); 起始點數"
+ods_mariadb_2b,ods_a168_bet01,bet12a,varchar,"source_type=decimal(16,4); 起始籌碼"
+ods_mariadb_2b,ods_a168_bet01,bet13,varchar,"source_type=decimal(16,4); 下注金額"
+ods_mariadb_2b,ods_a168_bet01,bet14,varchar,"source_type=decimal(16,4); 退水％數"
+ods_mariadb_2b,ods_a168_bet01,bet15,varchar,source_type=int(11); LV1ID
+ods_mariadb_2b,ods_a168_bet01,bet16,varchar,source_type=int(11); LV2ID
+ods_mariadb_2b,ods_a168_bet01,bet17,varchar,source_type=int(11); LV3ID
+ods_mariadb_2b,ods_a168_bet01,bet18,varchar,source_type=int(11); LV4ID
+ods_mariadb_2b,ods_a168_bet01,bet19,varchar,source_type=int(11); LV5ID
+ods_mariadb_2b,ods_a168_bet01,bet20,varchar,"source_type=decimal(16,4); LV1佔成"
+ods_mariadb_2b,ods_a168_bet01,bet21,varchar,"source_type=decimal(16,4); LV2佔成"
+ods_mariadb_2b,ods_a168_bet01,bet22,varchar,"source_type=decimal(16,4); LV3佔成"
+ods_mariadb_2b,ods_a168_bet01,bet23,varchar,"source_type=decimal(16,4); LV4佔成"
+ods_mariadb_2b,ods_a168_bet01,bet24,varchar,"source_type=decimal(16,4); LV5佔成"
+ods_mariadb_2b,ods_a168_bet01,bet25,varchar,"source_type=decimal(16,4); LV1退水%數"
+ods_mariadb_2b,ods_a168_bet01,bet26,varchar,"source_type=decimal(16,4); LV2退水%數"
+ods_mariadb_2b,ods_a168_bet01,bet27,varchar,"source_type=decimal(16,4); LV3退水%數"
+ods_mariadb_2b,ods_a168_bet01,bet28,varchar,"source_type=decimal(16,4); LV4退水%數"
+ods_mariadb_2b,ods_a168_bet01,bet29,varchar,"source_type=decimal(16,4); LV5退水%數"
+ods_mariadb_2b,ods_a168_bet01,bet30,varchar,"source_type=enum(''Y'',''N''); 取消單"
+ods_mariadb_2b,ods_a168_bet01,bet31,varchar,source_type=int(11); 桌子編號(Table ID)
+ods_mariadb_2b,ods_a168_bet01,bet32,varchar,source_type=int(11); 房間編號(Room ID)
+ods_mariadb_2b,ods_a168_bet01,betwalletid,varchar,source_type=text; 下注單一錢包用
+ods_mariadb_2b,ods_a168_bet01,gametype,varchar,source_type=int(11); 1:網投、2:電投
+ods_mariadb_2b,ods_a168_bet01,commission,varchar,"source_type=int(11); 0.一般,1,免傭"
+ods_mariadb_2b,ods_a168_bet01,category,varchar,"source_type=int(11); 1.一般,2.小費"
+ods_mariadb_2b,ods_a168_bet01,eid,varchar,source_type=int(11); 荷官
+ods_mariadb_2b,ods_a168_bet01,serid,varchar,source_type=int(11); 服務編號
+ods_mariadb_2b,ods_a168_bet01,ip,varchar,source_type=varchar(15); 下注IP
+ods_mariadb_2b,ods_a168_bet01,partnerBetId,varchar,source_type=varchar(50); 第三方注單編號
+ods_mariadb_2b,ods_a168_bet01,gameId,varchar,source_type=varchar(20); 第三方遊戲代碼
+ods_mariadb_2b,ods_a168_bet01,updatetime,varchar,source_type=datetime; 更新時間
+ods_mariadb_2b,ods_a168_bet01,source_db,varchar,来源库
+ods_mariadb_2b,ods_a168_bet01,source_table,varchar,来源表
+ods_mariadb_2b,ods_a168_bet01,ods_table_name,varchar,ODS表名
+ods_mariadb_2b,ods_a168_bet01,sync_time,datetime,同步时间
