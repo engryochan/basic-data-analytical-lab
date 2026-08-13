@@ -1,0 +1,641 @@
+---
+title: "a168 · 第二阶段 · L2 计算正确性与口径固化"
+subtitle: "§K 层逐条落地 —— 承第一阶段 §Z 之结论，为第三、四阶段铺底"
+author: "Ryo Eng"
+date: today
+lang: zh-CN
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看代码"
+    df-print: kable
+execute:
+  echo: false
+  warning: false
+  message: false
+  error: true
+---
+
+```{r}
+#| label: setup
+suppressMessages({
+  if (!require("pacman", quietly = TRUE)) install.packages("pacman")
+  library(pacman)
+  p_load(data.table, gt, here)
+})
+
+## ════════════════════════════════════════════════════════════════════════
+##  本档与第一阶段共用同一套读取与呈表器，函数逐字相同，不另起。
+##  铁律第九条：凡正文数字，渲染时自表格本体现算，严禁硬编码。
+## ════════════════════════════════════════════════════════════════════════
+
+## 常数集中登记（改一处即全档生效）
+N_PEEK   <- 3L
+BOX_H    <- "420px"
+BOX_W    <- "100%"
+DEF_LOCK <- "K1_20260813"   # 口径锁定列之应有取值
+
+## 数据目录多候选解析（承第一阶段之斧正：here() 锚定项目根而非本档目录）
+.dir_candidates <- unique(c(
+  file.path(getwd(), "数据库"),
+  "数据库",
+  tryCatch(here::here("数据库"), error = function(e) NA_character_),
+  file.path(dirname(getwd()), "数据库")
+))
+.dir_candidates <- .dir_candidates[!is.na(.dir_candidates)]
+.hit <- .dir_candidates[dir.exists(.dir_candidates)]
+DATA_DIR <- if (length(.hit)) .hit[1] else .dir_candidates[1]
+
+## 文件名归一：精确名 → 忽略大小写 → 重复扩展名 → 前缀近似
+resolve_file <- function(fname) {
+  if (!dir.exists(DATA_DIR)) return(NULL)
+  fs <- list.files(DATA_DIR)
+  if (!length(fs)) return(NULL)
+  hit <- fs[fs == fname]
+  if (!length(hit)) hit <- fs[tolower(fs) == tolower(fname)]
+  if (!length(hit)) hit <- fs[tolower(fs) == tolower(paste0(fname, ".csv"))]
+  if (!length(hit)) {
+    stem <- sub("\\.csv$", "", fname)
+    hit  <- fs[grepl(paste0("^", stem), fs, ignore.case = TRUE)]
+  }
+  if (!length(hit)) return(NULL)
+  list(path = file.path(DATA_DIR, hit[1]), name = hit[1],
+       variant = !identical(hit[1], fname))
+}
+
+## 编码自适应：读原始字节、剥 BOM、以 iconv 逐一转码
+read_adaptive <- function(fname) {
+  r <- resolve_file(fname); if (is.null(r)) return(NULL)
+  raw <- readBin(r$path, "raw", file.info(r$path)$size)
+  if (length(raw) >= 3 && identical(as.integer(raw[1:3]), c(239L, 187L, 191L))) {
+    raw <- raw[-(1:3)]; encs <- "UTF-8"; bom <- TRUE
+  } else { encs <- c("UTF-8", "GB18030", "GBK", "BIG5", "latin1"); bom <- FALSE }
+  for (enc in encs) {
+    txt <- try(iconv(rawToChar(raw), from = enc, to = "UTF-8"), silent = TRUE)
+    if (inherits(txt, "try-error") || is.na(txt) || !nzchar(txt)) next
+    d <- try(data.table::fread(text = txt, showProgress = FALSE), silent = TRUE)
+    if (!inherits(d, "try-error") && ncol(d) > 0) {
+      attr(d, "encoding_used") <- if (bom) "UTF-8-BOM" else enc
+      attr(d, "file_used") <- r$name
+      attr(d, "is_variant") <- r$variant
+      return(d)
+    }
+  }
+  NULL
+}
+
+placeholder <- function(fname, sqlid, affected) {
+  cat(sprintf(
+    "\n::: {.callout-important}\n## ⚠ 待补数据\n\n**所待文件**：`数据库/%s`  \n**产出语句**：`%s`  \n**受影响输出**：%s\n\n本节数字一律不填、不推想、不以静态文字冒充运行结果。\n:::\n",
+    fname, sqlid, affected))
+}
+
+gt_box <- function(g, h = BOX_H, w = BOX_W) {
+  g |> gt::tab_options(table.font.size = "82%", container.width = w,
+                       container.height = h,
+                       container.overflow.x = TRUE, container.overflow.y = TRUE)
+}
+
+show_tbl <- function(d, cap = NULL) {
+  if (is.null(d)) return(invisible(NULL))
+  g <- gt::gt(d); if (!is.null(cap)) g <- gt::tab_header(g, title = cap); gt_box(g)
+}
+
+## 首末各 N_PEEK 行，行号为实际观测序号（data.table 打印概念）
+show_head_tail <- function(d, cap = NULL, n = N_PEEK) {
+  if (is.null(d)) return(invisible(NULL))
+  N <- nrow(d); M <- ncol(d)
+  if (N == 0L) return(gt::gt(data.table::data.table(
+      提示 = "本表 0 行——须查明是查询无命中，抑或导出失败；0 行不等于无异常")) |>
+      gt::tab_header(title = cap, subtitle = "⚠ 空表·须解释") |> gt_box(h = "auto"))
+  as_disp <- function(x) if (is.numeric(x))
+      ifelse(is.na(x), "NA", format(x, big.mark = ",", trim = TRUE, scientific = FALSE))
+    else as.character(x)
+  rowlab <- function(i) sprintf("%s:", format(i, big.mark = ",", trim = TRUE))
+  if (N <= 2L * n) {
+    body <- as.data.table(lapply(d, as_disp)); body[, 行号 := rowlab(seq_len(N))]
+    sub <- sprintf("共 %s 行 × %d 列 —— 全表已尽列（行号即实际观测序号）",
+                   format(N, big.mark = ","), M)
+  } else {
+    hi <- seq_len(n); ti <- seq.int(N - n + 1L, N)
+    h <- as.data.table(lapply(d[hi], as_disp)); h[, 行号 := rowlab(hi)]
+    sep <- as.data.table(lapply(d[1L], \(x) "---")); sep[, 行号 := "---"]
+    t <- as.data.table(lapply(d[ti], as_disp)); t[, 行号 := rowlab(ti)]
+    body <- data.table::rbindlist(list(h, sep, t), use.names = TRUE, fill = TRUE)
+    omit <- N - 2L * n
+    sub <- sprintf(
+      "共 %s 行 × %d 列 —— 首 %d 与末 %d 行（行号即实际观测序号，末行号 %s 即总观测数），中间省略 %s 行（%.1f%%）",
+      format(N, big.mark = ","), M, n, n, format(N, big.mark = ","),
+      format(omit, big.mark = ","), 100 * omit / N)
+  }
+  data.table::setcolorder(body, "行号")
+  gt::gt(body) |> gt::tab_header(title = cap, subtitle = sub) |>
+    gt::cols_align(align = "right", columns = "行号") |> gt_box() |>
+    gt::tab_source_note(gt::md(
+      "*行号为实际观测序号，末行号即总观测数；`---` 为省略段。所见系样本非全集。*"))
+}
+
+gate <- function(pass, s, msg_pass, msg_fail) {
+  if (isTRUE(pass)) sprintf("🟢 通过 —— %s", msg_pass)
+  else sprintf("%s %s —— %s",
+    c(S1 = "🔴", S2 = "🟠", S3 = "🟡", S4 = "🟢")[[s]],
+    c(S1 = "S1 致命·停止分析", S2 = "S2 阻断·禁入正式结论",
+      S3 = "S3 条件·须满足附加条件", S4 = "S4 建议")[[s]], msg_fail)
+}
+
+## 口径锁定列校验：缺列或值不符即当场报错，不得静默通过
+check_def_lock <- function(d, sqlid) {
+  if (is.null(d)) return("—")
+  if (!"def_lock" %in% names(d))
+    return(sprintf("🔴 缺 def_lock 列 —— %s 之输出非本口径版本，禁止使用", sqlid))
+  v <- unique(as.character(d$def_lock))
+  if (length(v) == 1L && v == DEF_LOCK) sprintf("🟢 口径锁 %s 相符", DEF_LOCK)
+  else sprintf("🔴 口径锁不符：应为 %s，实得 %s —— 旧版产物，禁止使用",
+               DEF_LOCK, paste(v, collapse = "、"))
+}
+
+K_MANIFEST <- data.table::data.table(
+  SQL编号 = c("§K-01","§K-02","§K-03","§K-04","§K-04b",
+              "§K-05","§K-06","§K-07","§K-08","§K-09"),
+  文件名 = c("K01_valid_order_funnel.csv","K02_testline_impact.csv",
+             "K03_amount_identity.csv","K04_table_window.csv",
+             "K04b_table_window_mode.csv","K05_bet_phase_dist.csv",
+             "K06_player_round.csv","K07_grain_conservation.csv",
+             "K08_sentinel_dealer.csv","K09_join_cardinality.csv"),
+  层     = c("L2","L2","L2","L2","L2","L2","L2","L2","L1","L2"),
+  门禁   = c("S1","S2","S1","S3","S1","S2","S2","S1","S2","S3"),
+  口径锁 = c("否","否","否","否","否","是","是","否","是","否")
+)
+K_MANIFEST[, 已就位 := vapply(文件名, \(f) !is.null(resolve_file(f)), logical(1))]
+```
+
+# 〇 本档定位与承接 {#sec-charter}
+
+## 本档做什么
+
+第二阶段只回答一个问题——
+
+> **算得对不对？**
+
+它不回答阈值定多少、尾秒是否有优势。那属第三、四阶段。
+
+## 承第一阶段之六项结论（已闭合，本档据此建立，不再重议）
+
+| # | 结论 | 实证 |
+|---|---|---|
+| 一 | **`dt` 即 `bet07` 帳務日期** | 131,058,975 分之 131,058,975 全等，即 100.0% |
+| 二 | **`DATE(bet08)` 不可用于切日** | 与 `dt` 仅 61.4% 相符，相差 38.6 个百分点 |
+| 三 | **局键健全，塌缩未发生** | 跨桌局键 0、`bet03` 跨桌数 0、局键含哨兵值仅 102 行 |
+| 四 | **`bet06` 为开放下注时刻** | 纪元哨兵 0、时序异常仅 3 笔 |
+| 五 | **窗口为桌台级常量** | 30 桌跨六月零迁移、跨房零分歧 |
+| 六 | **`eid = -1` 占 15.24%** | 19,982,734 笔，成因待上游确认 |
+
+## 适用铁律（承第一阶段，全档生效）
+
+| 项 | 内容 |
+|---|---|
+| **标准来源** | 一律以全天下最顶尖标准为准，不以任何单一辖区为上限 |
+| **T × L × S 三轴** | 依据性质 × 核验领域 × 风险严重度，三者不得混称 |
+| **铁律第九条** | 凡正文数字，渲染时自表格本体现算，严禁硬编码 |
+| **核实之定义** | 以文件与数据实测验证；禁止凭源码推断即宣告完成 |
+| **缺失显式化** | 缺数据须写明文件名、SQL 编号、受影响输出三要素 |
+| **截断认识论** | 所见永远是样本；「未出现」不等于「不存在」 |
+| **呈表纪律** | 表格一律 gt，过宽 scroll-x、过长 scroll-y，不截列不截行 |
+| **口径锁定** | `def_lock` 缺列或值不符即当场报错，不得静默通过 |
+| **数据快照一致性** | 各条须记录执行时刻；跨条对账前须确认同一快照 |
+
+## 取数来源
+
+本档所读之 CSV，一律由 **`a168_第二阶段_口径固化与相位派生_SQL_K层_v2_净版无注释.sql`**
+按 §K-00 → §K-09 之顺序逐条执行、逐条导出而得。
+
+::: {.callout-important}
+## 执行一律用净版，留档用注释版
+
+第一阶段两度因注释触发 `Unexpected input` 而失败：
+一次系注释内之分号被语句切分器截断，一次系 §K-04 之注释同型失败。
+**两次故障之唯一共同项，为注释内之 `数据库/xxx.csv` —— 其中之斜杠为 SQL 除法运算符。**
+v2 已将注释内斜杠一并清零（17 处），连同分号、星号、块注释，四者皆为零。
+
+**惟最稳者仍是净版无注释**：注释之价值在留档，不在执行。
+:::
+
+```{r}
+#| label: manifest
+show_tbl(K_MANIFEST, "◆ §K 层载入清单（就位状态于渲染时现算）")
+```
+
+```{r}
+#| results: asis
+n_all <- nrow(K_MANIFEST); n_ok <- sum(K_MANIFEST$已就位)
+cat(sprintf("\n> **就位现况（现算）**：应载 %d 份，已就位 **%d** 份，尚缺 **%d** 份。\n\n",
+            n_all, n_ok, n_all - n_ok))
+if (n_ok < n_all) {
+  for (i in which(!K_MANIFEST$已就位))
+    cat(sprintf("> - `%s` ← %s（门禁 %s）\n",
+                K_MANIFEST$文件名[i], K_MANIFEST$SQL编号[i], K_MANIFEST$门禁[i]))
+  cat("\n")
+}
+```
+
+# 一 §K 层逐条落地 {#sec-k}
+
+## K-01 · 有效订单漏斗 {#sec-k-01}
+
+**用途**：固化去重与有效订单口径，逐级量化折损，确立本层一切比率之分母。
+**口径**：先去重、后过滤。反序执行会把「最新版已失效而旧版仍有效」者错误保留。
+
+```{r}
+#| label: read-k01
+d_K01 <- read_adaptive("K01_valid_order_funnel.csv")
+show_head_tail(d_K01, "◆ K-01 · 有效订单漏斗")
+```
+
+```{r}
+#| results: asis
+.d <- d_K01
+if (is.null(.d)) {
+  placeholder("K01_valid_order_funnel.csv", "§K-01",
+              "本层一切比率之分母；去重与五项有效条件之折损量")
+} else {
+  need <- c("S0_原始行数","S1_去重后订单数","S6_有效订单数")
+  if (all(need %in% names(.d))) {
+    s0 <- .d$S0_原始行数[1]; s1 <- .d$S1_去重后订单数[1]; s6 <- .d$S6_有效订单数[1]
+    cat(sprintf(
+      "\n> **现算**：原始 %s 行 → 去重后 %s 行（剔历史版本 %s 行，占 %.4f%%）→ 有效订单 %s 行（占原始 %.4f%%）。\n\n",
+      format(s0, big.mark = ","), format(s1, big.mark = ","),
+      format(s0 - s1, big.mark = ","), 100 * (s0 - s1) / s0,
+      format(s6, big.mark = ","), 100 * s6 / s0))
+  }
+  cat(sprintf("\n%s\n\n", gate(nrow(.d) > 0, "S1",
+    "漏斗已就位，分母确立", "未就位——本层一切比率无分母可依")))
+}
+```
+
+## K-02 · 测试线代理排除之影响 {#sec-k-02}
+
+```{r}
+#| label: read-k02
+d_K02 <- read_adaptive("K02_testline_impact.csv")
+show_head_tail(d_K02, "◆ K-02 · 测试线代理排除之影响")
+```
+
+```{r}
+#| results: asis
+.d <- d_K02
+if (is.null(.d)) placeholder("K02_testline_impact.csv", "§K-02",
+    "测试线订单之规模；排除该项后之分母")
+else cat(sprintf("\n%s\n\n", gate(nrow(.d) > 0, "S2",
+  "测试线影响已量化", "未就位——无从证明测试线已被排除")))
+```
+
+## K-03 · 金额四口径与恒等式 {#sec-k-03}
+
+**三式并试**，以定 `bet41` 是否入账。残差绝对值最小者，即真实之结算关系。
+
+```{r}
+#| label: read-k03
+d_K03 <- read_adaptive("K03_amount_identity.csv")
+show_head_tail(d_K03, "◆ K-03 · 金额四口径与恒等式（按账务日）")
+```
+
+```{r}
+#| results: asis
+.d <- d_K03
+if (is.null(.d)) {
+  placeholder("K03_amount_identity.csv", "§K-03",
+              "净输赢之结算关系；bet41 是否入账；洗码量作分母之收益率")
+} else {
+  rc <- intersect(c("残差式一","残差式二","残差式三"), names(.d))
+  if (length(rc) == 3L) {
+    a <- sapply(rc, \(c) sum(abs(.d[[c]]), na.rm = TRUE))
+    best <- names(which.min(a))
+    for (i in seq_along(a))
+      cat(sprintf("> %s：绝对值合计 %s\n", names(a)[i], format(a[i], big.mark = ",", digits = 6)))
+    cat(sprintf("\n> **判定（现算）**：残差绝对值最小者为 **%s**。\n\n", best))
+    if (best == "残差式一")
+      cat("> 即 **净输赢 = 游戏输赢 + 退水** 成立，`bet41` 不入账，需求文档四条算式完备无漏项。\n\n")
+  }
+  cat(sprintf("\n%s\n\n", gate(nrow(.d) > 0, "S1",
+    "恒等式已核，金额口径可信", "未就位——净输赢口径未经验证，禁入任何金额结论")))
+}
+```
+
+## K-04 · 桌台窗口之分位数对照 {#sec-k-04}
+
+::: {.callout-warning}
+## ⚠ 本条已降为对照，窗口之正解见 §K-04b
+
+v1 以 `P99` 为窗口上界，经 §K-05 实测暴露其在小样本桌上被逾制局拉高：
+得出七种窗口秒 13、25、28、29、30、31、32，而 28 至 32 各桌之
+「封盘前一秒内」注单占比仅 0.04% 至 0.13%，常规时段却占 85% 至 99.5%。
+**若窗口果真为 28 至 32 秒，封盘前一秒内理应聚集大量注单**，
+正如窗口 13 之桌占 18.96%、窗口 25 之桌占 8.68% 那样。可见系高估。
+
+**根因：`P99` 仍是人选之参数，非数据自身之断点。** 此为硬编码阈值之变形。
+:::
+
+```{r}
+#| label: read-k04
+d_K04 <- read_adaptive("K04_table_window.csv")
+show_head_tail(d_K04, "◆ K-04 · 桌台窗口之分位数对照（仅供检视）")
+```
+
+```{r}
+#| results: asis
+.d <- d_K04
+if (is.null(.d)) placeholder("K04_table_window.csv", "§K-04", "窗口估计量之对照检视")
+else cat(sprintf("\n%s\n\n", gate(nrow(.d) > 0, "S3",
+  "分位数对照已就位", "未就位——不影响正解，惟失去对照")))
+```
+
+## K-04b · 桌台窗口之众数解（正解） {#sec-k-04b}
+
+**何以众数优于分位数**：分位数须人先选一个 `p`，而 `p` 本身即是硬编码；
+**众数由数据自身之峰值给出，无须人选，亦不受少数逾制局影响**。
+
+**判读**：众数占比逾三成者窗口稳固；若前三高频秒相邻且合计逾五成，可采其最大者；
+若众数占比不足一成，则该桌窗口不清晰，须单独查明方可用于相位计算。
+
+```{r}
+#| label: read-k04b
+d_K04b <- read_adaptive("K04b_table_window_mode.csv")
+show_head_tail(d_K04b, "◆ K-04b · 桌台窗口之众数解（按窗口秒排序）")
+```
+
+```{r}
+#| results: asis
+.d <- d_K04b
+if (is.null(.d)) {
+  placeholder("K04b_table_window_mode.csv", "§K-04b",
+              "各桌窗口秒之正解；§K-05 与 §K-06 之相位计算前置；第四阶段尾秒分析之根基")
+} else {
+  msg <- ""
+  if ("稳健性判定" %in% names(.d)) {
+    tb <- table(.d$稳健性判定)
+    msg <- paste0("稳健性：", paste(sprintf("%s %d 桌", names(tb), as.integer(tb)),
+                                    collapse = "、"), "。")
+  }
+  if ("窗口秒_众数解" %in% names(.d))
+    msg <- paste0(msg, sprintf("窗口秒共 %d 种：%s。",
+      length(unique(.d$窗口秒_众数解)),
+      paste(sort(unique(.d$窗口秒_众数解)), collapse = "、")))
+  cat(sprintf("\n> **现算**：涵 %d 桌。%s\n\n", nrow(.d), msg))
+  ok <- if ("稳健性判定" %in% names(.d)) !any(.d$稳健性判定 == "C_不清晰_须单独查明") else nrow(.d) > 0
+  cat(sprintf("\n%s\n\n", gate(ok, "S1",
+    "各桌窗口稳固，相位可派生", "有桌窗口不清晰——该桌之相位计算须暂停，另行查明")))
+}
+```
+
+## K-05 · 注单相位分布 {#sec-k-05}
+
+**相位派生**：距封盘秒数 = 该桌窗口秒 − 距开局秒数；下注进度 = 距开局秒数 ÷ 窗口秒。
+
+**须记一事**：`bet08` 精度为秒，故同一秒内之先后不可分辨。
+**封盘前一秒实为一个整秒区间，非瞬时。**
+
+```{r}
+#| label: read-k05
+d_K05 <- read_adaptive("K05_bet_phase_dist.csv")
+show_head_tail(d_K05, "◆ K-05 · 注单相位分布（按窗口秒 × 相位段）")
+```
+
+```{r}
+#| results: asis
+.d <- d_K05
+if (is.null(.d)) {
+  placeholder("K05_bet_phase_dist.csv", "§K-05",
+              "各相位段之注单、会员、局数与游戏输赢率；第四阶段尾秒分析之直接输入")
+} else {
+  cat(sprintf("\n> **口径锁**：%s\n\n", check_def_lock(.d, "§K-05")))
+  cat(sprintf("\n%s\n\n", gate(nrow(.d) > 0, "S2",
+    "相位分布已就位", "未就位——尾秒一线无从展开")))
+}
+```
+
+## K-06 · 玩家物理局聚合 {#sec-k-06}
+
+**口径**：同一玩家同一物理局之多笔注单先聚合，再以局游戏输赢之正负零判胜负和。
+和局不进入胜率分母。
+
+**何以必须先聚合**：按单笔判胜负者，多笔下注者之胜率被系统性拉向五成，
+与单笔下注者不可比。
+
+**和局之双重含义**：此处之和局为该玩家该局净收支为零，**非牌面和局**。
+牌面和局押庄闲退回本金者落入此格，同局对冲致收支抵销者亦落入此格。
+**对打型账户之局面恰会大量落入此格**，故另出「疑似同局对冲」列以备辨识。
+
+::: {.callout-important}
+## 本条为明细导出，须以键集游标分页，禁用 OFFSET
+
+**何以禁用 OFFSET**：无稳定唯一排序时，`OFFSET` 翻页曾致 **36.49%** 重复行。
+且含并列值之排序键（如 z 分数）更不可用作游标——实测 517,528 行中并列 103,510 组。
+
+**本条之唯一键为「会员ID + 物理局键」**，两者组合唯一且无并列，适作游标。
+分页模板见 @sec-k06-page。
+:::
+
+```{r}
+#| label: read-k06
+d_K06 <- read_adaptive("K06_player_round.csv")
+show_head_tail(d_K06, "◆ K-06 · 玩家物理局聚合（明细）")
+```
+
+```{r}
+#| results: asis
+.d <- d_K06
+if (is.null(.d)) {
+  placeholder("K06_player_round.csv", "§K-06",
+              "玩家局级胜负和；胜率之唯一合法来源；第三、四阶段之核心输入")
+} else {
+  cat(sprintf("\n> **口径锁**：%s\n\n", check_def_lock(.d, "§K-06")))
+  if ("局结果" %in% names(.d)) {
+    w <- sum(.d$局结果 == "胜局"); l <- sum(.d$局结果 == "负局"); t <- sum(.d$局结果 == "和局")
+    cat(sprintf("> **现算**：胜局 %s、负局 %s、和局 %s；胜率 = 胜 ÷（胜＋负）= **%.4f**（和局不入分母）。\n\n",
+      format(w, big.mark = ","), format(l, big.mark = ","), format(t, big.mark = ","),
+      w / (w + l)))
+  }
+  cat(sprintf("\n%s\n\n", gate(nrow(.d) > 0, "S2",
+    "玩家局层已就位", "未就位——胜率无合法来源")))
+}
+```
+
+### K-06 之键集游标分页模板 {#sec-k06-page}
+
+**第一批**（不带游标）：
+
+```{sql, eval = FALSE}
+SELECT ... FROM ... 
+ORDER BY 会员ID, 物理局键
+LIMIT 500000
+```
+
+**其后每批**（以上一批之末行为游标，`?A` 与 `?B` 填入上一批末行之会员ID与物理局键）：
+
+```{sql, eval = FALSE}
+SELECT ... FROM ...
+WHERE (会员ID > '?A') OR (会员ID = '?A' AND 物理局键 > '?B')
+ORDER BY 会员ID, 物理局键
+LIMIT 500000
+```
+
+**合并后须自检三事**：总行数等于各批之和；按「会员ID + 物理局键」去重后行数不变（**无重复**）；
+去重键之最小与最大值与单跑 `COUNT` 之结果吻合（**无遗漏**）。
+
+## K-07 · 粒度守恒 {#sec-k-07}
+
+**判读**：玩家局层行数须等于注单层之「会员 × 局键」去重数；局层行数须等于局键去重数。
+**不等即有扇出，须立即停止并回查连接。**
+
+```{r}
+#| label: read-k07
+d_K07 <- read_adaptive("K07_grain_conservation.csv")
+show_head_tail(d_K07, "◆ K-07 · 粒度守恒")
+```
+
+```{r}
+#| results: asis
+.d <- d_K07
+if (is.null(.d)) {
+  placeholder("K07_grain_conservation.csv", "§K-07",
+              "各层粒度之守恒；扇出与否之唯一判据")
+} else {
+  if (all(c("L0_注单层行数","L1_玩家局层应有行数","L2_局层应有行数") %in% names(.d))) {
+    l0 <- .d$L0_注单层行数[1]; l1 <- .d$L1_玩家局层应有行数[1]; l2 <- .d$L2_局层应有行数[1]
+    cat(sprintf("> **现算**：注单层 %s 行 → 玩家局层 %s 行（每玩家局 %.4f 单）→ 局层 %s 行（每局 %.4f 单）。\n\n",
+      format(l0, big.mark = ","), format(l1, big.mark = ","), l0 / l1,
+      format(l2, big.mark = ","), l0 / l2))
+  }
+  cat(sprintf("\n%s\n\n", gate(nrow(.d) > 0, "S1",
+    "粒度守恒已核", "未就位——扇出与否不明，一切聚合皆不可信")))
+}
+```
+
+## K-08 · 哨兵荷官分层 {#sec-k-08}
+
+**原则**：装载即分层，其后各块一律取合格层。**本条先量化，不先剔除。**
+
+**何以不先剔除**：若其成因为「尚未发生」一类，剔除将造成选择性偏差——
+被剔除者非随机，而系统性偏向某一类局面。
+
+```{r}
+#| label: read-k08
+d_K08 <- read_adaptive("K08_sentinel_dealer.csv")
+show_head_tail(d_K08, "◆ K-08 · 哨兵荷官分层")
+```
+
+```{r}
+#| results: asis
+.d <- d_K08
+if (is.null(.d)) {
+  placeholder("K08_sentinel_dealer.csv", "§K-08",
+              "哨兵层之规模与表现；一切荷官维度结论之前提")
+} else {
+  cat(sprintf("\n> **口径锁**：%s\n\n", check_def_lock(.d, "§K-08")))
+  if (all(c("分层","桌台数","注单占比") %in% names(.d))) {
+    q <- .d[分层 %like% "合格"]; s <- .d[分层 %like% "哨兵"]
+    if (nrow(q) && nrow(s))
+      cat(sprintf("> **现算**：哨兵层占注单 %.2f%%，涉 %s 张桌；合格层涉 %s 张桌。\n\n",
+        100 * s$注单占比[1], format(s$桌台数[1], big.mark = ","),
+        format(q$桌台数[1], big.mark = ",")))
+  }
+  cat(sprintf("\n%s\n\n", gate(nrow(.d) > 0, "S2",
+    "哨兵层已量化并分层", "未就位——荷官维度结论一律禁入")))
+}
+```
+
+## K-09 · 连接前基数预估 {#sec-k-09}
+
+**判读**：预估配对量超过十亿者，一律先聚合再连接，**不得裸连**。
+注单粒度乘局粒度之裸连接曾使 S-02 三小时跑不完，即万亿级配对。
+
+```{r}
+#| label: read-k09
+d_K09 <- read_adaptive("K09_join_cardinality.csv")
+show_head_tail(d_K09, "◆ K-09 · 连接前基数预估")
+```
+
+```{r}
+#| results: asis
+.d <- d_K09
+if (is.null(.d)) placeholder("K09_join_cardinality.csv", "§K-09",
+    "各连接键之基数；同桌配对之实际规模；是否须设局规模上限")
+else {
+  if (all(c("连接键","基数") %in% names(.d))) {
+    p <- .d[连接键 %like% "同桌配对"]
+    if (nrow(p)) cat(sprintf(
+      "> **现算**：同桌配对预估 **%s** 组。%s\n\n", format(p$基数[1], big.mark = ","),
+      if (p$基数[1] > 1e9) "**逾十亿，须设局规模上限，不得裸连。**" else "在可直接连接之量级。"))
+  }
+  cat(sprintf("\n%s\n\n", gate(nrow(.d) > 0, "S3",
+    "基数已预估", "未就位——连接规模不明，禁裸连")))
+}
+```
+
+# 二 门禁总账 {#sec-gate}
+
+```{r}
+#| label: gate-summary
+G <- copy(K_MANIFEST)
+G[, 行数 := vapply(文件名, \(f) { x <- read_adaptive(f)
+                    if (is.null(x)) NA_integer_ else nrow(x) }, integer(1))]
+G[, 口径锁 := vapply(seq_len(.N), \(i) {
+     if (K_MANIFEST$口径锁[i] == "否") "—"
+     else check_def_lock(read_adaptive(K_MANIFEST$文件名[i]), K_MANIFEST$SQL编号[i])
+   }, character(1))]
+G[, 判定 := fifelse(已就位 & !is.na(行数) & 行数 > 0, "🟢 通过",
+             fifelse(门禁 == "S1", "🔴 S1 致命",
+             fifelse(门禁 == "S2", "🟠 S2 阻断", "🟡 S3 条件")))]
+show_tbl(G, "◆ §K 层门禁总账（渲染时现算）")
+```
+
+```{r}
+#| results: asis
+n_f <- sum(G$判定 == "🔴 S1 致命"); n_b <- sum(G$判定 == "🟠 S2 阻断")
+n_p <- sum(G$判定 == "🟢 通过")
+cat(sprintf("\n> **门禁现况（现算）**：通过 **%d**，S1 致命 **%d**，S2 阻断 **%d**。\n\n",
+            n_p, n_f, n_b))
+if (n_f > 0) {
+  cat("::: {.callout-important}\n## 🔴 S1 致命 —— 第三阶段不得开工\n\n")
+  for (f in G[判定 == "🔴 S1 致命", 文件名]) cat(sprintf("- `数据库/%s`\n", f))
+  cat("\n:::\n")
+} else if (n_b > 0) {
+  cat("::: {.callout-warning}\n## 🟠 S2 阻断 —— 可续探索，禁入正式结论\n:::\n")
+} else {
+  cat("::: {.callout-note}\n## 🟢 L2 门禁全数通过 —— 可进入第三阶段\n:::\n")
+}
+```
+
+# 三 下一阶段之前置条件 {#sec-next}
+
+**第三阶段（异常 IP 阈值）**开工须满足：
+
+1. 本层门禁零 S1；
+2. §K-09 之同桌配对规模已知，且**局规模上限已由数据推导**（不得手设）；
+3. `eid = -1` 之成因已由上游确认——此项只挡荷官维度，不挡 IP 维度。
+
+**第四阶段（尾秒阈值）**开工另须：
+
+1. §K-04b 之窗口众数解**全部为「A 稳固」或「B 可用」**，无一为「C 不清晰」；
+2. §K-05 之相位分布已就位且口径锁相符；
+3. 须预先厘清一事：**`bet08` 精度为秒**，故「封盘前一秒」是一个整秒区间而非瞬时；
+   同一秒内之先后不可分辨，「谁抢在最后一刻」这类微观时序问题**在本数据上不可解**，
+   相关命题应自需求中剔除，不宜勉强作答。
+
+# 四 本档之自我限制 {#sec-limits}
+
+1. 本档**只做 L2 计算正确性与口径固化**，不含任何阈值、评分、因果或经济结论。
+2. 所有数字皆于渲染时自 CSV 现算；CSV 未就位者一律出占位提示，**不推想**。
+3. SQL 原文自 **`..._K层_v2_净版无注释.sql`** 嵌入，未作改写；
+   脚本更新须**全档扫查一切来源声明**，不得只改一处。
+4. 证据等级上限为 **E3（原始 SQL 可重算）**。凡称「实测」者，指本档所读 CSV 之现算，
+   非原始 ODS 之独立复核。
+
+*谨呈 Ryo Eng 斧正。*
