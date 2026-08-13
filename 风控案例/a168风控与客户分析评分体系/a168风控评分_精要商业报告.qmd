@@ -16,7 +16,7 @@ format:
     code-summary: "查看计算代码（全部数字由此现算）"
     toc-location: left
 execute:
-  echo: false
+  echo: true
   warning: false
   message: false
 ---
