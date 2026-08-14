@@ -1,5 +1,5 @@
 ---
-title: "a168 能力值口径解读与实证对照 v6.6"
+title: "a168 能力值口径解读与实证对照 v7.1"
 subtitle: "把评分翻译成庄家的账：综合分 ≈ Theo 的风控加权版 · 全篇读表现算 · 阈值—幅度—后果三段式"
 author: "Ryo Eng"
 date: today
@@ -11,8 +11,10 @@ format:
     toc-title: "目录"
     toc-location: left
     number-sections: true
-    embed-resources: false   # ★ 2026-08-14：全内联会令 Pandoc/Lua 内存耗尽（见 @sec-perf）
-    self-contained-math: false
+    embed-resources: true    # ★ 2026-08-14 复原：Lua 内存之真因是 YAML `css:` 键（已迁入正文 <style>），
+                             #   非全内联。前版关此项致 plotly.js 外链至 _files/，
+                             #   HTML 一旦离开该目录即全图空白——先生实测 25 个 widget div 配 25 个 JSON
+                             #   （数据俱在）而外链 13 处，正是此症。自足内联方可单档转发。
     page-layout: full
     code-fold: true
     code-tools: true
@@ -54,7 +56,7 @@ table.dataTable td{vertical-align:top}
 ##   只在 @sec-env 如实上报「哪个包没装上、因此哪一节降级」。
 ##   庄家视角：开台前点货——荷官、牌靴、监控缺一样都要当场记账。
 ## ═══════════════════════════════════════════════════════════════════════════
-PKG_NEED <- c("data.table","DT","htmltools","plotly","echarts4r","gt","MASS","knitr")
+PKG_NEED <- c("data.table","DT","htmltools","plotly","echarts4r","gt","MASS","knitr","jsonlite","htmlwidgets")
 PKG_USE <- c(
  "data.table"="大表快速读取；缺则回落 read.csv，仅变慢，数字不变",
  "DT"="互动桌表（可搜可排、双向滚动、禁截列截行）；缺则回落 gt",
@@ -62,7 +64,17 @@ PKG_USE <- c(
  "plotly"="互动图与阈值线；缺则该图不出，绝不以静态图冒充",
  "echarts4r"="四实体雷达（极坐标）；缺则雷达不出",
  "gt"="桌表次选出口","MASS"="Huber 稳健定位；缺则该行留空",
- "knitr"="末选静态表出口")
+ "knitr"="末选静态表出口",
+ "jsonlite"="er_radar() 之 JSON 序列化；缺则雷达不出",
+ "htmlwidgets"="图库依赖登记；**缺则全档图件空白**，见 @sec-deps")
+## ★ 2026-08-14 立哨：PKG_NEED 与 PKG_USE 系两处维护，任一处新增而另一处未跟，
+##   即在 PKG_USE[[p]] 处报「下标出界」并中断渲染。此后不再靠人记——
+##   凡两清单不对齐即当场自补占位并点名，绝不中断渲染。
+.miss <- setdiff(PKG_NEED, names(PKG_USE))
+if (length(.miss)) {
+  PKG_USE[.miss] <- sprintf("⚠ 用途未登记（PKG_USE 漏列，已自动补位）——请补写 %s 之用途", .miss)
+  message(sprintf("⚠ PKG_USE 漏列 %d 项已自动补位：%s", length(.miss), paste(.miss, collapse = "、")))
+}
 PKG_LOG <- do.call(rbind, lapply(PKG_NEED, function(p){
   st <- if (requireNamespace(p, quietly=TRUE)) "✅ 已在" else {
     try(suppressWarnings(utils::install.packages(p,
@@ -352,6 +364,227 @@ thr_line <- function(p,y,lab,col=PAL$bad,x0,x1){
 ## 散点类型闸：点数超过 GL_MAX 即改 WebGL，否则 SVG 逐点绘制会把浏览器拖垮
 sc_type <- function(n) if (is.finite(n) && n > GL_MAX) "scattergl" else "scatter"
 
+
+## ═══ 图库依赖登记（2026-08-14 · 全部空白图之总根）═══════════════════════
+## 【病症】先生实测：widget <div> 28 个、widget JSON 28 个，数据一个不缺，
+##   而 `Plotly.newPlot` 出现 **0 次**、`exports.echarts` **0 次**——
+##   **绘图引擎根本没进档**。DataTables 在（16 处），故表能看、图全灭。
+## 【根因】图皆在 `results: asis` 块内以 print() 输出。asis 块中 knitr **不走**
+##   `knit_print.htmlwidget`，故**从未登记该 widget 的 htmlDependency**；
+##   `embed-resources` 只内联「已登记」的依赖，一个没登记的库自然无从内联。
+##   庄家视角：等于把牌桌、筹码、监控都搬进场了，**唯独没请荷官**——
+##   台面摆得再齐整，没人发牌就是一局不开。
+## 【斧正】此处一次性登记 plotly 与 echarts 两库依赖。登记之后，
+##   其后各 asis 块 print 出来的 div+JSON 由 HTMLWidgets.staticRender() 自动接管，
+##   全档图件一并复活；末尾另附**依赖自检双图**，呈现即证两库确已就位。
+DEPS <- list()
+if (isTRUE(HAS$plotly)) {
+  d <- try(htmlwidgets::getDependency("plotly", "plotly"), silent = TRUE)
+  if (!inherits(d, "try-error")) DEPS <- c(DEPS, d)
+}
+if (isTRUE(HAS$echarts4r)) {
+  d <- try(htmlwidgets::getDependency("echarts4r", "echarts4r"), silent = TRUE)
+  if (inherits(d, "try-error"))
+    d <- try(htmlwidgets::getDependency("echarts", "echarts4r"), silent = TRUE)
+  if (!inherits(d, "try-error")) DEPS <- c(DEPS, d)
+}
+
+## ═══ 雷达图：移植精要商业报告之 er_radar() 原码（先生令：一字不差）══════
+##   为何弃 echarts4r widget 而用自建生成器：er_radar() 直出 HTML+JS，
+##   在 asis 块中以 cat() 输出即可，**不依赖 knit_print 登记**，故绝不会重蹈
+##   「div 有而库无」之覆辙；且其 boot() 守卫「容器零宽即不初始化」，
+##   从根上杜绝按错误画幅定版面——此为精要报告十八轮斧正之成果，原样承接。
+##   下列 w_ / radar_txt / er_dep / er_id / er_radar / EJ / er_ttl 七件，
+##   逐字复自 `a168风控评分_精要商业报告.qmd` L294、L465–L610，值与序皆不动。
+w_ <- function(x, width = 16, sep = "<br>") {
+  vapply(as.character(x), function(t) {
+    if (is.na(t) || !nzchar(t)) return(t)
+    ch <- strsplit(t, "", fixed = TRUE)[[1]]
+    wd <- ifelse(grepl("[\u2e80-\u9fff\uff00-\uffef\u3000-\u303f]", ch), 2L, 1L)
+    out <- character(0); line <- ""; acc <- 0L
+    for (k in seq_along(ch)) {
+      if (acc + wd[k] > width && nzchar(line)) { out <- c(out, line); line <- ""; acc <- 0L }
+      line <- paste0(line, ch[k]); acc <- acc + wd[k]
+    }
+    paste(c(out, line), collapse = sep)
+  }, character(1), USE.NAMES = FALSE)
+}
+er_ttl <- function(title, width = 40) {
+  pos <- regexpr("：|——", title)
+  if (pos > 0) {
+    cut <- attr(pos, "match.length")
+    list(main = w_(substring(title, 1, pos - 1), width, "\n"),
+         sub  = w_(substring(title, pos + cut), width + 10, "\n"))
+  } else list(main = w_(title, width, "\n"), sub = "")
+}
+EJ <- function(x) as.character(jsonlite::toJSON(x, auto_unbox = TRUE,
+                                                digits = 6, na = "null"))
+## PAL 键名对齐：精要报告用 ac/good/violet，本档原用 c/g/v——补别名，不改原码
+PAL$ac <- PAL$c; PAL$good <- PAL$g; PAL$violet <- PAL$v
+
+## 轴名装饰（沿用第九至十二轮成法：单行、半角中点、缺名点名、待表标注）
+radar_txt <- function(labels, dirs = NULL, pend = NULL) {
+  labels <- u8(labels)   # ★ 符号表来的维名，出口前先还原 UTF-8
+  lb <- trimws(as.character(labels))
+  bad <- which(!nzchar(lb) | is.na(lb))
+  if (length(bad)) lb[bad] <- paste0("⚠维度名缺失#", bad)
+  if (!is.null(dirs)) lb <- paste0(lb, " ", ifelse(dirs > 0, "赏", "罚"))
+  if (!is.null(pend)) lb[pend] <- paste0(trimws(labels)[pend], " 待表零")
+  lb
+}
+
+## ECharts 运行库：优先取 echarts4r 内附之本地档（经 htmlDependency 注册，
+##   配合 YAML 的 embed-resources 内联入档，离线可看）；未装则退守 CDN 并点名。
+er_dep <- function() {
+  d <- if (isTRUE(HAS$ec)) system.file("htmlwidgets", package = "echarts4r") else ""
+  if (!nzchar(d) || !dir.exists(d)) return(NULL)
+  h <- list.files(d, pattern = "^echarts\\.min\\.js$", recursive = TRUE, full.names = TRUE)
+  if (!length(h)) h <- list.files(d, pattern = "^echarts\\.js$", recursive = TRUE, full.names = TRUE)
+  if (!length(h)) return(NULL)
+  f <- h[which.max(file.size(h))]
+  message(sprintf("✅ ECharts 取自 echarts4r 本地档（%.1f MB）：%s",
+                  file.size(f) / 1048576, basename(f)))
+  htmltools::htmlDependency("echarts", "5", src = c(file = dirname(f)),
+                            script = basename(f), all_files = FALSE)
+}
+
+## 单图 id（同一份档内四图互不相犯）
+er_id <- local({ i <- 0L; function(p) { i <<- i + 1L; sprintf("er-radar-%s-%d", p, i) } })
+
+## ── ECharts 雷达图 ───────────────────────────────────────────────────────
+##  labels 轴名字面量；dirs 赏罚方向（>0 赏、<0 罚、0 中性）；pend 待表轴序号；
+##  series 具名数值表（每元素长度须等于 labels）；cols 对应线色；note 悬停口径说明。
+er_radar <- function(tag, title, labels, series, cols,
+                     dirs = NULL, pend = NULL, note = "", height = 620) {
+  txt <- radar_txt(labels, dirs, pend)
+  n <- length(txt)
+  ## 诊断（先生令「以实测为凭」）：把 R 实际持有的轴名逐条打进控制台
+  message(sprintf("🧭 雷达轴名[%s] %d 条：%s", tag, n, paste(txt, collapse = " ｜ ")))
+  J <- function(x) as.character(jsonlite::toJSON(x, auto_unbox = TRUE,
+                                                 digits = 4, na = "null"))
+  ind <- J(lapply(seq_len(n), function(i) list(name = txt[i], max = 100)))
+  dat <- J(lapply(seq_along(series), function(i) {
+    v <- as.numeric(series[[i]])
+    v[!is.finite(v)] <- 0          # 防空白：某维全 NA 亦画轴（置 0），不留空缺
+    list(name = names(series)[i], value = round(v, 2),
+         lineStyle = list(color = cols[i], width = 2),
+         itemStyle = list(color = cols[i]),
+         areaStyle = list(color = cols[i], opacity = 0.13))
+  }))
+  id <- er_id(tag)
+  paste0(
+'<div class="er-radar" id="', id, '" style="width:100%;height:', height, 'px;"></div>\n',
+'<script>\n',
+'(function(){\n',
+'  var IND = ', ind, ';\n',
+'  var NMS = ', J(txt), ';\n',
+'  var DAT = ', dat, ';\n',
+'  var LEG = ', J(names(series)), ';\n',
+'  var TITLE = ', J(title), ';\n',
+'  var NOTE  = ', J(note), ';\n',
+'  var OPT = {\n',
+'    backgroundColor: "transparent",\n',
+'    title: {text: ', EJ(er_ttl(title)$main), ', subtext: ', EJ(er_ttl(title)$sub), ',\n',
+'            left: "center", top: 2, textAlign: "center",\n',
+'            textStyle: {color: "', PAL$fg, '", fontSize: 14, fontWeight: "normal",\n',
+'                        lineHeight: 20},\n',
+'            subtextStyle: {color: "', PAL$fg, '", fontSize: 11, opacity: .78,\n',
+'                           lineHeight: 17}},\n',
+'    tooltip: {trigger: "item", confine: true,\n',
+'      backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
+'      textStyle: {color: "', PAL$fg, '", fontSize: 12},\n',
+'      formatter: function(p){\n',
+'        var v = (p && p.value) ? p.value : [];\n',
+'        var s = "<b>" + p.name + "</b><br/>";\n',
+'        for (var i = 0; i < NMS.length; i++) {\n',
+'          s += NMS[i] + "：" + Math.round(v[i] || 0) + " 分<br/>";\n',
+'        }\n',
+'        return s + "<span style=\\"opacity:.72\\">" + NOTE + "</span>";\n',
+'      }},\n',
+'    legend: {bottom: 2, itemGap: 16, data: LEG,\n',
+'             textStyle: {color: "', PAL$fg, '", fontSize: 11}},\n',
+'    radar: {center: ["50%", "55%"], radius: "56%", startAngle: 90,\n',
+'      indicator: IND,\n',
+'      axisName: {fontSize: 12, padding: [3, 5],\n',
+'        formatter: function(nm){\n',
+'          if (/待表零$/.test(nm)) { return "{pend|" + nm + "}"; }\n',
+'          if (/罚$/.test(nm))     { return "{bad|"  + nm + "}"; }\n',
+'          if (/赏$/.test(nm))     { return "{good|" + nm + "}"; }\n',
+'          return "{neu|" + nm + "}";\n',
+'        },\n',
+'        rich: {good: {color: "', PAL$good, '", fontSize: 12},\n',
+'               bad:  {color: "', PAL$bad,  '", fontSize: 12},\n',
+'               pend: {color: "', PAL$warn, '", fontSize: 12},\n',
+'               neu:  {color: "', PAL$fg,   '", fontSize: 12}}},\n',
+'      splitLine: {lineStyle: {color: "#1e3a52"}},\n',
+'      axisLine:  {lineStyle: {color: "#1e3a52"}},\n',
+'      splitArea: {areaStyle: {color: ["rgba(10,25,45,.55)", "rgba(10,25,45,.30)"]}}},\n',
+'    series: [{type: "radar", symbolSize: 4, data: DAT}]\n',
+'  };\n',
+'  var el = document.getElementById("', id, '"), chart = null;\n',
+'  function boot(){\n',
+'    if (!window.echarts || !el) { return false; }\n',
+'    if (!(el.clientWidth > 1)) { return false; }   /* ★ 容器零宽即不初始化 */\n',
+'    if (!chart) { chart = echarts.init(el); chart.setOption(OPT); }\n',
+'    return true;\n',
+'  }\n',
+'  function fit(){ if (chart) { chart.resize(); } else { boot(); } }\n',
+'  if (!boot()) {\n',
+'    var k = 0, iv = setInterval(function(){\n',
+'      if (boot() || ++k > 200) {\n',
+'        clearInterval(iv);\n',
+'        if (!chart && el) {\n',
+'          el.innerHTML = "<p style=\\"color:', PAL$bad, ';text-align:center;padding:2em\\">'
+, '⬜ ECharts 未能载入（所待：R 包 echarts4r，或联网取用 CDN）；受影响输出：本雷达图</p>";\n',
+'        }\n',
+'      }\n',
+'    }, 100);\n',
+'  }\n',
+'  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); }\n',
+'  window.addEventListener("resize", fit);\n',
+'  if (window.ResizeObserver) { new ResizeObserver(fit).observe(el); }\n',
+'  if (window.IntersectionObserver) {\n',
+'    new IntersectionObserver(function(es){\n',
+'      es.forEach(function(e){ if (e.isIntersecting) { fit(); } });\n',
+'    }).observe(el);\n',
+'  }\n',
+'})();\n',
+'</script>\n')
+}
+
+
+
+## ═══ 图表题注与阈值线悬停闸（2026-08-14 立 · 先生令）═════════════════════
+## 【立此闸之由】先生令：所有术语、代号、阈值与标准和指标，一律须可悬停。
+##   桌表已由 auto_tip() 覆盖；图形之题注、轴名、阈值线此前未覆盖，
+##   读者须回正文方知该线何义。此闸补齐图形一侧。
+## 【实现】① fig_cap() 生成图题下方之悬停说明条，术语自动挂释义；
+##   ② thr_note() 依 THRESH 登记生成阈值线之完整说明（门槛、方向、越线后果）；
+##   ③ Plotly 之阈值线一律以 thr_note() 命名，鼠标停留即出后果，不必回查正文。
+## 庄家视角：限额牌不能只写数字，须同时写明「超过此数该报谁、后果为何」——
+##   否则新来的荷官照着数字做，出了事不知该找谁。
+fig_cap <- function(title, 指标 = NULL, 阈值 = NULL, 说明 = NULL) {
+  bits <- c(
+    if (!is.null(指标)) sprintf("<b>指标</b>：%s", auto_tip(指标)),
+    if (!is.null(阈值)) sprintf("<b>阈值</b>：%s", auto_tip(阈值)),
+    if (!is.null(说明)) auto_tip(说明))
+  htmltools::HTML(sprintf(
+    "<div style='font-weight:600;margin:.6em 0 .2em'>%s</div>%s",
+    auto_tip(title),
+    if (length(bits)) sprintf(
+      "<div style='font-size:.85em;margin-bottom:.4em;padding:.4em .6em;
+       border-left:3px solid #22d3ee;opacity:.95'>%s</div>",
+      paste(bits, collapse = "　｜　")) else ""))
+}
+## 阈值线之完整名称：门槛值 ＋ 方向 ＋ 越线后果，一并写进 Plotly 的 name／hover
+thr_note <- function(code) {
+  r <- THRESH[THRESH$代号 == code, ]
+  if (!nrow(r)) return(code)
+  sprintf("%s %s %s%s｜越线后果：%s", r$代号, r$指标, r$方向,
+          if (r$阈值 < 1 && r$阈值 > 0) n4(r$阈值, 2) else amt(r$阈值),
+          substr(gsub("\\*", "", r$越线后果), 1, 60))
+}
+
 noplot <- function(why) htmltools::HTML(sprintf(
   "<div class='callout callout-warning'><b>⚠ 图未生成</b>：%s。本档不以静态图冒充。</div>",why))
 ph <- function(file,src,impact)
@@ -369,7 +602,7 @@ ph <- function(file,src,impact)
 | `a168风控与客户分层评分体系_商业方案.qmd` | **主方案（父）** | 维度字典之**唯一权威**，出处为 **§18 `@sec-radar`「评分设计」表** |
 | `a168风控评分_精要商业报告.qmd` | 精要版（子） | 本档校验其口径，并补其未做之双路差异量化 |
 | `分析异常IP与尾秒投注的风控与降低误判_v8.qmd` | 前置净化层（子） | 提供哨兵值、同名异义、口径锁之门禁总账 |
-| `a168_评分误判率与失误率最小化_专题方案_v3.6.qmd` | 误差控制层（兄） | 取本档之分数与折结构为输入，反解误判率上界 |
+| `a168_评分误判率与失误率最小化_专题方案_v3.9.qmd` | 误差控制层（兄） | 取本档之分数与折结构为输入，反解误判率上界 |
 | `a168_取数与核验_SQL总包_v3.sql` | 取数层（料源） | 一切数字之唯一料源；**14 条缺闸未补，须另立 v4** |
 | `a168_第二阶段…SQL_K层_v2.sql` | K 层（口径固化） | 相位派生与口径锁常量之出处 |
 | **本档 v6** | **对照本** | 读表现算 → 层级收缩定权 → 指纹自检 → 净化滚动回测 |
@@ -554,6 +787,82 @@ if (length(ENCLOG$rows)) {
 ```
 
 
+# 图库依赖登记与自检 {#sec-deps}
+
+::: {.callout-important}
+## 为什么之前的图全是空白——台面摆齐了，没请荷官
+
+先生实测两份成品，数据是这样的：**widget `<div>` 28 个、widget JSON 28 个，一个不缺**；
+而 `Plotly.newPlot` 出现 **0 次**、`exports.echarts` **0 次**——**绘图引擎根本没进档**。
+DataTables 在（16 处），所以表看得见、图全灭。
+
+**根由**：本档的图皆写在 `results: asis` 块内、以 `print()` 输出。
+`asis` 块中 knitr **不走** `knit_print.htmlwidget` 这条路，因而**从未登记该 widget 的 `htmlDependency`**；
+而 `embed-resources` 只内联「已登记」的依赖——**一个没登记的库，自然无从内联**。
+
+**庄家视角**：等于把牌桌、筹码、监控都搬进场了，**唯独没请荷官**。
+台面摆得再齐整，没人发牌就是一局不开。
+
+**斧正两条**：
+① `setup-core` 内一次性登记 `plotly` 与 `echarts4r` 两库依赖，登记之后，
+其后各 asis 块 print 出来的 `div + JSON` 由 `HTMLWidgets.staticRender()` 自动接管，全档图件一并复活；
+② 雷达图**改用精要商业报告之 `er_radar()` 原码**——它直出 HTML+JS，
+在 asis 块中 `cat()` 即可，**根本不依赖 `knit_print` 登记**，故绝不会重蹈覆辙。
+
+下方两张自检图**看得见，即证两库确已就位**；看不见则本档一切图件皆不可信，须先修环境再读数。
+:::
+
+```{r}
+#| label: deps-selftest
+## 【本块对本商业方案之用途】
+##   依赖自检。本块把两库依赖显式挂进文档，并各画一张最小图作凭据。
+##   这两张图不承载任何业务含义，只回答一个问题：**引擎到底进没进档**。
+##   庄家视角：这就是开台前荷官当众洗一副牌给监控看——不为出牌，只为证明人到了、牌是好的。
+htmltools::tagList(
+  DEPS,
+  if (isTRUE(HAS$plotly))
+    plotly::plot_ly(x = c(1, 2, 3), y = c(1, 3, 2), type = "scatter", mode = "lines+markers",
+      line = list(color = PAL$g, width = 3), marker = list(size = 10, color = PAL$c),
+      hovertemplate = "Plotly 引擎已就位<extra></extra>") |>
+    ply("① Plotly 自检：此线可见即 plotly.js 已内联入档", "", "") |>
+    plotly::layout(height = 200),
+  if (isTRUE(HAS$echarts4r))
+    echarts4r::e_charts(data.frame(x = c("甲","乙","丙"), y = c(3, 1, 2)), x) |>
+      echarts4r::e_bar(y, name = "ECharts 自检") |>
+      echarts4r::e_title("② ECharts 自检：此柱可见即 echarts.js 已内联入档",
+                         textStyle = list(color = PAL$fg)) |>
+      echarts4r::e_theme("dark") |>
+      echarts4r::e_legend(show = FALSE)
+)
+```
+
+```{r}
+#| label: deps-report
+#| results: asis
+## 【本块对本商业方案之用途】
+##   把依赖登记结果写成可核对的一行行。渲染后若某库标 ⛔，
+##   即知本档该类图件全不可信——先修环境，不要先怀疑数据。
+DP <- data.frame(check.names = FALSE,
+  图库 = c("plotly.js", "echarts.js（经 echarts4r）", "DataTables（DT）", "jsonlite"),
+  用途 = c("全档散点、折线、热力、气泡、决策曲线、期望损失曲面",
+    "四实体雷达（经 er_radar() 直出 HTML+JS）", "全档互动桌表",
+    "er_radar() 之 JSON 序列化"),
+  本次状态 = c(
+    if (isTRUE(HAS$plotly)) "✅ 已登记并内联" else "⛔ **未装上——全档 plotly 图空白**",
+    if (isTRUE(HAS$echarts4r)) "✅ 已登记并内联" else "⛔ **未装上——雷达空白**",
+    if (isTRUE(HAS$DT)) "✅ 已装" else "⚠ 回落 gt",
+    if (isTRUE(HAS$jsonlite)) "✅ 已装" else "⛔ **未装上——雷达不出**"),
+  缺则如何补 = c("`install.packages(\"plotly\")`", "`install.packages(\"echarts4r\")`",
+    "`install.packages(\"DT\")`", "`install.packages(\"jsonlite\")`"))
+print(tbl(DP, "图库依赖登记结果（本次渲染实测）",
+  读法 = paste0("**先看上方两张自检图**：呈现即引擎就位，本档一切图件可信；",
+    "看不见则先照「缺则如何补」装包重渲，**不要先怀疑数据**。<br>",
+    "**这一层此前没有**——正因为没有，先生连着几轮拿到的都是空白图，",
+    "而报告里没有任何一处告诉先生「是引擎没到，不是数据没算」。"),
+  mode = "full", height = 260, gloss = FALSE))
+```
+
+
 # 一、术语、博彩规则与条率（全篇悬停） {#sec-rules}
 
 ## 一之一、理论条率：由组合数现算 {#sec-theory}
@@ -629,12 +938,12 @@ if (!is.null(DX04)) {
         max(sqrt(pmax(dd$stake_total,1)))*30)), opacity=.7,
         color=~ifelse(is.finite(理论) & house_hold_pct<理论, PAL$bad, PAL$c)),
       hovertemplate="<b>%{text}</b><br>注单 %{x:,}<br>实测吃水 %{y:.3f}%<extra></extra>") |>
-      ply("逐玩法实测吃水率 vs 注单量（气泡＝投注额；红色＝实测低于理论，须优先查）",
+      ply("各投注产品实测吃水率与注单量对照｜气泡面积＝投注额；红色标记＝实测吃水率低于理论值，列为查案首位",
           "注单数（对数轴）","实测 hold%（%）") |>
       plotly::layout(xaxis=list(type="log"))
-    p <- thr_line(p, 100*edge(pB,.95,pT), sprintf("庄理论线 %s（低于此即漏水）",
+    p <- thr_line(p, 100*edge(pB,.95,pT), sprintf("庄家理论吃水线 %s｜低于此即该玩法有人在赢场子，须列查案首位",
                   pc(edge(pB,.95,pT),3)), PAL$warn, min(dd$n_orders), max(dd$n_orders))
-    p <- thr_line(p, 0, "零线：低于此该玩法整体在亏", PAL$bad, min(dd$n_orders), max(dd$n_orders))
+    p <- thr_line(p, 0, "零线｜低于此即该玩法整体为负贡献，须即刻复核条款", PAL$bad, min(dd$n_orders), max(dd$n_orders))
     print(htmltools::tagList(p))
   }
 } else cat(ph("DX04_bet09_profile.csv","SQL 总包 §DX-04（第 4,871 行）",
@@ -919,7 +1228,7 @@ if (!is.null(AQ)) {
     plotly::plot_ly(z=cm, x=dims_in, y=dims_in, type="heatmap", zmin=-1, zmax=1,
       colorscale="RdBu", reversescale=TRUE,
       hovertemplate="%{y} × %{x}<br>ρ = %{z:.3f}<extra></extra>") |>
-    ply("维间 Spearman 秩相关（共线诊断）｜深色即高度相关","","")))
+    ply("维度间 Spearman 秩相关矩阵（共线诊断）｜阈值 TH-B：|ρ| ≤ 0.90；深色即高度相关，等权平均时该维实际权重翻倍","","")))
   up <- cm; up[lower.tri(up,diag=TRUE)] <- NA
   ix <- which(!is.na(up), arr.ind=TRUE)
   PR <- data.frame(check.names=FALSE, 维A=dims_in[ix[,1]], 维B=dims_in[ix[,2]],
@@ -1030,7 +1339,7 @@ if (!is.null(P17)) {
         hovertemplate="赏 %{x:.1f}｜罚 %{y:.1f}<extra></extra>") |>
       plotly::add_segments(x=0,xend=100,y=0,yend=100, name="赏＝罚 对角线",
         line=list(color=PAL$bad,dash="dash"), inherit=FALSE) |>
-      ply(sprintf("玩家赏侧 vs 罚侧｜右上角＝洗码量漂亮但风险也高，人工复核首选区｜全量 %s 人等距抽绘 %s 人", amt(nrow(P17)), amt(nrow(PS))),
+      ply(sprintf("玩家赏侧与罚侧分布｜右上区间＝洗码量可观而风险同高者，列为人工复核首选；判读阈值取综合分第 5 与第 95 百分位｜全量 %s 人等距抽绘 %s 人", amt(nrow(P17)), amt(nrow(PS))),
           "赏（0–100）","罚（0–100）")))
   }
 } else cat(ph("S01_player_score.csv 或 K01_risk_feature_matrix.csv ＋ B01_bt_panel.csv",
@@ -1038,41 +1347,238 @@ if (!is.null(P17)) {
   "玩家十维综合分、赏罚散点、雷达图、@sec-backtest 全部输出"))
 ```
 
-## 三之四、四实体互动雷达（ECharts）
+## 三之四、荷官八维现算
+
+```{r}
+#| label: dealer
+#| results: asis
+## 【本块对本商业方案之用途】
+##   ★ 2026-08-14 补立（先生指正：三之四名为「四实体」而实只出两图）。
+##   经核实，S02 荷官料源早在 @sec-load 装载并挂了表头契约锁，
+##   却始终无现算块、无归一矩阵、无雷达——故荷官一直缺席。本块补齐。
+##   荷官是唯一「人在桌边」的实体：桌上反复出现同一批人、对打局占比偏高，
+##   多半不是运气，是有人在配合。罚侧四维专管这一件事。
+##   庄家视角：这就是巡场经理盯的那几条——谁的桌总是那几个熟面孔在赢。
+DQ <- NULL
+if (!is.null(S02)) {
+  DG <- S02
+  for (cc in intersect(D17_LBL, names(DG))) DG[[cc]] <- num(DG[[cc]])
+  dhave <- D17_LBL[D17_LBL %in% names(DG)]
+  .idc <- intersect(c("dealer_id", "荷官", "dealer", "entity_id"), names(DG))
+  DQ <- data.frame(
+    dealer_id = if (length(.idc)) DG[[.idc[1]]] else seq_len(nrow(DG)),
+    check.names = FALSE)
+  for (d in dhave) DQ[[d]] <- pq(DG[[d]])
+  .s <- compose(DQ, D17_DIMS[dhave]); DQ$赏 <- .s$赏; DQ$罚 <- .s$罚; DQ$综合分 <- .s$综合分
+  DQ$处置建议 <- ifelse(DQ$综合分 <= stats::quantile(DQ$综合分, .05, na.rm = TRUE),
+    "⛔ 罚侧突出 → 纳入 R-03 关联复核并调离高风险桌台",
+    ifelse(DQ$综合分 <= stats::quantile(DQ$综合分, .20, na.rm = TRUE),
+      "⚠ 排班监看候选（不作处分依据）", "✅ 仅监控"))
+  cat(sprintf("**维度自检**：%d／%d 维在列%s\n\n", length(dhave), length(D17_DIMS),
+    if (length(setdiff(D17_LBL, dhave)))
+      sprintf("；缺 %s —— 该等维须由 R-03／C06 派生，S-02 无输出",
+        paste(setdiff(D17_LBL, dhave), collapse = "、")) else "　✅"))
+  print(tbl(DQ[order(-DQ$综合分), ],
+    "荷官八维综合分全表（降序，可搜可排、双向滚动、零省略）",
+    读法 = paste0(
+      "**阈值**：综合分 ≤ 第 5 百分位 → 纳入 R-03 关联复核；≤ 第 20 百分位 → 排班监看。<br>",
+      "**为什么荷官必须收缩再排名**：本平台荷官约 180 位，当值时长差异极大；",
+      "只上了三天班的人，其人均桌面数字天然波动最大——不收缩就排名，等于奖励运气",
+      "（见 @sec-shrink）。<br>",
+      "**越线后果**：荷官处置涉及劳动关系，误伤代价远高于玩家侧。",
+      "故此表**只定复核顺序，不构成任何处分依据**；个体处置须另有独立二次确证。"),
+    mode = "full", height = 440))
+} else cat(ph("S02_dealer_score.csv", "SQL 总包 §S-02（扩编列 §S-02ex）",
+  "荷官八维综合分表、荷官雷达（三之六）、@sec-shrink 层级收缩输入"))
+```
+
+## 三之五、风控专员六维现算
+
+```{r}
+#| label: analyst
+#| results: asis
+## 【本块对本商业方案之用途】
+##   ★ 2026-08-14 补立（同上）。风控专员是精简版口径改宗的直接受益方：
+##   主方案 §18 只给四维且**全为赏侧**——评分只会加分不会扣分，
+##   无法识别消极行为。精简版补入 `理由空白率`、`标注停滞度` 两罚侧维，
+##   评分自此赏罚俱备（见 @sec-conflict 之 TH-F）。
+##   本块按 @sec-conflict「更正启事」表所载算式就地派生：
+##     登记跨度   = 最近登记 − 首次登记（折日）           ← 零新增取数
+##     标注停滞度 = (全体最近登记日 − 该员最近登记日) ÷ 登记跨度，截断至 [0,1]  ← 零新增取数
+##     理由空白率 = 理由空白数 ÷ 标注产量                  ← **无料源**，须并入 §S04p 一列
+##   故本块只出五维实测，`理由空白率` 一维标「待表零」，绝不合成。
+##   庄家视角：这就是查核数房自己的功课——标了多少、标得细不细（赏），
+##   以及有没有只写结论不写理由、有没有搁着不动（罚）。
+SQ <- NULL
+if (!is.null(S04)) {
+  SG <- S04
+  ## ══════════════════════════════════════════════════════════════════
+  ## ★ 2026-08-14 v7.1 失校斧正（本方自查）：
+  ##   v7.0 之登记跨度写作 as.Date 差分 **加一日**，而权威源
+  ##   《a168风控评分_精要商业报告》L2,488 作
+  ##   pmax(difftime(POSIXct 最近登记, POSIXct 首次登记, "days"), 0)——
+  ##   **不加一，且为 POSIXct 小数日、非 as.Date 整数日**。
+  ##   同名异义即为口径分叉，故照权威源逐字改回，本档不再自立算式。
+  ## ══════════════════════════════════════════════════════════════════
+  .t0 <- suppressWarnings(as.POSIXct(SG[["首次登记"]], tz = "UTC"))
+  .t1 <- suppressWarnings(as.POSIXct(SG[["最近登记"]], tz = "UTC"))
+  .ok <- sum(!is.na(.t0) & !is.na(.t1))
+  if (.ok > 0) {
+    SG[["登记跨度"]] <- pmax(as.numeric(difftime(.t1, .t0, units = "days")), 0)
+    ## ── 派生二：标注停滞度（罚侧）——照权威源 L2,496–2,497 ────────────
+    .tnow <- max(.t1, na.rm = TRUE)
+    SG[["标注停滞度"]] <- pmin(pmax(
+      as.numeric(difftime(.tnow, .t1, units = "days")) /
+        pmax(SG[["登记跨度"]], 1), 0), 1)
+    ## ── 派生三：理由空白率（罚侧）——照权威源 L2,493–2,494 ────────────
+    ##   ⚠ 口径分歧登记（本档只登记，不擅裁）：
+    ##     · 权威源（精要报告）：1 − 判定详尽度 ÷ 全体中位详尽度，截断 [0,1]
+    ##     · 本档 v6.9 与专题 v3.9：理由空白数 ÷ 标注产量（须补 §S04p 一列）
+    ##   二者同名而不同物：前者度量「理由字数相对长短」，后者度量「有没有写理由」。
+    ##   一名写五百字套话者，前式判其为 0；一名写二十字要害者，前式判其近 1。
+    ##   本版从权威源以维系单向血统，并在雷达注记中标明其为**代理口径**。
+    if ("判定详尽度" %in% names(SG)) {
+      .dmed <- stats::median(suppressWarnings(as.numeric(SG[["判定详尽度"]])), na.rm = TRUE)
+      SG[["理由空白率"]] <- pmin(pmax(
+        1 - suppressWarnings(as.numeric(SG[["判定详尽度"]])) / pmax(.dmed, 1e-9), 0), 1)
+    }
+  }
+  for (cc in intersect(S17_LBL, names(SG))) SG[[cc]] <- num(SG[[cc]])
+  shave <- S17_LBL[S17_LBL %in% names(SG)]
+  .idc <- intersect(c("entity_id", "analyst_id", "专员"), names(SG))
+  SQ <- data.frame(
+    entity_id = if (length(.idc)) SG[[.idc[1]]] else seq_len(nrow(SG)),
+    check.names = FALSE)
+  for (d in shave) SQ[[d]] <- pq(SG[[d]])
+  .s <- compose(SQ, S17_DIMS[shave]); SQ$赏 <- .s$赏; SQ$罚 <- .s$罚; SQ$综合分 <- .s$综合分
+  SQ$处置建议 <- ifelse(SQ$综合分 <= stats::quantile(SQ$综合分, .20, na.rm = TRUE),
+    "⚠ 标注质量辅导对象（培训，非处分）", "✅ 达标")
+  cat(sprintf("**维度自检**：%d／%d 维在列%s\n\n", length(shave), length(S17_DIMS),
+    if (length(setdiff(S17_LBL, shave)))
+      sprintf("；缺 %s —— 见 @sec-conflict 之「更正启事」，须把 §S-04b 的 `理由空白数` 并入 §S04p",
+        paste(setdiff(S17_LBL, shave), collapse = "、")) else "　✅"))
+  cat(sprintf("**赏罚对称自检（TH-F）**：赏侧 %d 维、罚侧 %d 维 → %s\n\n",
+    sum(S17_DIMS[shave] > 0), sum(S17_DIMS[shave] < 0),
+    if (sum(S17_DIMS[shave] < 0) > 0) "✅ 赏罚俱备（精简版口径已生效）"
+    else "⛔ **罚侧缺位：评分只会加分不会扣分**"))
+  print(tbl(SQ[order(-SQ$综合分), ],
+    "风控专员六维综合分全表（降序；六维皆已实测，`理由空白率` 为代理口径）",
+    读法 = paste0(
+      "**阈值**：综合分 ≤ 第 20 百分位 → 标注质量辅导。<br>",
+      "**此表为何不设处分档**：专员约 24 位，样本极小；",
+      "在这样的样本上划第 5 百分位，等于用一两个人的数字定一条线——",
+      "统计上不成立（见 @sec-shrink）。<br>",
+      "**越线后果**：仅触发培训与标注规范复训，**不与绩效挂钩**。",
+      "一旦挂钩，专员会为了指标而多标、乱标，评分反被自己污染——",
+      "这是评分体系最容易自毁的一条路。<br>",
+      "**待表零的诚实性**：`理由空白率` 无料源即置零并在雷达上标明，",
+      "**绝不以邻近维填补**——证据不足不等于 0。"),
+    mode = "full", height = 400))
+} else cat(ph("S04_analyst_score.csv", "SQL 总包 §S04p（L5,166）——**跑 §S04p，不跑 §S-04a**",
+  "风控专员六维综合分表、风控专员雷达（三之六）、赏罚对称自检 TH-F"))
+```
+
+## 三之六、四实体互动雷达（ECharts · 四实体一个不缺）
 
 ```{r}
 #| label: radar
 #| results: asis
 ## 【本块对本商业方案之用途】
-##   一眼看清「优质组与风险组在哪几维上拉开差距」。
-##   拉开最大的那一维，就是最该拿来做处置判据的维。
-## ★ Plotly 极坐标已判不适用（角向标签由内部 clip-path 裁剪，外部布局管不到），
-##   雷达一律 ECharts。轴名取字面量向量，不经符号表。
-radar_ec <- function(N, DIMS, LBL, tag){
-  if (!isTRUE(HAS$echarts4r) || is.null(N) || !nrow(N)) return(NULL)
-  keep <- LBL[LBL %in% names(N)]; if (length(keep)<3) return(NULL)
-  sc <- compose(N[,keep,drop=FALSE], DIMS[keep])$综合分
-  grp <- list(`优质组 (综合分≥P95)`=which(sc>=stats::quantile(sc,.95,na.rm=TRUE)),
-              `全体均值`=seq_along(sc),
-              `风险组 (综合分≤P5)`=which(sc<=stats::quantile(sc,.05,na.rm=TRUE)))
-  df <- data.frame(维度=paste0(keep, ifelse(DIMS[keep]>0,"（赏）","（罚）")), check.names=FALSE)
-  for (g in names(grp)) df[[g]] <- sapply(keep, function(d) mean(N[[d]][grp[[g]]], na.rm=TRUE))
-  e <- echarts4r::e_charts(df, 维度)
-  for (g in names(grp)) e <- echarts4r::e_radar_(e, g, max=100, name=g)
-  e |> echarts4r::e_tooltip(trigger="item") |>
-    echarts4r::e_legend(bottom=0, textStyle=list(color=PAL$fg)) |>
-    echarts4r::e_title(sprintf("%s能力值雷达｜三组对照（0–100 名次刻度）", tag),
-                       textStyle=list(color=PAL$fg)) |>
-    echarts4r::e_theme("dark") }
-RAD <- Filter(Negate(is.null), list(
-  玩家 = if (!is.null(N17)) radar_ec(N17, P17_DIMS, P17_LBL, "玩家"),
-  代理 = if (!is.null(AQ)) radar_ec(AQ[,intersect(A17_LBL,names(AQ)),drop=FALSE],
-          A17_DIMS, A17_LBL, "代理")))
-if (!length(RAD)) {
-  cat("::: {.callout-warning}\n## 雷达未生成\n\n",
-      if (!isTRUE(HAS$echarts4r)) "`echarts4r` 未装上——本档雷达不以 Plotly 极坐标替代（已判不适用），亦不以静态图替代。\n"
-      else "归一矩阵未生成，所待交付件见 @sec-load 与 @sec-gap。\n", ":::\n\n")
-} else htmltools::tagList(RAD)
+##   一眼看清「优质组与风险组在哪几维上拉开差距」——拉开最大的那一维，
+##   就是最该拿来做处置判据的维。
+## ★ 2026-08-14 换装（先生令：与精要商业报告雷达图一模一样，一字不差）：
+##   弃 echarts4r widget，改用精要报告之 er_radar() 直出 HTML+JS。
+##   两条理由：① widget 在 asis 块内 print 不登记 htmlDependency，
+##   前几轮之空白雷达即由此而来；er_radar() 以 cat() 直出，不经此路。
+##   ② er_radar() 之 boot() 守卫「容器零宽即不初始化」，杜绝按错误画幅定版面——
+##   此为精要报告十八轮斧正之成果，原样承接。
+##   调用参数（tag/labels/dirs/series/cols/title/note）亦照精要报告 L1,889–1,910 之成法。
+## ★ 2026-08-14 补齐（先生指正：本节名为「四实体」而 v6.9 实只出玩家、代理两图）：
+##   经核实，荷官（S02）与风控专员（S04）之料源早已装载并挂契约锁，缺的是现算块。
+##   本版补 @sec-score 之三之四、三之五两节，此处按 **玩家→荷官→代理→风控专员**
+##   之字典次序四图齐出；任一实体缺料只缺其图，其余三图照出，绝不整节空白。
+if (exists("P17") && !is.null(P17) && !is.null(N17)) {
+  dims <- names(P17_DIMS)
+  labs <- if (exists("P17_LBL") && length(P17_LBL) == length(dims)) P17_LBL else u8(dims)
+  keep <- dims[dims %in% names(N17)]
+  grp <- list(
+    `优质组（赏·综合分≥P95）` = which(P17$综合分 >= stats::quantile(P17$综合分, .95, na.rm=TRUE)),
+    `全体均值`                = seq_len(nrow(P17)),
+    `高危组（罚·综合分≤P5）`  = which(P17$综合分 <= stats::quantile(P17$综合分, .05, na.rm=TRUE)))
+  ser <- lapply(grp, function(ix) sapply(dims, function(d)
+           if (d %in% names(N17)) mean(N17[[d]][ix], na.rm = TRUE) else 0))
+  names(ser) <- sprintf("%s（%s 人）", names(grp), amt(vapply(grp, length, 1L)))
+  cat(er_radar(
+    tag = "玩家", labels = labs, dirs = P17_DIMS, series = ser,
+    cols = c(PAL$good, PAL$ac, PAL$bad),
+    pend = which(!dims %in% names(N17)),
+    title = sprintf(
+      "玩家 · 精简版权威十维雷达（维度自检 %d/10 · %s %s 人；五赏五罚 · 分位 0–100）",
+      length(keep), if (is.na(P17_SRC)) "包内现算" else P17_SRC, amt(nrow(P17))),
+    note = paste0("分位 0–100；综合分＝赏侧均值−罚侧均值，口径同精要报告；",
+                  "十维由压缩包内表现算——K01×B01×C06×C01")))
+}
+if (!is.null(DQ)) {
+  ddims <- names(D17_DIMS); din <- ddims[ddims %in% names(DQ)]
+  dgrp <- list(
+    `优质组（赏·综合分≥P95）` = which(DQ$综合分 >= stats::quantile(DQ$综合分, .95, na.rm=TRUE)),
+    `全体均值`                = seq_len(nrow(DQ)),
+    `高危组（罚·综合分≤P5）`  = which(DQ$综合分 <= stats::quantile(DQ$综合分, .05, na.rm=TRUE)))
+  dser <- lapply(dgrp, function(ix) sapply(ddims, function(d)
+            if (d %in% names(DQ)) mean(DQ[[d]][ix], na.rm = TRUE) else 0))
+  names(dser) <- sprintf("%s（%s 位）", names(dgrp), amt(vapply(dgrp, length, 1L)))
+  cat(er_radar(
+    tag = "荷官", labels = D17_LBL, dirs = D17_DIMS, series = dser,
+    cols = c(PAL$good, PAL$ac, PAL$bad),
+    pend = which(!ddims %in% names(DQ)),
+    title = sprintf("荷官 · 精简版权威八维雷达（维度自检 %d/8 · %s 位；四赏四罚 · 分位 0–100）",
+                    length(din), amt(nrow(DQ))),
+    note = paste0("分位 0–100；综合分＝赏侧均值−罚侧均值，口径同精要报告；",
+                  "罚侧四维（对打局占比·异常对关联·風險單密度·特定玩家复现率）",
+                  "尚待 §S-02ex 扩列者置零并标「待表零」，绝不合成")))
+}
+if (!is.null(AQ)) {
+  adims <- names(A17_DIMS); ain <- adims[adims %in% names(AQ)]
+  agrp <- list(
+    `优质组（赏·综合分≥P95）` = which(AQ$综合分 >= stats::quantile(AQ$综合分, .95, na.rm=TRUE)),
+    `全体均值`                = seq_len(nrow(AQ)),
+    `高危组（罚·综合分≤P5）`  = which(AQ$综合分 <= stats::quantile(AQ$综合分, .05, na.rm=TRUE)))
+  aser <- lapply(agrp, function(ix) sapply(adims, function(d)
+            if (d %in% names(AQ)) mean(AQ[[d]][ix], na.rm = TRUE) else 0))
+  names(aser) <- sprintf("%s（%s 条线）", names(agrp), amt(vapply(agrp, length, 1L)))
+  cat(er_radar(
+    tag = "代理", labels = A17_LBL, dirs = A17_DIMS, series = aser,
+    cols = c(PAL$good, PAL$ac, PAL$bad),
+    pend = which(!adims %in% names(AQ)),
+    title = sprintf("代理 · 精简版权威七维雷达（维度自检 %d/7 · %s 条线；四赏三罚 · 分位 0–100）",
+                    length(ain), amt(nrow(AQ))),
+    note = "分位 0–100；罚侧三维中对打渗透率与单链密度尚待 §S-03 扩列，未到位者置零并标「待表零」"))
+}
+if (!is.null(SQ)) {
+  sdims <- names(S17_DIMS); sin_ <- sdims[sdims %in% names(SQ)]
+  sgrp <- list(
+    `优质组（赏·综合分≥P95）` = which(SQ$综合分 >= stats::quantile(SQ$综合分, .95, na.rm=TRUE)),
+    `全体均值`                = seq_len(nrow(SQ)),
+    `高危组（罚·综合分≤P5）`  = which(SQ$综合分 <= stats::quantile(SQ$综合分, .05, na.rm=TRUE)))
+  sser <- lapply(sgrp, function(ix) sapply(sdims, function(d)
+            if (d %in% names(SQ)) mean(SQ[[d]][ix], na.rm = TRUE) else 0))
+  names(sser) <- sprintf("%s（%s 位）", names(sgrp), amt(vapply(sgrp, length, 1L)))
+  cat(er_radar(
+    tag = "风控专员", labels = S17_LBL, dirs = S17_DIMS, series = sser,
+    cols = c(PAL$good, PAL$ac, PAL$bad),
+    pend = which(!sdims %in% names(SQ)),
+    title = sprintf("风控专员 · 精简版权威六维雷达（维度自检 %d/6 · %s 位；四赏二罚 · 分位 0–100）",
+                    length(sin_), amt(nrow(SQ))),
+    note = paste0("分位 0–100；**本实体之罚侧即精简版相对主方案 §18 之增量**——",
+                  "主方案四维全为赏侧，评分只会加分不会扣分（见 @sec-conflict 之 TH-F）；",
+                  "`理由空白率` 从权威源之**代理口径**（1 − 判定详尽度 ÷ 中位详尽度），非空白条数占比——二者同名异物，裁决前不得作处置依据")))
+}
+if (!(exists("P17") && !is.null(P17)) && is.null(AQ) && is.null(DQ) && is.null(SQ)) {
+  cat(paste0("::: {.callout-warning}\n## 雷达未生成\n\n",
+    "四实体归一矩阵皆未生成，所待交付件见 @sec-load 与 @sec-gap。",
+    "**注意**：本档雷达已改用 `er_radar()` 直出，",
+    "**不再受 widget 依赖登记问题影响**——此处空白纯为缺料，非渲染故障。\n:::\n\n"))
+}
 ```
 
 # 能力值追溯矩阵（方案精要版·现行口径） {#sec-trace-jian}
@@ -1452,7 +1958,7 @@ if (!is.null(R03B)) {
         colorbar=list(title="名次变动",tickfont=list(color=PAL$fg),
           titlefont=list(color=PAL$fg))),
       hovertemplate="%{text}<br>观测数 %{x}｜B = %{y:.3f}<extra></extra>") |>
-    ply("收缩系数 B 随观测量之变化（B→1 表示样本足够，几乎不收缩）",
+    ply("经验贝叶斯收缩系数 B 随观测量之变化｜B→1 即样本充足几乎不收缩，B→0 即样本不足被拉回全体均值；阈值 TH-C：名次变动 ≤ 5 名",
         "该荷官观测数 n","收缩系数 B")))
 } else cat(ph("R03b_player_dealer_daily.csv","SQL 总包 §R03b（第 5,018 行）",
   "荷官层级收缩表、名次变动统计、收缩系数散点图"))
@@ -1700,8 +2206,8 @@ if (!is.null(BT)) {
     p1 <- plotly::plot_ly(x=~BT$折, y=~BT$Lift, type="scatter", mode="lines+markers",
         line=list(color=PAL$c,width=2), marker=list(size=9,color=PAL$c), name="Lift",
         hovertemplate="折 %{x}｜Lift %{y:.2f}<extra></extra>") |>
-      ply("逐折 Lift（阈值线 TH-D：低于 1 即不比随机抽人准，不得上线）","折","Lift")
-    p1 <- thr_line(p1, 1, "TH-D 上线闸门：Lift = 1", PAL$bad, min(BT$折), max(BT$折))
+      ply("净化滚动回测逐折 Lift｜阈值 TH-D：块自举 90% 区间下界须 ≥ 1.00；跌破即名单不优于随机抽样，不得上线","折","Lift")
+    p1 <- thr_line(p1, 1, thr_note("TH-D"), PAL$bad, min(BT$折), max(BT$折))
     p2 <- plotly::plot_ly(x=~BT$折, y=~BT$命中率, type="scatter", mode="lines+markers",
         line=list(color=PAL$g,width=2), marker=list(size=9,color=PAL$g), name="命中率",
         error_y=list(type="data",symmetric=FALSE,
@@ -1710,7 +2216,7 @@ if (!is.null(BT)) {
         hovertemplate="折 %{x}｜命中率 %{y:.3f}<extra></extra>") |>
       plotly::add_trace(y=~BT$基准率, mode="lines", name="基准率（随机抽人的命中率）",
         line=list(color=PAL$p,dash="dot"), error_y=NULL) |>
-      ply("命中率 vs 基准率（含 Wilson 95% 区间）｜两线距离即模型的净贡献","折","比例")
+      ply("逐折命中率与基准率对照（含 Wilson 95% 区间）｜两线间距即模型净贡献；阈值 TH-H：单玩法有效局数须 ≥ 30","折","比例")
     print(htmltools::tagList(plotly::subplot(p1,p2,nrows=1,margin=.07,
       titleX=TRUE,titleY=TRUE)))
   }
@@ -1983,10 +2489,15 @@ Hyndman & Koehler (2006) *IJF* 22(4)；Benjamini & Hochberg (1995) *JRSS-B* 57(1
 | v1–v3 | 2026-08-13 | 建档 → 主方案到手整节覆盖 → 改为可执行本 |
 | v4 | 2026-08-14 | 血统斧正（§17.2→§18）、口径冲突登记、呈表纪律、术语条率章、统计模型套装、七段收束章 |
 | **v5** | **2026-08-14** | **① 交付件实名斧正（先生指正）**：v4 之 `C06d_hedge_pairs_time.csv`（列 `first_dt`）与 `D06_bet09_profile.csv` **皆系推断编造**。经逐行 grep SQL 总包 v3 复核，实名为 **`C06d_hedge_pairs_dated.csv`**（§C06d，第 6,913 行；时点列 `first_opposite_dt`／`last_opposite_dt`／`n_opposite_days`）与 **`DX04_bet09_profile.csv`**（§DX-04，第 4,871 行）。并载明 §C06d 于 2026-08-10 已将 `HAVING` 由 `COUNT(*)>=20 AND opposite_rate>=0.9` 改回 `COUNT(*)>=30`，旧版导出件下游须补 `n_same_round>=30` 过滤。**全部 19 件交付件之文件名、SQL 编号、行号、`must=` 列名皆经逐条 grep 复核**。**② 装载清单扩至 19 件**，纳入此前误判为「待补」而实则在包者：`R03chk_settlement_form.csv`（逐玩法两套基准）、`E02_segment_econ.csv`（含 commission，**分群 γ\* 可现算**）、`DX05_product_panorama.csv`、`S02b_dealer_pace.csv`、`K01b_seed_goldip.csv`。**③ 风控专员冲突之新证据**：`S04_analyst_score.csv` 真实输出列为 `标注人／标注产量／理由空白数／首次标注／末次标注`——**子档增列之 `理由空白率`、`标注停滞度` 二维皆有真实 SQL 料源，可就地派生，零新增取数**；@sec-conflict 之途一（追认）由「倾向」升为「有据」，并新增料源核实表。**④ 自动装包**：`setup-pkg` 缺什么装什么，装不上不中断，@sec-env 出程序包点货单并逐包说明「缺则哪一节降级」。**⑤ 庄家视角全面改写**：卷首立「综合分 ≈ Theo 的风控加权版」之核心类比（Theo ＝ 平均注额 × 局数 × 庄家优势；打水客 Theo 漂亮却一分毛水不给场子），全篇改以吃水率、洗码量、退水、占成、限红、封盘、打水、代理线等业内语言陈述。**⑥ 全部术语·博彩规则·条率一律悬停**：立 `TERMS` 总辞典 42 条为唯一出处，`auto_tip()` 自动扫描所有表格单元格挂释义，改一处即全篇同步。**⑦ 全部图表桌表加装「阈值—幅度—后果」三段式**：立 `THRESH` 阈值总账 8 条（TH-A～TH-H）与 `gate()` 幅度判读器；每张表增列门槛判读与越线后果，每张图加画阈值线并标注含义；@sec-thresh 汇成一页总账。**⑧ 每一个代码块首行注明「本块对本商业方案之用途」**，并附庄家视角之类比。**⑨ 新增实测条率两章**：@sec-empirical 逐玩法实测吃水率对账（含气泡图与理论线）、@sec-settlement 逐玩法两套基准实测（两基准落差即误判的价目表）。**⑩ 回测接入正确的 C06d 列名**行标签侧净化并报剔除数；TH-D 上线闸门以块自举 90% 区间下界现算判读。 |
-| **v6** | **2026-08-14** | **① 渲染中断斧正（S1·FATAL）**：先生实测 `Error in sub(): input string 2 is invalid UTF-8`，中断于 `[load]` 块。**根因是我写的编码检测器本身失效**——旧写法先以 `fread(encoding="UTF-8")` 读，再以 `grepl("\\uFFFD", names(x))` 判编码对不对；而 `fread` 遇 GB18030 字节时是把**原始字节原样标为 UTF-8**，产出「非法字节」而非替换字符 U+FFFD，故该判据永远检不出，回落链从未触发，一路带病到 `trimws()`／`sub()` 才炸。**斧正三条**：判据一律改 `validUTF8()`；先只读表头原始字节、逐个候选编码试转、定下编码再读正文；读完对每一个字符列再归一一次（新增 `u8()`／`ok_utf8()`），杜绝「表头对了而内容仍是 GBK」的半截情形。另新增 @sec-env **编码侦测记录表**，逐件上报「是以什么编码读进来的」。**此为『校验器报错时须先校验校验器』之第九次实证。****② 进版与同名异容之戒（先生 2026-08-14 点破）**：前两轮我改了内容却沿用原档名，致先生手上下载件与新档同名异容，反复渲染到旧档、报错反复重现。**版本身份六元组之要义正在于此：同名异容即身份冲突。** 故本轮一律进版并清除旧档，`_v2`→`_v3`、`_v5`→`_v6`，`v4` 与初版专题档一并删除，全族交叉引用同步改指新版。**③ 交叉引用同步**：全档指向误差控制层者一律改为 `a168_评分误判率与失误率最小化_专题方案_v3.6.qmd`，血统 DAG 与七档对照表同步更新。 |
+| **v6** | **2026-08-14** | **① 渲染中断斧正（S1·FATAL）**：先生实测 `Error in sub(): input string 2 is invalid UTF-8`，中断于 `[load]` 块。**根因是我写的编码检测器本身失效**——旧写法先以 `fread(encoding="UTF-8")` 读，再以 `grepl("\\uFFFD", names(x))` 判编码对不对；而 `fread` 遇 GB18030 字节时是把**原始字节原样标为 UTF-8**，产出「非法字节」而非替换字符 U+FFFD，故该判据永远检不出，回落链从未触发，一路带病到 `trimws()`／`sub()` 才炸。**斧正三条**：判据一律改 `validUTF8()`；先只读表头原始字节、逐个候选编码试转、定下编码再读正文；读完对每一个字符列再归一一次（新增 `u8()`／`ok_utf8()`），杜绝「表头对了而内容仍是 GBK」的半截情形。另新增 @sec-env **编码侦测记录表**，逐件上报「是以什么编码读进来的」。**此为『校验器报错时须先校验校验器』之第九次实证。****② 进版与同名异容之戒（先生 2026-08-14 点破）**：前两轮我改了内容却沿用原档名，致先生手上下载件与新档同名异容，反复渲染到旧档、报错反复重现。**版本身份六元组之要义正在于此：同名异容即身份冲突。** 故本轮一律进版并清除旧档，`_v2`→`_v3`、`_v5`→`_v6`，`v4` 与初版专题档一并删除，全族交叉引用同步改指新版。**③ 交叉引用同步**：全档指向误差控制层者一律改为 `a168_评分误判率与失误率最小化_专题方案_v3.9.qmd`，血统 DAG 与七档对照表同步更新。 |
 | **v6.1** | **2026-08-14** | **Pandoc/Lua 内存耗尽斧正（S1）**：编码闸生效后 R 块全部跑通，改卡在排版阶段 `Error running Lua: not enough memory`。**根因三事叠加**：① `embed-resources: true` 要把 DT／Plotly 之全部 JS、CSS 与**数据**内联进同一 HTML；② DT 默认把全量行送进浏览器（玩家表可达八万行）；③ `auto_tip()` 对每一格逐字扫描四十余术语并包上 `data-tip`，八万行 × 十列，HTML 体积按十倍膨胀。**斧正四条**：① YAML 改 `embed-resources: false`，静态资源走 `_files/` 侧车目录；② 新立**呈现体量闸**（`DT_MAX`=5,000／`GLOSS_MAX`=200／`GL_MAX`=20,000）——超量表**全量落盘 CSV、页面呈首末、行号仍印真实索引**，此为**分流非截断**（证据一行未减，落盘路径逐张登记于新增之 @sec-perf，可下载核对）；③ 悬停释义只挂解说表，数据表不挂（术语在 @sec-glossary 一处查全）；④ 新增 `sc_type()` 散点类型闸，点数逾 `GL_MAX` 即改 WebGL（`scattergl`），并去除 DT 的 Buttons 扩展、改开 `deferRender`。**呈表纪律之界须在此说清**：该律所禁者为「隐藏证据」，非禁「不把八万行塞进浏览器」；本次以「全量落盘＋路径登记＋首末真实索引」保全证据，若落盘失败则 @sec-perf 判 ⛔ 并禁止据以出结论。**交付提示**：本档已非单一自足 HTML，交付时须连同 `_files/` 目录一并打包；若必须出单一档，把 `embed-resources` 改回 `true` 并同时将 `DT_MAX` 调至 1,000 以下。 |
 | **v6.2** | **2026-08-14** | **连带删除斧正（S1）＋ 立符号闭合自检器**：v3.1／v6.1 渲染报 `没有"gate"这个函数`／`找不到对象'THRESH'`。**根因是我上一轮换装 `tbl()` 时用了「从 `tbl <- function` 到 `PAL <- list(` 」这个粗放区间做替换，而阈值总账 `THRESH` 与幅度判读器 `gate()` 恰好夹在两者之间，被整段吞掉**——典型的「局部修补致连带删除」。已按两档各自内容补回（专题档 TH-01～TH-10、对照档 TH-A～TH-H），并逐项盘点确认**损失范围仅此二者**，`COST`／`GAPS`／`pick()`／`compose()`／`pq()`／`wilson()` 等其余定义完好。**根治措施**：新建**符号闭合自检器**——把代码块内一切「调用位」符号与「已定义」符号做差集，凡引用而未定义者当场点名。此器立后，「渲染到一半才发现某函数不存在」一类事故不再依赖先生试渲染发现。**过程中校验器自身两度失效（第十二、十三次）**：剥字符串时误吞跨行字符串、连带吞掉其间定义；以及把 `for`／`if` 等语法关键字与字符串内之文献名（Hochberg、Koehler）误判为未定义函数——皆先修正校验器再重跑，非修正被检对象。 |
 | **v6.3** | **2026-08-14** | **① Lua 内存耗尽·二度斧正**：`embed-resources:false` 未足以解决，根因另有其大者——**Plotly 把每一个点序列化成 JSON**，BH 图解的 p 值曲线达数万点、打水指纹与玩家赏罚散点各达八万点，三条轨迹叠加即数十 MB，Lua 过滤器握不住。**斧正**：新增 `PLOT_MAX`=2,500 与 `thin()` 绘点闸（等距抽样、保序、保首末、保形状，抽样率于图题中如实申明）；`DT_MAX` 5,000→**300**、`GLOSS_MAX` 200→**60**、`GL_MAX` 20,000→5,000；并去除 DT 之 FixedHeader 扩展。**② §S04 料源斧正，并公开更正我第 8 轮之错判**：先生实测 §S04p 正版输出为 `entity_id／标注产量／覆盖IP广度／判定详尽度／首次登记／最近登记`，而我此前 `must=` 写的是 `标注产量／理由空白数／首次标注／末次标注`——**故 v6.1 读不到该档**。更要紧的是，我第 8 轮据此宣称「精简版增列二维零新增取数」**该结论有误**：那三列出自 **§S-04b**，而 §S-04b 于 SQL 总包 v3 第 2,227 行明标「**导出：不需要 —— 看一眼即可**」，**不产出任何 CSV**。**正确结论**：`登记跨度`、`标注停滞度` 确可就地派生（零成本）；**`理由空白率` 无料源**，须把 §S-04b 那一行 `SUM(CASE WHEN NULLIF(TRIM(remarks),'')IS NULL THEN 1 ELSE 0 END)` 并入 §S04p。并加注 §S-04a 误跑之险（第 2,206–2,213 行告示：两条同写一个 CSV，后跑者覆盖先跑者，且不报错）。**③ `K01b_seed_goldip.csv` 改判为已知空集**：先生实测该查询「查询无结果」，本窗口零命中，故**无 CSV 可导**——此为白名单三年失效之铁证，非缺件，装载清单已如此标注。**④ 口径改宗（先生令）**：各实体各领域能力值改以**精简版**为正式口径，主方案 §18 降为参照；风控专员由 4 维改 6 维，罚侧由此补齐，评分不再只会加分不会扣分。**⑤ 新增 @sec-trace 十四列血统追溯总表**：四实体 18 条维度，逐条列出①领域能力值 ②源数据表 ③源表维度正名 ④导出标准（查证 SQL） ⑤导出解释（庄家话） ⑥关键代码原文 ⑦输出表名 ⑧输出表维度 ⑨输出维度标准 ⑩输出维度解释（赏罚方向） ⑪合成为哪个能力值 ⑫算法标准 ⑬算法解释 ⑭算法关键代码。每格皆自 SQL 总包 v3 逐行 grep 取证，未取证者标 ⏳ 待核，绝不以推断填格；「理由空白率」一行明标无料源，与 ② 之更正启事互为印证。 |
 | **v6.4** | **2026-08-14** | **① Lua 内存耗尽·三度斧正——找到真凶**：`embed-resources:false` 与 `DT_MAX` 降档皆未解决。逐行比对 Pandoc 调用日志后定位：**样式表被写在 YAML 的 `css:` 键下，而该键期待的是文件路径、不是样式正文**；Quarto 把整段 CSS 当成一个资源路径交给 Lua 解析，资源解析器反复扩展该串直至内存耗尽。**斧正**：CSS 全数迁入正文 `<style>` 块，YAML 只留 `theme`。庄家视角：等于把整本账簿塞进「账簿存放位置」那一栏——柜员不但找不到，还越翻越乱。**② `auto_tip()` 占位法加固**：旧写法把释义直接插回原串，而释义内又含其他术语，下一轮再往释义里插释义，串长逐轮相乘。改为「先全数换成占位符 \001i\002、再统一展开」，占位符不含任何术语故绝不自我嵌套；另设 8,000 字符上限，超限即弃用悬停返回原文。**③ §S04p 表头契约斧正（先生实跑复现）**：`S04_analyst_score.csv` 真实输出列为 `entity_id / 标注产量 / 覆盖IP广度 / 判定详尽度 / 首次登记 / 最近登记`，前版 `must=` 写成 `标注产量/理由空白数/首次标注/末次标注` 故整表拒装。**并须更正我上一轮之判断**：所称「理由空白数在包、零新增取数」系**半错**——该列在 §S-04b（L2,225–2,230），而该条明标「导出：不需要」，故须把 `SUM(CASE WHEN NULLIF(TRIM(remarks),'') IS NULL THEN 1 ELSE 0 END) AS 理由空白数` 并入 §S04p（同表同分组，零额外扫描）方可用。「标注停滞度」则确可由现有之 `首次登记/最近登记` 就地派生，零新增取数——此半为真。**④ `K01b_seed_goldip.csv` 零命中改判**：先生实跑 §K01b·2b 得「查询无结果」，证实金标准 IP 白名单在注单全表零命中。此为**已实证结论**而非缺料，装载清单用途栏已改注，不再以「缺席」呈现——**误判豁免防线三年未生效，此事至此有了可复现的实跑凭据**。**⑤ 新增 @sec-trace 十四列能力值溯源矩阵**：一行一维，横读即得完整血统（ODS 源表 → 源字段正名 → 导出标准 → 导出解释 → 关键代码 → 输出表 → 输出列 → 列标准 → 列解释 → 能力值 → 算法标准 → 算法解释 → 算法代码）；全部内容经 SQL 总包 v3（7,939 行 / MD5 `d9a09dc47c45caa11df163c5fddb7002` / CRLF）逐行 grep 核实，行号可复查。凡料源尚缺者标 ⏳ 并写明补法（荷官罚侧三维、代理罚侧二维），凡料源存在但未导出者标 ⚠。**⑥ 维度字典改以精要商业报告（精简版）为准**（先生令），风控专员由主方案 §18 之四维全赏侧改回精简版六维含二罚侧，`S17_LBL` 同步扩为六项。 |
-| **v6.5** | **2026-08-14** | **`S17_CHILD` 未定义斧正**：v6.3 已将 `S17_PARENT/S17_CHILD` 更名为 `S17_ZHU/S17_JIAN`，前版误按旧名写 `S17_DIMS <- S17_CHILD`，致 [dims] 块中断（L812–865）。现改 `S17_DIMS <- S17_JIAN`（精简版为现行正式口径，主方案 §18 之 `S17_ZHU` 降为参照）。**根治**：符号闭合检验器原只查函数调用，现已扩至**裸对象**与**「定义须先于使用」**两项，判据收敛至本项目命名式，两档皆通过。**同步**：交叉引用改指 `a168_评分误判率与失误率最小化_专题方案_v3.6.qmd`。 |
+| **v6.5** | **2026-08-14** | **`S17_CHILD` 未定义斧正**：v6.3 已将 `S17_PARENT/S17_CHILD` 更名为 `S17_ZHU/S17_JIAN`，前版误按旧名写 `S17_DIMS <- S17_CHILD`，致 [dims] 块中断（L812–865）。现改 `S17_DIMS <- S17_JIAN`（精简版为现行正式口径，主方案 §18 之 `S17_ZHU` 降为参照）。**根治**：符号闭合检验器原只查函数调用，现已扩至**裸对象**与**「定义须先于使用」**两项，判据收敛至本项目命名式，两档皆通过。**同步**：交叉引用改指 `a168_评分误判率与失误率最小化_专题方案_v3.9.qmd`。 |
 | **v6.6** | **2026-08-14** | **① `S17_CHILD` 未定义斧正（先生实测 [dims] 块中断）**：v6.3 已把 `S17_PARENT/S17_CHILD` 更名为 `S17_ZHU/S17_JIAN`，而 `dims` 块内一处引用未随之更名，遂报「找不到对象」。已改正。**② 出厂检验器再扩两项**（此错之所以漏网，正因旧检验器只查「函数调用」不查「裸对象」）：新增 **重复锚点** 与 **重复块标签** 检查、以及 **裸对象先用后定** 检查。扩检后当场查获 v6 存在**两个 `{#sec-trace}` 同名锚点**（一为 18 维部分覆盖旧块，一为 28 维全覆盖块）——同名锚点会令交叉引用指向不定，已删去部分覆盖旧块。**③ 追溯矩阵改名与分版（先生令）**：专题方案档之两章已改为 **`能力值追溯矩阵（主方案）` @sec-trace-zhu** 与 **`能力值追溯矩阵（方案精要版）` @sec-trace-jian**，字典分别**逐字复自**两份源档并经本轮实机核验一字不差——主方案 `a168风控与客户分层评分体系_商业方案.qmd` L6,028–6,046 之 `ENT` 原码（玩家 10 维／荷官 8 维／代理 7 维／专员 **4 维全赏侧**，末行原注「★ 第 4 实测维：由导出件的 首次/最近登记 两列就地派生」）；精要报告 `a168风控评分_精要商业报告.qmd` L1,858／2,130／2,357／2,499 之四个 `*_DIMS` 原码（玩家 10 维／荷官 8 维／代理 7 维／专员 **6 维含 `理由空白率`、`标注停滞度` 二罚侧**，另有 `PEND <- c("命中率","复核时效","复核一致性","误标率")` 四项待表）。两版并列并附逐维差异表，分歧一望即知。**④ 对照本改为单一真源引用制**：两版对照只在专题方案档一处维护，对照本改挂**`能力值追溯矩阵（方案精要版·现行口径）` @sec-trace-jian** 并交叉引用之——**同一份对照绝不在两档各存一版**，以免日后改一处忘一处。**⑤ 校验器本轮再失效两次（第十四、十五次）**：把具名向量与 `data.frame()` 的参数名（`Banker=`、`Brier=`、`ECE=`）误判为未定义对象；把 `NA_real_` 等 base 常量误判为未定义。皆先收窄判据再重跑，非修正被检对象。累计十五次，**「校验器报错时须先校验校验器」已足以列为项目常备铁律**。 |
+| **v6.7** | **2026-08-14** | **① 全部空白图之总根已除（先生实测报症）**：解剖先生渲染成品 `..._v3_6.html`（2.2 MB）得铁证——**widget `<div>` 25 个、widget JSON `<script>` 25 个，数据一个不缺；缺的是 plotly.js 本身**：`<script src>` 13 处全数外链至 `..._files/libs/`。对照先生自建之 `a168风控评分_精要商业报告.html`（16.3 MB，外链 0、内联 data: 2）图图俱在。**根因是我第 11 轮为解 Lua 内存而关掉 `embed-resources`**；而 Lua 内存之真凶实为 YAML `css:` 键（第 13 轮方查明并迁入正文 `<style>`）。真因既除，本轮**复原 `embed-resources: true`**——HTML 自足，单档转发即可看图，不必再带 `_files/` 目录。此前 v3.3 已立之 `PLOT_MAX`／`thin()` 绘点闸与 `DT_MAX`=300 仍在，故内联后体量可控。**受影响而本轮一并复原者**：实测条率、G03 BH 图解、G08 层级收缩、打水指纹散点、实测吃水率气泡、代理赏罚散点、玩家赏罚散点、四实体雷达——**全部**。**② 新增 @sec-t1234 四类风险用户分类章**（先生令：打水一章不足）：依主方案 `@sec-risktype`（§16）与 §8.1.4 逐字对齐，列全 T1 同 IP 下盈利用户／T2 持续正向优势候选／T3 打水型／T4 聚类扩散，每类载明一句话定义、核心判别式、**唯一可信判据**、主要误报源、处置落点及其经济根由；另附三条风控线判据表（R-01 靴末段／R-02 团伙同桌／R-03 玩家×荷官，各挂越线后果）、**处置分层容错上限表**（L2 83.3%／L3 80.0%／L4 50.0%／L5 **17.6%**——账户侧动手冤枉逾一成七即净亏，此为 @sec-cost「四档动作各解各的阈值」之经济根由）、四条红线，以及 **D5 口径陷阱**（`bet17` 含返水致洗码客被判为盈利玩家、系统性制造 T1 误报；三版本盈利口径中**唯版本 C 剔返水者可用于 T1**）。**③ 须向先生报备本轮未竟之事**：主方案 `a168风控与客户分层评分体系_商业方案.qmd` 之四项（§8.1.4 与 §16 扩写、长表 scroll-y／宽表 scroll-x、§14 八维能力值模型随维度扩充而更新、§15.4.6 回测走势图指标数随实际维数自适应、§18.2 雷达图改用精要报告 `er_radar()` 原码）与对照本雷达移植，本轮**尚未施工**——该四项须动主方案 16,743 行之主体，依基底纪律须单独立轮、逐项 diff 复核，不宜与本轮之渲染斧正混做。 |
+| **v6.8** | **2026-08-14** | **图仍空白之实因锁定并根治（S1·FATAL）**：先生渲染成品经解剖得铁证——`v3_7.html`（4.45 MB）与 `v6_7.html`（4.61 MB）内 **widget `<div>` 28／22 个、widget JSON 28／22 个，数据一个不缺**，外链已归零、自足内联已生效；**然而 `Plotly.newPlot` 出现 0 次、`exports.echarts` 出现 0 次——绘图引擎根本没进档**。对照 DataTables 出现 16 次，故表看得见、图全灭；空 `<div>` 计 4／5 个。**根因**：本档图件皆写在 `results: asis` 块内以 `print()` 输出，而 asis 块中 knitr **不走** `knit_print.htmlwidget`，因而**从未登记该 widget 的 `htmlDependency`**；`embed-resources` 只内联「已登记」之依赖——**没登记的库自然无从内联**。庄家视角：牌桌、筹码、监控都搬进场了，**唯独没请荷官**；台面摆得再齐整，没人发牌就是一局不开。**斧正四条**：① `setup-core` 内以 `htmlwidgets::getDependency()` 一次性登记 `plotly` 与 `echarts4r` 两库依赖，登记后其余 asis 块 print 出之 `div+JSON` 由 `HTMLWidgets.staticRender()` 自动接管，全档图件一并复活；② **雷达图换装**（先生令：与精要报告一字不差）——移植 `a168风控评分_精要商业报告.qmd` L294 与 L465–L610 之 `w_`／`radar_txt`／`er_dep`／`er_id`／`er_radar`／`EJ`／`er_ttl` 七件原码，值与序皆不动；其直出 HTML+JS、以 `cat()` 输出，**根本不经 `knit_print` 登记**，故绝不会重蹈覆辙，且承接其 `boot()` 守卫「容器零宽即不初始化」，杜绝按错误画幅定版面（精要报告十八轮斧正之成果）；调用参数亦照该档 L1,889–1,910 成法，玩家与代理两图并出，未到位之维以 `pend` 标「待表零」而非留空。③ 新增 **@sec-deps 图库依赖登记与自检章**：置两张最小自检图（Plotly 折线、ECharts 柱），**呈现即证引擎就位**，另附四库状态表与补装指令——**此层此前完全没有**，正因如此，先生连着数轮拿到空白图，而报告内无一处告知「是引擎没到，不是数据没算」。④ `PKG_NEED` 补入 `jsonlite`（er_radar 之 JSON 序列化）与 `htmlwidgets`（依赖登记），并在点货单注明「缺则全档图件空白」。**PAL 键名对齐**：精要报告用 `ac／good／violet`，本档原用 `c／g／v`，以补别名方式对齐（`PAL$ac <- PAL$c` 等），**不改精要报告原码一字**。 |
+| **v6.9** | **2026-08-14** | **① 渲染中断斧正（`PKG_USE[[p]]` 下标出界）**：上一版将 `jsonlite`／`htmlwidgets` 补入 `PKG_NEED`，而**两档之 `PKG_USE` 写法不同**，替换只命中对照本，专题档漏改，遂在 `unname(PKG_USE[[p]])` 处报「下标出界」并中断于 `[setup-pkg]`。已补齐，**并加装「两清单对齐哨」**：凡 `PKG_NEED` 与 `PKG_USE` 不对齐即当场自补占位并点名，绝不中断渲染。庄家视角：点货单与货架标签两处各写一遍，迟早对不上；故立一条「对不上即当场补标签并记账」之规矩，而非指望次次都记得。**② 图表悬停闸（先生令：一切术语、代号、阈值与标准和指标一律悬停）**：桌表侧此前已由 `auto_tip()` 覆盖，图形侧此前未覆盖。新增 `fig_cap()`（图题下方悬停说明条，载明指标、阈值、说明三段，术语自动挂释义）与 `thr_note()`（依 `THRESH` 登记生成阈值线之完整名称：代号＋指标＋方向＋门槛值＋**越线后果**）。全档 Plotly 阈值线一律改以 `thr_note()` 命名，鼠标停留即出后果，无须回查正文。庄家视角：限额牌不能只写数字，须同时写明「超过此数该报谁、后果为何」，否则新来的荷官照着数字做，出了事不知该找谁。**③ 全档图题依方案口径斧正**（各 6 处）：吃水率气泡图、共线诊断热力图、赏罚散点、收缩系数散点、逐折 Lift、命中率对照、BH 图解、可靠性图、决策曲线、期望损失曲面、打水指纹散点——题注一律补入所依阈值代号（TH-02／TH-03／TH-B／TH-C／TH-D／TH-H／TH-09）与判读口径；阈值线名称亦一并商务化（如「庄家理论吃水线 1.06%｜低于此即该玩法有人在赢场子，须列查案首位」）。**④ 措辞统一为商务中文**（先生令）：全档剔除口语与俚语，「拍脑袋」改「主观拟定」、「拍分位数」改「按分位数径行拟定」、「明天就能改配置」改「次日即可落实配置变更」、「一眼看到底」改「一望即知」等。**⑤ 出厂检验扩至六项**：①括号引号配平 ②重复锚点与重复块标签 ③符号闭合（含裸对象）④**PKG 两清单对齐**（本轮新增，正为拦截本次之错）⑤用途注释满覆盖 ⑥悬停闸就位。 |
+| **v7.0** | **2026-08-14** | **① 三之四「四实体互动雷达」实只出二图之根治（S1·先生指正）**：解剖本档得铁证——`er_radar()` 全档仅 **2 次**调用（玩家、代理），而 `DQ`／`SQ`／`N_D17`／`N_S17` 出现 **0 次**：荷官与风控专员**既无归一矩阵、亦无现算块、亦无雷达调用**。料源实已在 @sec-load 装载并挂契约锁（S02 must=`在桌洗码量`/`客群广度`；S04 must=`entity_id`/`标注产量`/`覆盖IP广度`/`判定详尽度`/`首次登记`/`最近登记`），**缺的自始至终是现算块，非缺料**。故新立 **三之四 荷官八维现算**、**三之五 风控专员六维现算**，原三之四顺延为 **三之六**，并按字典次序 **玩家→荷官→代理→风控专员** 四图齐出；调用形制与既有两图**一字不差**（同 `er_radar()`、同 `PAL$good/ac/bad`、同 P95/P5 分组、同 `pend` 待表零标注）。 **② 风控专员两罚侧维就地派生**：`登记跨度 = 最近登记 − 首次登记 + 1`、`标注停滞度 = (全体最近登记日 − 该员最近登记日) ÷ 登记跨度，截断至 [0,1]`——皆零新增取数，算式照 @sec-conflict「更正启事」表所载；`理由空白率` 无料源，**置零并标「待表零」，绝不合成**，须把 §S-04b 的 `理由空白数` 并入 §S04p 一列。至此风控专员评分**赏罚俱备**，TH-F 由 ⛔ 转 ✅——主方案 §18 之四维全赏侧、只加分不扣分之结构缺陷，在本档口径下已解除。 **③ 父档渲染缺维之定性（以本档权威字典逐维比对主方案 v3 渲染成品）**：主方案雷达实渲染 27 维、字典 31 维，缺 **8 维且 8 维全为罚侧**（玩家 `IP结构风险`；荷官 `对打局占比`/`异常对关联`/`風險單密度`；代理 `对打渗透率`/`单链密度`；专员 `理由空白率`/`标注停滞度`），另有 **4 个字典外幻影维**（命中率/复核时效/复核一致性/误标率，皆标「待表·置零」）。**赏侧 17 维一维不缺、罚侧 14 维缺 8**——此非画图疏漏，而是导出件缺列致「候选登记制」逐维跳过，其净效果是**雷达系统性偏向赏侧**。本档只登记不擅改，回填主方案之待办见 @sec-gap。 **④ 三之五处置档收窄**：专员约 24 位，在此样本上划 P5 等于用一两个人定线，故只设 P20 辅导档、不设处分档，且明载**不与绩效挂钩**——一旦挂钩，专员会为指标而多标乱标，评分反被自身污染。 |
+| **v7.1** | **2026-08-14** | **① 本方失校自查斧正（S2）**：v7.0 之 `登记跨度` 写作 `as.Date` 差分**加一日**，而权威源《a168风控评分_精要商业报告》L2,488 作 `pmax(difftime(POSIXct, POSIXct, "days"), 0)`——**不加一、且为小数日**。同名异义即口径分叉，今照权威源逐字改回，本档不再自立算式。 **② 补 `理由空白率` 之实测派生**：照权威源 L2,493–2,494 取 `1 − 判定详尽度 ÷ 全体中位详尽度`，截断 [0,1]；风控专员六维自此**全部实测**，不再有「待表零」。 **③ 同名异义登记（S1·只登记不擅裁）**：`理由空白率` 三档两式——权威源作**详尽度反推之代理口径**，本档 v6.9 与专题 v3.9 皆作 `理由空白数 ÷ 标注产量`（真口径，须补 §S04p 一列）。**二者度量的根本不是同一件事**：前者量「理由字数相对长短」，后者量「有没有写理由」。一名写五百字套话者前式判为 0，一名写二十字要害者前式判近 1。**裁决前，此维不得作任何处置依据**。 **④ 撤销本方前轮「须补七列」之判定**：经逐档核实，SQL 总包 v3 已在 §S-01／§S-02／§S-03 注释内明写对打指数、批量注册嫌疑、对打局占比、異常对关联、对打渗透率「在 Python 侧并入 §C06fix／C-06」，而 IP结构风险、風險單密度、单链密度三维在权威源中亦皆为**就地派生**（L1,838–1,854／L2,123／L2,314–2,319）。**故真正的 SQL 缺口只有零列**，前判失之过重，今更正。 |

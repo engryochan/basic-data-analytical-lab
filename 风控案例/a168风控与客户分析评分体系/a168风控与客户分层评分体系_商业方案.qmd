@@ -5988,6 +5988,11 @@ P3 试运行仍须随机对照组（@sec-plan），但**代理结算审计可以
   "风控专员","覆盖IP广度","赏","其标注覆盖的独立 IP 数","§S04p","🆕 本轮补列",
   "风控专员","判定详尽度","赏","备注字数——判定理由是否可复核","§S04p","🆕 本轮补列",
   "风控专员","登记跨度","赏","首末登记的时间跨度——持续在岗贡献，而非一次性突击标注","§S04p 导出件派生（首次/最近登记）","✅ 已实装",
+  ## ★ 2026-08-14 口径改宗（先生令：能力值以精要商业报告即精简版为准）：
+  ##   补入两条罚侧维。此前风控专员四维**全为赏侧**——评分只会加分不会扣分，
+  ##   结构上无法识别消极行为。补入后赏四罚二，赏罚俱备。
+  "风控专员","理由空白率","罚","备注过短或全空——判定不可复核；口径为 1 − 判定详尽度 ÷ 全体中位详尽度，截断 [0,1]","§S04p 导出件派生（判定详尽度）","🆕 本轮补列（改宗精简版）",
+  "风控专员","标注停滞度","罚","距全体最近登记日的天数 ÷ 该员登记跨度——跨度长而近期停滞者，其覆盖面是历史遗产而非当期贡献","§S04p 导出件派生（首次/最近登记）","🆕 本轮补列（改宗精简版）",
   "风控专员","命中率","赏","其标注被后续数据证实的比例","风控处置日志","⏳ 待表",
   "风控专员","复核时效","赏","标注到处置的间隔","风控处置日志","⏳ 待表",
   "风控专员","误标率","罚","被推翻的标注比例","风控处置日志","⏳ 待表",
@@ -6042,8 +6047,10 @@ ENT = {  # 实体: (文件, 维度 -> 赏罚方向 +1 赏 / -1 罚)
    {"线下规模":1,"真实流水":1,"下线留存":1,"新增会员质量":1,
     "对打渗透率":-1,"单链密度":-1,"退水消耗比":-1}),
  "风控专员":(f"{DATA_DIR}/S04_analyst_score.csv",
-   {"标注产量":1,"覆盖IP广度":1,"判定详尽度":1,
-    "登记跨度":1})}   # ★ 第 4 实测维：由导出件的 首次/最近登记 两列就地派生
+   {"标注产量":1,"覆盖IP广度":1,"判定详尽度":1,"登记跨度":1,
+    ## ★ 2026-08-14 口径改宗：补两条罚侧维，与精要商业报告（现行权威）逐条对齐。
+    ##   此前四维全为赏侧——评分只会加分不会扣分，结构上识别不了消极行为。
+    "理由空白率":-1,"标注停滞度":-1})}   # 三、四、五、六维皆由 §S04p 导出件就地派生
 
 N_DEMO = {"玩家": 3000, "荷官": 180, "代理": 400, "风控专员": 24}
 
@@ -6159,19 +6166,162 @@ for ent, (path, dims) in (ENT.items() if ENV_OK else []):
                     df["对打指数"]     = df["对打指数"].fillna(0.0)
                     df["批量注册嫌疑"] = df["批量注册嫌疑"].fillna(0.0)
                     print(f"ℹ️ [玩家] 已由 C06_hedge_pairs 并入 对打指数/批量注册嫌疑（对打名单 {len(agg)} 人，其余记 0）")
-        if ent == "风控专员" and {"首次登记","最近登记"} <= set(df.columns) \
-           and "登记跨度" not in df.columns:
+        ## ── 荷官三罚侧维 ← §R03b 日粒度底表 × §C06fix 对打名单 × §K01b 金标种子 ──
+        ##    算式逐行迻录自 a168风控评分_精要商业报告.qmd L2,093–2,095、L2,121–2,123，
+        ##    值与序皆不动。此三维**非 SQL 缺列**：SQL 总包 §S-02 注释早已写明
+        ##    「对打局占比/異常对关联在 Python 侧并 §C06fix 名单」，缺的一直是本段代码。
+        if ent == "荷官" and not {"对打局占比","异常对关联","風險單密度"} <= set(df.columns):
+            r03p, _hr = resolve_data("R03b_player_dealer_daily.csv")
+            if r03p is None:
+                r03p, _hr = resolve_data("R03_player_dealer.csv")
+            c06d, _hc = resolve_data("C06_hedge_pairs.csv")
+            sedp, _hs = resolve_data("K01b_seed_manual.csv")
+            if r03p is not None:
+                rb = read_any(r03p)
+                rb.columns = [str(c).strip().replace("\ufeff", "") for c in rb.columns]
+                uidc = next((c for c in ("uid","member_id") if c in rb.columns), None)
+                stkc = next((c for c in ("stake_amount","valid_bet","stake") if c in rb.columns), None)
+                if uidc and stkc and "dealer_id" in rb.columns:
+                    hm2, sd2 = set(), set()
+                    if c06d is not None:
+                        c6d = read_any(c06d)
+                        c6d.columns = [str(c).strip() for c in c6d.columns]
+                        for cc in ("m_a","m_b"):
+                            if cc in c6d.columns:
+                                hm2 |= set(pd.to_numeric(c6d[cc], errors="coerce").dropna().astype("int64").astype(str))
+                    if sedp is not None:
+                        sd = read_any(sedp)
+                        sd.columns = [str(c).strip() for c in sd.columns]
+                        if "member_id" in sd.columns:
+                            sd2 = set(pd.to_numeric(sd["member_id"], errors="coerce").dropna().astype("int64").astype(str))
+                    key = pd.to_numeric(rb[uidc], errors="coerce")
+                    rb = rb.assign(_uid=key.dropna().astype("int64").astype(str)
+                                   if key.notna().all() else key.astype(str))
+                    rb["_stk"] = pd.to_numeric(rb[stkc], errors="coerce").fillna(0.0)
+                    inh = rb["_uid"].isin(hm2); ins = rb["_uid"].isin(sd2)
+                    agg = rb.assign(_h=rb["_stk"].where(inh, 0.0),
+                                    _s=rb["_stk"].where(ins, 0.0),
+                                    _hu=rb["_uid"].where(inh)).groupby("dealer_id").agg(
+                        対打注额=("_h","sum"), 種子注额=("_s","sum"),
+                        対打客数=("_hu","nunique")).reset_index()
+                    df["dealer_id"] = df["dealer_id"].astype(str)
+                    agg["dealer_id"] = agg["dealer_id"].astype(str)
+                    df = df.merge(agg, on="dealer_id", how="left")
+                    for cc in ("対打注额","種子注额","対打客数"):
+                        df[cc] = df[cc].fillna(0.0)
+                    df["对打局占比"] = df["対打注额"] / df["在桌洗码量"].clip(lower=1)
+                    df["异常对关联"] = df["対打客数"] / df["客群广度"].clip(lower=1)
+                    df["風險單密度"] = df["種子注额"] / df["在桌洗码量"].clip(lower=1)
+                    print(f"ℹ️ [荷官] 已由 {os.path.basename(r03p)} × C06fix × K01b 派生"
+                          f" 对打局占比/异常对关联/風險單密度（对打名单 {len(hm2)} 人、种子 {len(sd2)} 人）")
+
+        ## ── 玩家 · IP结构风险 ← §C-00 会员×IP 明细 × §K01b 金标（精要报告 L1,838–1,854）──
+        if ent == "玩家" and "IP结构风险" not in df.columns:
+            iplp, _hi = resolve_data("I_ip_player.csv")
+            if iplp is not None:
+                ip = read_any(iplp)
+                ip.columns = [str(c).strip().replace("\ufeff", "") for c in ip.columns]
+                if {"member_id","bet_ip"} <= set(ip.columns):
+                    g = ip.groupby("member_id")["bet_ip"].nunique().rename("密度").reset_index()
+                    hit = set()
+                    sedp, _hs = resolve_data("K01b_seed_manual.csv")
+                    if sedp is not None:
+                        sd = read_any(sedp)
+                        sd.columns = [str(c).strip() for c in sd.columns]
+                        if "member_id" in sd.columns:
+                            hit = set(pd.to_numeric(sd["member_id"], errors="coerce").dropna().astype("int64"))
+                    g["_m"] = pd.to_numeric(g["member_id"], errors="coerce")
+                    g["命中"] = g["_m"].isin(hit).astype(int)
+                    g["IP结构风险"] = g["密度"] * (1 + g["命中"])
+                    df["_k"] = pd.to_numeric(df["member_id"], errors="coerce")
+                    df = df.merge(g[["_m","IP结构风险"]], left_on="_k", right_on="_m",
+                                  how="left").drop(columns=["_k","_m"])
+                    df["IP结构风险"] = df["IP结构风险"].fillna(0.0)
+                    print(f"ℹ️ [玩家] 已由 I_ip_player × K01b 派生 IP结构风险（金标命中 {len(hit)} 人加倍计）")
+
+        ## ── 代理 · 单链密度 ← §C-00（精要报告 L2,314–2,319）；对打渗透率 ← §C06fix（L2,393）──
+        if ent == "代理":
+            iplp, _hi = resolve_data("I_ip_player.csv")
+            if iplp is not None and "单链密度" not in df.columns:
+                ip = read_any(iplp)
+                ip.columns = [str(c).strip().replace("\ufeff", "") for c in ip.columns]
+                if {"lv3","member_per_chain"} <= set(ip.columns):
+                    mx = (ip[["lv3","member_per_chain"]].drop_duplicates()
+                          .groupby("lv3")["member_per_chain"].max().rename("单链密度").reset_index())
+                    df["lv3"] = df["lv3"].astype(str); mx["lv3"] = mx["lv3"].astype(str)
+                    df = df.merge(mx, on="lv3", how="left")
+                    df["单链密度"] = df["单链密度"].fillna(0.0)
+                    print("ℹ️ [代理] 已由 I_ip_player 派生 单链密度（线内 member_per_chain 最大值）")
+            if "对打渗透率" not in df.columns:
+                for cand in ("对打占比","对打渗透"):
+                    if cand in df.columns:
+                        df["对打渗透率"] = pd.to_numeric(df[cand], errors="coerce").fillna(0.0)
+                        print(f"ℹ️ [代理] 对打渗透率 取自导出件同义列 {cand}")
+                        break
+                else:
+                    iplp2, _h2 = resolve_data("I_ip_player.csv")
+                    c06d2, _h3 = resolve_data("C06_hedge_pairs.csv")
+                    if iplp2 is not None and c06d2 is not None:
+                        ip2 = read_any(iplp2); c62 = read_any(c06d2)
+                        ip2.columns = [str(c).strip() for c in ip2.columns]
+                        c62.columns = [str(c).strip() for c in c62.columns]
+                        if {"lv3","member_id"} <= set(ip2.columns):
+                            hm = set()
+                            for cc in ("m_a","m_b"):
+                                if cc in c62.columns:
+                                    hm |= set(pd.to_numeric(c62[cc], errors="coerce").dropna().astype("int64"))
+                            ip2["_m"] = pd.to_numeric(ip2["member_id"], errors="coerce")
+                            gg = ip2.drop_duplicates(["lv3","_m"]).groupby("lv3").agg(
+                                _n=("_m","nunique"),
+                                _h=("_m", lambda v: v.isin(hm).sum())).reset_index()
+                            gg["对打渗透率"] = gg["_h"] / gg["_n"].clip(lower=1)
+                            df["lv3"] = df["lv3"].astype(str); gg["lv3"] = gg["lv3"].astype(str)
+                            df = df.merge(gg[["lv3","对打渗透率"]], on="lv3", how="left")
+                            df["对打渗透率"] = df["对打渗透率"].fillna(0.0)
+                            print(f"ℹ️ [代理] 已由 I_ip_player × C06fix 派生 对打渗透率（对打名单 {len(hm)} 人）")
+
+        ## ── 风控专员 · 登记跨度 / 标注停滞度 / 理由空白率 ────────────────────
+        ##    ★ 2026-08-14 三处斧正：
+        ##      ① 登记跨度改**小数日**——权威源 L2,488 作 difftime(...,"days")，
+        ##         旧写法 .dt.days 取整数日，四十三分钟的跨度会被抹成 0，口径分叉；
+        ##      ② 补 标注停滞度 与 理由空白率 两罚侧维（权威源 L2,493–2,497）；
+        ##      ③ **时间一致性守卫**：实测查出一条登记时间为 2026-08-09，
+        ##         晚于本方案窗口截止日 2026-08-07，属未来信息（S1）。
+        ##         本处检出即高声点名并按窗口截断，根治须在 §S04p 加 addtime 上界。
+        if ent == "风控专员" and {"首次登记","最近登记"} <= set(df.columns):
+            WIN_END = pd.Timestamp("2026-08-07")
             t0 = pd.to_datetime(df["首次登记"], errors="coerce")
             t1 = pd.to_datetime(df["最近登记"], errors="coerce")
-            df["登记跨度"] = (t1 - t0).dt.days.clip(lower=0).fillna(0)
-            print("ℹ️ [风控专员] 已由 首次/最近登记 派生 登记跨度（天）")
+            n_fut = int((t1 >= WIN_END).sum())
+            if n_fut:
+                print(f"⛔ [风控专员·时间一致性] 检出 {n_fut} 位专员之最近登记 ≥ 窗口截止日"
+                      f" {WIN_END.date()}——属未来信息，已按窗口截断。"
+                      f" 根治办法：§S04p 增补 WHERE addtime < '2026-08-07'。")
+                t1 = t1.clip(upper=WIN_END)
+            if "登记跨度" not in df.columns:
+                df["登记跨度"] = ((t1 - t0).dt.total_seconds() / 86400.0).clip(lower=0).fillna(0)
+            if "标注停滞度" not in df.columns:
+                t_now = t1.max()
+                df["标注停滞度"] = (((t_now - t1).dt.total_seconds() / 86400.0)
+                                    / df["登记跨度"].clip(lower=1)).clip(0, 1).fillna(1.0)
+            if "理由空白率" not in df.columns and "判定详尽度" in df.columns:
+                d = pd.to_numeric(df["判定详尽度"], errors="coerce")
+                d_med = d.median()
+                df["理由空白率"] = (1 - d / max(d_med, 1e-9)).clip(0, 1).fillna(1.0)
+            print("ℹ️ [风控专员] 已派生 登记跨度（小数日）/ 标注停滞度 / 理由空白率"
+                  "（三式逐行迻录自精要商业报告 L2,488–2,497；理由空白率为**代理口径**）")
         have = {d: s for d, s in dims.items() if d in df.columns}
         miss = [d for d in dims if d not in df.columns]
         if miss:
             print(f"⛔ [{ent}] {os.path.basename(path)} 缺 {len(miss)} 列：{miss}")
-            print(f"   → 该实体只能以现有 {len(have)} 维作图。补列办法见 SQL 总包的"
-                  f" S-01ex / S-02ex / S-03ex / §S04p（各实体的扩编维度专列查询）；"
-                  f" 对打类维度须先跑 §DX-01 再跑 §C06fix。")
+            print(f"   → 该实体只能以现有 {len(have)} 维作图。"
+                  f" ★ 2026-08-14 更正：本方案四实体三十一维中，"
+                  f" IP结构风险 / 对打局占比 / 异常对关联 / 風險單密度 /"
+                  f" 对打渗透率 / 单链密度 / 理由空白率 / 标注停滞度 八维"
+                  f" **皆非 SQL 缺列，而是报表侧就地派生**（本区块上方已实装）；"
+                  f" 其料源为 §C-00 I_ip_player、§R03b、§C06fix、§K01b 与 §S04p。"
+                  f" 若此处仍报缺列，须先确认上列交付件是否到位，"
+                  f" 而非重跑 S-01ex / S-02ex / S-03ex。")
         if len(have) < 2:
             print(f"⛔ [{ent}] 可用维度不足 2 → 改出结构演示图")
             df, have, is_demo = demo_frame(ent, dims, N_DEMO[ent]), dict(dims), True
@@ -6200,12 +6350,17 @@ for ent, (path, dims) in (ENT.items() if ENV_OK else []):
     df["综合分"] = df["赏"] - df["罚"]          # 赏罚分明：正=该赏，负=该罚
 
     # 雷达：高危组(综合分P5以下) vs 全体均值 vs 优质组(P95以上)
-    ## ★ 风控专员：恢复多维形态——同一张图内四维实测 + 四维待表并列。
-    ##   待表轴数值恒为 0（无数据即零，绝非合成），轴名后缀「待表·置零」；
-    ##   处置日志与申诉记录两表到位、导出件补列后自动转为实测轴。
-    ##   全篇风控专员雷达仅此一张。
-    PEND = (["命中率", "复核时效", "复核一致性", "误标率"]
-            if ent == "风控专员" and not is_demo else [])
+    ## ★ 2026-08-14 斧正：四条「待表·置零」轴予以撤除。
+    ##   撤除之据是本档自订之规则（见 ENT 字典首注）：
+    ##     「只登记标『✅ 已实装』与『🆕 本轮补列』的维度；标『⏳ 待表』的一律不列——
+    ##       列了也永远画不出来，只会让读者以为报告漏算。」
+    ##   而此处偏偏把命中率/复核时效/复核一致性/误标率四条 ⏳ 待表维画了上去，
+    ##   **与本档自订之规则直接抵触**；且五条待表维只画四条（漏申诉推翻率），
+    ##   取舍无据。置零占位混入实测雷达，读者会以为风控专员有八维、
+    ##   其中四维「表现为零」——实情是那四维根本没有数据。
+    ##   待表维之缺口已由上方「评分设计」表逐条明示，无须再以空轴重复宣告。
+    ##   风控专员雷达自此为**六维全实测**（赏四罚二），全篇仅此一张。
+    PEND = []
     grp = {"优质组(赏·≥P95)": df[df.综合分 >= df.综合分.quantile(.95)],
            "全体均值":        df,
            "高危组(罚·≤P5)":  df[df.综合分 <= df.综合分.quantile(.05)]}
@@ -6365,19 +6520,40 @@ tibble::tribble(
 | 覆盖IP广度 | `COUNT(DISTINCT ip)` | 其标注覆盖多少个独立 IP，衡量广度而非重复劳动 |
 | 判定详尽度 | `remarks` 字符长度 | 判定理由是否写得可复核——空白备注等于不可审计 |
 
-`§S04p` 已实现前三维，导出即为 `S04_analyst_score.csv`；第四维**登记跨度**由
-导出件自带的首次/最近登记两列就地派生（首末登记时间差，量「持续在岗贡献」而非
-一次性突击标注）。四维雷达在几何上仍偏薄，但它是**实测的**。
+`§S04p` 已实现前三维，导出即为 `S04_analyst_score.csv`；其余三维——**登记跨度**、
+**标注停滞度**、**理由空白率**——皆由导出件自带的首次/最近登记与判定详尽度三列
+就地派生，算式逐行迻录自《a168风控评分_精要商业报告》（现行口径权威）L2,488–2,497。
 
-风控专员雷达全篇**仅此一张**，且为多维形态：同一张图内，四条实测轴
-（标注产量 · 覆盖IP广度 · 判定详尽度 · 登记跨度）与四条待表轴
-（命中率 · 复核时效 · 复核一致性 · 误标率，轴名后缀「待表·置零」）并列呈现。
-待表轴数值恒为零——无数据即零，绝非合成；处置日志与申诉记录两表到位、
-导出件补列之后，待表轴自动转为实测轴，图形随渲染自行补全。
+::: {.callout-important}
+## 2026-08-14 斧正：四维改六维，撤除四条待表空轴
 
-**两条使用限制须随表一起交付**：其一，样本仅 17 条量级，**只可作画像展示，
-不足以做绩效排名**；其二，登记时间多在 2022 年，与本方案 139 天窗口无重叠，
-**任何跨期比较都不成立**，先跑 `§TG-03` 确认时间范围再决定是否引用。
+**其一 · 口径改宗。** 依先生令，能力值以精要商业报告（精简版）为准。
+此前风控专员四维**全为赏侧**——评分只会加分不会扣分，结构上识别不了消极行为。
+今补入 `理由空白率`、`标注停滞度` 两条罚侧维，赏四罚二，赏罚俱备。
+
+**其二 · 撤除四条「待表·置零」轴。** 命中率 · 复核时效 · 复核一致性 · 误标率
+原以空轴画在图上，此举与本章 `ENT` 字典首注自订之规则直接抵触——
+该注明写「标『⏳ 待表』的一律不列，列了也永远画不出来，只会让读者以为报告漏算」。
+且五条待表维只画四条（漏 `申诉推翻率`），取舍无据。
+**置零占位混入实测雷达，读者会以为风控专员有八维、其中四维表现为零；
+实情是那四维根本没有数据。** 待表缺口已由上方「评分设计」表逐条明示，
+无须再以空轴重复宣告。风控专员雷达自此为**六维全实测**。
+
+**其三 · 登记跨度改小数日。** 旧写法取 `.dt.days` 整数日，
+四十三分钟的跨度会被抹成 0，与权威源之 `difftime(…, "days")` 口径分叉，今改回。
+:::
+
+**三条使用限制须随表一起交付**：
+
+其一，**样本仅六人**。分位归一之取值只有六档，综合分不是连续量而是六档序号；
+在六人身上划 P95/P5，P95 即最大值本身。**此维不具个体判别力，只可作存在性刻画。**
+
+其二，**登记时间多在 2022 年**，与本方案 139 天窗口无重叠，任何跨期比较都不成立。
+
+其三，**两条罚侧维在小样本下高度耦合**。实测已见：一名 `remarks` 全空者，
+理由空白率满罚，却因恰为最近有动作者而标注停滞度零罚，两罚相抵、综合分归零，
+排名反居中游，高于确实写了理由的三位。
+**故在「风控处置日志」建成之前，本实体雷达只宜作结构演示，不宜进入任何绩效场合。**
 
 **商业措施**：把「风控处置日志」与「客诉/申诉记录」两张表列入
 @sec-needtables 的 P2 优先级。两表到位后，风控专员维度即可由三维补至八维，
@@ -16525,6 +16701,14 @@ tibble::tribble(
   218,"**立一条分界：并非所有常数都该实测**。统计惯例阈值（SMD<0.1、卡钳 0.2、α=0.05、功效 0.8）与外部权威基准（Zender 50–55 局/小时、UKGC 七类）不该由本项目重估——前者是同行为使结果可比而约定，自行重估即无法与外部研究对话且易沦为**调门槛以就结论**；后者若以本平台数据重算再用以评价本平台，是循环论证。**分界不在「能不能算」，而在「该不该由我们算」**","新增","@sec-const-audit",
   229,"**结算形态核实定谳**：庄／闲开出和局退还本金（game_pnl 恰为 0），台面三果而结算只二果——即 Draw No Bet；押和与边注为纯二元无退还。新立 @sec-settle 载三类产品结算形态表、两套基准（含和局的无条件 45.86% 用于算庄家优势；剔和后的决胜局 50.68% 方为 Z 分数之基）与其各自用途","新增","@sec-settle",
   230,"**文档与实现不同基之根治**：SQL 侧 side_base 分母已剔退还局，而正文七处把无条件概率称作 Z-score 基准，差 4.82pp。全篇十一处改为并列两基或明注所取之基（庄家优势算式取无条件属正确用法，加注以免相混）。定性为文档缺陷非计算缺陷——代码取实测 p_base，既有结论一个未错；危害在下游照文档实现者，其偏差随局数以根号 n 增长，只押庄者约 1,100 决胜局即自动越 Z≥3.2 线","斧正","@sec-settle + 术语库 + @sec-r03",
+  359,"**四实体雷达罚侧补齐：渲染 23 维 → 31 维（S1 斧正）**。先生实测查出「雷达实体数目不齐全」。逐维核实得铁证：正文三处皆声明四实体三十一维，而渲染成品实际只画 27 轴，其中 4 轴为置零占位，**真正有据者仅 23 维**；所缺 8 维**全为罚侧**，赏侧 17 维一维不缺——净效果是雷达只会加分不会扣分。成因分三类，各有各的补法：① 六维（IP结构风险／对打局占比／异常对关联／風險單密度／对打渗透率／单链密度）之维名早在 ENT 字典内，惟 CSV 无此列，绘图按候选登记制**静默略过、不报错不留痕**；② 二维（理由空白率／标注停滞度）在 ENT 中根本未登记——风控专员仍为口径改宗前之四维旧本；③ 四维（命中率／复核时效／复核一致性／误标率）为 ⏳ 待表维而被以空轴画上，与本章自订规则相抵触","斧正","@sec-radar",
+  360,"**六维改由报表侧就地派生，非补 SQL 列**。据 SQL 总包 v3 逐行核实：§S-02 注释早已写明「对打局占比/異常对关联在 Python 侧并 §C06fix 名单」，§S-03 亦写明「对打渗透率在 Python 侧并 C-06」——此三维**本就设计为报表侧合并，不由 SQL 出列**；另三维之料源亦皆在包（IP结构风险 ← §C-00 I_ip_player × §K01b；風險單密度 ← §R03b × §K01b；单链密度 ← §C-00 member_per_chain）。**故真正的 SQL 缺口为零列**，缺的一直是本章那几段派生代码。今补入四段，算式逐行迻录自《a168风控评分_精要商业报告》L1,838–1,854／L2,093–2,095／L2,121–2,123／L2,314–2,319，值与序皆不动","斧正","@sec-radar",
+  361,"**风控专员四维改六维（口径改宗精简版）**。依先生令，能力值以精要商业报告为准。此前风控专员四维**全为赏侧**，评分只会加分不会扣分，结构上识别不了消极行为。今于「评分设计」表与 ENT 字典同步补入 `理由空白率`（罚）与 `标注停滞度`（罚），赏四罚二。二维皆由 §S04p 导出件就地派生，零新增取数","升级","@sec-radar",
+  362,"**撤除四条「待表·置零」轴**。命中率／复核时效／复核一致性／误标率原以空轴画在风控专员雷达上，此举与本章 ENT 字典首注自订之规则直接抵触——该注明写「标『⏳ 待表』的一律不列，列了也永远画不出来，只会让读者以为报告漏算」；且五条待表维只画四条（漏 `申诉推翻率`），取舍无据。**置零占位混入实测雷达，读者会以为该实体有八维而其中四维表现为零，实情是那四维根本没有数据**。待表缺口已由「评分设计」表逐条明示，无须再以空轴重复宣告","斧正","@sec-radar",
+  363,"**登记跨度改小数日**。旧写法取 `.dt.days` 整数日，四十三分钟之跨度会被抹成 0；权威源 L2,488 作 `difftime(…, \"days\")` 为小数日。同名而不同物即口径分叉，今照权威源改回","斧正","@sec-radar",
+  364,"**时间一致性守卫立于风控专员派生处（S1）**。§S04p 实测输出六行，其中 `livegame` 之最近登记为 **2026-08-09**，晚于本方案窗口截止日 **2026-08-07**——属未来信息。今于派生处检出即高声点名并按窗口截断；**根治办法为 §S04p 增补 `WHERE addtime < 2026-08-07`**，已列入取数待办","斧正","@sec-radar",
+  365,"**风控专员三条使用限制随表交付**。① 样本仅六人，分位归一只有六档，综合分是序号非连续量，P95 即最大值本身；② 六人中五人最近登记皆在 2022 年，与 139 天窗口无重叠；③ **两条罚侧维在小样本下高度耦合**——实测已见一名 `remarks` 全空者，理由空白率满罚却因恰为最近有动作者而停滞度零罚，两罚相抵、综合分归零，排名反居中游，高于确实写了理由的三位。故在「风控处置日志」建成前，本实体雷达只宜作结构演示，**不宜进入任何绩效场合**","核实","@sec-radar",
+  366,"**`理由空白率` 同名异义登记（只登记不擅裁）**。三档两式：本档与精要报告（权威源）作 `1 − 判定详尽度 ÷ 全体中位详尽度`（量**理由字数的相对长短**）；《能力值口径解读》与《评分误判率专题》皆作 `理由空白数 ÷ 标注产量`（量**有没有写理由**）。二者度量的根本不是同一件事——一名写五百字套话者，前式判其为 0；一名写二十字要害者，前式判其近 1。本轮从权威源以维系单向血统，并在正文标明其为**代理口径**；**裁决前此维不得作任何处置依据**","核实","@sec-radar",
   340,"**归档 A-17 与总包脱节已根治**：连日斧正总包 §R03 而未同步主方案归档 A-17，实测其仍含 MAX(bet_side)（字母序取主注）与 COALESCE(s.p_base, 0.5)（0.5 兜底）两处已废之法——同一份 SQL 两处口径不一，读者依归档实现即得旧结果。A-17 已全面重写与总包逐字一致，并于段首列出六处实质差异与预期产出行数（8,061,974 行，ELIGIBLE 应恰 517,528、SENTINEL 应 243,025，对不上即回查）","斧正","@sec-sql-a-17",
   341,"**二十三份归档全数普查，旧法残留归零**：逐份扫描四类旧法（0.5 兜底／哨兵源头删除／下限过滤／字母序主注），23 份中需斧正者仅 A-17 一份，其余二十二份洁净","核实","@sec-sql-archive",
   348,"**新立 @sec-req-trace 来源文档逐条溯源矩阵**：把五份来源的每一项要求逐条对到章节、口径与状态。需求文档 30 项全数在表，三态标注（✅ 已实现／🟡 受数据所限而降级／⛔ 无一项）——凡数据不可得者（如 close_bet_time）非跳过，而是给出替代口径并注明局限。另出「另三份分析报告的对应」表，说明本方案非另起炉灶，而是接住其对的部分、补上其留的口子","新增","@sec-req-trace",
