@@ -1,0 +1,11 @@
+SELECT COUNT(*)                              AS n_rows_in_window,
+       COUNT(DISTINCT b.bet01)               AS n_distinct_bet01,
+       COUNT(*) - COUNT(DISTINCT b.bet01)    AS n_dropped_by_rn
+FROM   ods_mariadb_2b.ods_a168_bet02 b
+WHERE  b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+  AND  b.bet02 = '101' AND b.category = '1';
+
+00:00:02.210
+
+n_rows_in_window	n_distinct_bet01	n_dropped_by_rn
+125649147	124726293	922854

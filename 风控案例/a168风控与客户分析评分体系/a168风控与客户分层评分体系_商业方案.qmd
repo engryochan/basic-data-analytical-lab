@@ -618,10 +618,41 @@ cached <- function(key, expr, inputs = list(), params = list(), version = "v1") 
 ## 供 Python 侧复用同一套目录与开关
 CACHE_DIR_PY <- CACHE_DIR
 
-read_any <- function(f){
+## ★ 表头名规范化：去 BOM、不换行空格与前后空白。
+##   read_hdr() 与 fetch() 共用此一式，使「Schema 证据」与「分析载荷」两路
+##   读出的列名必然同形——同一判据只此一处，不留第二份写法。
+hdr_norm <- function(v) trimws(gsub("\u00a0", " ", gsub("^\ufeff", "", v)))
+
+## ★★ 只读表头，取该件之**全列名**（2026-08-14 第三十九轮立 · S1 级保护）
+##   立此独立一路的理由，不是省事，是**因果识别闸不得被内存优化污染**：
+##   一旦为省内存而只读必需列，`names(x)` 即被截断；而下游以列名探测
+##   「对照组标识」者（@sec-r03b-status 之 has_ctrl）会由「有」静默翻成「无」，
+##   准实验的可识别性判定随之失真。故全列名自成一路，与读入哪几列无关。
+read_hdr <- function(f) {
   for (enc in c("UTF-8","GB18030","GBK","Latin1")) {
-    x <- try(suppressWarnings(readr::read_csv(
-           f, locale = readr::locale(encoding = enc), show_col_types = FALSE)),
+    h <- try(suppressWarnings(readr::read_csv(
+           f, locale = readr::locale(encoding = enc), n_max = 0, show_col_types = FALSE)),
+         silent = TRUE)
+    if (!inherits(h, "try-error") && ncol(h) > 0) return(hdr_norm(names(h)))
+  }
+  character(0)
+}
+
+## ★ 读入：`keep` 给定时只读该几列，其余以 readr 紧凑型 col_types 之 "_" 逐位跳过。
+##   不采 tidyselect——其求值环境随调用栈而变，易生「找不到变量」之患；
+##   改以**列位逐位指定**，结果确定且可逐字审。
+read_any <- function(f, keep = NULL){
+  ctypes <- NULL
+  if (!is.null(keep)) {
+    all_nm <- read_hdr(f)
+    if (length(all_nm)) ctypes <- paste(ifelse(all_nm %in% keep, "?", "_"), collapse = "")
+  }
+  for (enc in c("UTF-8","GB18030","GBK","Latin1")) {
+    x <- try(suppressWarnings(
+           if (is.null(ctypes))
+             readr::read_csv(f, locale = readr::locale(encoding = enc), show_col_types = FALSE)
+           else
+             readr::read_csv(f, locale = readr::locale(encoding = enc), col_types = ctypes)),
          silent = TRUE)
     if (!inherits(x, "try-error") && ncol(x) > 0) {
       if (enc != "UTF-8") message(glue::glue("ℹ️ [{basename(f)}] 以 {enc} 读入"))
@@ -690,6 +721,10 @@ MANIFEST_PATH <- file.path(CACHE_DIR, "_data_manifest.rds")
 MANIFEST_OLD  <- if (file.exists(MANIFEST_PATH))
                    tryCatch(readRDS(MANIFEST_PATH), error = function(e) list()) else list()
 MANIFEST_NEW  <- list()
+## ★ SCHEMA：每件导出件之**全列名**登记（Schema Evidence）。
+##   与 D 中实际读入的列集**解耦**——凡以「该件有没有某列」为判据者，
+##   一律查此，不查 names(D$x)。见 read_hdr() 注与 @sec-r03b-status。
+SCHEMA        <- list()
 HEALTH <- new.env(parent = emptyenv()); HEALTH$rows <- list()
 
 ## ── ② 计时与进度 ────────────────────────────────────────────────
@@ -753,7 +788,7 @@ resolve_csv <- function(n) {
   }
   list(path = NA_character_, how = "目录内无近似文件")
 }
-fetch <- function(n) {
+fetch <- function(n, select = NULL) {
   rs <- resolve_csv(n)
   f  <- rs$path
   ct <- CONTRACT[[n]]
@@ -774,16 +809,40 @@ fetch <- function(n) {
   if (rs$how != "精确命中")
     message(glue::glue("ℹ️ [{n}] 文件自动识别：{rs$how}"))
   mb <- round(file.info(f)$size / 1024^2, 2)
-  x  <- guard(if (mb > 50) timed(glue::glue("读取 {n}.csv ({mb}MB)"), read_any(f)) else read_any(f), n)
+  ## ★★ 先留存全列名（Schema Evidence），再决定读哪几列（Analysis Payload）。
+  ##   次序不可倒置：倒置则 select 一旦生效，全列名即无从取得。
+  SCHEMA[[n]] <<- read_hdr(f)
+  keep <- if (is.null(select)) NULL else intersect(select, SCHEMA[[n]])
+  if (!is.null(select)) {
+    lost <- setdiff(select, SCHEMA[[n]])
+    if (length(lost))
+      message(glue::glue("⚠️ [{n}] 请求列有 {length(lost)} 个不在该件表头：",
+                         "{paste(lost, collapse=', ')}——本次按实有列读入，缺列由表头核验点名"))
+    if (!length(keep)) keep <- NULL          # 一列都对不上：退回全读，宁多读不静默丢
+  }
+  x  <- guard(if (mb > 50) timed(glue::glue("读取 {n}.csv ({mb}MB)"), read_any(f, keep)) else read_any(f, keep), n)
   if (is.null(x)) { add("🔴 读取失败", "文件存在但无法解析：检查是否为 HTML 报错页或半截下载"); return(NULL) }
   ## ★ 列名规范化：Superset / Excel 导出的表头常带 BOM、前后空格或不换行空格，
   ##   肉眼看不出，但 setdiff() 一比就判「缺列」→ 明明有文件却一路吐占位。
   ##   这是「我有 S_player_tail.csv 为何还是待数据」最常见的一种成因。
   nm0 <- names(x)
-  names(x) <- trimws(gsub("\u00a0", " ", gsub("^\ufeff", "", nm0)))
+  names(x) <- hdr_norm(nm0)
   if (!identical(nm0, names(x)))
     message(glue::glue("ℹ️ [{n}] 列名已规范化（去 BOM/空格）：",
                        "{sum(nm0 != names(x))} 列受影响"))
+
+  ## ★★ DR-LOAD-002 斧正（2026-08-14 第三十九轮）：身份键一律保字符串原貌。
+  ##   旧法把 dealer_id 交给下方「>20MB 即压缩类型」的数值化规则，其判据是
+  ##   **首 1000 个非 NA 值是否含非数字字符**——于是同一份文件，行序不同则列型不同
+  ##   （首 1000 行恰含 "-1" 则不转，恰不含则转），是为 order-dependent data semantics；
+  ##   且数值化会抹掉前导零（"007" → 7 → "7"），身份即被改写。
+  ##   今立三条：① dealer_id 不入数值化名单；② 一律 as.character + trimws；
+  ##   ③ NA 保持 NA_character_，**不映射为 ""**——空字符串与缺失是两种状态，
+  ##   混为一谈即重新制造「SQL 二员 / R 三员」之患（见 GAP-S1-CRIT-002）。
+  for (cl in intersect("dealer_id", names(x))) {
+    v <- x[[cl]]
+    x[[cl]] <- ifelse(is.na(v), NA_character_, trimws(as.character(v)))
+  }
 
   ## 内存纪律：t4-cluster 曾报「无法分配 750 KiB」——这么小的分配都失败，
   ##   说明进程内存早已见底。元凶不是 T4 本身，是 R 侧长期持有的几份大表：
@@ -791,7 +850,10 @@ fetch <- function(n) {
   ##   会膨胀数倍。reticulate 与 R 同进程，Python 只能在剩下的缝里挤。
   ##   对策：读入即压缩类型 + 立刻 gc()，把峰值压下去。
   if (mb > 20) {
-    idc <- intersect(c("member_id","uid","uid1","uid2","dealer_id","bet_ip","bet05"), names(x))
+    ## ⚠️ dealer_id 已于上方定为字符身份键，**不得入此名单**（DR-LOAD-002）。
+    ##   其余四个 ID 列仍在此压缩：它们参与大表连接，改型将牵动全篇，
+    ##   本轮不动；其同类前导零风险已登记为 GAP-S3-IDKEY-004，另轮处置。
+    idc <- intersect(c("member_id","uid","uid1","uid2","bet_ip","bet05"), names(x))
     for (cl in idc) {
       v <- x[[cl]]
       if (is.character(v) && length(v[!is.na(v)]) &&
@@ -875,6 +937,17 @@ release <- function(...) {
   invisible(gc(full = TRUE))
 }
 
+## ══ ★ R03b 列契约前置（2026-08-14 第三十九轮）════════════════════════════
+##   R03b 为全篇最大件（CSV 逾 2 GB），故独家启用 select 只读必要列。
+##   常量前置于装载之前，使「读哪几列」与「下游要哪几列」同出一源；
+##   @sec-r03b-dual 处不再另行定义，只引用此处。
+##   ★ `eligibility_status` **必须在列**：它是血统的第一等证据（P1），
+##     若为省内存而漏读，prov() 即被迫降级为 R 侧推断（P2）——
+##     那正是本轮所要根治之事，不可自己再犯一次。
+COLS_R03B  <- c("bet_date","uid","dealer_id","stake_amount","profit_amount",
+                "win_rate","n_related_orders","n_rounds_eff","z_score")
+SEL_R03B   <- unique(c(COLS_R03B, "eligibility_status"))
+
 D <- list(recon=fetch("V_recon"), ipmatch=fetch("V_ipmatch"),
           table_span=fetch("T_table_span"), sec_dist=fetch("S_second_dist"),
           player_tail=fetch("S_player_tail"), ip_player=fetch("I_ip_player"),
@@ -886,7 +959,8 @@ D <- list(recon=fetch("V_recon"), ipmatch=fetch("V_ipmatch"),
           r03=fetch("R03_player_dealer"),  daily_roi=fetch("T02_daily_roi"),
           t3=fetch("T03_arbitrage"),       seg_econ=fetch("E02_segment_econ"),
           bt_panel=fetch("B01_bt_panel"), d03s=fetch("D03S_daily_roi_diff"),
-          tblcnt=fetch("V_table_counts"), r03b=fetch("R03b_player_dealer_daily"),
+          tblcnt=fetch("V_table_counts"),
+          r03b=fetch("R03b_player_dealer_daily", select = SEL_R03B),
           r03chk=fetch("R03chk_settlement_form"),
           ## ★ 处置台账（§TL-10）：准实验的处置组由此而来
           tl10=fetch("TL10_treatment_ledger"), tl11=fetch("TL11_treatment_episode"), tl11c=fetch("TL11c_population_reconcile"),
@@ -903,25 +977,53 @@ AVAIL <- lapply(D, Negate(is.null))
 ##   缘起：此前哨兵剔除散在 r03-dual／r03-dealer-rank／r03-fdr／release-r03 四块，
 ##   同一判据写四遍——任一处漏改即口径分裂；且四块之前的统计量皆含哨兵。
 ##   今照 @sec-layer-contract 之三层契约，于装载处一次分清：
-##     L0 事实层  D$r03_full   全量，含哨兵、含不合格——**留档备查，不得直接分析**
+##     L0 事实层  D$r03_full   全量，含哨兵、含不合格——**留账备查，不得直接分析**
+##                             （2026-08-14 改：证据入 QUAL／SCHEMA，数据本体于
+##                               @sec-qual-layer 表后即释放，故是留「账」不是留「档」）
 ##     L1 合格层  D$r03        非哨兵且基准非空且有决胜局且局数达阈——**分析一律取此**
-##   哨兵判据与 SQL 侧 §R03 的 is_sentinel_dealer 逐字同义（eid ∈ {-1, 0, 空}）。
+##   ★★ 2026-08-14 第三十九轮斧正（GAP-S1-CRIT-002）：判据由三员改为**二员**。
+##   SQL 总包 v3 §R03 第 3,417 行之原文为
+##       CASE WHEN TRIM(r.eid) IN ('-1','0') THEN 1 ELSE 0 END AS is_sentinel_dealer
+##   —— **只有两员，没有空值**。而 R 侧旧写法为 c("-1","0","")，第三员系本方自行扩充，
+##   且在当前读入器下**永远命中不了**：read_csv 之 na 预设含 ""，空字段读进来即 NA，
+##   `NA %in% c(...)` 恒为 FALSE。故第三员是一枚**伪装成已对齐的死码**：
+##   两侧行为偶然一致，无人察觉；一旦有人改用 fread（其 na.strings 预设不含 ""），
+##   R 侧即开始标记 SQL 不标记的行，口径静默分裂，对账锚点 243,025 随之失守。
+##   今定：**SQL 是契约，R 服从 SQL**，不得为使两侧「看起来更完整」而擅改业务口径。
+##   四态各归其位，不得并成三态或两态：
+##       "-1" → 哨兵 ｜ "0" → 哨兵 ｜ "" → 非哨兵 ｜ NA → 缺失，非哨兵
 ## ═══════════════════════════════════════════════════════════════════════════
-SENTINEL_IDS <- c("-1", "0", "")          # 哨兵荷官号：与 SQL §R03 之判据逐字同义
-is_sentinel  <- function(v) trimws(as.character(v)) %in% SENTINEL_IDS
+SENTINEL_IDS <- c("-1", "0")              # 哨兵荷官号：与 SQL §R03 之 TRIM(eid) IN ('-1','0') 逐字同义
+is_sentinel  <- function(v) {
+  s <- trimws(as.character(v))
+  !is.na(s) & s %in% SENTINEL_IDS         # NA 显式排除：缺失 ≠ 哨兵
+}
 
 ## ── 分层：r03 与 r03b 各留一份事实层，再分出合格层 ───────────────────────────
 QUAL <- list()                             # 分层账：供下方「资格分层实况」表现算
 for (k in c("r03", "r03b")) {
   x <- D[[k]]
   if (is.null(x) || !("dealer_id" %in% names(x))) next
-  D[[paste0(k, "_full")]] <- x             # L0 事实层：原样留档
+  D[[paste0(k, "_full")]] <- x             # L0 事实层：原样留存，证据入账后即释放
   sent <- is_sentinel(x$dealer_id)
   ## L1 资格：非哨兵为其必要条件；若导出件已带 eligibility_status 则一并采信
+  ## ★ 2026-08-14：判等一律改 `%in%`。旧写 `== "ELIGIBLE"` 遇该列有 NA 即产出 NA，
+  ##   而 `x[NA, ]` 会**凭空生出整行 NA**——比报错更危险。`%in%` 永不返回 NA。
   keep <- !sent
-  if ("eligibility_status" %in% names(x)) keep <- keep & (x$eligibility_status == "ELIGIBLE")
+  if ("eligibility_status" %in% names(x))
+    keep <- keep & (trimws(as.character(x$eligibility_status)) %in% "ELIGIBLE")
+  ## ★★ 血统证据分层（2026-08-14 第三十九轮）：
+  ##   n_sql_sent —— **SQL 自己的裁定**（P1 直接证据）。它回答的是
+  ##                「SQL 源头剔没剔」；唯有此数可支持该断言。
+  ##   n_sent     —— R 侧判据在 **L0 事实层**上数出者（P2 间接证据）。
+  ##   二者性质不同，**不可互相顶替**，故并存并各挂各名。
+  n_sql <- if ("eligibility_status" %in% names(x))
+             sum(trimws(as.character(x$eligibility_status)) == "SENTINEL_DEALER",
+                 na.rm = TRUE) else NA_integer_
   QUAL[[k]] <- list(n_full = nrow(x), n_sent = sum(sent), n_keep = sum(keep),
-                    has_elig = "eligibility_status" %in% names(x))
+                    has_elig = "eligibility_status" %in% names(x),
+                    n_sql_sent = n_sql,
+                    n_na_dealer = sum(is.na(x$dealer_id)))
   D[[k]] <- x[keep, , drop = FALSE]        # L1 合格层：其后各块所取者
   rm(x, sent, keep)
 }
@@ -949,17 +1051,39 @@ if (!length(QUAL)) {
       导出件 = c(r03 = "R03_player_dealer（玩家×荷官·全窗）",
                  r03b = "R03b_player_dealer_daily（玩家×荷官·日粒度）")[[k]],
       `L0 事实层` = format(q$n_full, big.mark = ","),
-      `其中哨兵` = sprintf("%s（%.2f%%）", format(q$n_sent, big.mark = ","),
+      `其中哨兵（R 侧判据）` = sprintf("%s（%.2f%%）", format(q$n_sent, big.mark = ","),
                            100 * q$n_sent / max(q$n_full, 1)),
+      ## ★ SQL 自述：与左列性质不同——左列是本报告数的，此列是 SQL 标的
+      `其中哨兵（SQL 自述）` = if (is.na(q$n_sql_sent)) "—（该件无资格列）"
+                              else format(q$n_sql_sent, big.mark = ","),
+      `dealer_id 缺失` = format(q$n_na_dealer, big.mark = ","),
       `L1 合格层` = format(q$n_keep, big.mark = ","),
       `留存率` = sprintf("%.1f%%", 100 * q$n_keep / max(q$n_full, 1)),
       `资格列` = if (q$has_elig) "✅ 采信导出件之 eligibility_status" else "🟡 仅按哨兵判据筛（该件无资格列）")
   })
   do.call(rbind, rows) |> aurora_kb(caption = paste0(
     "资格分层实况（渲染现算）｜解释：L0 事实层 → 剔哨兵与不合格 → L1 合格层，逐件列其去向",
-    "｜本方案用途：**其后一切分析一律取 L1**；L0 以 `_full` 后缀留档备查，",
-    "凡需回答「平台究竟有多少关系」者取之，不得用于统计推断"))
+    "｜本方案用途：**其后一切分析一律取 L1**；L0 之证据已尽录于本表（**留账备查**，",
+    "非留档备查——数据本体于本表之后即释放），凡需回答「平台究竟有多少关系」者取此表之数"))
 }
+```
+
+```{r}
+#| label: release-l0
+# include: false
+## ★★ L0 生命周期（2026-08-14 第三十九轮 · S2 斧正）
+##   旧法：D$r03_full／D$r03b_full 自装载起持有到渲染结束，而 L1 是
+##   `x[keep, ]` 生成的**新列向量**，与 L0 不共享内存——两份大表遂长期并存，
+##   R03b 一件即以约两倍体量常驻。`release("r03b")` 只释放 L1，_full 从未释放。
+##   这是「无法分配 43.4 Mb」的**远因**：那 43.4 Mb 本身不大，只是压垮地址空间的最后一根。
+##   今定：L0 的**证据**已由上表与 QUAL 全数留存（行数、两种口径的哨兵数、
+##   缺失键数、资格列有无），SCHEMA 另存其全列名——故数据本体在此即可释放。
+##   ★ 纪律随之改名：L0 自此是「**留账**备查」，不再声称「留档备查」。
+##     释放之后数据本体已不存在，仍写「留档」即名实不符。
+##   ★ 已做安全性普查：`_full` 在全篇的引用点仅止于装载、QUAL 记账与上表，
+##     无任何分析块引用；改动此处须重跑该普查。
+release("r03_full", "r03b_full")
+AVAIL <- lapply(D, Negate(is.null))   # 释放后重取，免 AVAIL 说「有」而 D 已为 NULL
 ```
 
 ::: {.callout-important}
@@ -4917,39 +5041,99 @@ if (need_data(D$r03, "荷官关联", c("dealer_id","z_score","n_rounds_eff"))) g
 ### 导出件血统自检：这份 CSV 是过滤前的还是过滤后的 {#sec-provenance}
 
 哨兵过滤自 2026-08-11 起进入 SQL 源头，于是**同名文件出现两个血统**：
-过滤前者含哨兵行（`dealer_id` 取 −1／0／空），过滤后者不含。
+过滤前者含哨兵行（`dealer_id` 取 −1／0），过滤后者不含。
 文件名一样、表头一样、覆盖下载之后**肉眼分辨不出**——
 而两者的行数、`p_base`、`win_rate_other` 皆不相同。
 
-**判据只需一条：数一数哨兵行还在不在。** 哨兵在本平台确然存在
-（其曾占 Z 榜前列），故「一行不含」即证已过滤。本节对本次已装载的
-荷官键导出件逐一现算判定，不另读文件、不增内存。
+::: {.callout-important}
+## 本节曾把两个命题当成一个（2026-08-14 第三十九轮根治 · GAP-S1-PROV-001）
+
+旧版把已装载的 `D$r03` / `D$r03b` 递进判定函数，而这两个符号自
+@sec-qual-layer 的分层块起**已是 L1 合格层**——哨兵是本报告自己剔掉的。
+于是哨兵行数恒为 0，血统判定恒亮绿灯「SQL 源头已剔」，
+**这道闸在结构上永远不会亮黄灯**。
+
+病根不在写错一行，而在**验证对象已受报告侧处理污染**
+（post-filter validation bias）。该证据链能证明的只是
+
+> L1 层没有哨兵，
+
+它无从证明
+
+> SQL 源头剔除了哨兵。
+
+**这是两个命题。** 前者由本报告自己造成，后者才是要问的事。
+
+今立四级证据，各自只说自己能说的话，不得越级：
+
+| 级 | 证据来源 | 可以说什么 |
+|---|---|---|
+| **P1** | 导出件自带 `eligibility_status` | SQL 直接证据——可断言源头剔与未剔 |
+| **P2** | L0 事实层 ＋ R 侧哨兵判据 | R 侧间接推断——只能说「未发现」 |
+| **P3** | L1 合格层无哨兵 | 仅证明报告侧过滤已生效 |
+| **P0** | 无相关字段、无从核验 | 不作判定 |
+
+**底线一条**：若导出件确无 `eligibility_status`，即老实降为 P2，
+**不得为使闸门转绿而人工补造该字段**。
+:::
+
+判定所需之数已于装载分层时一次算清并存入 `QUAL`（见 @sec-qual-layer），
+本节只读账、不重算，故不另读文件、不增内存。
 
 ```{r}
 #| label: provenance-sentinel
 # echo: false
 ## 血统自检：对每份荷官键导出件，数其哨兵行数 → 判定过滤前／过滤后。
-##   纪律：判定一律由本次装载的数据现算，不接受任何静态声明。
-SENT <- c("-1","0","")
-prov <- function(nm, df, fn) {
-  if (is.null(df) || !is.data.frame(df) || !"dealer_id" %in% names(df))
-    return(tibble::tibble(导出件 = fn, 数据表 = nm, 总行数 = NA_character_,
-                          哨兵行数 = NA_character_, 血统判定 = "⬜ 未装载"))
-  k <- sum(trimws(as.character(df$dealer_id)) %in% SENT, na.rm = TRUE)
-  tibble::tibble(
-    导出件 = fn, 数据表 = nm,
-    总行数   = format(nrow(df), big.mark = ","),
-    哨兵行数 = format(k, big.mark = ","),
-    血统判定 = if (k > 0) "🟡 **过滤前**（全量含哨兵）——报告侧已代为剔除，可安全使用"
-               else       "✅ **过滤后**（SQL 源头已剔）")
+##   纪律三条（2026-08-14 第三十九轮）：
+##     ① 判定对象一律取 **L0 事实层之分层账 QUAL**，不取 L1——L1 的哨兵是本报告剔的；
+##     ② 第一证据取 `eligibility_status`（SQL 自述），R 侧判据只作次级推断；
+##     ③ 判据引用 `SENTINEL_IDS` 单一真源，本块**不再另立副本**
+##        （旧版此处有 `SENT <- c("-1","0","")` 一份，与全局判据同值不同名，
+##         且含已废之空值第三员——违单一真源，今删，见 DR-SSOT-001）。
+prov <- function(nm, key, fn) {
+  q <- if (exists("QUAL") && is.list(QUAL)) QUAL[[key]] else NULL
+  if (is.null(q))
+    return(tibble::tibble(导出件 = fn, 数据表 = nm, `L0 总行数` = NA_character_,
+                          `哨兵行数` = NA_character_, `证据级` = "P0",
+                          血统判定 = "⬜ 未装载——不作判定"))
+  ## ★ L1 断言：分层若失效而漏入哨兵，此处即刻中断，不静默带病往下算。
+  if (!is.null(D[[key]]) && "dealer_id" %in% names(D[[key]]))
+    stopifnot(!any(is_sentinel(D[[key]]$dealer_id)))
+  if (isTRUE(q$has_elig)) {
+    ## ── P1：SQL 直接证据 ─────────────────────────────────────────────
+    k <- q$n_sql_sent
+    tibble::tibble(
+      导出件 = fn, 数据表 = nm,
+      `L0 总行数` = format(q$n_full, big.mark = ","),
+      `哨兵行数`  = sprintf("%s（SQL 自述）", format(k, big.mark = ",")),
+      `证据级`    = "P1",
+      血统判定 = if (k > 0)
+        "🟡 **过滤前**（SQL 标注而未剔，事实层完整）——报告侧已代为剔除，可安全使用"
+      else
+        "✅ **过滤后**（SQL 源头已剔）——由该件自带之 `eligibility_status` 直接证成")
+  } else {
+    ## ── P2：R 侧间接推断。措辞须收敛：只能说「未发现」，不得断言 SQL 已剔 ──
+    k <- q$n_sent
+    tibble::tibble(
+      导出件 = fn, 数据表 = nm,
+      `L0 总行数` = format(q$n_full, big.mark = ","),
+      `哨兵行数`  = sprintf("%s（R 侧判据）", format(k, big.mark = ",")),
+      `证据级`    = "P2",
+      血统判定 = if (k > 0)
+        "🟡 **过滤前**（L0 实含哨兵）——报告侧已代为剔除，可安全使用"
+      else
+        paste0("⚠️ **无法判定**：该件无 `eligibility_status` 资格列，",
+               "不能证明 SQL 源头已过滤；依 R 侧判据仅可称「本件未发现哨兵」"))
+  }
 }
 dplyr::bind_rows(
-  prov("D$r03",  if (exists("D")) D$r03  else NULL, "R03_player_dealer.csv"),
-  prov("D$r03b", if (exists("D")) D$r03b else NULL, "R03b_player_dealer_daily.csv")
+  prov("D$r03",  "r03",  "R03_player_dealer.csv"),
+  prov("D$r03b", "r03b", "R03b_player_dealer_daily.csv")
 ) |> aurora_kb(caption = paste0(
-  "导出件血统自检（渲染现算）｜解释：哨兵过滤上线后同名文件有两个血统，覆盖下载后肉眼不可辨；",
-  "数哨兵行即可定谳——一行不含即已过滤",
-  "｜本方案用途：先生不必记得哪份重导过——每次渲染自行报出，两种血统皆可安全渲染"))
+  "导出件血统自检（渲染现算 · 四级证据）｜解释：哨兵过滤上线后同名文件有两个血统，",
+  "覆盖下载后肉眼不可辨；判定一律取 L0 分层账，第一证据为该件自带之 `eligibility_status`",
+  "｜本方案用途：先生不必记得哪份重导过——每次渲染自行报出；",
+  "**无资格列者只降级为间接推断，绝不补造字段使闸门转绿**"))
 ```
 
 **两种血统皆可安全渲染**：报告侧的防御性剔除（本节之上四处）对过滤前的文件
@@ -5183,8 +5367,9 @@ release("r03")
 ```{r}
 #| label: r03-timeseries
 # echo: false
-COLS_R03B <- c("bet_date","uid","dealer_id","stake_amount","profit_amount",
-               "win_rate","n_related_orders","n_rounds_eff","z_score")
+## ★ `COLS_R03B` 已于装载章前置定义并用作该件之 select 列集（单一真源）；
+##   此处不再另立一份——旧版在此重复定义，与前置者同值不同处，
+##   一旦二者失步即「读进来的」与「要用的」不一致，属同型于 DR-SSOT-001 之隐患。
 if (need_data(D$r03b, "荷官双轨回测", COLS_R03B)) guard({
   x <- D$r03b |> dplyr::mutate(
     bet_date = as.Date(bet_date),
@@ -5284,17 +5469,31 @@ if (need_data(D$r03b, "荷官双轨回测", COLS_R03B_S)) guard({
   x  <- D$r03b
   dt <- as.Date(x$bet_date); dt <- dt[!is.na(dt)]
   pair <- length(unique(paste(x$uid, x$dealer_id)))
-  has_ctrl <- any(grepl("对照|control|group|arm", names(x), ignore.case = TRUE))
+  ## ★★ 2026-08-14 第三十九轮（S1 · 因果识别完整性）：
+  ##   本判据探测的是「该导出件有没有对照组标识」，属 **Schema 证据**，
+  ##   与「本次读进来几列」无关。自本轮起 R03b 只读必要列，若仍扫 `names(x)`，
+  ##   结论会由「有对照组」静默翻成「无对照组」，直接污染准实验的可识别性判定。
+  ##   故改扫 `SCHEMA$r03b`（该件全列名，由 read_hdr() 独立取得）。
+  ##   `SCHEMA` 缺位时退回 `names(x)`，并在判语中标明该退路已启用。
+  r03b_nm  <- if (!is.null(SCHEMA[["R03b_player_dealer_daily"]])) SCHEMA[["R03b_player_dealer_daily"]] else names(x)
+  sch_ok   <- !is.null(SCHEMA[["R03b_player_dealer_daily"]])
+  has_ctrl <- any(grepl("对照|control|group|arm", r03b_nm, ignore.case = TRUE))
   tibble::tibble(
     项目 = c("日维度导出", "覆盖营业日", "覆盖周数", "玩家×荷官组合",
-             "上方三条序列", "对照组标识"),
+             "上方三条序列", "对照组标识", "列名证据来源"),
     实测 = c(glue::glue("✅ R03b_player_dealer_daily.csv 已就位（SQL 总包 §R03b）"),
              glue::glue("{length(unique(dt))} 日（{min(dt)} ~ {max(dt)}）"),
              as.character(length(unique(format(dt, "%G-W%V")))),
              format(pair, big.mark = ","),
              "命中组合数 · 误判率代理 · 关联漏损（按周展开，可悬停读数）",
              if (has_ctrl) "面板含对照组标识，可直接做双重差分"
-             else "面板不含对照组标识——增幅类因果效应此处无从估计")) |>
+             else "面板不含对照组标识——增幅类因果效应此处无从估计",
+             if (sch_ok)
+               glue::glue("✅ SCHEMA$R03b（该件全列名 {length(r03b_nm)} 列，",
+                          "独立于本次实读之 {ncol(x)} 列）")
+             else
+               glue::glue("⚠️ SCHEMA 缺位，退回本次实读之 {ncol(x)} 列列名——",
+                          "若该件曾启用 select，此判定可能偏向「无对照组」，须回查"))) |>
     aurora_kb(caption = paste0(
       "R-03 日维度对照的数据条件（本次渲染现算）",
       "｜解释：逐项列出时序对照所依赖的日维度导出与其实际覆盖范围",
@@ -14913,6 +15112,107 @@ SELECT (SELECT COUNT(*) FROM a) n_bet, (SELECT COUNT(*) FROM b) n_log,
 ```
 
 # 变更日志 {#sec-changelog}
+
+**2026-08-14 · 第三十九轮：血统验证架构修复（Provenance Validation Architecture Repair）**
+
+本轮起因是一则渲染中断（`cannot allocate vector of size 43.4 Mb`，止于 `[provenance-sentinel]`）。
+但**本轮不得记为一次 OOM 修复**——顺该中断回溯，查出的第一件是 S1，
+内存问题只是它的伴生症：崩溃会阻止交付，而**错误的绿色审计结论会放行错误数据进入生产**，
+后者严重得多。
+
+**一、S1 · 血统验证对象污染（`GAP-S1-PROV-001`）**
+
+`provenance-sentinel` 把已装载的 `D$r03` / `D$r03b` 递进判定，
+而此二符号自 @sec-qual-layer 分层块起已是 **L1 合格层**——哨兵是本报告自己剔的。
+故哨兵行数恒为 0，判定恒为「✅ SQL 源头已剔」，**该闸在结构上永不亮黄灯**。
+这条证据链能证的只是「L1 没有哨兵」，无从证「SQL 剔了哨兵」，二者是两个命题。
+今立 **P1／P2／P3／P0 四级证据**：第一证据取该件自带之 `eligibility_status`（SQL 自述），
+R 侧判据降为间接推断且措辞收敛为「未发现」。
+**底线：无资格列即老实降级，不得补造字段使闸门转绿。**
+
+**二、S1 · 哨兵判据跨层分歧且含死码（`GAP-S1-CRIT-002`）**
+
+SQL 总包 v3 §R03 第 3,417 行原文为 `TRIM(r.eid) IN ('-1','0')`——**二员**；
+R 侧却写 `c("-1","0","")`——**三员**，且注称「逐字同义」。
+第三员在当前读入器下**永不可能命中**（`read_csv` 之 `na` 预设含 `""`，空字段读进即 `NA`），
+是一枚伪装成已对齐的死码。两侧行为偶然一致，故长期无人察觉；
+一旦改用 `fread`（其 `na.strings` 预设不含 `""`），R 侧即开始标记 SQL 不标记的行，
+口径静默分裂，对账锚点 `SENTINEL_DEALER = 243,025` 随之失守。
+**裁定：SQL 是契约，R 服从 SQL。** 删第三员，四态各归其位——
+`"-1"`／`"0"` 为哨兵，`""` 与 `NA` 皆非哨兵，不得并成三态或两态。
+不为使两侧「看起来更完整」而擅改业务口径。
+
+**三、S1 · 对照组 Schema 截断风险（`SCHEMA` 双轨）**
+
+`has_ctrl` 以列名探测对照组标识，实为**准实验识别闸门**，非普通列计算。
+本轮 R03b 启用 `select=` 只读必要列，若该闸仍扫 `names(x)`，
+结论会由「有对照组」静默翻成「无对照组」，与「无对照组不得证增量效应」直接冲突。
+今立双轨：`read_hdr()` 独取全列名存 `SCHEMA`，`fread`／`read_csv` 只读分析必要列，
+**Schema 证据与分析载荷解耦**，该闸改扫 `SCHEMA`。
+
+**四、S2 · 装载类型压缩之行序依赖（`DR-LOAD-002`）**
+
+`fetch()` 对 >20 MB 之件数值化 ID 列，判据是「首 1000 个非 NA 值是否含非数字字符」——
+同一份文件，行序不同则 `dealer_id` 列型不同，是为 order-dependent data semantics；
+且数值化抹掉前导零（`"007" → 7 → "7"`），身份键被改写。
+今定 `dealer_id` 退出数值化名单，一律 `as.character` + `trimws`，`NA` 保持 `NA_character_`。
+其余四个 ID 列参与大表连接，改型将牵动全篇，本轮不动，另记 `GAP-S3-IDKEY-004`。
+
+**五、S2 · L0／L1 双份长期驻留**
+
+`D$r03b_full` 与 `D$r03b` 不共享内存，两份大表并存；`release("r03b")` 只释放 L1，
+`_full` 从未释放。今于分层表之后即释放 L0，纪律随之由「留档备查」改称
+「**留账备查**」——释放后数据本体已不存在，仍写「留档」即名实不符。
+
+**六、单一真源（`DR-SSOT-001`）**
+
+删 `provenance-sentinel` 块内之 `SENT` 副本与 §R03b 块内之 `COLS_R03B` 重复定义，
+判据与列契约各归其一处。
+
+```{r}
+#| label: gaps-registry-v39
+# echo: false
+## 本轮缺口与纪律登记：性质、等级、闭环条件逐条列明，不写「已修复」四字了事。
+tibble::tribble(
+  ~编号, ~名称, ~性质, ~等级, ~本轮处置, ~闭环条件,
+  "GAP-S1-PROV-001","Provenance Sentinel Validation Target Contamination",
+    "验证对象已受报告侧过滤，无法证明 SQL 源头过滤","S1",
+    "prov() 改读 L0 分层账；立 P1–P0 四级证据；措辞按级收敛",
+    "须实际导出件含 `eligibility_status` 且判定落于 P1；否则维持 P2，缺口不闭",
+  "GAP-S1-CRIT-002","Sentinel Criterion Cross-Layer Divergence with Dead Member",
+    "R 为三员、SQL 为二员，且 R 第三员在当前 parser 下为死码","S1",
+    "统一为 SQL 二员 `c(\"-1\",\"0\")`；NA 显式排除；注释载明四态",
+    "重跑后 `SENTINEL_DEALER` 计数须与 SQL 侧 243,025 对得上",
+  "DR-SSOT-001","Sentinel Criterion Duplication",
+    "`SENT` 与 `SENTINEL_IDS` 并存，违单一真源","S2",
+    "删 `SENT`；`COLS_R03B` 重复定义一并删","全档判据定义点计数须恒为 1",
+  "DR-LOAD-002","Order-Dependent Type Coercion in fetch()",
+    "首 1000 行决定 `dealer_id` 类型，行序改变即改 schema/identity 语义","S2",
+    "`dealer_id` 退出数值化名单，一律字符 + trimws","同一件以不同行序读入，列型与哨兵计数须一致",
+  "GAP-S3-CONTRACT-003","R03b Contract Drift",
+    "`CONTRACT` 声明 6 列而 `COLS_R03B` 要 9 列，二者未对齐","S3·CONDITIONAL",
+    "本轮不裁——无实际导出件表头，不得断言 CSV 缺列",
+    "取得实际 R03b 表头后，三者（CONTRACT／COLS_R03B／实际 schema）须形成明确关系",
+  "GAP-S3-IDKEY-004","Leading-Zero Loss on Joined ID Keys",
+    "`member_id`/`uid`/`uid1`/`uid2` 数值化同样抹前导零","S3",
+    "本轮不动（改型牵动全篇连接）","须先普查该四键是否确有前导零，再定是否改字符"
+) |> aurora_kb(caption = paste0(
+  "第三十九轮缺口与纪律登记（GAPS / DR）｜解释：逐条列明性质、等级、本轮处置与**闭环条件**",
+  "｜本方案用途：闭环条件未达者一律不得记为「已修复」——",
+  "本轮三条 S1 证据链闭合之前，P&L 闸维持 🔴 BLOCKED，不得进入处置效应与因果评估"))
+```
+
+::: {.callout-warning}
+## 本轮之后仍未闭环者
+
+`GAP-S1-PROV-001` 的闭环取决于**实际导出件里有没有 `eligibility_status`**——
+这不是代码能决定的事。若该列不在，判定即停在 P2，
+只能称「本件未发现哨兵」，不能称「SQL 源头已剔」。
+`GAP-S3-CONTRACT-003` 同理，须实际表头到手方可裁决。
+两者皆不得以任何方式在报告侧凑成绿灯。
+:::
+
+---
 
 **2026-08-12 · 第三十八轮：外部六份交付件交叉核验后的斧正（两份同标准 · SQL 总包同步）**
 

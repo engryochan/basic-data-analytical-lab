@@ -1,0 +1,70 @@
+SOURCE : /mnt/user-data/uploads/a168_处置账与结果账_建账规格_v1.sql
+BYTES  : 18109
+MD5    : 919bd2ccea4cd5b309c82293ccbe7a4e
+SHA256 : fc89781f00b2cec099d6b8cf1c49e88609bc313af52e7cb4dfd69f308ace6aa4
+CR     : 0 → 行尾 LF
+LINES  : 210
+
+── a168_treatment_ledger   DDL 区间 L43–L92
+   COLUMN COUNT = 31   NOT NULL = 14
+   未匹配之非注释行 = 0  （无遗漏）
+    1  L44   tl_id            VARCHAR(64)    NOT NULL 处置流水号，全局唯一（建议 UUID 或 日期+序号）
+    2  L47   decided_by       VARCHAR(64)    NOT NULL 决定人工号；自动执行者记 SYSTEM
+    3  L48   decided_at       DATETIME       NOT NULL 决定时刻（下判之时，非生效之时）
+    4  L49   executed_by      VARCHAR(64)             执行人工号；未执行者留空
+    5  L50   executed_at      DATETIME                生效时刻——★ 因果分析之事件零点，最要紧的一列
+    6  L51   reverted_at      DATETIME                撤销时刻；未撤销者留空（可回滚是本方案之处置纪律）
+    7  L54   entity_type      VARCHAR(16)    NOT NULL 对象类别：MEMBER / DEALER / AGENT / TABLE / GLOBAL
+    8  L55   entity_id        VARCHAR(64)    NOT NULL 对象标识：会员号 / 荷官工号 / lv3 代理线 / 桌号
+    9  L58   action_type      VARCHAR(32)    NOT NULL 动作类别，见下方值域约定
+   10  L59   action_param     VARCHAR(256)            动作参数（如限红档位、退水下调 δ*、封盘提前秒数）
+   11  L60   action_layer     VARCHAR(16)    NOT NULL 处置层级：PRODUCT（产品参数）/ SETTLE（结算）/ ACCOUNT（账户）
+   12  L61   is_reversible    TINYINT        NOT NULL 可否回滚：1 可 / 0 不可。★ 不可回滚者须双人复核
+   13  L64   trigger_source   VARCHAR(32)    NOT NULL 触发来源：GATE_T2 / GATE_R01 / GATE_R02 / GATE_R03 
+   14  L65   trigger_gate     VARCHAR(32)             触发之闸：六领域闸之一（PROFIT/BETTING/ANOMALY/NETWORK/LIF
+   15  L66   trigger_score    DECIMAL(18,6)           触发时之维度取值或综合分
+   16  L67   trigger_thr      DECIMAL(18,6)           触发时之阈值（★ 一律记当期现算值，不记写死数）
+   17  L68   reason_text      VARCHAR(1024)  NOT NULL 判定理由原文——★ 不得留空，留空即该笔作废
+   18  L71   arm              VARCHAR(16)    NOT NULL 实验臂：TREATMENT / CONTROL / SHADOW。★ 无 CONTROL 则
+   19  L72   assign_method    VARCHAR(32)    NOT NULL 分配方式：RANDOM / PSM / RULE / NONE
+   20  L73   assign_seed      VARCHAR(64)             随机种子或匹配批次号，供复现
+   21  L74   cohort_id        VARCHAR(64)             实验批次号，同一次试运行共用
+   22  L77   review_required  TINYINT        NOT NULL 是否须人工复核：1 是 / 0 否。★ 涉个体处置一律为 1
+   23  L78   reviewed_by      VARCHAR(64)             复核人工号；高价值客群须二人，第二人记于 reviewed_by2
+   24  L79   reviewed_by2     VARCHAR(64)             第二复核人工号
+   25  L80   review_result    VARCHAR(16)             复核结论：APPROVE / REJECT / MODIFY
+   26  L83   cost_review      DECIMAL(18,4)           复核成本：复核工时 × 工时单价
+   27  L84   cost_treatment   DECIMAL(18,4)           处置成本：执行该动作之直接开销
+   28  L85   cost_tech        DECIMAL(18,4)           技术成本：算力、系统改动之摊销
+   29  L86   cost_operation   DECIMAL(18,4)           运营成本：沟通、安抚、客服之开销
+   30  L89   changed_reason   VARCHAR(512)            ★ 若本笔为对既有处置之变更，须记变更动机——只记改了什么而不记为何改，追溯只能还原动作不能
+   31  L90   created_at       DATETIME       NOT NULL 入账时刻
+
+── a168_outcome_ledger   DDL 区间 L120–L151
+   COLUMN COUNT = 23   NOT NULL = 11
+   未匹配之非注释行 = 0  （无遗漏）
+    1  L121  ol_id            VARCHAR(64)    NOT NULL 结果流水号
+    2  L122  tl_id            VARCHAR(64)    NOT NULL 对应之处置流水号（外键指向处置账）
+    3  L123  entity_type      VARCHAR(16)    NOT NULL 对象类别，与处置账一致
+    4  L124  entity_id        VARCHAR(64)    NOT NULL 对象标识，与处置账一致
+    5  L125  arm              VARCHAR(16)    NOT NULL 实验臂，自处置账带下，供分组比较
+    6  L128  window_tag       VARCHAR(16)    NOT NULL 窗标签：PRE_28D / POST_7D / POST_28D / POST_90D
+    7  L129  window_start     DATE           NOT NULL 窗起（含）
+    8  L130  window_end       DATE           NOT NULL 窗止（不含）
+    9  L131  n_active_days    INT                     窗内活跃日数——样本量之凭据，缺此则显著性是虚的
+   10  L134  validbet         DECIMAL(20,4)           有效投注（洗码量）——ROI 之分母，非原始投注额
+   11  L135  ggr              DECIMAL(20,4)           毛博彩收入（平台视角）
+   12  L136  rebate           DECIMAL(20,4)           返水支出
+   13  L137  commission       DECIMAL(20,4)           占成支出
+   14  L138  ngr              DECIMAL(20,4)           净博彩收入（★ 本平台只能算到三扣，对外须声明）
+   15  L139  n_rounds         BIGINT                  窗内局数
+   16  L140  is_retained      TINYINT                 窗内是否仍有下注：1 留存 / 0 流失
+   17  L141  days_to_return   INT                     距下次下注之天数；未回返者留空（★ 留空 ≠ 0，见五类零之别）
+   18  L142  n_complaint      INT                     窗内客诉件数
+   19  L143  n_appeal         INT                     窗内申诉件数
+   20  L144  appeal_overturn  INT                     申诉推翻件数——★ 误伤率之金标准，风控专员评分之缺口正在此
+   21  L147  is_censored      TINYINT        NOT NULL 是否右删失（窗未走完即结算）：1 是 / 0 否。★ 删失当完整用即高估留存
+   22  L148  src_snapshot_at  DATETIME       NOT NULL 结果计算时之数据快照时刻，供复算对账
+   23  L149  created_at       DATETIME       NOT NULL 入账时刻
+
+RESULT : 31 / 23 （NOT NULL 14 / 11 ）
