@@ -2,12 +2,26 @@
    ║  a168 风控与客户分层评分体系 · 商业方案                                      ║
    ║  取数与核验 SQL 总包（一册两卷 · 合并定稿）                                  ║
    ╠═══════════════════════════════════════════════════════════════════════════╣
-   ║  作者：Ryo（雷欧）                                                         ║
+   ║  作者：Ryo Eng                                                            ║
    ║  平台：a168 真人厅 · 数据源 StarRocks ods_mariadb_2b · 前端 Superset SQL Lab║
    ║  配套报告：a168风控与客户分层评分体系_商业方案_v3.qmd                         ║
    ║  本文件由「a168_核验与取数_SQL包.sql」与「a168_取数SQL包_v3增补.sql」         ║
    ║  合并而成，取代该二者；此后维护只认本文件一份。                               ║
    ╚═══════════════════════════════════════════════════════════════════════════╝
+
+   ═══ 版本身份六元组（2026-08-13 立 · 铁律 T3·L7·S3）═══════════════════════
+     版本身份须以六元组共同锚定，缺一即不足以定身份：
+       文件名 + 行数 + 字节数 + MD5 + 换行符 + 编码
+     本文件换行制式为 CRLF，编码 UTF-8（无 BOM）。
+     故同一份文件存在三个互不相通的 MD5，取用时务必声明取的是哪一个：
+       · 原样（CRLF）      —— 传输与归档以此为准
+       · LF 归一后         —— 跨平台比对以此为准
+       · 剥离行尾注释后    —— 注释体例第六条所载者，仅用于验证注释零改动
+     实证教训（2026-08-13）：某审计方以 LF 归一后之 MD5 与本包原样 MD5 相较，
+     径判「版本身份 BLOCK」。实则两组读数皆正确，字节差恰等于行数
+     （每行一个回车符），差异纯由换行归一造成。
+     判读次序：见 MD5 不符，第一步先比对字节差是否恰等于行数；若是，
+     即为换行制式差异，不得径判为版本冲突或造假。
 
    ═══ 分析窗口（正名版，务必按此措辞对外）═══════════════════════════════════
      2026-03-21 ~ 2026-08-06 收盘，共 139 个完整营业日。
@@ -15,6 +29,89 @@
      右端点为**开区间**——2026-08-07 当日不在窗口内。
      旧头部曾写「~ 2026-08-07」，字面易被读成含当日，已正名。
      改窗时须同时改动全包 53 处字面量，不得只改其一。
+
+   ═══ 血统关系登记（2026-08-13 立 · 一族四档）════════════════════════════
+     本包为「取数层」，居一族四档之料源位。改本包即改全族之数字，故列明：
+
+       档                                          角色        与本包之关系
+       a168风控与客户分层评分体系_商业方案.qmd       主方案(父)   §17.2 维度字典之权威出处
+       a168风控评分_精要商业报告.qmd                 精要版(子)   以 must= 挂本包之表头契约锁
+       a168_取数与核验_SQL总包_v3.sql               本包(料源)   一切数字之唯一出处
+       a168_能力值口径解读_SQL转R.qmd                对照本(校验) 逐条对照本包与主方案之口径差
+
+     同步纪律三条：
+       ① 交付件**表头**即契约：增删改任何输出列，须同步下游三档之 must= 清单；
+       ② 口径锁列（late_def 之属）只可增不可删——删之即令下游锁失效；
+       ③ 任一档改动，须于变更记录记明改前改后之六元组，并核对其余三档是否受累。
+
+   ═══ 常数集中登记（2026-08-13 立 · 铁律 T3·L2·S3）═════════════════════════
+     顶尖工程标准要求常数集中于单一处、余处一律引用。本包因 Superset 不支持
+     占位符（纪律①「零占位符」）而无法参数化，故改以登记表代替，
+     使「改一处漏一处」由不可察变为可核对：
+
+       常数名          取值                出现处数   语义
+       WIN_START       '2026-03-21'        89         窗口左端（闭区间）
+       WIN_END         '2026-08-07'        89         窗口右端（开区间）
+       GAME_BACCARAT   '101'               64         bet02 游戏类别：百家乐
+       CAT_NORMAL      '1'                 49         category：一般注单
+       REBET_NO        'N'                 81         bet38：非重对
+       TESTLINE        age022 = '1'        —          公司测试线代理（214 条）
+       LATE_DEF        shoe_pos >= 0.80    —          靴末段判据（2026-08-12 斧正）
+
+     改窗／改口径之作业纪律：
+       一、先以全文检索点数，实得处数须与上表相符；不符即先查本登记表；
+       二、改毕后再检索一次，确认旧值零残留；
+       三、同步更新本表处数，并于变更记录写明改前改后之六元组。
+     ⚠ 上表处数系 2026-08-13 全文检索实测所得，非静态记忆；
+       任何改动后须重新点数，不得沿用旧数。
+
+   ═══ §Z-13 全包净化审计结论（2026-08-13 实测 · 154 条查询逐条核实）═══════
+     方法：全文剥注释 → 裸分号切分 → 逐条 12 项守卫探测 → 分级裁定。
+     铁律：任何聚合与推算之前，输入须已剔净六项——测试线、旧版本、非一般注单、
+           重对注单、空串/不可转型值、荷官哨兵。唯一豁免：哨兵占比统计本身。
+
+       查询语句总数        154 条        豁免·元数据            20 条
+       产出交付件者         79 条        豁免·一览/哨兵占比      14 条
+       ✅ 四闸齐备          31 条        旁路·未触注单主表       65 条
+       ⛔ 交付件缺闸        14 条  ← 见下；须先补闸再取数
+       ⛔ 屏幕核验缺闸       6 条  ← 次级，不阻断
+
+     ⛔ 交付件缺闸 14 条（P0 者标 ★）：
+       ★ 行4982 §R03b   R03b_player_dealer_daily.csv   缺剔测试线
+       ★ 行3341 §R03    R03_player_dealer.csv          缺剔测试线
+       ★ 行3523 §R03chk R03chk_settlement_form.csv     缺剔测试线
+       ★ 行3584 §R03inv R03inv_pair_census.csv         缺剔测试线
+       ★ 行3132 §R02    R02_same_table.csv             缺剔测试线、**版本去重**
+       ★ 行6587 §P0C-04 P0C04_同日泄漏检验.csv           四闸全缺
+       ★ 行6627 §P0C-05 P0C05_标记时点定位.csv           四闸全缺
+       ★ 行6665 §P0C-06 P0C06_LabelB骨架.csv            四闸全缺
+       ★ 行6789 §P0C-09 P0C09_安慰剂检验.csv             四闸全缺
+         行4810 §DX-04  DX04_bet09_profile.csv         缺剔测试线
+         行2555 §A-01   A_anchor.csv                   四闸全缺
+         行2573 §V-01   V_ipmatch.csv                  四闸全缺
+         行7519 §TL-11  TL11_treatment_episode.csv     缺剔测试线、一般注单、非重对
+         行3922 §TL-14  TL14_limit_treatment.csv       四闸全缺
+
+     三处须点名之后果（非精度问题，逐条不同量级）：
+       一、§R03 家族四条全缺剔测试线——R03b 系荷官八维之**唯一底表**，
+           「客群广度」「对打局占比」「異常对关联」三维直接受污。
+           且此污染**不随占比线性衰减**：测试线只要碰过某荷官一次，
+           其 uniqueN(uid) 即 +1——占比再小，也是整数级偏移。
+       二、§R02 连版本去重都无——same_rounds 与 rounds_i 同时虚增，
+           而 Jaccard 分子分母虚增比例不同，Lift 系统性偏移且**方向不定**。
+           此非精度问题，是排序可能翻转。
+       三、§P0C 家族四条皆因果推断类——测试线行为分布与真人不同，
+           混入即令处置组与对照组之**可比性假设失效**。
+           产出者非「偏了的估计」，是「没有意义的估计」，不得进经济裁定。
+
+     全文字符扫描：U+FFFD 替换符 **0 行**（全文无乱码）；U+00A0／U+200B／
+       U+FEFF／TAB 皆 0 行；U+3000 全角空格 1 行；全角标点混入代码区 13 行
+       （首现 898、3736、4791、4897、7788…）。判读三条：落注释区者无碍；
+       落**字符串字面量**内者必清（同 §C-06 判庄闲实测零行之根因）；
+       落标识符或运算符位者必致语法错，跑即报错，不会静默。
+
+     处置：补闸最小 diff、影响量化探针与四条验收断言，见随附
+       「Z15_前置净化层_标准前奏与补闸包.sql」。纪律：**先量后改，不量不改**。
 
    ═══ 使用纪律（实测教训固化，逐条有血泪）═══════════════════════════════════
      ① 每条查询自包含、零占位符 —— 整段复制直接运行；
@@ -24,6 +121,10 @@
      ④ 导出必带 ORDER BY —— 分页无稳定排序曾致 36.49% 重复行；
      ⑤ 导出上限 1,000 行时只承认排序头部结论，「未出现」类判断一律无效；
      ⑥ 超过 10 万行者先跑 COUNT 预检，按会员号区间切分，**不要用 OFFSET 翻页**；
+        ★ 2026-08-11 补：翻页一律取**唯一键**为序（如 §R03 的 member_id+dealer_id），
+          不得以 z_score 一类**有并列值**的量为序——实测 517,528 行中 z_score 并列
+          103,510 组、连次级键都分不开者 452 行，OFFSET 翻页必致重漏；
+          且含全局 CTE 之段落，切点须在最外层（见 §99 之界）。
      ⑦ 导出编码选 CSV(UTF-8)，全部存入报告同级「数据库/」目录，
         文件名一字不可错 —— 错名不报错，只让图表静默空白，是最坑的失败方式；
      ⑧ 每个 Superset 会话开跑前先逐条执行：
@@ -31,6 +132,15 @@
           SET SESSION cbo_cte_reuse = true;   -- 报「变量不存在」则跳过
         第二条让被多次引用的 CTE 只计算一遍——本包 S-01（bs×4）、S-03（bs×3）、
         §R02 / §K01 等条依赖它；老版本无此开关时，列瘦身仍保证可接受耗时；
+     ⑩ **一行一跑，跑前清选区**：Superset 有选中即只跑选中段。三次实测失败中有两次
+        皆因执行的是残片而非全文（报错首个词位于句中，如 'enable_spill'）。
+        跑前按 Esc 或空白处单击，确保无高亮；SET 一类短语句一律逐行单跑。
+     ⑪ **注释内不写分号**：语句切分器遇行注释里的分号可能切出残片。
+        本包已把 §00 会话参数段内唯一一处注释内分号移除。
+     ⑫ **全量导出前先带 LIMIT 试跑一次**：如 §R03 全量 806 万行，先加 LIMIT 100000
+        约 18 秒即知链路与语法俱通，赔得起；确认无碍再去掉 LIMIT 跑全量。
+        若中途遇 Connection refused，先跑 SELECT 1 验服务，再查 Query History
+        有无残留 running 之僵尸查询（本包纪律③早戒：僵尸查询会拖垮集群）。
      ⑨ 连接前先估配对规模：凡两表连接键**不含局键或会员键**、仅靠桌号/日期
         这类低基数键相连的，必先各自聚合再连接——注单粒度×局粒度的裸连接
         曾使 S-02 三小时跑不完（万亿级配对），已以加权矩坍缩修复。
@@ -68,15 +178,40 @@
      两组各自同写一个 CSV，后跑者覆盖先跑者 —— 误跑将使对打对名单清空、
      风控员雷达退化为结构演示。各条正文上方已加醒目告示。
 
-   ═══ 字段正名速查（以本包 SQL 实际用法为准）═══════════════════════════════
+   ═══ 字段正名速查（★ 2026-08-13 斧正：逐条标明所属表）══════════════════════
+     ⚠ 本表原将四张表之字段混列一处，致 bet41 一项被外部审计误判为「误标」。
+       同一代号在不同表中语义不同，跨表援用同一段 SQL 必致静默错误。
+       故此后每条皆冠所属表；未标明所属表者，不得引用。
+
+     【表一 · ods_a168_bet02 —— 注单明细（本包主表）】
      bet03 靴号        bet04 局内第几把    bet05 会员号     bet08 下注时间
+     bet06 开局时间    bet07 帳務日期      bet10 币别
      bet09 玩法（英文玩法名：Banker / Player / Tie / BankerDragonBonus …）
      bet11 汇率（币种归一化除数：stake = bet13 / bet11）  ← 非赔率，词典须核正
-     bet13 下注金额    bet14 派彩金额      bet15 会员退水%  bet16 退水
-     bet17 净输赢      bet18~22 五级代理线  bet38 测试标识   bet39 桌号
-     bet41 有效投注    eid 荷官工号
+     bet13 下注金额    bet14 派彩金额      bet15 会员退水%  bet16 退水金额
+     bet17 净输赢      bet18~22 五级代理线  bet39 桌号       bet40 房间编号
+     bet38 重對（enum Y/N；本包取 N）。旧记「测试标识」有误——测试线系由
+           age022='1' 之五路 LEFT JOIN 排除，与 bet38 无涉；本包基准 CTE 之
+           注释「非测试线、非重对、一般注单」原已写对，误者仅此速查表一行。
+     bet41 下注退水金额（⚠ 与表二之 bet41 同名异义，切勿互换）
+     validbet 有效投注   eid 荷官工号   gametype 1网投/2电投/3-4混合
+     commission 0一般/1免佣   category 1一般/2小费
      bet23~27 LV1~5 占成   bet28~32 LV1~5 退水（量纲待 §E02c-0 探针判定）
-     gi001~gi013 局信息（gi004 局开始 · gi006 开牌 · gi011 桌号）
+
+     【表二 · ods_a168_dailyreport_member —— 会员日报】
+     bet41 有效投注（⚠ 与表一之 bet41 同名异义；§E02c 之 κ 由此列算出，
+           见第 3950 行 DX-03 实测记录。本包五处 bet41 代码用法皆取自本表，
+           无一处取自表一——2026-08-13 逐块回查 FROM 子句确认）
+
+     【表三 · ods_a168_game_info —— 局信息】
+     gi001~gi013（gi004 局开始 · gi006 开牌 · gi011 桌号）
+
+     【表四 · ods_a168_bet01 —— 未结算注单（⚠ 自 bet14 起与表一整段错位）】
+     bet14 退水％數（表一为「派彩」）    bet15~19 LV1~5 ID
+     bet17 LV3ID（表一为「净输赢」——此为最凶险之一处）
+     bet31 桌子编号（表一为 LV4 退水%）  bet32 房间编号（表一为 LV5 退水%）
+     ★ 需求文档 §3.3 之四条金额算式（bet13/bet14/bet16/bet17）只对表一成立；
+       若误施于表一以外之表，数值照算、SQL 照跑，而结果全错且无任何报警。
      产品 = 供玩家投注的游戏种类（百家乐、龙虎等，见 §DX-05 产品全景）
      玩法 = 该产品下的投注方式（bet09 的 23 种取值，见 §DX-04）
      二者不可混用。
@@ -183,7 +318,15 @@
           声明——否则照头运行即覆盖正版输出（S-04a 覆盖 §S04p 的旧事即此）。
        ② 标注「不需要」的查询，注释内不得出现任何导出文件名；需指代某份交付件
           时只写查询编号。读者只会看见文件名与查询相邻，不会读完整段上下文。
-       ③ 全包现状：需导出 40 条 · 无需导出 35 条 · 文件名写盘冲突 0。
+       ③ 全包现状（2026-08-12 逐行实测；计数口径＝行首以 -- 起首的导出标记行）：
+          产出交付件的语句 64 条（新式 42 条 + 卷一旧式块注释 22 条），
+          标注为无须导出的 72 条，文件名写盘冲突 0，唯一交付件文件名 64 个。
+          旧头部所记「40 / 35 / 全包 75」系卷一并入前之口径，已失真，今据实更正。
+       ④ 声明体例两式并存：新式行首带需要／不需要二选一字样，旧式只在块注释内给出
+          文件名而无该字样。例检脚本若只扫新式会漏计卷一 22 条，务必两式并扫。
+       ⑤ 口径锁（2026-08-12 立）：§R01／§B01／§B01-D 三条各输出常量列 late_def。
+          凡靴末段判据变更，必同步改该列取值；报告侧将其登记为必需列，
+          旧版 CSV 因缺列而当场报错——静默语义漂移自此变为显式失败。
    ═══════════════════════════════════════════════════════════════════════════
 
    【第六批 · 时间一致性与切分工具】
@@ -191,12 +334,518 @@
      §99 大表切分导出模板      COUNT-01/02/08a/08b/09 计数与分批
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ╔═══════════════════════════════════════════════════════════════════════════╗
+   ║  §Z 前置章 · 全库结构剖析与哨兵值审计                                       ║
+   ║  2026-08-13 并入 · 原为独立档 a168_全库结构与哨兵值审计_SQL_v1.sql           ║
+   ╠═══════════════════════════════════════════════════════════════════════════╣
+   ║  并入缘由：正式交付物永久锁定为三份（主方案 .qmd／精要 .qmd／本 SQL 总包）。 ║
+   ║  另立一份 SQL 即成第四份，违「恰为三份」之律，故并入而不并列。               ║
+   ╚═══════════════════════════════════════════════════════════════════════════╝
+
+   ═══ 本章何以置于 §00 之前 ═════════════════════════════════════════════════
+     取数次序为铁律，不可倒：
+       结构剖析 → 列剖析 → 关系剖析 → 口径固化 → 取数下载 → 分析
+     置于 §00 之前，则本文件之物理顺序即等于执行顺序，无从倒序。
+
+   ═══ 与本包既有语句之关系（2026-08-13 逐条核实，非推想）══════════════════
+     本包原已有九处 information_schema 语句，散在五个章节：
+       §00-2（字段清单）§00b（辅助表列名核对·已摘除）§00c（表行数）
+       §DX-01（bet09 取值普查）§DX-03（取列定义通用写法）
+       §BZ-00／§BZ-01（经营指标与流水字段搜寻）
+       §EX-00／§EX-01／§EX-08（元数据总览与关键词搜表）§TZ-01~05（时区五条）
+     本章之真正增量仅四类，余者为归拢：
+       ① 备份／测试表排除（§Z-02）—— 本包原无表级排除
+       ② 同名异义自动侦测（§Z-04）—— 本包原无；bet41 遭外部误判之根因即在此
+       ③ 逐列哨兵值普查（§Z-06／§Z-07）—— 本包原仅 §DX-01 查 bet09 一列
+       ④ 局键塌缩检验（§Z-08）—— 本包 §R02-0 有每局人数分布，无哨兵键塌缩
+     §Z-03 沿用 §DX-03 之导出名 V_columns_dict.csv，二者择一执行，
+     不得并行产出两份字段字典。
+     §Z-09 承 §TZ-03，不重出 dt／bet08 端点，只留 bet07 三方对账
+     与 bet06 减 bet08 之差值分布。
+
+   ═══ 编号族与导出命名 ═════════════════════════════════════════════════════
+     编号族取 §Z-xx（Zero／零层），避开本包既用之 C／S／R／T／D／E／K／V／
+     P0／TL／DX／EV／BZ／EX／A／I／L／X 各族。
+     导出名前缀 Z，与本包既有 66 个导出名实测零碰撞。
+   ═══════════════════════════════════════════════════════════════════════ */
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-00 · 会话参数（每个 Superset 会话开跑前逐条单跑一次）
+   ▸ 导出：不需要 —— 会话参数设置，无结果集
+   ═══════════════════════════════════════════════════════════════════════════ */
+SET SESSION query_timeout = 259200;
+SET SESSION cbo_cte_reuse = true;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-01 · 全库表清单与规模
+   用途：确立审计范围与分批次序。TABLE_ROWS 为估计值，仅用于排序，不作结论。
+   ▸ 导出：需要 —— 存为「数据库/Z01_table_inventory.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+SELECT
+    TABLE_NAME                                                   AS 表名,
+    TABLE_TYPE                                                   AS 表类型,
+    TABLE_ROWS                                                   AS 估计行数,
+    TABLE_COMMENT                                                AS 表注释,
+    CASE
+      WHEN LOWER(TABLE_NAME) LIKE '%_bak%'  THEN '备份'
+      WHEN LOWER(TABLE_NAME) LIKE '%bak2%'  THEN '备份'
+      WHEN LOWER(TABLE_NAME) LIKE '%_test%' THEN '测试'
+      WHEN LOWER(TABLE_NAME) LIKE '%_tmp%'  THEN '临时'
+      WHEN LOWER(TABLE_NAME) LIKE '%_old%'  THEN '旧版'
+      WHEN LOWER(TABLE_NAME) LIKE '%_copy%' THEN '副本'
+      WHEN LOWER(TABLE_NAME) LIKE '%_v1%'   THEN '疑似旧版'
+      WHEN LOWER(TABLE_NAME) LIKE '%demo%'  THEN '疑似演示'
+      ELSE '生产'
+    END                                                          AS 疑似性质
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+ORDER BY 疑似性质, TABLE_NAME;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-02 · 排除清单（备份／测试／临时／副本表）
+   用途：此清单须写入全案「禁用表」名录。已知实例：ods_a168_agent_bak20250610、
+         ods_a168_agent_test、ods_a168_game_demoipsetting。
+   判读：凡列入者，一律不得进入任何分析；若某分析已引用之，须整体重跑。
+   ▸ 导出：需要 —— 存为「数据库/Z02_excluded_tables.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+SELECT
+    TABLE_NAME                          AS 表名,
+    TABLE_ROWS                          AS 估计行数,
+    TABLE_COMMENT                       AS 表注释,
+    CASE
+      WHEN LOWER(TABLE_NAME) LIKE '%_bak%'  OR LOWER(TABLE_NAME) LIKE '%bak2%' THEN '备份表·禁用'
+      WHEN LOWER(TABLE_NAME) LIKE '%_test%' THEN '测试表·禁用'
+      WHEN LOWER(TABLE_NAME) LIKE '%_tmp%'  THEN '临时表·禁用'
+      WHEN LOWER(TABLE_NAME) LIKE '%_old%'  THEN '旧版表·禁用'
+      WHEN LOWER(TABLE_NAME) LIKE '%_copy%' THEN '副本表·禁用'
+      WHEN LOWER(TABLE_NAME) LIKE '%demo%'  THEN '演示表·须确认'
+      ELSE '其他·须确认'
+    END                                 AS 处置
+FROM INFORMATION_SCHEMA.TABLES
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND (   LOWER(TABLE_NAME) LIKE '%_bak%'  OR LOWER(TABLE_NAME) LIKE '%bak2%'
+       OR LOWER(TABLE_NAME) LIKE '%_test%' OR LOWER(TABLE_NAME) LIKE '%_tmp%'
+       OR LOWER(TABLE_NAME) LIKE '%_old%'  OR LOWER(TABLE_NAME) LIKE '%_copy%'
+       OR LOWER(TABLE_NAME) LIKE '%demo%')
+ORDER BY 处置, TABLE_NAME;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-03 · 全库字段字典（含 source_type 解析）
+   用途：本表即数据字典之基底，落盘存档后，作为一切字段引用之**唯一依据**。
+   要点：本库全部字段以 varchar 存储，真实类型仅存于 COLUMN_COMMENT 之
+         `source_type=` 前缀。凡涉数值或时间比较，须先查此表确定原始类型，
+         再行显式 CAST，**不得凭字段名臆测**。
+   ▸ 导出：需要 —— 存为「数据库/Z03_column_dictionary.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+SELECT
+    TABLE_NAME                                                        AS 表名,
+    ORDINAL_POSITION                                                  AS 列序,
+    COLUMN_NAME                                                       AS 列名,
+    DATA_TYPE                                                         AS 存储类型,
+    IS_NULLABLE                                                       AS 可空,
+    REGEXP_EXTRACT(COLUMN_COMMENT, 'source_type=([^;]+)', 1)          AS 原始类型,
+    TRIM(REGEXP_REPLACE(COLUMN_COMMENT, 'source_type=[^;]+;', ''))    AS 业务含义,
+    COLUMN_COMMENT                                                    AS 原始注释
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+ORDER BY TABLE_NAME, ORDINAL_POSITION;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-04 · 同名异义自动侦测（★ 本文件最关键之一条）
+   用途：一次列出全库所有「同一列名、不同业务含义」之字段，
+         不必再靠人逐一撞见。已知六处（bet14、bet01/bet02 自 bet14 起整段错位、
+         bet31/bet32 与 bet39/bet40、member.mem015 与 member_dtl.mem015、
+         member.mem015 自身、game_log.region 注释为「國家」）应由本条全数覆盖，
+         且极可能另有未知者。
+   判读：释义数 ≥ 2 者即为同名异义；类型数 ≥ 2 者风险更高——不仅义异，且型异，
+         跨表复用同一段 SQL 必致静默错误。
+   ▸ 导出：需要 —— 存为「数据库/Z04_name_collision.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+WITH d AS (
+  SELECT
+      COLUMN_NAME,
+      TABLE_NAME,
+      TRIM(REGEXP_REPLACE(COLUMN_COMMENT, 'source_type=[^;]+;', ''))  AS 含义,
+      REGEXP_EXTRACT(COLUMN_COMMENT, 'source_type=([^;]+)', 1)        AS 类型
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+    AND COLUMN_COMMENT IS NOT NULL
+    AND TRIM(COLUMN_COMMENT) <> ''
+)
+SELECT
+    COLUMN_NAME                                  AS 列名,
+    COUNT(DISTINCT 含义)                          AS 释义数,
+    COUNT(DISTINCT 类型)                          AS 类型数,
+    COUNT(DISTINCT TABLE_NAME)                   AS 出现表数,
+    CASE WHEN COUNT(DISTINCT 类型) >= 2 THEN '🔴 义异且型异'
+         ELSE '🟠 义异型同' END                   AS 风险,
+    GROUP_CONCAT(DISTINCT CONCAT(TABLE_NAME, ' → ', 含义, ' [', 类型, ']')
+                 SEPARATOR '  ||  ')             AS 明细
+FROM d
+GROUP BY COLUMN_NAME
+HAVING COUNT(DISTINCT 含义) >= 2
+ORDER BY 类型数 DESC, 释义数 DESC, 出现表数 DESC, COLUMN_NAME;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-05 · 类型缺注与注释缺失侦测
+   用途：凡 COLUMN_COMMENT 为空或无 source_type 前缀者，其真实类型无从判定，
+         一切 CAST 皆属臆测。此清单即「不得使用之字段」名录。
+   ▸ 导出：需要 —— 存为「数据库/Z05_missing_typehint.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+SELECT
+    TABLE_NAME                        AS 表名,
+    ORDINAL_POSITION                  AS 列序,
+    COLUMN_NAME                       AS 列名,
+    DATA_TYPE                         AS 存储类型,
+    COLUMN_COMMENT                    AS 原始注释,
+    CASE
+      WHEN COLUMN_COMMENT IS NULL OR TRIM(COLUMN_COMMENT) = ''      THEN '🔴 无任何注释'
+      WHEN COLUMN_COMMENT NOT LIKE '%source_type=%'                 THEN '🟠 缺原始类型'
+      WHEN TRIM(REGEXP_REPLACE(COLUMN_COMMENT,'source_type=[^;]+;','')) = ''
+                                                                    THEN '🟠 有类型无含义'
+      ELSE '🟢 完整'
+    END                               AS 状态
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND (COLUMN_COMMENT IS NULL
+       OR TRIM(COLUMN_COMMENT) = ''
+       OR COLUMN_COMMENT NOT LIKE '%source_type=%'
+       OR TRIM(REGEXP_REPLACE(COLUMN_COMMENT,'source_type=[^;]+;','')) = '')
+ORDER BY 状态, TABLE_NAME, ORDINAL_POSITION;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-06 · 生成逐列高频值普查语句（★ 令哨兵值自行现形）
+   原理：真实业务取值在秒级或金额级上近乎连续，任一具体取值之占比极低；
+         哨兵值则表现为单点尖峰。故取每列高频前 20，异常者自现，
+         **不预设 -1／0／unknown／1970-01-01 之类候选清单**——
+         手拟必漏，且会遗漏 9999-12-31、1900-01-01、'N/A'、'null' 字符串、
+         -999、全角空格等未曾预料者。
+   用法：先跑本条**生成** SQL，再逐条执行其输出（承纪律②，禁批量）。
+   分批：若表数逾百，先依 §Z-01 之估计行数与业务重要性排序，分批执行。
+   ▸ 导出：需要 —— 存为「数据库/Z06_generated_probe_sql.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+SELECT
+    c.TABLE_NAME                                          AS 表名,
+    c.ORDINAL_POSITION                                    AS 列序,
+    c.COLUMN_NAME                                         AS 列名,
+    t.TABLE_ROWS                                          AS 估计行数,
+    CONCAT(
+      'SELECT ''', c.TABLE_NAME, ''' AS t, ''', c.COLUMN_NAME, ''' AS c, ',
+      'CAST(', c.COLUMN_NAME, ' AS VARCHAR) AS v, COUNT(*) AS n, ',
+      'COUNT(*) * 1.0 / SUM(COUNT(*)) OVER () AS pct ',
+      'FROM ods_mariadb_2b.', c.TABLE_NAME, ' ',
+      'GROUP BY 3 ORDER BY n DESC LIMIT 20;'
+    )                                                     AS 待执行SQL
+FROM INFORMATION_SCHEMA.COLUMNS c
+LEFT JOIN INFORMATION_SCHEMA.TABLES t
+       ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME
+WHERE c.TABLE_SCHEMA = 'ods_mariadb_2b'
+  AND c.COLUMN_NAME NOT IN ('__source_pk','source_db','source_table',
+                            'ods_table_name','sync_time')
+  AND NOT (   LOWER(c.TABLE_NAME) LIKE '%_bak%'  OR LOWER(c.TABLE_NAME) LIKE '%bak2%'
+           OR LOWER(c.TABLE_NAME) LIKE '%_test%' OR LOWER(c.TABLE_NAME) LIKE '%_tmp%'
+           OR LOWER(c.TABLE_NAME) LIKE '%_old%'  OR LOWER(c.TABLE_NAME) LIKE '%_copy%')
+ORDER BY t.TABLE_ROWS DESC, c.TABLE_NAME, c.ORDINAL_POSITION;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-07 · 普查执行样例（以注单主表示范；其余各表由 §Z-06 生成）
+   判读准则（三条，缺一不可）：
+     一、单点尖峰：某具体取值之占比较其邻近取值高出数个量级者，列为候选；
+     二、语义可疑：取值形如 -1／0／-999／'unknown'／'N/A'／'null'／
+         1970-01-01／0000-00-00／9999-12-31／1900-01-01 者，列为候选；
+     三、跨列共现：候选行在其余字段是否同步异常——若是，则为系统填充之空行；
+         若仅此一列异常，则更可能为 ETL 故障。二者成因不同，处置亦不同。
+   ▸ 导出：需要 —— 存为「数据库/Z07_probe_bet02.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+SELECT 'ods_a168_bet02' AS t, 'bet03' AS c, CAST(bet03 AS VARCHAR) AS v,
+       COUNT(*) AS n, COUNT(*) * 1.0 / SUM(COUNT(*)) OVER () AS pct
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'bet04', CAST(bet04 AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'bet39', CAST(bet39 AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'eid', CAST(eid AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'gametype', CAST(gametype AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'commission', CAST(commission AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'category', CAST(category AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'bet09', CAST(bet09 AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'bet10', CAST(bet10 AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+UNION ALL
+SELECT 'ods_a168_bet02', 'bet11', CAST(bet11 AS VARCHAR),
+       COUNT(*), COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()
+FROM ods_mariadb_2b.ods_a168_bet02 GROUP BY 3
+ORDER BY 1, 2, 4 DESC;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-08 · 局键唯一性与塌缩检验（对应「待-02」·风险最高之一条）
+   何以要紧：局键为 bet03 + bet04 + bet39。若三者任一含哨兵值，
+         则所有此类注单将被拼成同一「局键」（如 -1|-1|-1），
+         **成千上万笔互不相干之注单被聚合为同一局**。
+         其后果：该「局」参与会员数暴增，同桌共现于此局产生天量虚假配对；
+         玩家局级胜负判定亦全盘错乱。
+   须查者：既有产物 `候选_同桌异常_最终版_已去重.csv` 是否已受此污染。
+   附带核验：bet03 单列是否已全局唯一——若是，则 bet39 在键中为冗余项。
+   ▸ 导出：需要 —— 存为「数据库/Z08_roundkey_integrity.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+WITH v AS (
+  SELECT
+      CAST(bet03 AS VARCHAR) AS k3,
+      CAST(bet04 AS VARCHAR) AS k4,
+      CAST(bet39 AS VARCHAR) AS k39,
+      CAST(bet05 AS VARCHAR) AS member_id,
+      CONCAT_WS('|', CAST(bet03 AS VARCHAR),
+                     CAST(bet04 AS VARCHAR),
+                     CAST(bet39 AS VARCHAR)) AS round_key
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE bet02 = '101'
+),
+per_key AS (
+  SELECT round_key,
+         COUNT(*)                  AS n_rows,
+         COUNT(DISTINCT member_id) AS n_member,
+         COUNT(DISTINCT k39)       AS n_table
+  FROM v GROUP BY round_key
+),
+per_k3 AS (
+  SELECT k3, COUNT(DISTINCT k39) AS n_table_per_k3,
+             COUNT(DISTINCT k4)  AS n_k4_per_k3
+  FROM v GROUP BY k3
+)
+SELECT
+    (SELECT COUNT(*) FROM v)                                            AS 注单行数,
+    (SELECT COUNT(*) FROM per_key)                                      AS 局键数,
+    (SELECT MAX(n_rows)   FROM per_key)                                 AS 单局最大注单行数,
+    (SELECT MAX(n_member) FROM per_key)                                 AS 单局最大会员数,
+    (SELECT PERCENTILE_APPROX(CAST(n_member AS DOUBLE),0.999) FROM per_key)
+                                                                        AS 单局会员数P999,
+    (SELECT COUNT(*) FROM per_key WHERE n_table > 1)                    AS 跨桌局键数_应为0,
+    (SELECT COUNT(*) FROM per_k3 WHERE n_table_per_k3 > 1)              AS bet03跨桌数,
+    (SELECT COUNT(*) FROM per_k3)                                       AS bet03唯一值数,
+    (SELECT SUM(CASE WHEN k3 IN ('-1','0','') OR k3 IS NULL
+                       OR k4 IN ('-1','0','') OR k4 IS NULL
+                       OR k39 IN ('-1','0','') OR k39 IS NULL
+                     THEN 1 ELSE 0 END) FROM v)                         AS 局键含哨兵值行数;
+
+/* 配套：局键规模排行（若榜首出现 -1|-1|-1 之类且注单数远超其余，即坐实塌缩）
+   ▸ 承上条之诊断，本注释块不单独计为一条语句 */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-09 · 时间字段口径核验（对应「待-01」）
+   何以要紧：本项目一切「日／月／滚动 30 日」聚合，皆须先确定切日基准。
+         候选有三：`dt`（StarRocks 分区日）、`bet07`（帳務日期）、
+         `DATE(bet08)`（下注日）。SQL 总包现行一律以 `dt` 切日。
+   判读准则：
+     · 三数若同为行数，则三者一致，议题消解，**总包现行做法正确，不必改动**；
+     · 若 dt = bet07 恒成立而两者皆异于下注日，则 dt 已承载账务日语义，仍不必改；
+     · 唯有当 bet07 与 dt 分歧显著时，方须讨论切日基准之更换。
+   附带：bet06（開局時間）与 bet08 之差值分布，可一并回答三事——
+         bet06 究为「开放下注」抑或「开牌」、下注时长是否恒定、两者时区是否一致。
+         若差值集中于 0 至 30 秒，则 bet06 在下注之前且时长约 30 秒；
+         若集中于 28800 秒上下，则时区不一致，尾秒相位计算将整体错八小时。
+   ▸ 导出：需要 —— 存为「数据库/Z09_time_axis_recon.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+WITH v AS (
+  SELECT
+      dt,
+      CAST(NULLIF(TRIM(bet07),'') AS DATE)      AS d_acct,
+      CAST(NULLIF(TRIM(bet06),'') AS DATETIME)  AS t_open,
+      CAST(NULLIF(TRIM(bet08),'') AS DATETIME)  AS t_bet
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE bet02 = '101'
+)
+SELECT
+    COUNT(*)                                                        AS 行数,
+    SUM(CASE WHEN dt = d_acct THEN 1 ELSE 0 END)                    AS dt等于账务日,
+    SUM(CASE WHEN dt = DATE(t_bet) THEN 1 ELSE 0 END)               AS dt等于下注日,
+    SUM(CASE WHEN d_acct = DATE(t_bet) THEN 1 ELSE 0 END)           AS 账务日等于下注日,
+    SUM(CASE WHEN d_acct IS NULL THEN 1 ELSE 0 END)                 AS 账务日不可用,
+    SUM(CASE WHEN t_open IS NULL THEN 1 ELSE 0 END)                 AS 开局时间不可用,
+    SUM(CASE WHEN t_bet  IS NULL THEN 1 ELSE 0 END)                 AS 下注时间不可用,
+    SUM(CASE WHEN t_bet <= '1971-01-01 00:00:00' THEN 1 ELSE 0 END) AS 下注时间纪元哨兵,
+    SUM(CASE WHEN t_open <= '1971-01-01 00:00:00' THEN 1 ELSE 0 END) AS 开局时间纪元哨兵,
+    MIN(d_acct)                                                     AS 账务日最小,
+    MAX(d_acct)                                                     AS 账务日最大,
+    SUM(CASE WHEN TIMESTAMPDIFF(SECOND, t_open, t_bet) <  0 THEN 1 ELSE 0 END)
+                                                                    AS 下注早于开局_时序异常,
+    MIN(TIMESTAMPDIFF(SECOND, t_open, t_bet))                       AS 下注距开局秒_最小,
+    PERCENTILE_APPROX(CAST(TIMESTAMPDIFF(SECOND, t_open, t_bet) AS DOUBLE), 0.50)
+                                                                    AS 下注距开局秒_P50,
+    PERCENTILE_APPROX(CAST(TIMESTAMPDIFF(SECOND, t_open, t_bet) AS DOUBLE), 0.99)
+                                                                    AS 下注距开局秒_P99,
+    PERCENTILE_APPROX(CAST(TIMESTAMPDIFF(SECOND, t_open, t_bet) AS DOUBLE), 0.999)
+                                                                    AS 下注距开局秒_P999,
+    MAX(TIMESTAMPDIFF(SECOND, t_open, t_bet))                       AS 下注距开局秒_最大
+FROM v;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-10 · 哨兵值定性登记（须携 §Z-07 读数向上游查询后填写）
+   本条为**表格模板**，非查询。哨兵值之业务成因无法自数据闭合，
+   须逐项向上游确认后，方可决定处置。
+   登记字段（十二项，缺一不可）：
+     table / column / sentinel_value / row_count / pct / co_anomaly（跨列共现）
+     / semantic（业务成因）/ source（谁确认的）/ disposition（剔除／分离／保留）
+     / rationale / affected_output / decided_at
+   处置对照：
+     字段未采集         → 剔除，但须报告剔除量
+     该场景下不适用     → 分离，单独分析
+     ETL 故障           → 剔除，并向上游报缺陷
+     尚未发生（如未结算）→ **不可剔除**，另立状态；剔除将造成选择性偏差
+   处置策略（分两派，按字段风险择用）：
+     局键三要素 bet03／bet04／bet39 → 装载层一律转 NULL 并剔除
+       （局键塌缩之害太重，不容任何遗漏渗入下游）
+     荷官／代理等维度字段          → 保留原值另设标志列
+       （成因未明，或有单独分析之价值），并加锁定列使旧版产物在导入时强制报错
+   ▸ 导出：不需要 —— 登记模板，无结果集
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-11 · 哨兵值处置前后影响量化
+   用途：处置一经裁定，须以本条量化其影响，方可对外声明。
+   注意：「每局最大会员数」与「同桌共现配对数」两项对局键塌缩最敏感，
+         其前后差额即虚假配对之规模。
+   前提：本条须待 §Z-10 裁定后方可填入具体排除条件；当前先出「未处置」侧读数，
+         作为基线。
+   ▸ 导出：需要 —— 存为「数据库/Z11_sentinel_impact.csv」
+   ═══════════════════════════════════════════════════════════════════════════ */
+WITH v AS (
+  SELECT
+      CAST(bet05 AS VARCHAR) AS member_id,
+      CAST(ip    AS VARCHAR) AS ip_addr,
+      CONCAT_WS('|', CAST(bet03 AS VARCHAR),
+                     CAST(bet04 AS VARCHAR),
+                     CAST(bet39 AS VARCHAR)) AS round_key,
+      CASE WHEN CAST(bet03 AS VARCHAR) IN ('-1','0','') OR bet03 IS NULL
+                OR CAST(bet04 AS VARCHAR) IN ('-1','0','') OR bet04 IS NULL
+                OR CAST(bet39 AS VARCHAR) IN ('-1','0','') OR bet39 IS NULL
+           THEN 1 ELSE 0 END AS is_sentinel_key
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE bet02 = '101'
+),
+a AS (
+  SELECT COUNT(*) AS n_rows, COUNT(DISTINCT round_key) AS n_key,
+         COUNT(DISTINCT member_id) AS n_member, COUNT(DISTINCT ip_addr) AS n_ip
+  FROM v
+),
+b AS (
+  SELECT COUNT(*) AS n_rows, COUNT(DISTINCT round_key) AS n_key,
+         COUNT(DISTINCT member_id) AS n_member, COUNT(DISTINCT ip_addr) AS n_ip
+  FROM v WHERE is_sentinel_key = 0
+),
+ma AS (SELECT MAX(c) AS m FROM (SELECT round_key, COUNT(DISTINCT member_id) AS c
+                                FROM v GROUP BY round_key) x),
+mb AS (SELECT MAX(c) AS m FROM (SELECT round_key, COUNT(DISTINCT member_id) AS c
+                                FROM v WHERE is_sentinel_key = 0 GROUP BY round_key) y)
+SELECT
+    a.n_rows   AS 未处置_注单行数,  b.n_rows   AS 已处置_注单行数,
+    a.n_key    AS 未处置_局键数,    b.n_key    AS 已处置_局键数,
+    a.n_member AS 未处置_会员数,    b.n_member AS 已处置_会员数,
+    a.n_ip     AS 未处置_IP数,      b.n_ip     AS 已处置_IP数,
+    ma.m       AS 未处置_单局最大会员数,
+    mb.m       AS 已处置_单局最大会员数,
+    ma.m - mb.m                                       AS 单局最大会员数_差额,
+    a.n_rows - b.n_rows                               AS 剔除行数,
+    (a.n_rows - b.n_rows) * 1.0 / NULLIF(a.n_rows, 0) AS 剔除占比
+FROM a CROSS JOIN b CROSS JOIN ma CROSS JOIN mb;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-12 · 锁定（承既有 late_def 之例）
+   本条为纪律陈述，非查询。
+   哨兵值处置一经裁定，须于装载层落地，并加**口径锁定列**，
+   使不合口径之旧版产物在导入时**强制报错，而非静默通过**。
+   既有实例：`late_def` 锁定列——尾靴判据自 round_no >= 50 改为 shoe_pos >= 0.80 后，
+   新增该列，令旧版 CSV 在导入时报错。此设计优于纯标志列，
+   因其不依赖下游之自觉。
+   旧版产物一律重命名为 `_v1_superseded` 后缀存档，**禁止直接删除**。
+   ▸ 导出：不需要 —— 纪律陈述，无结果集
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   导出汇总（与语句一一对应）
+     §Z-00  不需要                §Z-07  数据库/Z07_probe_bet02.csv
+     §Z-01  数据库/Z01_table_inventory.csv    §Z-08  数据库/Z08_roundkey_integrity.csv
+     §Z-02  数据库/Z02_excluded_tables.csv    §Z-09  数据库/Z09_time_axis_recon.csv
+     §Z-03  数据库/Z03_column_dictionary.csv  §Z-10  不需要
+     §Z-04  数据库/Z04_name_collision.csv     §Z-11  数据库/Z11_sentinel_impact.csv
+     §Z-05  数据库/Z05_missing_typehint.csv   §Z-12  不需要
+     §Z-06  数据库/Z06_generated_probe_sql.csv
+   八个导出名与 SQL 总包既有 66 个导出名**零碰撞**（Z 族为本文件专用）。
+
+   优先次序：§Z-01、§Z-02、§Z-04 三条代价近乎为零，宜立即执行——
+   其读数将直接决定既有六处同名异义登记册是否完备，
+   以及总包与三份 .qmd 是否曾误用备份表。
+   §Z-08 与 §Z-09 次之：前者关乎既有同桌产物是否受污染，
+   后者关乎切日基准与尾秒相位能否成立。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+
 /* 顺便提醒一句：max_execution_time 在 MariaDB 和 MySQL 5.7+ 中生效，但它只针对 
    SELECT 语句生效，对 INSERT/UPDATE/DELETE 等写操作无效。如果你的后续 CTE 查询超过 
    15 分钟，这个设置会主动杀掉该查询，防止拖垮数据库。  */
 -- ▸ 导出：不需要 —— 会话参数设置，无结果集。每个 Superset 会话开跑前先执行一次。
+--
+-- ★★★ 2026-08-11 立·会话参数的执行纪律（三次实测失败之教训固化）★★★
+--   【一】本段每一行 SET 皆是**独立语句**，务请**一行一跑**，跑完看返回 OK 再跑下一行。
+--        切勿整段一次提交——Superset 的语句切分遇行注释内的分号（本段下方
+--        「-- SET max_execution_time = 259200000」原即含一个，已移除）可能切出残片。
+--   【二】跑之前先按一次 Esc、或在编辑器空白处单击，**确保没有任何高亮选区**。
+--        Superset 的规则是「有选中就只跑选中的那一段」——一次误触拖选即跑出半句。
+--        实测教训：先生曾两度收到形如
+--            Unexpected input 'enable_spill'   ／  Unexpected input 'R03b_player_dealer_daily'
+--        的语法错，其共同特征是**送出去的第一个词位于一句话的中间**，
+--        即执行的并非编辑器所见之全文，而是一个残片。**病不在 SQL，在选区。**
+--   【三】本段**全部可跳过**，不影响任何查询之正确性——它们只管提速与防崩：
+--          · query_timeout        默认超时够长即不必改
+--          · enable_spill/spill_mode  只在内存不足时起作用
+--          · cbo_cte_reuse        对 S-01／S-03／§R02 收益大，**对 §R03 收益有限**
+--                                 （§R03 的 CTE 链单向，未被多次引用）
+--        故若此段任一行报错，**径行跳过即可**，不必纠缠。
+--   【四】辨错之法：若报「Unknown system variable」→ 本版不支持该变量，跳过；
+--        若报「syntax error / Unexpected input」→ **是选区或切分之误，不是变量之误**，
+--        请重按【一】【二】两条再跑。欲先验其有无，可单跑：
+--            SHOW VARIABLES LIKE 'enable_spill'      （跑时自行补分号）
+--   【五】新会话须重跑本段（会话级参数不跨会话），惟第【三】条同样适用。
+--
 SET SESSION query_timeout = 259200;                                                                 -- 会话参数：会话查询超时上限（秒）——本包多条为重查询，须先行放宽
--- SET max_execution_time = 259200000;   -- 259200秒 = 259200000毫秒
+-- SET max_execution_time = 259200000    -- 259200秒 = 259200000毫秒（★ 行内分号已移除：
+--                                        --   语句切分器遇注释内的分号可能切出残片，见上方纪律【一】）
 
 -- ★ 决定性的一条：允许大聚合/大连接溢写磁盘，而不是撞上限即崩。
 --   StarRocks 3.x 支持；若报变量不存在则跳过，主改写本身已大幅降内存。
@@ -1364,6 +2013,7 @@ bs AS (                  -- 金额正名（只保留本查询实际使用的量�
            / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl                            -- 除法或乘法计算：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「game_pnl」
   FROM vd v                                                                                         -- 取数来源：取自本条自建的中间结果集 vd
   WHERE NULLIF(TRIM(v.eid),'') IS NOT NULL   -- 空荷官行本就不进任何输出组，前置过滤不改输出
+    AND TRIM(v.eid) NOT IN ('-1', '0')       -- 哨兵荷官号一并剔除：-1／0 非真实荷官，不得入评分（2026-08-11 增）
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（交付件 S02_dealer_score.csv）
 bd AS (                  -- ★ 一次坍缩：荷官×桌×会员×局。bs 全文只被此处引用一次
   SELECT dealer_id, table_id, member_id, round_key,                                                 -- 取列：起始取列子句，本行先列 dealer_id, table_id, member_id, round_key，涉 round_key（局键）、member_id（会员号）、dealer_id（荷官工号）
@@ -2378,9 +3028,18 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;                                          
 
 /* ───────────────────────────────────────────────────────────────────────────
    §R01 · R01_late_shoe.csv
-   策略性风控：靴内第 50 把及之后的下注占比 + 相对靴位 + 注额斜率 + 分段 ROI
+   策略性风控：靴内相对靴位 ≥ 0.80（≈ 靴末 20% 之局位，等价外部报告「第 40 局」）的下注占比
+              + 相对靴位 + 注额斜率 + 分段 ROI
+   ★★ 2026-08-12 B-01 斧正：判据由绝对局号 round_no>=50 改为相对靴位 shoe_pos>=0.80 ★★
+     依据：外部实测靴长分布（均值 49.86 局、P50=50、P75=52、P90=54、P99=58）。
+     第 50 把的相对靴位为 100.3%（以均值计），故 round_no>=50 实为「靴的最后一局
+     及长于中位数的那半数靴」——约半数牌靴无末段可言，late_share 被系统性压低。
+     新判据固定的是**局位区间**（每靴末 20% 的局），不是下注占比；late_share 仍由
+     实际下注行为决定，均匀下注之零偏好基准下期望约 20%，实际可为 0%~100%。
+   ★ 新增 late_def 口径锁列：旧版 CSV 因缺此列而在报告侧读入时当场报错，
+     使「新文字配旧数字」的静默语义漂移变成显式失败。
    对应报告：@sec-r01
-   输出列：uid, n_orders_all, n_orders_late, late_share, shoe_pos_p50,
+   输出列：late_def(口径锁), uid, n_orders_all, n_orders_late, late_share, shoe_pos_p50,
            stake_late_avg, stake_early_avg, stake_ramp, roi_late, roi_early,
            stake_late, game_pnl_late, stake_all, game_pnl_all
    预期行数：数千 ~ 数万（HAVING 已收敛）
@@ -2434,7 +3093,8 @@ enriched AS (                                                                   
          b.round_no * 1.0 / NULLIF(s.max_round,0)     AS shoe_pos,                                  -- 取值表达式：产出「shoe_pos」
          b.stake_raw / b.fx                           AS stake,                                     -- 取值表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
          (b.payout_raw - b.stake_raw) / b.fx          AS game_pnl,                                  -- 续行：取用 game_pnl（游戏净输赢），产出「game_pnl」
-         CASE WHEN b.round_no >= 50 THEN 1 ELSE 0 END AS is_late                                    -- 条件分支：产出「is_late」
+         CASE WHEN b.round_no * 1.0 / NULLIF(s.max_round,0) >= 0.80
+              THEN 1 ELSE 0 END                        AS is_late   -- B-01 斧正：相对靴位                                    -- 条件分支：产出「is_late」
   FROM base b                                                                                       -- 取数来源：取自本条自建的中间结果集 base
   JOIN shoe_len s ON s.shoe_id = b.shoe_id AND s.table_id = b.table_id                              -- 连接：取自本条自建的中间结果集 shoe_len，连接键为 s.shoe_id = b.shoe_id AND s.table_id = b.table_id
 )                                                                                                   -- 续行：收束上方的子查询或函数括号（§R01）
@@ -2442,6 +3102,7 @@ SELECT                                                                          
   member_id                                                     AS uid,                             -- 取值表达式：取用 member_id（会员号）、uid（会员号），产出「uid」
   COUNT(*)                                                      AS n_orders_all,                    -- 计数表达式：产出「n_orders_all」
   SUM(is_late)                                                  AS n_orders_late,                   -- 汇总表达式：产出「n_orders_late」
+  'shoe_pos>=0.80'                                              AS late_def,        -- 口径锁：definition_version = v2
   SUM(is_late) * 1.0 / COUNT(*)                                 AS late_share,                      -- 汇总表达式：计数，取用 late_share（晚注占比），产出「late_share」
   PERCENTILE_APPROX(CASE WHEN is_late=1 THEN shoe_pos END, 0.5) AS shoe_pos_p50,                    -- 取近似分位数表达式：产出「shoe_pos_p50」
   SUM(CASE WHEN is_late=1 THEN stake END) / NULLIF(SUM(is_late),0)              AS stake_late_avg,  -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake_late_avg」
@@ -2643,16 +3304,107 @@ ORDER BY n_rounds DESC;                                                         
    对应报告：@sec-r03
    ★ 已实现《荷官作弊风控阈值分析报告》自列的必补检查：
      用 bet03+bet04 统计关联有效局数，修正同局拆多单造成的 Z-score 放大。
+   ★★ 2026-08-11 提速·四处结构改写（先生实测：第三批逾一分钟未出）★★
+     【病根】StarRocks 之 CTE 默认 inline 展开，**被引用 N 次即重算 N 次**。改前实测：
+        · `ord` 被 side_base 与 ordb 各引用一次 → ord 子树算 2 遍
+        · `pr` 被 player_all 与 pd 各引用一次 → pr 子树算 2 遍
+        ⇒ 最贵的 `ranked`（全窗约 1.26 亿注单开窗去重）**共算 2 × 2 = 4 遍**。
+     【改一·投影瘦身】`ranked` 原投影 17 列，其中 updatetime／sync_time／dt 只用于
+        OVER 内排序、bet02／category 只用于 WHERE——**五者皆无须进入投影**（窗口排序
+        直接取自源表）。今去之，开窗须物化的宽度减五列。
+     【改二·局键不造字符串】原以 CONCAT_WS 把 bet03+bet04+bet39 拼成 round_key，
+        1.26 亿行即造 1.26 亿个字符串，其后又以该长串为分组键（串哈希昂贵）。
+        今**三列原样透传、原生分组**，等价而省去造串与串哈希两笔。
+     【改三·会员合计改开窗】删 `player_all`，在 pd 之上加一层 `pdw`，
+        以 `SUM(...) OVER (PARTITION BY member_id)` 求五项合计。
+        **等价性可证**：pd 是 pr 按「会员×荷官×哨兵」的分组，player_all 是 pr 按
+        「会员」的分组；对 pd 再按会员求和，与直接对 pr 按会员求和**逐值相等**
+        （分组求和的结合律）。原为 INNER JOIN 且每行 pd 必有其会员，**行数亦不变**。
+        **pr 自此只被引用一次。**
+     【改四·一处曾试而回退，记其始末】曾把 side_base 并入 ordb，改以窗口
+        `SUM(...) OVER (PARTITION BY bet_side)` 就地算基准，本意令 ord 由二引降一引。
+        **惟随即察觉此举引入更坏的数据倾斜**：按 bet_side 开窗须把 1.25 亿行按 23 个值
+        重分布，而 Banker 一支即占 4,648 万行（37%），单节点必成瓶颈。
+        **故已回退为原式**——side_base 独立聚合（**结果仅 23 行**，连接时引擎广播，无倾斜）。
+     【必跑】**`SET cbo_cte_reuse = true;` 一行本段须跑**（此前列为可略，今提为必跑）：
+        改三已令 pr 只被引用一次，惟 ord 仍被 side_base 与 ordb 各引用一次；
+        无此开关则 ord 子树算两遍，`ranked` 亦随之算两遍。
+        跑法见 §00 会话参数段纪律【一】【二】：**单独一行跑，跑前清选区**。
+        若报「Unknown system variable」（本版不支持），请回报本方，
+        另以「冻结基准为字面量」之法处之（须先跑一条仅 23 行的基准查询）。
+     【改后】开关命中时 `ranked` **由 4 遍降为 1 遍**；未命中则为 2 遍，仍较改前减半。
+     【★ 2026-08-11 定案·L0 与 L1 分工（因 Superset 只读模式每次至多下载十万行）】
+        · 事实层 L0 的举证**移交 §R03-inv**（`R03inv_pair_census.csv`，约 30 行，一次导完）：
+          各资格档 × 各稀疏分层的边数、会员数、荷官数、局数合计——
+          「平台究竟有多少玩家×荷官关系、其中 n=1 者几何」由该件回答。
+        · 本件回归 **L1 合格层**：末尾加四条资格谓词（非哨兵、基准非空、有决胜局、
+          有效局数 ≥ 30），即 `eligibility_status = 'ELIGIBLE'` 之展开式。
+          **预期 517,528 行 → 十万一批共 6 批**，而非 L0 全量的 81 批。
+        · **此为工程约束下的明白取舍，非悄悄回退**：L0「不删行」所要防的是
+          「稀疏性被藏起来」，而稀疏性已由 §R03-inv 全量点清，举证责任并未落空。
+          日后若导出上限放宽，去掉那四条谓词即恢复 L0 全量，一字不必另改。
+     【分批下载之法（六批，游标翻页，禁用 OFFSET）】
+        第 1 批：末尾加  LIMIT 100000
+        第 k+1 批：取上批**末行**的 (member_id, dealer_id) 记作 (M, D)，
+                  在 ORDER BY 之前把 WHERE 尾部加一条：
+                    AND ( CAST(pdw.member_id AS BIGINT) > M
+                       OR ( CAST(pdw.member_id AS BIGINT) = M
+                            AND CAST(pdw.dealer_id AS BIGINT) > D ) )
+                  并保留 LIMIT 100000。
+        ⚠ 每批仍须把整条链算一遍（ORDER BY 施于最终聚合结果，LIMIT 只省传输）——
+          **故批数越少越好，这正是回归 L1 的第二个理由**：6 遍而非 81 遍。
+     【⚠ 分批无益，反是负优化】终查询的 `ORDER BY` 施于**最终聚合结果**，
+        故引擎须把整条链算完（约 1.26 亿注单 → 806 万行）方能挑出头 N 行——
+        **`LIMIT` 只省传输，不省计算**。第 1 批与全量同价，81 批即 81 倍代价。
+        **故本件一律一次导全，不得分批。**
+     【须先生自验】改写不得改数。跑毕请核三事，任一不符即回报本方，不得放行：
+        ① 总行数仍应为 8,061,974；
+        ② `eligibility_status = 'ELIGIBLE'` 仍应恰为 517,528 行；
+        ③ `SENTINEL_DEALER` 仍应为 243,025 行。
+   ★ 2026-08-11 立·三层数据契约（L0 事实 → L1 资格 → L2 模型）：
+     · 本导出为 **L0 事实层**：**不为统计而删行**。哨兵荷官（eid = -1／0）由「剔除」
+       改为「标注」（`is_sentinel_dealer`）；有效局数下限亦由 WHERE 过滤改为
+       `eligibility_status` 标注。理由：预先删行会把**稀疏性本身**藏起来，
+       令「平台究竟有多少玩家×荷官关系」这一问永远答不出，且生成选择偏差。
+     · **L1 资格层**由报告侧（R/Python）按 `eligibility_status = 'ELIGIBLE'` 筛，
+       规则显式、可追踪、可复现，且 `eligibility_min_n` 与 `eligibility_rule` 随行落档。
+     · **L2 模型层**方作 Z 分数、FDR、阈值与评分。任何一行自 L0→L1→L2 消失，须解释得通。
+     ⚠ 体量警示：去掉 n>=30 之后本件行数将大幅膨胀。**务必先跑 §R03-inv 量其规模**，
+       依其结果再决定是全量导出，抑或临时施加下限并在报告中明记该下限。
+   ★ 2026-08-11 增·对照臂（Dixon & Coles 1996 之法，先生旧作同源）：
+     加权基准之优势不得凭断言，须由**无权重基线**对照证成。故并出
+     `p_base_mix_unw` 与 `z_score_unw` 作**基线臂**——非诊断附属，而是判定加权是否为
+     升级的**唯一标尺**。主估计量仍取加权（`p_base_mix_w` / `z_score`），
+     惟其「主」之地位待对照跑毕方为定论；**不得因增设基线臂而把主估计量偷换为等权**。
+   ★ 2026-08-11 增·估计量元数据（外部审计第七条：不得再有 magic number）：
+     · 估计量：p_base 为**极大似然估计**，$\hat p = x / n$，其中 x = 该投注产品赢的决胜局数、
+       n = 该产品决胜局数（game_pnl <> 0；退还局不入分母，见报告结算形态节）。
+     · 先验／平滑：**无**。不作 Laplace（α=1）亦不作 Jeffreys（α=0.5）平滑——
+       主线产品 n 逾千万，平滑影响小于 1e-7，徒增不可审计的自由度。
+     · 零处理：n = 0 者 p_base 为**空**（NULL），并沿 ordb→pr→pd 一路传播，
+       其 p_base_mix_w 与 z_score 亦为空。★ 旧版写 COALESCE(s.p_base, 0.5)，
+       **以 0.5 顶替缺失基准**——此 0.5 既非先验亦非连续性校正，只是一个凭空的常数，
+       对真实胜率或仅 2% 的边注而言荒谬。今删。实测七种产品各只 1 局且该局即退还，
+       决胜局为零，正属此类（皆无法通过 n_rounds_eff >= 30 之闸，故旧版实际未致误判）。
+     · 局级基准：p_base_round_w 为该局各注 p_side 的**注额加权平均**，权重为各注注额；
+       无基准之注不入分子亦不入分母（非以 0 计），全注皆无基准则该局基准为空。
+     · 连续性校正：**未施**。判定门槛 n_rounds_eff >= 30，正态近似之误差远小于
+       基准本身的不确定性；若日后放宽有效局数门槛，须重估此项。
+   ★ 2026-08-11 增·哨兵剔除：eid 取 -1／0 者非真实荷官（转播位／系统位），
+     曾凭样本量优势窜居 Z 榜前列，属铁证级假阳性——自源头逐出检验总体。
+     同一过滤同步进 S-02／§R03b／§EX-05 三处荷官键查询（§DX-05 无荷官键，未动）；
+     四件涉荷官导出**均须重导**；报告 R 侧另有防御性剔除，旧档在重导前仍可安全使用
+     （多重比较校正见报告 @sec-r03-fdr）。
    输出列：uid, dealer_id, stake_amount, profit_amount, net_pnl, win_rate,
-           n_related_orders, n_rounds_eff, p_base_mix, z_score,
+           n_related_orders, n_rounds_eff, p_base_mix_w, z_score,
            net_pnl_all, game_pnl_all, stake_all, win_rate_all, win_rate_other
    ─────────────────────────────────────────────────────────────────────────── */
 -- ▸ 导出：需要 —— 存为「数据库/R03_player_dealer.csv」（§R03 玩家×荷官·全窗聚合）。
 WITH ranked AS (                                                                                    -- 公共表表达式：开启中间结果集 ranked，其后各行为其定义体（§R03）
-  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,                                         -- 取列：起始取列子句，本行先列 b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02，涉 bet02（游戏类别）、dt（营业日）
-         b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,                                               -- 续行：接续上一取列子句，续列 b.bet03, b.bet04, b.bet05, b.bet09, b.bet11，涉 bet03（靴号）、bet04（局内序号）、bet05（会员号）
-         b.bet13, b.bet14, b.bet17, b.bet38, b.bet39,                                               -- 续行：接续上一取列子句，续列 b.bet13, b.bet14, b.bet17, b.bet38, b.bet39，涉 bet13（下注金额）、bet14（派彩金额）、bet17（会员净输赢）
-         b.category, b.eid,                                                                         -- 续行：接续上一取列子句，续列 b.category, b.eid，涉 eid（荷官工号）
+  SELECT b.bet01,                                                                                   -- 取列：起始取列子句——★ 2026-08-11 提速：只投影下游真正用到的列
+         b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,                                               -- 续行：涉 bet03（靴号）、bet04（局内序号）、bet05（会员号）、bet09（玩法）、bet11（汇率）
+         b.bet13, b.bet14, b.bet17, b.bet38, b.bet39,                                               -- 续行：涉 bet13（下注金额）、bet14（派彩金额）、bet17（会员净输赢）、bet38（测试标识）、bet39（桌号）
+         b.eid,                                                                                     -- 续行：涉 eid（荷官工号）——★ 已去 updatetime／sync_time／dt／bet02／category 五列（说明见段首提速注记）
          ROW_NUMBER() OVER (                                                                        -- 行号窗口表达式：以行号窗口取每组头部或去重，免出重复行
            PARTITION BY b.bet01                                                                     -- 窗口分区：按 b.bet01 分组开窗，组内各自编号或排名
            ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                           -- 排序：按 b.updatetime（降序）, b.sync_time（降序）, b.dt（降序）) AS rn 排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
@@ -2662,8 +3414,9 @@ WITH ranked AS (                                                                
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
 base AS (                                                                                           -- 公共表表达式：开启中间结果集 base，其后各行为其定义体（§R03）
   SELECT r.bet01 AS bet_id, r.bet05 AS member_id, r.eid AS dealer_id,                               -- 取列：起始取列子句，本行先取「dealer_id」，涉 bet05（会员号）、eid（荷官工号）、member_id（会员号）
+         CASE WHEN TRIM(r.eid) IN ('-1','0') THEN 1 ELSE 0 END AS is_sentinel_dealer,               -- 取值表达式：哨兵标记——★ 2026-08-11 改：由**删除**改为**标注**（事实层不删，分析层才筛）
          r.bet09 AS bet_side,                                                                       -- 取值表达式：取用 bet09（玩法），产出「bet_side」
-         CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,                                    -- 取值表达式：取用 bet03（靴号）、bet04（局内序号）、bet39（桌号），产出「round_key」
+         r.bet03, r.bet04, r.bet39,                                                                 -- 续行：★ 提速：局键三列**原样透传**，不再 CONCAT_WS 造字符串（1.25 亿行少造 1.25 亿个串）
          CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS fx,                                     -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「fx」
          CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)) AS stake_raw,                              -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「stake_raw」
          CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4)) AS payout_raw,                             -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「payout_raw」
@@ -2677,38 +3430,40 @@ base AS (                                                                       
     AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\_1\_%'      -- 阈值报告：排除小费单
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
 ord AS (                                                                                            -- 公共表表达式：开启中间结果集 ord，其后各行为其定义体（§R03）
-  SELECT bet_id, member_id, dealer_id, bet_side, round_key,                                         -- 取列：起始取列子句，本行先列 bet_id, member_id, dealer_id, bet_side, round_key，涉 round_key（局键）、member_id（会员号）、dealer_id（荷官工号）
+  SELECT bet_id, member_id, dealer_id, is_sentinel_dealer, bet_side, bet03, bet04, bet39,           -- 取列：起始取列子句，局键改三列透传，涉 bet03（靴号）、bet04（局内序号）、bet39（桌号）
          stake_raw / fx                AS stake,                                                    -- 取值表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
          (payout_raw - stake_raw) / fx AS game_pnl,                                                 -- 续行：取用 game_pnl（游戏净输赢），产出「game_pnl」
          net_raw / fx                  AS net_pnl                                                   -- 取值表达式：取用 net_pnl（会员净输赢），产出「net_pnl」
   FROM base                                                                                         -- 取数来源：取自本条自建的中间结果集 base
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
-side_base AS (      -- ★ 玩法基准胜率：Banker/Player/Tie/Big/Small 各算各的
+side_base AS (      -- ★ 玩法基准胜率：各投注产品各算各的（仅 23 行，连接时广播，无倾斜）
   SELECT bet_side,                                                                                  -- 取列：起始取列子句，本行先列 bet_side
-         SUM(CASE WHEN game_pnl > 0 THEN 1 ELSE 0 END) * 1.0                                        -- 取值表达式：比率之分子，乘 1.0 以避整数除法截断，涉 game_pnl（游戏净输赢）
-           / NULLIF(SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END), 0) AS p_base                    -- 除法或乘法计算：汇总，取用 game_pnl（游戏净输赢），产出「p_base」
-  FROM ord GROUP BY bet_side                                                                        -- 取数来源：取自本条自建的中间结果集 ord
+         SUM(CASE WHEN game_pnl >  0 THEN 1 ELSE 0 END) * 1.0                                       -- 取值表达式：该产品赢局数；乘 1.0 以避整数除法截断
+           / NULLIF(SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END), 0) AS p_base                    -- 除法或乘法计算：除以决胜局数——退还局不入分母，产出「p_base」
+  FROM ord WHERE is_sentinel_dealer = 0                                                             -- 取数来源：取自本条自建的中间结果集 ord——基准只由真实牌桌估计
+  GROUP BY bet_side                                                                                 -- 分组：按投注产品汇总——结果仅 23 行
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
+ordb AS (             -- 注单层挂上各自产品的基准，供下方按注额加权
+  SELECT o.member_id, o.dealer_id, o.is_sentinel_dealer, o.bet03, o.bet04, o.bet39, o.bet_side,     -- 取列：起始取列子句，局键三列透传
+         o.stake, o.game_pnl, o.net_pnl, s.p_base AS p_side                                         -- 续行：并取三项金额与该注自身产品的基准胜率，产出「p_side」
+  FROM      ord o                                                                                   -- 取数来源：取自本条自建的中间结果集 ord
+  LEFT JOIN side_base s ON s.bet_side = o.bet_side                                                  -- 左连接：取自本条自建的中间结果集 side_base（23 行，广播）——基准未定义者留空，不以 0.5 顶替
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
 pr AS (             -- ★ 局级去重：同局多单折成一局，Z-score 才不被 √k 倍放大
-  SELECT member_id, dealer_id, round_key,                                                           -- 取列：起始取列子句，本行先列 member_id, dealer_id, round_key，涉 round_key（局键）、member_id（会员号）、dealer_id（荷官工号）
+  SELECT member_id, dealer_id, is_sentinel_dealer, bet03, bet04, bet39,                             -- 取列：起始取列子句，局键改**三列原生分组**——较 CONCAT 字符串分组显著更省
          SUM(stake)    AS stake,                                                                    -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
          SUM(game_pnl) AS game_pnl,                                                                 -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「game_pnl」
          SUM(net_pnl)  AS net_pnl,                                                                  -- 汇总表达式：取用 net_pnl（会员净输赢），产出「net_pnl」
          COUNT(*)      AS n_orders_in_round,                                                        -- 计数表达式：产出「n_orders_in_round」
-         MAX(bet_side) AS main_side                                                                 -- 取最大值表达式：产出「main_side」
-  FROM ord GROUP BY member_id, dealer_id, round_key                                                 -- 取数来源：取自本条自建的中间结果集 ord
-),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
-player_all AS (     -- 需求条件：用户整体盈利
-  SELECT member_id,                                                                                 -- 取列：起始取列子句，本行先列 member_id，涉 member_id（会员号）
-         SUM(net_pnl)  AS net_pnl_all,                                                              -- 汇总表达式：取用 net_pnl（会员净输赢），产出「net_pnl_all」
-         SUM(game_pnl) AS game_pnl_all,                                                             -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「game_pnl_all」
-         SUM(stake)    AS stake_all,                                                                -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake_all」
-         SUM(CASE WHEN game_pnl >  0 THEN 1 ELSE 0 END) AS win_all,                                 -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「win_all」
-         SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END) AS dec_all                                  -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「dec_all」
-  FROM pr GROUP BY member_id                                                                        -- 取数来源：取自本条自建的中间结果集 pr
+         SUM(stake * p_side)                                                                        -- 汇总表达式：注额加权基准起算——★ 2026-08-11 斧正，旧法 MAX(bet_side) 取字母序最大而非主注
+           / NULLIF(SUM(CASE WHEN p_side IS NOT NULL THEN stake ELSE 0 END), 0)                     -- 除法或乘法计算：除以有基准之注的注额合计，权重口径与分子对齐
+                       AS p_base_round_w,                                                             -- 续行：产出「p_base_round_w」——该局的**注额加权**基准；全注皆无基准则留空
+         AVG(p_side)   AS p_base_round_unw,                                                         -- 汇总表达式：同局各注基准的**等权**均值——★ 2026-08-11 增，供两种 estimand 对照
+         MAX(bet_side) AS main_side                                                                 -- 取最大值表达式：字母序最大注项，**仅备查、不参与计算**（旧版据此取基准，已废）
+  FROM ordb GROUP BY member_id, dealer_id, is_sentinel_dealer, bet03, bet04, bet39                  -- 取数来源：取自本条自建的中间结果集 ordb；★ 三列原生分组，等价于原 round_key 分组
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
 pd AS (                                                                                             -- 公共表表达式：开启中间结果集 pd，其后各行为其定义体（§R03）
-  SELECT p.member_id, p.dealer_id,                                                                  -- 取列：起始取列子句，本行先列 p.member_id, p.dealer_id，涉 member_id（会员号）、dealer_id（荷官工号）
+  SELECT p.member_id, p.dealer_id, p.is_sentinel_dealer,                                            -- 取列：起始取列子句，透传哨兵标记，涉 member_id（会员号）、dealer_id（荷官工号）
          COUNT(*)                                          AS n_rounds_eff,                         -- 计数表达式：取用 n_rounds_eff（有效局数），产出「n_rounds_eff」
          SUM(p.n_orders_in_round)                          AS n_orders,                             -- 汇总表达式：产出「n_orders」
          SUM(p.stake)                                      AS stake,                                -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
@@ -2716,33 +3471,570 @@ pd AS (                                                                         
          SUM(p.net_pnl)                                    AS net_pnl,                              -- 汇总表达式：取用 net_pnl（会员净输赢），产出「net_pnl」
          SUM(CASE WHEN p.game_pnl >  0 THEN 1 ELSE 0 END)  AS n_win,                                -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「n_win」
          SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END)  AS n_dec,                                -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「n_dec」
-         AVG(COALESCE(s.p_base, 0.5))                      AS p_base_mix                            -- 求均值表达式：产出「p_base_mix」
+         AVG(p.p_base_round_w)                               AS p_base_mix_w,                           -- 汇总表达式：对各局的注额加权基准取均值——★ 斧正：旧法以 0.5 顶替未定义基准，今删兜底
+         AVG(p.p_base_round_unw)                           AS p_base_mix_unw                        -- 汇总表达式：等权口径之对照量——★ 二者背离即示该会员的资金集中于某一产品
   FROM pr p                                                                                         -- 取数来源：取自本条自建的中间结果集 pr
-  LEFT JOIN side_base s ON s.bet_side = p.main_side                                                 -- 左连接：取自本条自建的中间结果集 side_base，连接键为 s.bet_side = p.main_side
-  GROUP BY p.member_id, p.dealer_id                                                                 -- 分组：按 p.member_id, p.dealer_id 汇总
+  -- （已废）旧版在此按 main_side 连 side_base 取基准，2026-08-11 改为注单层注额加权                                       -- 注：连接已移至 ordb，本处不再取基准
+  GROUP BY p.member_id, p.dealer_id, p.is_sentinel_dealer                                           -- 分组：按会员×荷官×哨兵标记汇总
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03）
+pdw AS (             -- ★ 2026-08-11 提速：会员合计改由 pd 开窗求得，原 player_all 已删
+  SELECT p.*,                                                                                       -- 取列：整体承接上游结果集的全部字段，不再逐列列举
+         SUM(p.net_pnl)  OVER (PARTITION BY p.member_id) AS net_pnl_all,                            -- 取值表达式：按会员开窗求净输赢合计——★ 与原 player_all 逐值等价（pd 为 pr 之细分组）
+         SUM(p.game_pnl) OVER (PARTITION BY p.member_id) AS game_pnl_all,                           -- 取值表达式：按会员开窗求游戏净输赢合计
+         SUM(p.stake)    OVER (PARTITION BY p.member_id) AS stake_all,                              -- 取值表达式：按会员开窗求下注额合计
+         SUM(p.n_win)    OVER (PARTITION BY p.member_id) AS win_all,                                -- 取值表达式：按会员开窗求赢局合计
+         SUM(p.n_dec)    OVER (PARTITION BY p.member_id) AS dec_all                                 -- 取值表达式：按会员开窗求决胜局合计
+  FROM pd p                                                                                         -- 取数来源：取自本条自建的中间结果集 pd——★ pr 自此只被引用一次，免 inline 重算
 )                                                                                                   -- 续行：收束上方的子查询或函数括号（§R03）
 SELECT                                                                                              -- 续行：接续上一取列子句，续列 SELECT
-  pd.member_id AS uid, pd.dealer_id,                                                                -- 取值表达式：取用 member_id（会员号）、uid（会员号）、dealer_id（荷官工号），产出「uid」
-  pd.stake      AS stake_amount,      -- 需求「投注金额」
-  pd.game_pnl   AS profit_amount,     -- 需求「盈利金额」（剔返水口径）
-  pd.net_pnl,                                                                                       -- 续行：接续上一取列子句，续列 pd.net_pnl，涉 net_pnl（会员净输赢）
-  pd.n_win * 1.0 / NULLIF(pd.n_dec, 0)              AS win_rate,          -- 需求「胜率」
-  pd.n_orders  AS n_related_orders,                                       -- 需求「关联订单笔数」
-  pd.n_rounds_eff, pd.p_base_mix,                                                                   -- 续行：接续上一取列子句，续列 pd.n_rounds_eff, pd.p_base_mix，涉 n_rounds_eff（有效局数）
-  (pd.n_win - pd.n_dec * pd.p_base_mix)                                                             -- 续行：承接上一子句，构成完整语句，属 §R03 之取数
-    / NULLIF(SQRT(pd.n_dec * pd.p_base_mix * (1 - pd.p_base_mix)), 0)  AS z_score,                  -- 除法或乘法计算：取用 z_score（标准化偏离度），产出「z_score」
-  pa.net_pnl_all, pa.game_pnl_all, pa.stake_all,                                                    -- 续行：接续上一取列子句，续列 pa.net_pnl_all, pa.game_pnl_all, pa.stake_all
-  pa.win_all * 1.0 / NULLIF(pa.dec_all, 0)          AS win_rate_all,                                -- 取值表达式：产出「win_rate_all」
-  (pa.win_all - pd.n_win) * 1.0                                                                     -- 取值表达式：比率之分子，乘 1.0 以避整数除法截断
-    / NULLIF(pa.dec_all - pd.n_dec, 0)              AS win_rate_other     -- ★ 对照检验
-FROM pd                                                                                             -- 取数来源：取自本条自建的中间结果集 pd
-JOIN player_all pa ON pa.member_id = pd.member_id                                                   -- 连接：取自本条自建的中间结果集 player_all，连接键为 member_id（会员号）
-WHERE pd.n_rounds_eff >= 30                 -- 阈值报告口径：有效局数下限
-ORDER BY z_score DESC, profit_amount DESC;                                                          -- 排序：按 z_score（降序）, profit_amount（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
+  pdw.member_id AS uid, pdw.dealer_id, pdw.is_sentinel_dealer,                                         -- 取列：起始取列子句，本行先取「uid」与哨兵标记，涉 member_id（会员号）、dealer_id（荷官工号）
+  pdw.stake      AS stake_amount,      -- 需求「投注金额」
+  pdw.game_pnl   AS profit_amount,     -- 需求「盈利金额」（剔返水口径）
+  pdw.net_pnl,                                                                                       -- 续行：接续上一取列子句，续列 pd.net_pnl，涉 net_pnl（会员净输赢）
+  pdw.n_win * 1.0 / NULLIF(pdw.n_dec, 0)              AS win_rate,          -- 需求「胜率」
+  pdw.n_orders  AS n_related_orders,                                       -- 需求「关联订单笔数」
+  pdw.n_rounds_eff, pdw.p_base_mix_w, pdw.p_base_mix_unw,                                                -- 续行：并出两种口径的基准——注额加权（判定所用）与等权（对照），涉 n_rounds_eff（有效局数）
+  pdw.stake      AS total_bet_amount,                                                                -- 取值表达式：该会员×荷官的总注额——★ 暴露量，供判读加权口径是否被少数巨注支配
+  pdw.n_orders   AS n_bets,                                                                          -- 取值表达式：注单数——★ 与 n_rounds_eff 并列，可见同局多注之程度
+  (pdw.n_win - pdw.n_dec * pdw.p_base_mix_w)                                                             -- 取值表达式：Z 分数之分子——观测胜局减期望胜局（**注额加权基准**，主估计量）
+    / NULLIF(SQRT(pdw.n_dec * pdw.p_base_mix_w * (1 - pdw.p_base_mix_w)), 0)  AS z_score_w,            -- 除法或乘法计算：除以伯努利标准差，产出「z_score_w」——**加权候选臂**，分母 n_dec 为决胜局
+  (pdw.n_win - pdw.n_dec * pdw.p_base_mix_unw)                                                         -- 取值表达式：★ 2026-08-11 增·**对照臂**——同式改用等权基准（Dixon & Coles 1996 之法：
+    / NULLIF(SQRT(pdw.n_dec * pdw.p_base_mix_unw * (1 - pdw.p_base_mix_unw)), 0) AS z_score_unw,       -- 续行：先立无权重基线，加权之优势方能由对照证成），产出「z_score_unw」
+  (pdw.n_win - pdw.n_dec * pdw.p_base_mix_w)                                                           -- 取值表达式：兼容别名之分子——与 z_score_w 逐字同式
+    / NULLIF(SQRT(pdw.n_dec * pdw.p_base_mix_w * (1 - pdw.p_base_mix_w)), 0)  AS z_score,              -- 除法或乘法计算：产出「z_score」——★ **兼容别名，恒等于 z_score_w**；既有报告与数据契约沿用此名
+  pdw.p_base_mix_w - pdw.p_base_mix_unw                AS delta_p,                                    -- 加减计算：比较层——两臂基准之差，产出「delta_p」；正即加权把基准抬高
+  (pdw.n_win - pdw.n_dec * pdw.p_base_mix_w)                                                           -- 取值表达式：比较层之 Z 差起算——加权臂
+    / NULLIF(SQRT(pdw.n_dec * pdw.p_base_mix_w * (1 - pdw.p_base_mix_w)), 0)                           -- 续行：加权臂 Z
+  - (pdw.n_win - pdw.n_dec * pdw.p_base_mix_unw)                                                       -- 续行：减基线臂
+    / NULLIF(SQRT(pdw.n_dec * pdw.p_base_mix_unw * (1 - pdw.p_base_mix_unw)), 0) AS delta_z,           -- 续行：产出「delta_z」——★ 判据是 Δ，不是加权臂本身之大小
+  pdw.net_pnl_all, pdw.game_pnl_all, pdw.stake_all,                                                    -- 续行：接续上一取列子句，续列 pa.net_pnl_all, pa.game_pnl_all, pa.stake_all
+  pdw.win_all * 1.0 / NULLIF(pdw.dec_all, 0)          AS win_rate_all,                                -- 取值表达式：产出「win_rate_all」
+  (pdw.win_all - pdw.n_win) * 1.0                                                                     -- 取值表达式：比率之分子，乘 1.0 以避整数除法截断
+    / NULLIF(pdw.dec_all - pdw.n_dec, 0)              AS win_rate_other,     -- ★ 对照检验
+  CASE WHEN pdw.is_sentinel_dealer = 1        THEN 'SENTINEL_DEALER'                                 -- 取值表达式：统计资格判定起算——★ 2026-08-11 立：**事实层不删，此处只标注资格**
+       WHEN pdw.p_base_mix_w IS NULL            THEN 'NO_BASE_RATE'                                    -- 续行：基准未定义（该会员所押产品皆无决胜局）
+       WHEN pdw.n_dec = 0                     THEN 'NO_DECISIVE_ROUND'                               -- 续行：全为退还局，无胜负可判
+       WHEN pdw.n_rounds_eff < 30             THEN 'INSUFFICIENT_N'                                  -- 续行：有效局数低于阈值报告所立的 30 局下限
+       ELSE 'ELIGIBLE' END                   AS eligibility_status,                                 -- 续行：产出「eligibility_status」——分析层据此筛选，规则显式可追踪
+  30                                         AS eligibility_min_n,                                  -- 取值表达式：本次所用的最小有效局数——显式化，改阈只改此处并记入变更日志
+  'n_rounds_eff >= 30 且基准非空且非哨兵'      AS eligibility_rule,                                           -- 取值表达式：资格规则之明文，随行落档，免日后追问「当时筛的是什么」
+  'L1_ELIGIBILITY'                           AS filter_stage,                                       -- 取值表达式：过滤所处之层——★ L0 事实层不删行，此处只标注其在 L1 资格层的去留
+  'v2026-08-11'                              AS filter_rule_version,                                 -- 取值表达式：资格规则版本号——改规则须改版本号并记入变更日志，免「同名不同义」
+  'R03_20260811_FULL_v1'                     AS comparison_id,                                      -- 取值表达式：比较批次号——★ 两臂须同批次方可比；口径见下五列，随行落档
+  '2026-03-21..2026-08-06'                   AS cmp_time_window,                                    -- 取值表达式：时间窗，产出「cmp_time_window」——两臂必同
+  'baccarat_bet02_101_all_pairs_incl_sentinel' AS cmp_population,                                   -- 取值表达式：总体定义（含哨兵之全量对），产出「cmp_population」——两臂必同
+  'round_win = game_pnl > 0 (decisive only)' AS cmp_label,                                          -- 取值表达式：标签定义，产出「cmp_label」——两臂必同
+  'COMPATIBILITY_ONLY_NOT_PRODUCTION'        AS z_score_alias_status                                -- 取值表达式：★ `z_score` 系兼容别名之状态标记——**禁止作任何模型／排序／阈值／能力值／处置之输入**
+FROM pdw                                                                                             -- 取数来源：取自本条自建的中间结果集 pdw（已含会员合计，无须再连 player_all）
+-- （已删）旧版在此连 player_all 取会员合计；2026-08-11 改由 pdw 开窗求得，pr 遂只算一遍
+WHERE   pdw.is_sentinel_dealer = 0                                                                  -- 过滤条件：★ 2026-08-11 立·L1 合格层——非哨兵荷官
+  AND   pdw.p_base_mix_w IS NOT NULL                                                                -- 并列条件：基准已定义（该会员所押产品至少一项有决胜局）
+  AND   pdw.n_dec > 0                                                                               -- 并列条件：至少有一局分出胜负（全为退还局者无从判定）
+  AND   pdw.n_rounds_eff >= 30                                                                      -- 并列条件：有效局数不少于 30——四者合起来即 eligibility_status = 'ELIGIBLE'
+ORDER BY pdw.member_id, pdw.dealer_id;                                                              -- 排序：按**唯一键**升序，可作游标翻页之键；分页铁律①：排序键须唯一
+/* ★★ 分页与提速（2026-08-11 立，因先生实测第五批由 18 秒跳至 5 分钟未出）★★
+   ── 病因两条，其一慢、其二错 ──
+   ① 慢：OFFSET 深翻页。引擎须先排出 OFFSET+LIMIT 那么多行再丢掉前面的，
+      堆随偏移增大，逾门槛即由 Top-N 退化为全量排序＋落盘溢写——耗时**跳变**而非渐增。
+   ② 错：旧版 ORDER BY z_score DESC, profit_amount DESC **排序键不唯一**——
+      实测 517,528 行中 z_score 并列 103,510 组，连次级键都分不开者 452 行。
+      以 OFFSET 翻页取之，这 452 行可能重复、可能漏掉，与当年 36.49% 重复率同一病根。
+   ── 今改 ORDER BY 为 (member_id, dealer_id)：实测该组合**零重复**，可作游标键。
+      屏读若需按 Z 排序，在 Superset 或报告侧排即可，**不必在导出时排**。
+   ── 分批下载：一律游标翻页，**禁用 OFFSET** ────────────────────────────────
+   第 1 批：在最外层 SELECT 之后加
+       LIMIT 100000
+   第 k+1 批：取上一批**末行**的 (member_id, dealer_id)，记作 (M, D)，加
+       WHERE (CAST(pd.member_id AS BIGINT), CAST(pd.dealer_id AS BIGINT)) > (M, D)
+       ORDER BY pd.member_id, pd.dealer_id
+       LIMIT 100000
+     若引擎不支持行值比较，等价写法：
+       WHERE CAST(pd.member_id AS BIGINT) > M
+          OR ( CAST(pd.member_id AS BIGINT) = M
+               AND CAST(pd.dealer_id AS BIGINT) > D )
+   ⚠ 该 WHERE 须加在**最外层**（对 pd 而非对 ranked/base）——
+     §99 的哈希切分模板把切点放在上游，那对 T02／B01／K01 安全，
+     **对 §R03 不安全**：本段有全局 CTE side_base（各投注产品基准胜率），
+     上游切片会令每片各估一套基准，十片十个基准，z_score 彼此不可比。
+   ── 预期规模与耗时（§R03-inv 实测为据）────────────────────────────────────
+     L0 全量 8,061,974 行 ÷ 每批 10 万 = **81 批**；
+     若取 n>=2 则 6,031,067 行 = 61 批；若仍取 n>=30 则 517,528 行 = 6 批。
+     游标翻页每批同价：单批 18 秒 → 约 24 分钟；60 秒 → 约 1.4 小时；180 秒 → 约 4 小时。
+     （18 秒极可能是缓存命中价；本段须对 1.247 亿注单开窗去重，冷启单批更可能 60~180 秒。）
+   ── 自验：ELIGIBLE 应恰 517,528 行、SENTINEL_DEALER 应 243,025 行，对不上即回查。
+   ═══════════════════════════════════════════════════════════════════════════ */                                                          -- 排序：按 z_score（降序）, profit_amount（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
 /* ⚠️ 此处保留 n_rounds_eff>=30（阈值报告已论证 30 以下噪声主导），
    但**不加** win_rate>0.70 / net_pnl_all>0：四条规则对照表（@sec-r03 的 r03-dual）
    需要在同一份底料上比较需求原口径与修正口径，加了就比不了。 */
 
+
+
+/* ───────────────────────────────────────────────────────────────────────────
+   §R03-chk · 结算形态实测：庄闲是否 Draw No Bet、各投注产品的两套基准各是多少
+   对应报告：@sec-settle
+   缘起：报告的 Z 分数分母写作「决胜局」（game_pnl <> 0），而此前正文把含和局的
+   无条件概率 45.86% 称作 Z 分数基准——两者不同基。本探针以数据一举定谳。
+   ⚠ 转义纪律：'TIP\_1\_%' 的反斜杠为**单层**——LIKE 语义下 \_ 方为字面下划线，
+     写成 \\_ 则表示字面反斜杠，该条排除将**静默失效**（本方 2026-08-11 曾一犯，
+     系脚本写入时多转义一层所致，已根治）。凡程序化写入 SQL，此处务必复验。
+   判读（一句话）：Banker 的 push_rate 若约 9.5%、p_base_dnb 若约 50.7%，
+   则 Draw No Bet 坐实，现行分母无误；若 push_rate 近 0，则本平台和局按输结算，
+   那是另一桩更大的事——全篇基准须重议，且须先改 SQL 再改报告。
+   ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/R03chk_settlement_form.csv」（§R03-chk 结算形态·逐产品两套基准）。
+WITH ranked AS (                                                                                    -- 公共表表达式：开启中间结果集 ranked——口径与 §R03 逐字一致，便于对照（§R03-chk）
+  SELECT b.bet01, b.bet03, b.bet04, b.bet39, b.bet05, b.bet09,                                      -- 取列：起始取列子句，涉 bet03（靴号）、bet04（局内序号）、bet39（桌号）、bet05（会员号）、bet09（玩法）
+         b.bet11, b.bet13, b.bet14, b.bet38, b.eid,                                                 -- 续行：接续上一取列子句，涉 bet11（汇率）、bet13（下注金额）、bet14（派彩金额）、bet38（测试标识）
+         ROW_NUMBER() OVER (                                                                        -- 行号窗口表达式：以行号窗口取每注最终态，免修订滞后造成重复
+           PARTITION BY b.bet01                                                                     -- 窗口分区：按 b.bet01 分组开窗，组内各自编号
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                           -- 排序：取最新一版，产出「rn」
+  FROM ods_mariadb_2b.ods_a168_bet02 b                                                              -- 取数来源：取自注单明细表（金额与行为口径的第一料源）
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+    AND b.bet02 = '101' AND b.category = '1'                                                        -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03-chk）
+base AS (                                                                                           -- 公共表表达式：开启中间结果集 base——有效注单，与 §R03 同口径（§R03-chk）
+  SELECT r.bet05 AS member_id, r.eid AS dealer_id, r.bet09 AS bet_side,                             -- 取列：起始取列子句，涉 bet05（会员号）、eid（荷官工号）、bet09（玩法）
+         CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,                                    -- 取值表达式：三键拼物理局键，产出「round_key」
+         (CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4))                                           -- 取值表达式：派彩额起算，涉 bet14（派彩金额）
+          - CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)))                                        -- 续行：减投注额得游戏净输赢，涉 bet13（下注金额）
+          / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS game_pnl                             -- 续行：折汇率归一，产出「game_pnl」——恰为 0 即退还局
+  FROM ranked r                                                                                     -- 取数来源：取自本条自建的中间结果集 ranked
+  WHERE r.rn = 1                                                                                    -- 过滤条件：限定 r.rn等于 1，只取每注最终态
+    AND UPPER(TRIM(r.bet38)) = 'N'                                                                  -- 并列条件：剔除测试注单，涉 bet38（测试标识）
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                                -- 并列条件：剔除无效会员号，涉 bet05（会员号）
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：汇率须为正，涉 bet11（汇率）
+    AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\_1\_%'                                                 -- 并列条件：排除小费单，涉 bet09（玩法）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03-chk）
+pr AS (                                                                                             -- 公共表表达式：开启中间结果集 pr——同局拆单先折叠，与 §R03 同法（§R03-chk）
+  SELECT member_id, dealer_id, bet_side, round_key,                                                 -- 取列：起始取列子句，本行先列四键
+         SUM(game_pnl) AS game_pnl                                                                  -- 聚合：局内合计游戏净输赢，产出「game_pnl」
+  FROM base GROUP BY member_id, dealer_id, bet_side, round_key                                      -- 分组：按会员×荷官×玩法×物理局汇总
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§R03-chk）
+SELECT  UPPER(TRIM(bet_side))                          AS bet_side,                                 -- 取列：起始取列子句，本行先取「bet_side」——逐投注产品分列
+        COUNT(*)                                       AS n_rounds,                                 -- 聚合：该产品的总局数，产出「n_rounds」
+        SUM(CASE WHEN game_pnl = 0 THEN 1 ELSE 0 END)  AS n_push,                                   -- 聚合：退还局数（game_pnl 恰为 0），产出「n_push」——DNB 的直接证据
+        SUM(CASE WHEN game_pnl = 0 THEN 1 ELSE 0 END) * 1.0                                         -- 除法或乘法计算：退还局占比起算
+          / NULLIF(COUNT(*), 0)                        AS push_rate,                                -- 续行：除以总局数，产出「push_rate」——庄闲应约 9.5%，押和与边注应近 0
+        SUM(CASE WHEN game_pnl > 0 THEN 1 ELSE 0 END) * 1.0                                         -- 除法或乘法计算：决胜局基准起算
+          / NULLIF(SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END), 0) AS p_base_dnb,                -- 续行：分母取决胜局，产出「p_base_dnb」——报告 Z 分数所用之基，庄应约 50.7%
+        SUM(CASE WHEN game_pnl > 0 THEN 1 ELSE 0 END) * 1.0                                         -- 除法或乘法计算：无条件基准起算
+          / NULLIF(COUNT(*), 0)                        AS p_base_incl                               -- 续行：分母取全部局，产出「p_base_incl」——庄家优势所用之基，庄应约 45.9%
+FROM    pr                                                                                          -- 取数来源：取自本条自建的中间结果集 pr
+GROUP BY UPPER(TRIM(bet_side))                                                                      -- 分组：按投注产品汇总——23 种各出一行
+ORDER BY n_rounds DESC;                                                                             -- 排序：按局数降序，主线三门居前
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §R03-inv · 玩家×荷官关系的体量与稀疏度盘点：全量导出前先量其规模
+   ---------------------------------------------------------------------------
+   缘起：§R03 依三层契约改为 L0 事实层（不为统计而删行），去掉 n>=30 之后行数将膨胀。
+   导出之前须先知其规模；且此表本身即回答一个此前答不出的问题——
+   **平台究竟有多少玩家×荷官关系？其中多少够格进统计？**
+   旧版直接 WHERE n>=30 导出，把 n=0/1/2 的长尾整个藏起来，
+   而稀疏性恰是本项目最重要的红队证据之一（见报告关系特征三层一节）。
+   读法：ELIGIBLE 一行即新版 §R03 的可分析行数；各行之和即 L0 全量行数。
+   若全量过大（逾千万），可临时施加下限，但**须在报告中明记该下限与其影响**。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：需要 —— 存为「数据库/R03inv_pair_census.csv」（§R03-inv 玩家×荷官关系普查·L0 全量）。
+-- ★ 2026-08-11 由「屏显」改为「导出件」：Superset 只读模式每次至多下载十万行，
+--   §R03 的 L0 全量（806 万行）须 81 次下载、且每次须把整条链全算一遍，工程上不可行。
+--   而 L0「不删行」所要防的，是**稀疏性被藏起来**——本表恰以约三十行把它全量点清
+--   （各资格档 × 各稀疏分层的边数、会员数、荷官数、局数合计）。
+--   **故 L0 的举证责任自此由本表承担**，§R03 回归 L1 合格层导出。二者分工写死于此，
+--   日后任何人问「平台究竟有多少玩家×荷官关系、其中 n=1 者几何」，答案在本件而非 §R03。
+WITH ranked AS (                                                                                    -- 公共表表达式：开启中间结果集 ranked——口径与 §R03 一字不差（§R03-inv）
+  SELECT b.bet01, b.bet03, b.bet04, b.bet39, b.bet05, b.bet09, b.bet11,                             -- 取列：起始取列子句，涉 bet03（靴号）、bet04（局内序号）、bet39（桌号）、bet05（会员号）
+         b.bet13, b.bet14, b.bet38, b.eid,                                                          -- 续行：接续上一取列子句，涉 bet13（下注金额）、bet14（派彩金额）、bet38（测试标识）
+         ROW_NUMBER() OVER (PARTITION BY b.bet01                                                    -- 行号窗口表达式：按注单号开窗取最终态
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                           -- 排序：取最新一版，产出「rn」
+  FROM ods_mariadb_2b.ods_a168_bet02 b                                                              -- 取数来源：取自注单明细表
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+    AND b.bet02 = '101' AND b.category = '1'                                                        -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03-inv）
+base AS (                                                                                           -- 公共表表达式：开启中间结果集 base——有效注单，哨兵**标注不删**（§R03-inv）
+  SELECT r.bet05 AS member_id, r.eid AS dealer_id,                                                  -- 取列：起始取列子句，涉 bet05（会员号）、eid（荷官工号）
+         CASE WHEN TRIM(r.eid) IN ('-1','0') THEN 1 ELSE 0 END AS is_sentinel_dealer,               -- 取值表达式：哨兵标记，产出「is_sentinel_dealer」
+         CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,                                    -- 取值表达式：三键拼物理局键，产出「round_key」
+         (CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4))                                           -- 取值表达式：派彩额起算，涉 bet14（派彩金额）
+          - CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)))                                        -- 续行：减投注额得游戏净输赢，涉 bet13（下注金额）
+          / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS game_pnl                             -- 续行：折汇率归一，产出「game_pnl」
+  FROM ranked r                                                                                     -- 取数来源：取自本条自建的中间结果集 ranked
+  WHERE r.rn = 1 AND UPPER(TRIM(r.bet38)) = 'N'                                                     -- 过滤条件：只取每注最终态且非测试单，涉 bet38（测试标识）
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                                -- 并列条件：剔除无效会员号，涉 bet05（会员号）
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：汇率须为正，涉 bet11（汇率）
+    AND NULLIF(TRIM(r.eid),'') IS NOT NULL                                                          -- 并列条件：荷官号非空——空号无从归属，不构成关系
+    AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\\_1\\_%'                                                 -- 并列条件：排除小费单，涉 bet09（玩法）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03-inv）
+pr AS (                                                                                             -- 公共表表达式：开启中间结果集 pr——同局多注折成一局（§R03-inv）
+  SELECT member_id, dealer_id, is_sentinel_dealer, round_key,                                       -- 取列：起始取列子句，本行先列四键
+         SUM(game_pnl) AS game_pnl                                                                  -- 聚合：局内合计游戏净输赢，产出「game_pnl」
+  FROM base GROUP BY member_id, dealer_id, is_sentinel_dealer, round_key                            -- 分组：按会员×荷官×哨兵标记×物理局汇总
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03-inv）
+pd AS (                                                                                             -- 公共表表达式：开启中间结果集 pd——玩家×荷官关系级（§R03-inv）
+  SELECT member_id, dealer_id, is_sentinel_dealer,                                                  -- 取列：起始取列子句，本行先列三键
+         COUNT(*)                                          AS n_rounds_eff,                         -- 计数表达式：有效局数，产出「n_rounds_eff」
+         SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END)    AS n_dec                                 -- 聚合：决胜局数（退还局不入），产出「n_dec」
+  FROM pr GROUP BY member_id, dealer_id, is_sentinel_dealer                                         -- 分组：按会员×荷官×哨兵标记汇总
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§R03-inv）
+SELECT  CASE WHEN is_sentinel_dealer = 1 THEN 'SENTINEL_DEALER'                                     -- 取值表达式：资格分档起算——与 §R03 的 eligibility_status 逐字同口径
+             WHEN n_dec = 0              THEN 'NO_DECISIVE_ROUND'                                   -- 续行：全为退还局
+             WHEN n_rounds_eff < 30      THEN 'INSUFFICIENT_N'                                      -- 续行：局数不足 30
+             ELSE 'ELIGIBLE' END                           AS eligibility_status,                   -- 续行：产出「eligibility_status」
+        CASE WHEN n_rounds_eff = 1 THEN '01_n=1'                                                    -- 取值表达式：稀疏分层起算——长尾的形状此前被 WHERE 藏起，今逐层点清
+             WHEN n_rounds_eff <= 2  THEN '02_n=2'                                                  -- 续行：n 等于 2
+             WHEN n_rounds_eff <= 5  THEN '03_n=3~5'                                                -- 续行：n 介于 3 至 5
+             WHEN n_rounds_eff <= 10 THEN '04_n=6~10'                                               -- 续行：n 介于 6 至 10
+             WHEN n_rounds_eff <= 29 THEN '05_n=11~29'                                              -- 续行：n 介于 11 至 29
+             WHEN n_rounds_eff <= 100 THEN '06_n=30~100'                                            -- 续行：n 介于 30 至 100
+             ELSE '07_n>100' END                           AS n_bucket,                             -- 续行：产出「n_bucket」
+        COUNT(*)                                          AS n_pairs,                               -- 计数表达式：该格的玩家×荷官关系数，产出「n_pairs」
+        COUNT(DISTINCT member_id)                         AS n_members,                             -- 计数表达式：涉及会员数（去重），产出「n_members」
+        COUNT(DISTINCT dealer_id)                         AS n_dealers,                             -- 计数表达式：涉及荷官数（去重），产出「n_dealers」
+        SUM(n_rounds_eff)                                 AS n_rounds_total                         -- 聚合：该格的有效局合计，产出「n_rounds_total」
+FROM    pd                                                                                          -- 取数来源：取自本条自建的中间结果集 pd
+GROUP BY 1, 2                                                                                       -- 分组：按资格分档与稀疏分层汇总
+ORDER BY 1, 2;                                                                                      -- 排序：按资格与分层升序——长尾形状一目了然
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §RC-00 · 关系普查·计数层：平台究竟存在多少条「实体×实体」的边
+   对应报告：@sec-relation-census
+   ---------------------------------------------------------------------------
+   缘起：「跨产品、跨实体、跨局、跨设备、跨 IP 一个不遗漏地算全关系」——
+   **发现层**当为之，**入模层**不可为之（论证见报告 @sec-relation-layer）。
+   而发现层的第一步不是把边全导出来（那是数千万至上亿行），
+   是先**数一数每类边有多少条、其稀疏形状如何**。本查询即此，输出仅数十行。
+   ⚠ 一条须先说破的事实：**关系普查在最细粒度上会退化为注单表本身**——
+   「玩家×荷官×产品×桌×IP×局×日」的一行，就是一张注单。故普查的设计问题
+   不是「要不要全」，而是**要物化哪几个边缘投影**。本表逐一给出各投影的边数，
+   使这一取舍有据可依，而非拍脑袋。
+   读法：n_edges 即该类边的**可观测**条数（非笛卡尔上界）；
+   n_edges_ge30 为够格进统计者。两者之比即该层的「统计可用率」——
+   比值越低，说明该层越稀疏、越不宜直接入模。
+   ⚠ 设备一轴**本表未含**：库内有无设备字段尚未核实（见 §TL-12），
+   **不得在字段未证之前把它写进普查规格**。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §RC-00 关系普查计数层，屏幕看结果。
+WITH ranked AS (                                                                                    -- 公共表表达式：开启中间结果集 ranked——口径与 §R03 一致（§RC-00）
+  SELECT b.bet01, b.bet03, b.bet04, b.bet39, b.bet05, b.bet09, b.bet11,                             -- 取列：起始取列子句，涉 bet03（靴号）、bet04（局内序号）、bet39（桌号）、bet05（会员号）、bet09（玩法）
+         b.bet13, b.bet38, b.eid, b.ip, b.bet18, b.bet19, b.bet20,                                  -- 续行：接续上一取列子句，涉 bet38（测试标识）、eid（荷官工号）、ip（下注 IP）、bet18~20（代理线）
+         ROW_NUMBER() OVER (PARTITION BY b.bet01                                                    -- 行号窗口表达式：按注单号开窗取最终态
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                           -- 排序：取最新一版，产出「rn」
+  FROM ods_mariadb_2b.ods_a168_bet02 b                                                              -- 取数来源：取自注单明细表
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+    AND b.bet02 = '101' AND b.category = '1'                                                        -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§RC-00）
+base AS (                                                                                           -- 公共表表达式：开启中间结果集 base——有效注单，哨兵标注不删（§RC-00）
+  SELECT r.bet05 AS player_id, r.eid AS dealer_id, r.bet09 AS product_id,                           -- 取列：起始取列子句，三轴，涉 bet05（会员号）、eid（荷官工号）、bet09（玩法）
+         r.bet39 AS table_id, r.ip AS ip_id, r.bet18 AS agent_lv1,                                  -- 续行：另三轴，涉 bet39（桌号）、ip（下注 IP）、bet18（一级代理线）
+         CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key                                     -- 取值表达式：三键拼物理局键，产出「round_key」
+  FROM ranked r                                                                                     -- 取数来源：取自本条自建的中间结果集 ranked
+  WHERE r.rn = 1 AND UPPER(TRIM(r.bet38)) = 'N'                                                     -- 过滤条件：只取每注最终态且非测试单，涉 bet38（测试标识）
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                                -- 并列条件：剔除无效会员号，涉 bet05（会员号）
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：汇率须为正，涉 bet11（汇率）
+    AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\\_1\\_%'                                                 -- 并列条件：排除小费单，涉 bet09（玩法）
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§RC-00）
+SELECT '玩家×荷官' AS edge_type,                                                                        -- 取值表达式：边类型，产出「edge_type」
+       COUNT(*)                                  AS n_edges,                                        -- 计数表达式：可观测边数（非笛卡尔上界），产出「n_edges」
+       SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END)  AS n_edges_ge30,                                   -- 聚合：够格进统计之边数，产出「n_edges_ge30」
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END)    AS n_edges_n1,                                     -- 聚合：只出现一次之边——稀疏长尾之头，产出「n_edges_n1」
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END)   AS n_edges_le5,                                    -- 聚合：n≤5 之边，产出「n_edges_le5」——P(n≤5) 之分子
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END)  AS n_edges_le10,                                   -- 聚合：n≤10 之边，产出「n_edges_le10」
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END)  AS n_edges_lt30,                                   -- 聚合：n<30 之边，产出「n_edges_lt30」——与 n_edges_ge30 互补，二者之和即 n_edges
+       SUM(n)                                    AS n_bets_total                                    -- 聚合：该层注单合计，产出「n_bets_total」
+FROM ( SELECT player_id, dealer_id, COUNT(*) AS n FROM base                                         -- 取数来源：玩家×荷官投影
+       GROUP BY player_id, dealer_id ) t1                                                           -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '玩家×产品', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                 -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT player_id, product_id, COUNT(*) AS n FROM base                                        -- 取数来源：玩家×产品投影
+       GROUP BY player_id, product_id ) t2                                                          -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '玩家×桌', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                  -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT player_id, table_id, COUNT(*) AS n FROM base                                          -- 取数来源：玩家×桌投影
+       GROUP BY player_id, table_id ) t3                                                            -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '玩家×IP', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                 -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT player_id, ip_id, COUNT(*) AS n FROM base                                             -- 取数来源：玩家×IP 投影
+       GROUP BY player_id, ip_id ) t4                                                               -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '荷官×产品', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                 -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT dealer_id, product_id, COUNT(*) AS n FROM base                                        -- 取数来源：荷官×产品投影
+       GROUP BY dealer_id, product_id ) t5                                                          -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '荷官×桌', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                  -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT dealer_id, table_id, COUNT(*) AS n FROM base                                          -- 取数来源：荷官×桌投影
+       GROUP BY dealer_id, table_id ) t6                                                            -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT 'IP×代理线', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                                -- 取值表达式：边类型与三项计数
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT ip_id, agent_lv1, COUNT(*) AS n FROM base                                             -- 取数来源：IP×一级代理线投影——跨代理共用 IP 是团伙的强结构证据
+       GROUP BY ip_id, agent_lv1 ) t7                                                               -- 分组：按二轴汇总得边
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一类边
+SELECT '玩家×荷官×产品（三元）', COUNT(*), SUM(CASE WHEN n >= 30 THEN 1 ELSE 0 END),                          -- 取值表达式：三元投影——用以实测「每细分一层，格内样本塌陷多少」
+       SUM(CASE WHEN n = 1 THEN 1 ELSE 0 END),                                                      -- 续行：续列长尾数（n=1）
+       SUM(CASE WHEN n <= 5 THEN 1 ELSE 0 END),                                                     -- 续行：续列 n≤5
+       SUM(CASE WHEN n <= 10 THEN 1 ELSE 0 END),                                                    -- 续行：续列 n≤10
+       SUM(CASE WHEN n <= 29 THEN 1 ELSE 0 END), SUM(n)                                             -- 续行：续列 n<30 与注单合计
+FROM ( SELECT player_id, dealer_id, product_id, COUNT(*) AS n FROM base                             -- 取数来源：玩家×荷官×产品投影
+       GROUP BY player_id, dealer_id, product_id ) t8                                               -- 分组：按三轴汇总得边
+ORDER BY n_edges DESC;                                                                              -- 排序：按边数降序——体量与稀疏形状一目了然
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §BZ-00 · 经营指标可得性普查：营业额／注册／充值／访问，究竟哪几项库内真有
+   对应报告：@sec-capability-forecast
+   ---------------------------------------------------------------------------
+   缘起：先生令「营业额、新浏览、注册会员数、新或持续充值、盈利之增减，
+   一律须由各实体各领域能力值预测出来」。而预测的前提是**标的须可观测**——
+   库内没有的东西，任何模型都预测不出，宣称能预测即是空言。
+   本查询逐一扫描候选承载表的列义，判定五项标的各自的可得性。
+   已知线索（由 §00 表清单得）：
+     · ods_a168_dailyreport_member   会员日报——最可能承载充值／提款／输赢日汇总
+     · ods_a168_log_age_cash_change  代理资金变动日志——可能承载上下分／充提
+     · ods_a168_conversion           转换记录——待查其义
+     · ods_a168_member_dtl           会员主档明细（§TG-01 已证其 22 列**无注册时间**）
+     · ods_a168_tablelimit           ★ 桌台限额表——极可能即 §TL-13 所寻的限额字典
+   ⚠ 「新浏览」一项：库内**并无任何网站分析／会话／页面浏览表**，
+     故其可得性预判为「⛔ 不可得」。本查询若亦查无，即以此定案，
+     报告须明写「该指标不在数据资产之内」，**不得以活跃会员数顶替**——
+     二者不是一回事（顶替即是偷换标的）。
+   读法：凡 COLUMN_COMMENT 译出为充值／提款／注册时间／上下分者，即为可用承载列；
+   译不出者须回查其取值分布再定，**不得凭列名猜义**（bet41／bet14 之鉴在前）。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §BZ-00 经营指标可得性普查，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( TABLE_NAME IN ('ods_a168_dailyreport_member',                                               -- 并列条件：候选承载表起算——会员日报
+                       'ods_a168_log_age_cash_change',                                              -- 续行：代理资金变动日志
+                       'ods_a168_conversion',                                                       -- 续行：转换记录
+                       'ods_a168_member_dtl',                                                       -- 续行：会员主档明细
+                       'ods_a168_tablelimit')                                                       -- 续行：桌台限额表——★ 兼答 §TL-13 之问
+     OR LOWER(COLUMN_NAME) LIKE '%deposit%'                                                         -- 并列条件：列名候选起算——充值
+     OR LOWER(COLUMN_NAME) LIKE '%withdraw%'                                                        -- 续行：提款
+     OR LOWER(COLUMN_NAME) LIKE '%recharge%'                                                        -- 续行：充值别名
+     OR LOWER(COLUMN_NAME) LIKE '%regist%'                                                          -- 续行：注册
+     OR LOWER(COLUMN_NAME) LIKE '%signup%'                                                          -- 续行：注册别名
+     OR LOWER(COLUMN_NAME) LIKE '%visit%'                                                           -- 续行：访问——预判查无，查无即定案
+     OR LOWER(COLUMN_NAME) LIKE '%session%'                                                         -- 续行：会话
+     OR LOWER(COLUMN_NAME) LIKE '%pageview%'                                                        -- 续行：页面浏览
+     OR COLUMN_COMMENT LIKE '%充值%'                                                                  -- 并列条件：中文列义候选起算——充值
+     OR COLUMN_COMMENT LIKE '%存款%'                                                                  -- 续行：存款
+     OR COLUMN_COMMENT LIKE '%提款%'                                                                  -- 续行：提款
+     OR COLUMN_COMMENT LIKE '%上分%'                                                                  -- 续行：上分
+     OR COLUMN_COMMENT LIKE '%下分%'                                                                  -- 续行：下分
+     OR COLUMN_COMMENT LIKE '%注册%'                                                                  -- 续行：注册
+     OR COLUMN_COMMENT LIKE '%開戶%'                                                                  -- 续行：繁体开户
+     OR COLUMN_COMMENT LIKE '%开户%'                                                                  -- 续行：简体开户
+     OR COLUMN_COMMENT LIKE '%訪問%'                                                                  -- 续行：繁体访问
+     OR COLUMN_COMMENT LIKE '%登入%'                                                                  -- 续行：登入——退而求其次的活跃代理量，惟不得顶替「新浏览」
+     OR COLUMN_COMMENT LIKE '%限額%'                                                                  -- 续行：繁体限额——兼答限额字典之问
+     OR LOWER(COLUMN_NAME) LIKE '%bonus%'                                                           -- 并列条件：红利／彩金——★ NGR 之构件，查其有无以定 NGR 可算与否
+     OR LOWER(COLUMN_NAME) LIKE '%promo%'                                                           -- 续行：活动／推广成本
+     OR LOWER(COLUMN_NAME) LIKE '%coupon%'                                                          -- 续行：优惠券
+     OR COLUMN_COMMENT LIKE '%紅利%'                                                                  -- 续行：繁体红利
+     OR COLUMN_COMMENT LIKE '%红利%'                                                                  -- 续行：简体红利
+     OR COLUMN_COMMENT LIKE '%優惠%'                                                                  -- 续行：繁体优惠
+     OR COLUMN_COMMENT LIKE '%优惠%'                                                                  -- 续行：简体优惠
+     OR COLUMN_COMMENT LIKE '%活動%'                                                                  -- 续行：繁体活动
+     OR COLUMN_COMMENT LIKE '%活动%'                                                                  -- 续行：简体活动——以上七项决定 NGR 能否全口径计算
+     OR COLUMN_COMMENT LIKE '%限额%' )                                                                -- 续行：简体限额——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-13b · 限额字典最后一里：组 ID 究竟对应多少钱，孰紧孰松
+   对应报告：@sec-probe-findings
+   ---------------------------------------------------------------------------
+   §TL-13 已查得四张承载表，其中最关键的一项是**解开了一个新的同名异义**：
+     · ods_a168_member.mem015      = login_error（§TL-09 已证）
+     · ods_a168_member_dtl.mem015  = **新版限額**（varchar(300)）★ 同代号异表异义
+   而变更日志里的 `101-mem015`，其取值形态（逗号分隔整数串）与 member_dtl 的
+   「新版限額」完全吻合——**故 101-mem015 极可能是按产品分设的限红，而非 login_error**。
+   ⚠ 但「极可能」不是「已证」。六层判据（物理列→字典→旧值/新值→业务含义→处置动作→
+   处置节）目前只走到第二层。本查询走第三、四层：看限额组 ID 的取值与其金额映射，
+   **能比大小，方能判孰紧孰松**；判不出方向，限红就进不了处置总体。
+   读法：① bet_limit_default 的 set01~set14 若为金额档位，则组 ID 可排序；
+         ② 与 §TL-10 中出现过的组 ID（如 3、4、21、350）比对，须能对上；
+         ③ member_dtl.mem015 的实际取值形态须与 101-mem015 同形，方证同源。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §TL-13b 限额组取值形态，屏幕看结果。
+SELECT  'bet_limit_default' AS src, id AS grp_id, gtype,                                            -- 取列：起始取列子句，产出「src」「grp_id」——限额组定义表之主键与游戏类别
+        set01, set02, set03, set04, set05, set06, set07,                                            -- 续行：接续上一取列子句，续列七档设定值——若为金额则可排序
+        status, sort                                                                                -- 续行：续列启用状态与排序
+FROM    ods_mariadb_2b.ods_a168_bet_limit_default                                                   -- 取数来源：取自限额组定义表（§TL-13 查得）
+WHERE   dt = ( SELECT MAX(dt) FROM ods_mariadb_2b.ods_a168_bet_limit_default )                      -- 过滤条件：只取最新一版快照，免同一组多版重复
+ORDER BY CAST(NULLIF(TRIM(gtype),'') AS INT), CAST(NULLIF(TRIM(id),'') AS INT)                      -- 排序：按游戏类别与组号升序——档位阶梯一目了然
+LIMIT 200;                                                                                          -- 限行：仅看形态，不求全量
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §BZ-01 · 红利与充值流水搜寻：配置表已见，流水表未见
+   对应报告：@sec-probe-findings
+   ---------------------------------------------------------------------------
+   §BZ-00 实测所得可归纳为一句：**见到的全是「配置」，没见到「流水」**——
+     · ods_a168_RedPacketSetup     红包活动**设置**（活動獎金是否需打碼、活動規則）
+     · ods_a168_category / categoryLevel  存提款**限额**与手续费率
+     · ods_a168_urllist.register   一个 int(1) **开关**，非注册时间
+   配置回答「规则是什么」，流水回答「实际发了多少钱、谁在何时充了多少」——
+   **NGR₃ 能否升为全口径，系于后者而非前者**。本查询专找流水型承载表。
+   读法：凡表名含 record／detail／log／order／history 且列义译出为金额与时间者，
+   即为流水候选；找到则须再验其与 bet05（会员号）之可关联性。
+   ⚠ 找不到亦是结论：则 NGR₃ 三扣口径的命名纪律**永久生效**，
+     并写入局限章，不得以活动设置表反推发放额（那是拿规则冒充事实）。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §BZ-01 红利与充值流水搜寻，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( LOWER(TABLE_NAME) LIKE '%redpacket%'                                                        -- 并列条件：表名候选起算——红包（设置表已见，此处找其流水）
+     OR LOWER(TABLE_NAME) LIKE '%bonus%'                                                            -- 续行：红利
+     OR LOWER(TABLE_NAME) LIKE '%promo%'                                                            -- 续行：活动
+     OR LOWER(TABLE_NAME) LIKE '%reward%'                                                           -- 续行：奖励
+     OR LOWER(TABLE_NAME) LIKE '%cash%'                                                             -- 续行：资金（log_age_cash_change 即属此类）
+     OR LOWER(TABLE_NAME) LIKE '%wallet%'                                                           -- 续行：钱包
+     OR LOWER(TABLE_NAME) LIKE '%fund%'                                                             -- 续行：资金变动
+     OR LOWER(TABLE_NAME) LIKE '%trans%'                                                            -- 续行：交易
+     OR LOWER(TABLE_NAME) LIKE '%order%'                                                            -- 续行：订单
+     OR LOWER(TABLE_NAME) LIKE '%payment%'                                                          -- 续行：支付
+     OR LOWER(TABLE_NAME) LIKE '%recharge%'                                                         -- 续行：充值
+     OR LOWER(TABLE_NAME) LIKE '%deposit%'                                                          -- 续行：存款
+     OR LOWER(TABLE_NAME) LIKE '%withdraw%'                                                         -- 续行：提款
+     OR LOWER(TABLE_NAME) LIKE '%dailyreport%' )                                                    -- 续行：日报——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-14 · 限红处置事件：`101-mem015` 的方向判定与处置节起点
+   对应报告：@sec-limit-treatment
+   ---------------------------------------------------------------------------
+   §TL-13b 已把六层判据全数打通：
+     ① 物理列：ods_a168_member_dtl.mem015 = 新版限額（★ 与 member.mem015 = login_error
+        异表同名，务必分清）；
+     ② 数据字典：ods_a168_bet_limit_default，gtype = '101'（百家乐）下有 81 个限额组；
+     ③ 旧值/新值：§TL-10 中出现过的组 ID（1、2、3、4、5、6、7、21、350…）**全部在字典内**；
+     ④ 业务含义：set01 形如「下限,上限」，可比大小；
+     ⑤ 处置动作：`101-mem015` 之值是**允许选用的限额组清单**（逗号分隔），
+        故方向取该清单的**最高上限**之变化——降即收紧、升即放宽、平即持平。
+        实测四例皆判得出：350→21（5 万→2 万，收紧）、3,21→3,4（2 万→1 万，收紧）、
+        「124,59,1,200,2,3,4,162,21,22,184」→「124,59,1」（3 万→1 千，**大幅收紧**）、
+        59,22→59,30（3 万→5 万，放宽）。
+     ⑥ 处置节：本查询即其事件层，节的折叠沿 §TL-11 同法。
+   ⚠ 一处**尚未判明**的歧义，已显式标记而非默认：
+     每个 gtype 恰有一个 set01 = '0,0' 的组（百家乐为组 610，其 sort 排在最前）。
+     `category` 表的列义写「0 為不限制」，而其 sort 位次又像是**最低档／停用**。
+     二者含义相反：若为「不限制」，则含 0 组者应判**最松**；若为「停用」，则应判**最紧**。
+     本查询取**停用**解（合于 sort 位次），但另出 `has_zero_group` 一列标记，
+     **凡该列为 1 者，其方向判定须人工复核**，不得径入处置总体。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：需要 —— 存为「数据库/TL14_limit_treatment.csv」（§TL-14 限红处置事件·含方向判定）。
+WITH dict AS (                                                                                      -- 公共表表达式：开启中间结果集 dict——百家乐限额组字典（§TL-14）
+    SELECT  CAST(id AS STRING)                            AS grp_id,                                -- 取值表达式：取用组号并转字符，产出「grp_id」——与变更日志内的字面值同型方能连上
+            CAST(NULLIF(TRIM(SPLIT_PART(set01, ',', 1)),'') AS DECIMAL(20,2)) AS lo,                -- 取值表达式：set01 逗号前段为下限，产出「lo」
+            CAST(NULLIF(TRIM(SPLIT_PART(set01, ',', 2)),'') AS DECIMAL(20,2)) AS hi                 -- 取值表达式：set01 逗号后段为上限，产出「hi」——方向判定之凭据
+    FROM    ods_mariadb_2b.ods_a168_bet_limit_default                                               -- 取数来源：取自限额组定义表（§TL-13 查得）
+    WHERE   gtype = '101'                                                                           -- 过滤条件：限定百家乐，与本方案 bet02 = '101' 同口径
+      AND   dt = ( SELECT MAX(dt) FROM ods_mariadb_2b.ods_a168_bet_limit_default )                  -- 并列条件：只取最新一版快照，免同组多版重复
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+ev AS (                                                                                             -- 公共表表达式：开启中间结果集 ev——变更日志原始事件，口径与 §TL-11 一致（§TL-14）
+    SELECT  CAST(lmc02 AS STRING)                         AS member_id,                             -- 取值表达式：取用 lmc02（被改会员号），产出「member_id」
+            SUBSTR(CAST(lmc08 AS STRING), 1, 10)          AS action_date,                           -- 取值表达式：取用 lmc08（操作时间）之日期段，产出「action_date」
+            CAST(lmc08 AS STRING)                         AS action_time,                           -- 取值表达式：取用 lmc08（操作时间），产出「action_time」
+            CAST(lmc06 AS STRING)                         AS operator_id,                           -- 取值表达式：取用 lmc06（操作人账号），产出「operator_id」
+            CAST(lmc07 AS STRING)                         AS operator_lv,                           -- 取值表达式：取用 lmc07（操作人层级），产出「operator_lv」
+            CAST(lmc05 AS STRING)                         AS content                                -- 取值表达式：取用 lmc05（变更内容串），产出「content」
+    FROM    ods_mariadb_2b.ods_a168_log_mem_change                                                  -- 取数来源：取自会员变更日志表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')                                       -- 并列条件：只留配置修改与状态变更两类
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+seg AS (                                                                                            -- 公共表表达式：开启中间结果集 seg——把多段 content 逐段拆开（§TL-14）
+    SELECT  e.member_id, e.action_date, e.action_time, e.operator_id, e.operator_lv,                -- 取列：起始取列子句，透传五要素
+            TRIM(s.piece)                                 AS piece                                  -- 取值表达式：逐段去空白，产出「piece」
+    FROM ev e, unnest(split(e.content, ';')) AS s(piece)                                            -- 行展开：以 unnest(split(…)) 把分号分隔的多段逐段成行
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+lim AS (                                                                                            -- 公共表表达式：开启中间结果集 lim——只留百家乐限额变更段（§TL-14）
+    SELECT  member_id, action_date, action_time, operator_id, operator_lv,                          -- 取列：起始取列子句，透传五要素
+            TRIM(SPLIT_PART(SPLIT_PART(piece, ':', 2), '=>', 1)) AS grp_before,                     -- 取值表达式：箭头前段为旧组清单，产出「grp_before」
+            TRIM(SPLIT_PART(piece, '=>', 2))              AS grp_after,                             -- 取值表达式：箭头后段为新组清单，产出「grp_after」
+            CONCAT_WS('#', member_id, action_time)        AS ev_key                                 -- 取值表达式：会员×时刻拼事件键，产出「ev_key」——供两侧展开后回接
+    FROM    seg                                                                                     -- 取数来源：取自本条自建的中间结果集 seg
+    WHERE   piece LIKE '101-mem015:%'                                                               -- 过滤条件：只认百家乐的新版限額段——★ 不得与 member.mem015（login_error）相混
+      AND   piece LIKE '%=>%'                                                                       -- 并列条件：须含箭头方为有效变更段
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+bfr AS (                                                                                            -- 公共表表达式：开启中间结果集 bfr——旧组清单逐组展开后取最高上限（§TL-14）
+    SELECT  l.ev_key,                                                                               -- 取列：起始取列子句，本行先取事件键
+            MAX(d.hi)                                     AS max_hi_before,                         -- 聚合：旧清单之最高上限，产出「max_hi_before」
+            SUM(CASE WHEN d.hi = 0 THEN 1 ELSE 0 END)     AS zero_before,                           -- 聚合：旧清单含「0,0」组之个数，产出「zero_before」——歧义标记之料
+            COUNT(d.grp_id)                               AS n_grp_before                           -- 计数表达式：旧清单中能连上字典的组数，产出「n_grp_before」
+    FROM        lim l                                                                               -- 取数来源：取自本条自建的中间结果集 lim
+    CROSS JOIN  unnest(split(l.grp_before, ',')) AS g(grp)                                          -- 行展开：把逗号分隔的组清单逐组成行
+    LEFT JOIN   dict d ON d.grp_id = TRIM(g.grp)                                                    -- 左连接：取自本条自建的中间结果集 dict，连接键为组号——连不上者留空，不以 0 顶替
+    GROUP BY l.ev_key                                                                               -- 分组：按事件键汇总
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+aft AS (                                                                                            -- 公共表表达式：开启中间结果集 aft——新组清单同法（§TL-14）
+    SELECT  l.ev_key,                                                                               -- 取列：起始取列子句，本行先取事件键
+            MAX(d.hi)                                     AS max_hi_after,                          -- 聚合：新清单之最高上限，产出「max_hi_after」
+            SUM(CASE WHEN d.hi = 0 THEN 1 ELSE 0 END)     AS zero_after,                            -- 聚合：新清单含「0,0」组之个数，产出「zero_after」
+            COUNT(d.grp_id)                               AS n_grp_after                            -- 计数表达式：新清单中能连上字典的组数，产出「n_grp_after」
+    FROM        lim l                                                                               -- 取数来源：取自本条自建的中间结果集 lim
+    CROSS JOIN  unnest(split(l.grp_after, ',')) AS g(grp)                                           -- 行展开：把逗号分隔的组清单逐组成行
+    LEFT JOIN   dict d ON d.grp_id = TRIM(g.grp)                                                    -- 左连接：取自本条自建的中间结果集 dict，连接键为组号
+    GROUP BY l.ev_key                                                                               -- 分组：按事件键汇总
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-14）
+bl AS (                                                                                             -- 公共表表达式：开启中间结果集 bl——本方案口径的百家乐投注会员名单（§TL-14）
+    SELECT  DISTINCT CAST(bet05 AS STRING)                AS member_id                              -- 取值表达式：取用 bet05（会员号）去重，产出「member_id」
+    FROM    ods_mariadb_2b.ods_a168_bet02                                                           -- 取数来源：取自注单明细表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(bet02 AS STRING) = '101'                                                           -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§TL-14）
+SELECT  l.member_id,                                                                                -- 取列：起始取列子句，本行先取「member_id」
+        l.action_date, l.action_time,                                                               -- 取值表达式：事件之日与时刻
+        l.operator_id, l.operator_lv,                                                               -- 取值表达式：操作人与其层级——审计轨迹之「谁」
+        l.grp_before, l.grp_after,                                                                  -- 取值表达式：新旧限额组清单原文，留档以备复核
+        b.max_hi_before, f.max_hi_after,                                                            -- 取值表达式：新旧清单之最高上限——方向判定之两端
+        b.n_grp_before, f.n_grp_after,                                                              -- 取值表达式：两侧能连上字典的组数——连不上者即字典外之组，须查
+        CASE WHEN b.max_hi_before IS NULL OR f.max_hi_after IS NULL                                 -- 取值表达式：方向判定起算——任一端无从取上限即判不明
+             THEN 'UNKNOWN_NO_DICT'                                                                 -- 续行：组号不在字典内，方向不明
+             WHEN f.max_hi_after < b.max_hi_before THEN 'TIGHTEN'                                   -- 续行：上限调低即收紧——**限红处置**
+             WHEN f.max_hi_after > b.max_hi_before THEN 'RELEASE'                                   -- 续行：上限调高即放宽
+             ELSE 'FLAT' END                              AS direction,                             -- 续行：持平——清单变而上限未变，不入处置节，产出「direction」
+        CASE WHEN COALESCE(b.zero_before,0) + COALESCE(f.zero_after,0) > 0                          -- 取值表达式：歧义标记起算——含「0,0」组者
+             THEN 1 ELSE 0 END                            AS has_zero_group,                        -- 续行：产出「has_zero_group」——★ 为 1 者方向判定须人工复核，不得径入处置总体
+        CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END  AS is_baccarat_member,                    -- 取值表达式：是否本方案口径的百家乐会员
+        'v2026-08-11'                                     AS filter_rule_version                    -- 取值表达式：规则版本号——改判定规则须改版本并记入变更日志
+FROM        lim l                                                                                   -- 取数来源：取自本条自建的中间结果集 lim
+LEFT JOIN   bfr b  ON b.ev_key = l.ev_key                                                           -- 左连接：取自本条自建的中间结果集 bfr，连接键为事件键
+LEFT JOIN   aft f  ON f.ev_key = l.ev_key                                                           -- 左连接：取自本条自建的中间结果集 aft，连接键为事件键
+LEFT JOIN   bl     ON bl.member_id = l.member_id                                                    -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+ORDER BY l.member_id, l.action_time;                                                                -- 排序：按会员与时刻升序——逐人可读其限额调整史；导出必带排序
 
 /* ───────────────────────────────────────────────────────────────────────────
    §T02 · T02_daily_roi.csv
@@ -2938,6 +4230,7 @@ ranked AS (                                                                     
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§B01）
 ord AS (                                                                                            -- 公共表表达式：开启中间结果集 ord，其后各行为其定义体（§B01）
   SELECT r.bet05 AS member_id, r.dt AS bet_date, r.bet39 AS table_id, r.ip AS bet_ip,               -- 取列：起始取列子句，本行先取「bet_ip」，涉 bet05（会员号）、bet39（桌号）、dt（营业日）
+         r.bet03 AS shoe_id,                                                                        -- 靴号（B-01 斧正新增，供 shoe_len 求靴长）
          r.bet09 AS bet_side,                                                                       -- 取值表达式：取用 bet09（玩法），产出「bet_side」
          CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,                                    -- 取值表达式：取用 bet03（靴号）、bet04（局内序号）、bet39（桌号），产出「round_key」
          CAST(NULLIF(TRIM(r.bet04),'') AS INT)           AS round_no,                               -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「round_no」
@@ -2958,9 +4251,19 @@ ord AS (                                                                        
     AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))大于 0，涉 bet11（汇率）
     AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL               -- 并列条件：限定该值为空——本包以左连接加空值判定替代 EXISTS，因 StarRocks 不支持 EXISTS 配多列 IN
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§B01）
+shoe_len AS (   /* ★ B-01 斧正（2026-08-12）：靴长不定，绝对局号不是固定靴位 */
+  SELECT shoe_id, table_id, MAX(round_no) AS max_round
+  FROM ord GROUP BY shoe_id, table_id
+),
+ordx AS (       /* 把该靴长度带回逐注单行，供相对靴位判定 */
+  SELECT o.*, s.max_round
+  FROM ord o
+  JOIN shoe_len s ON s.shoe_id = o.shoe_id AND s.table_id = o.table_id
+),
 rk AS (                                                                                             -- 公共表表达式：开启中间结果集 rk，其后各行为其定义体（§B01）
   SELECT member_id, bet_date, round_key, MAX(table_id) AS table_id,                                 -- 取列：起始取列子句，本行先取「table_id」，涉 round_key（局键）、member_id（会员号）、bet_date（营业日）
          MAX(bet_ip) AS bet_ip, MAX(round_no) AS round_no,                                          -- 取最大值表达式：取用 bet_ip（下注 IP），产出「round_no」
+         MAX(round_no) * 1.0 / NULLIF(MAX(max_round),0) AS shoe_pos,                       -- 该局的相对靴位（B-01 斧正新增）
          SUM(stake_raw/fx)                     AS stake,                                            -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
          SUM(COALESCE(vb_raw,stake_raw)/fx)    AS validbet,                                         -- 汇总表达式：取用 validbet（有效投注（洗码量）），产出「validbet」
          SUM((payout_raw-stake_raw)/fx)        AS game_pnl,                                         -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「game_pnl」
@@ -2970,7 +4273,7 @@ rk AS (                                                                         
          CASE WHEN MAX(CASE WHEN TRIM(bet_side)='Banker' THEN 1 ELSE 0 END)=1                       -- 条件分支：取最大值
                AND MAX(CASE WHEN TRIM(bet_side)='Player' THEN 1 ELSE 0 END)=1                       -- 并列条件：限定 MAX(CASE WHEN TRIM(bet_side)等于 'Player' THEN 1 ELSE 0 END)=1
               THEN 1 ELSE 0 END                AS is_self_hedge                                     -- 分支取值：产出「is_self_hedge」
-  FROM ord GROUP BY member_id, bet_date, round_key                                                  -- 取数来源：取自本条自建的中间结果集 ord
+  FROM ordx GROUP BY member_id, bet_date, round_key                                                  -- 取数来源：取自本条自建的中间结果集 ord
 )                                                                                                   -- 续行：收束上方的子查询或函数括号（§B01）
 SELECT member_id, bet_date,                                                                         -- 取列：起始取列子句，本行先列 member_id, bet_date，涉 member_id（会员号）、bet_date（营业日）
        SUM(stake)                                     AS stake,                                     -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
@@ -2981,7 +4284,8 @@ SELECT member_id, bet_date,                                                     
        COUNT(*)                                       AS n_rounds,                                  -- 计数表达式：产出「n_rounds」
        COUNT(DISTINCT table_id)                       AS n_tables,                                  -- 计数表达式：统计去重个数，产出「n_tables」
        COUNT(DISTINCT bet_ip)                         AS n_ip,                                      -- 计数表达式：统计去重个数，产出「n_ip」
-       SUM(CASE WHEN round_no >= 50 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS late_share_d,            -- 汇总表达式：计数，产出「late_share_d」
+       'shoe_pos>=0.80'                               AS late_def,                                  -- 口径锁：definition_version = v2（旧版 CSV 缺此列即报错）
+       SUM(CASE WHEN shoe_pos >= 0.80 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS late_share_d,  -- 靴末段占比（B-01 斧正：相对靴位 ≥0.80；原为 round_no>=50）
        SUM(is_self_hedge) * 1.0 / COUNT(*)            AS hedge_rate_d,                              -- 汇总表达式：计数，产出「hedge_rate_d」
        STDDEV_SAMP(stake) / NULLIF(AVG(stake),0)      AS stake_cv_d                                 -- 取值表达式：求均值，取用 stake（下注额（经汇率归一化）），产出「stake_cv_d」
 FROM rk                                                                                             -- 取数来源：取自本条自建的中间结果集 rk
@@ -3018,6 +4322,7 @@ ranked AS (                                                                     
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号
 ord AS (                                                                                            -- 公共表表达式：开启中间结果集 ord，其后各行为其定义体
   SELECT r.bet05 AS member_id, r.dt AS bet_date, r.bet39 AS table_id, r.ip AS bet_ip,               -- 取列：起始取列子句，本行先取「bet_ip」，涉 bet05（会员号）、bet39（桌号）、dt（营业日）
+         r.bet03 AS shoe_id,                                                                        -- 靴号（B-01 斧正新增，供 shoe_len 求靴长）
          r.bet09 AS bet_side,                                                                       -- 取值表达式：取用 bet09（玩法），产出「bet_side」
          CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,                                    -- 取值表达式：取用 bet03（靴号）、bet04（局内序号）、bet39（桌号），产出「round_key」
          CAST(NULLIF(TRIM(r.bet04),'') AS INT)           AS round_no,                               -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「round_no」
@@ -3038,9 +4343,19 @@ ord AS (                                                                        
     AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))大于 0，涉 bet11（汇率）
     AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL               -- 并列条件：限定该值为空——本包以左连接加空值判定替代 EXISTS，因 StarRocks 不支持 EXISTS 配多列 IN
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号
+shoe_len AS (   /* ★ B-01 斧正（2026-08-12）：靴长不定，绝对局号不是固定靴位 */
+  SELECT shoe_id, table_id, MAX(round_no) AS max_round
+  FROM ord GROUP BY shoe_id, table_id
+),
+ordx AS (       /* 把该靴长度带回逐注单行，供相对靴位判定 */
+  SELECT o.*, s.max_round
+  FROM ord o
+  JOIN shoe_len s ON s.shoe_id = o.shoe_id AND s.table_id = o.table_id
+),
 rk AS (                                                                                             -- 公共表表达式：开启中间结果集 rk，其后各行为其定义体
   SELECT member_id, bet_date, round_key, MAX(table_id) AS table_id,                                 -- 取列：起始取列子句，本行先取「table_id」，涉 round_key（局键）、member_id（会员号）、bet_date（营业日）
          MAX(bet_ip) AS bet_ip, MAX(round_no) AS round_no,                                          -- 取最大值表达式：取用 bet_ip（下注 IP），产出「round_no」
+         MAX(round_no) * 1.0 / NULLIF(MAX(max_round),0) AS shoe_pos,                       -- 该局的相对靴位（B-01 斧正新增）
          SUM(stake_raw/fx)                     AS stake,                                            -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
          SUM(COALESCE(vb_raw,stake_raw)/fx)    AS validbet,                                         -- 汇总表达式：取用 validbet（有效投注（洗码量）），产出「validbet」
          SUM((payout_raw-stake_raw)/fx)        AS game_pnl,                                         -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「game_pnl」
@@ -3050,7 +4365,7 @@ rk AS (                                                                         
          CASE WHEN MAX(CASE WHEN TRIM(bet_side)='Banker' THEN 1 ELSE 0 END)=1                       -- 条件分支：取最大值
                AND MAX(CASE WHEN TRIM(bet_side)='Player' THEN 1 ELSE 0 END)=1                       -- 并列条件：限定 MAX(CASE WHEN TRIM(bet_side)等于 'Player' THEN 1 ELSE 0 END)=1
               THEN 1 ELSE 0 END                AS is_self_hedge                                     -- 分支取值：产出「is_self_hedge」
-  FROM ord GROUP BY member_id, bet_date, round_key                                                  -- 取数来源：取自本条自建的中间结果集 ord
+  FROM ordx GROUP BY member_id, bet_date, round_key                                                  -- 取数来源：取自本条自建的中间结果集 ord
 )                                                                                                   -- 续行：收束上方的子查询或函数括号
 SELECT member_id, bet_date,                                                                         -- 取列：起始取列子句，本行先列 member_id, bet_date，涉 member_id（会员号）、bet_date（营业日）
        SUM(stake)                                     AS stake,                                     -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
@@ -3061,7 +4376,8 @@ SELECT member_id, bet_date,                                                     
        COUNT(*)                                       AS n_rounds,                                  -- 计数表达式：产出「n_rounds」
        COUNT(DISTINCT table_id)                       AS n_tables,                                  -- 计数表达式：统计去重个数，产出「n_tables」
        COUNT(DISTINCT bet_ip)                         AS n_ip,                                      -- 计数表达式：统计去重个数，产出「n_ip」
-       SUM(CASE WHEN round_no >= 50 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS late_share_d,            -- 汇总表达式：计数，产出「late_share_d」
+       'shoe_pos>=0.80'                               AS late_def,                                  -- 口径锁：definition_version = v2（旧版 CSV 缺此列即报错）
+       SUM(CASE WHEN shoe_pos >= 0.80 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS late_share_d,  -- 靴末段占比（B-01 斧正：相对靴位 ≥0.80；原为 round_no>=50）
        SUM(is_self_hedge) * 1.0 / COUNT(*)            AS hedge_rate_d,                              -- 汇总表达式：计数，产出「hedge_rate_d」
        STDDEV_SAMP(stake) / NULLIF(AVG(stake),0)      AS stake_cv_d                                 -- 取值表达式：求均值，取用 stake（下注额（经汇率归一化）），产出「stake_cv_d」
 FROM rk                                                                                             -- 取数来源：取自本条自建的中间结果集 rk
@@ -3472,7 +4788,7 @@ ORDER BY opposite_rate DESC, n_opposite_round DESC;                             
 -- 若本版仍返回零行，那才是真正的结论（同IP无对打）；
 -- 但在此之前先跑下面这条一行探针确认判别已生效：
 --   SELECT COUNT(*) FROM ods_mariadb_2b.ods_a168_bet02
---   WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet09 = 'Banker';
+--   WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet09 = 'Banker'   （跑时自行补分号）
 -- 该数应约为 4,682 万。若为 0，说明 bet09 有前后空格，把判别改成
 --   UPPER(TRIM(bet_side)) = 'BANKER' / 'PLAYER'。
 
@@ -3482,6 +4798,11 @@ ORDER BY opposite_rate DESC, n_opposite_round DESC;                             
    ★ 绝对不要用 OFFSET 翻页 —— 277 批数据 36.49% 重复的根因就是分页无稳定排序。
    正确做法：按 bet05 的哈希或数值区间切成 N 份，每份独立跑、独立导。
    ─────────────────────────────────────────────────────────────────────────── */
+-- ⚠★ 2026-08-11 补一条界：**本模板并非对每一段都安全**。
+--   凡该段含**全局 CTE**（如 §R03／§R03b 的 side_base 各投注产品基准胜率）者，
+--   在上游 CTE 切片会令每片各估一套基准——十片十个基准，其 Z 分数彼此不可比。
+--   此类段落的切点**必须放在最外层**（对最终 SELECT 的键取模或用游标翻页），
+--   代价是每片仍须全量计算一次。安全适用者：T02／B01／K01 等纯会员级聚合。
 -- 第 k 份（k = 0..9，共 10 份）：在最外层 SELECT 之前的 ord/rk CTE 里加这一行
 --   AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) % 10 = 0     -- ← 改 0,1,2,...,9
 -- 导出 10 份后在 R 侧 rbind 即可；因为切分键是会员号，各份之间天然不重叠。
@@ -3523,7 +4844,7 @@ ORDER BY bucket;                                                                
 --            FROM ods_mariadb_2b.ods_a168_bet02
 --            WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02='101'
 --            GROUP BY bet05) f ON f.bet05 = m.★★会员列★★
--- ORDER BY verdict, member_id;
+-- ORDER BY verdict, member_id     （跑时自行补分号）
 
 -- §TG-03 · 关注 IP 名单的登记时间是否越过截止日（可直接跑，列名已实测）
 -- ▸ 导出：不需要 —— §TG-03 屏幕守卫（关注 IP 登记时间越界检测）。
@@ -3692,9 +5013,34 @@ ORDER BY 行数 DESC;                                                           
    改为
        GROUP BY member_id, dealer_id, bet_date
    输出：bet_date, uid, dealer_id, stake_amount, profit_amount, win_rate,
-         n_related_orders, n_rounds_eff, p_base_mix, z_score
+         n_related_orders, n_rounds_eff, p_base_mix_w, z_score
    ─────────────────────────────────────────────────────────────────────────── */
 -- ▸ 导出：需要 —— 存为「数据库/R03b_player_dealer_daily.csv」（§R03b 玩家×荷官·日粒度）。
+-- ★★★ 2026-08-11 警示·本件在十万行上限下不可直接导出 ★★★
+--   旧版实测 18,139,550 行 → 十万一批需 **182 次**下载，且每次须把整条链全算一遍，
+--   工程上不可行。**导出之前须先定粒度**，三条可选（本方不擅代先生决，故并列于此）：
+--     甲、加资格过滤（同 §R03 之四条谓词，另加日粒度下限如 n_rounds_eff >= 5）——
+--         最省，惟日粒度本就稀疏，过滤后能否支撑时序对照须先以计数查验；
+--     乙、缩窗口（如只取末 30 个营业日）——行数约降至五分之一，惟时序对照随之缩短；
+--     丙、按营业日切片逐日导（139 片）——片数虽多而每片小，且 dt 是分区键，
+--         切片可下推至扫描层，**每片只扫该日数据**，故总代价不翻倍（与 §R03 之情形不同）。
+--   ★ 本方倾向丙：其为唯一「切片不翻倍」者，因 dt 恰是 StarRocks 的分区键。
+--     惟须注意：side_base（各产品基准）若随片重算，则各片基准不同、z 分数不可比——
+--     **故按日切片时，切点须置于最外层 WHERE，不得下推至 ranked**。
+-- ★★ 2026-08-11 斧正·排序键与分页（与 §R03 同治）★★
+--   本件为全包**行数之最**（旧版实测 1,814 万行），最须分批下载，故此病在此处最烈。
+--   ① 旧版 `ORDER BY p.bet_date, z_score DESC` **排序键不唯一**——同日内 z_score
+--      大量并列，OFFSET 翻页必致重复或漏行（与当年 36.49% 重复率同一病根）。
+--   ② 今改 `ORDER BY p.bet_date, p.member_id, p.dealer_id`——三键即本件之主键，
+--      天然唯一（pd 层即按此三键分组），可作游标键。
+--   ③ 分批一律**游标翻页，禁用 OFFSET**：
+--        第 1 批：末尾加  LIMIT 100000
+--        第 k+1 批：取上批末行三键 (T, M, D)，在 ORDER BY 之前加
+--          WHERE (p.bet_date, CAST(p.member_id AS BIGINT), CAST(p.dealer_id AS BIGINT))
+--                > (T, M, D)
+--        引擎若不支持行值比较，改写为三段 OR 的等价式（见 §R03 段末模板）。
+--   ④ 亦**不得**照 §99 在上游 CTE 取模切片——本段同样有全局 CTE `side_base`，
+--      上游切片会令每片自成基准，各片 z 分数不可比。切点只能在最外层。
 WITH ranked AS (                                                                                    -- 公共表表达式：开启中间结果集 ranked，其后各行为其定义体（§R03b）
   SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,                                         -- 取列：起始取列子句，本行先列 b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02，涉 bet02（游戏类别）、dt（营业日）
          b.bet03, b.bet04, b.bet05, b.bet09, b.bet11,                                               -- 续行：接续上一取列子句，续列 b.bet03, b.bet04, b.bet05, b.bet09, b.bet11，涉 bet03（靴号）、bet04（局内序号）、bet05（会员号）
@@ -3709,6 +5055,7 @@ WITH ranked AS (                                                                
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03b）
 base AS (                                                                                           -- 公共表表达式：开启中间结果集 base，其后各行为其定义体（§R03b）
   SELECT r.bet05 AS member_id, r.eid AS dealer_id, r.dt AS bet_date,                                -- 取列：起始取列子句，本行先取「bet_date」，涉 bet05（会员号）、eid（荷官工号）、dt（营业日）
+         CASE WHEN TRIM(r.eid) IN ('-1','0') THEN 1 ELSE 0 END AS is_sentinel_dealer,               -- 取值表达式：哨兵标记——★ 由删除改为标注（事实层不删，分析层才筛）
          r.bet09 AS bet_side,                                                                       -- 取值表达式：取用 bet09（玩法），产出「bet_side」
          CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,                                    -- 取值表达式：取用 bet03（靴号）、bet04（局内序号）、bet39（桌号），产出「round_key」
          CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS fx,                                     -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「fx」
@@ -3723,7 +5070,7 @@ base AS (                                                                       
     AND UPPER(TRIM(r.bet09)) NOT LIKE 'TIP\_1\_%'                                                   -- 并列条件：限定不匹配所给模式，涉 bet09（玩法）
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03b）
 ord AS (                                                                                            -- 公共表表达式：开启中间结果集 ord，其后各行为其定义体（§R03b）
-  SELECT member_id, dealer_id, bet_date, bet_side, round_key,                                       -- 取列：起始取列子句，本行先列 member_id, dealer_id, bet_date, bet_side, round_key，涉 round_key（局键）、member_id（会员号）、dealer_id（荷官工号）
+  SELECT member_id, dealer_id, is_sentinel_dealer, bet_date, bet_side, round_key,                   -- 取列：起始取列子句，透传哨兵标记，涉 bet_date（营业日）、round_key（局键）
          stake_raw / fx                AS stake,                                                    -- 取值表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
          (payout_raw - stake_raw) / fx AS game_pnl,                                                 -- 续行：取用 game_pnl（游戏净输赢），产出「game_pnl」
          net_raw / fx                  AS net_pnl                                                   -- 取值表达式：取用 net_pnl（会员净输赢），产出「net_pnl」
@@ -3733,15 +5080,27 @@ side_base AS (                                                                  
   SELECT bet_side,                                                                                  -- 取列：起始取列子句，本行先列 bet_side
          SUM(CASE WHEN game_pnl > 0 THEN 1 ELSE 0 END) * 1.0                                        -- 取值表达式：比率之分子，乘 1.0 以避整数除法截断，涉 game_pnl（游戏净输赢）
            / NULLIF(SUM(CASE WHEN game_pnl <> 0 THEN 1 ELSE 0 END), 0) AS p_base                    -- 除法或乘法计算：汇总，取用 game_pnl（游戏净输赢），产出「p_base」
-  FROM ord GROUP BY bet_side                                                                        -- 取数来源：取自本条自建的中间结果集 ord
+  FROM ord WHERE is_sentinel_dealer = 0                                                             -- 取数来源：取自本条自建的中间结果集 ord——★ 基准只由**真实牌桌**估计
+  GROUP BY bet_side                                                                                 -- 分组：按投注产品汇总
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03b）
+ordb AS (             -- ★ 2026-08-11 增：注单层挂上各自产品的基准，供下方按注额加权
+  SELECT o.member_id, o.dealer_id, o.is_sentinel_dealer, o.bet_date, o.round_key, o.bet_side,       -- 取列：起始取列子句，透传五键与哨兵标记
+         o.stake, o.game_pnl, o.net_pnl, s.p_base AS p_side                                         -- 续行：并取三项金额与该注自身产品的基准胜率，产出「p_side」
+  FROM      ord o                                                                                   -- 取数来源：取自本条自建的中间结果集 ord
+  LEFT JOIN side_base s ON s.bet_side = o.bet_side                                                  -- 左连接：取自本条自建的中间结果集 side_base，基准未定义者留空——不以 0.5 顶替
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R03b）
 pr AS (   -- 局级去重：同一物理局折成一局，避免 Z-score 被 sqrt(k) 放大
-  SELECT member_id, dealer_id, bet_date, round_key,                                                 -- 取列：起始取列子句，本行先列 member_id, dealer_id, bet_date, round_key，涉 round_key（局键）、member_id（会员号）、dealer_id（荷官工号）
+  SELECT member_id, dealer_id, is_sentinel_dealer, bet_date, round_key,                             -- 取列：起始取列子句，透传哨兵标记
          SUM(stake) AS stake, SUM(game_pnl) AS game_pnl, SUM(net_pnl) AS net_pnl,                   -- 汇总表达式：取用 stake（下注额（经汇率归一化））、net_pnl（会员净输赢）、game_pnl（游戏净输赢），产出「net_pnl」
-         COUNT(*) AS n_orders_in_round, MAX(bet_side) AS main_side                                  -- 计数表达式：取最大值，产出「main_side」
-  FROM ord GROUP BY member_id, dealer_id, bet_date, round_key                                       -- 取数来源：取自本条自建的中间结果集 ord
+         COUNT(*) AS n_orders_in_round,                                                             -- 计数表达式：产出「n_orders_in_round」
+         SUM(stake * p_side)                                                                        -- 汇总表达式：注额加权基准起算——★ 斧正，旧法 MAX(bet_side) 取字母序最大而非主注
+           / NULLIF(SUM(CASE WHEN p_side IS NOT NULL THEN stake ELSE 0 END), 0)                     -- 除法或乘法计算：除以有基准之注的注额合计
+                       AS p_base_round_w,                                                             -- 续行：产出「p_base_round_w」——该局的**注额加权**基准；全注皆无基准则留空
+         AVG(p_side)   AS p_base_round_unw,                                                         -- 汇总表达式：同局各注基准的**等权**均值——★ 2026-08-11 增，供两种 estimand 对照
+         MAX(bet_side) AS main_side                                                                 -- 取最大值表达式：字母序最大注项，**仅备查、不参与计算**
+  FROM ordb GROUP BY member_id, dealer_id, is_sentinel_dealer, bet_date, round_key                  -- 取数来源：取自本条自建的中间结果集 ordb（已挂基准）
 )                                                                                                   -- 续行：收束上方的子查询或函数括号（§R03b）
-SELECT p.bet_date, p.member_id AS uid, p.dealer_id,                                                 -- 取列：起始取列子句，本行先取「uid」，涉 member_id（会员号）、uid（会员号）、dealer_id（荷官工号）
+SELECT p.bet_date, p.member_id AS uid, p.dealer_id, p.is_sentinel_dealer,                           -- 取列：起始取列子句，本行先取「uid」与哨兵标记
        SUM(p.stake)                                        AS stake_amount,                         -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake_amount」
        SUM(p.game_pnl)                                     AS profit_amount,                        -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「profit_amount」
        SUM(p.net_pnl)                                      AS net_pnl,                              -- 汇总表达式：取用 net_pnl（会员净输赢），产出「net_pnl」
@@ -3749,16 +5108,47 @@ SELECT p.bet_date, p.member_id AS uid, p.dealer_id,                             
          / NULLIF(SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END), 0) AS win_rate,                 -- 除法或乘法计算：汇总，取用 game_pnl（游戏净输赢），产出「win_rate」
        SUM(p.n_orders_in_round)                            AS n_related_orders,                     -- 汇总表达式：产出「n_related_orders」
        COUNT(*)                                            AS n_rounds_eff,                         -- 计数表达式：取用 n_rounds_eff（有效局数），产出「n_rounds_eff」
-       AVG(COALESCE(s.p_base, 0.5))                        AS p_base_mix,                           -- 求均值表达式：产出「p_base_mix」
+       AVG(p.p_base_round_w)                                 AS p_base_mix_w,                           -- 汇总表达式：对各局的**注额加权**基准取均值——判定所用者
+       AVG(p.p_base_round_unw)                             AS p_base_mix_unw,                       -- 汇总表达式：**等权**口径之对照量——★ 2026-08-11 与 §R03 对齐，二者背离即示资金集中于某产品
        (SUM(CASE WHEN p.game_pnl > 0 THEN 1 ELSE 0 END)                                             -- 续行：汇总，取用 game_pnl（游戏净输赢）
-        - SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END) * AVG(COALESCE(s.p_base,0.5)))           -- 加减计算：汇总后取负号——会员净输赢取负即平台毛利（GGR）
+        - SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END) * AVG(p.p_base_round_w))           -- 加减计算：汇总后取负号——会员净输赢取负即平台毛利（GGR）
          / NULLIF(SQRT(SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END)                             -- 除法或乘法计算：汇总，取用 game_pnl（游戏净输赢）
-                       * AVG(COALESCE(s.p_base,0.5))                                                -- 除法或乘法计算：求均值
-                       * (1 - AVG(COALESCE(s.p_base,0.5)))), 0)        AS z_score                   -- 除法或乘法计算：求均值，取用 z_score（标准化偏离度），产出「z_score」
+                       * AVG(p.p_base_round_w)                                                -- 除法或乘法计算：求均值
+                       * (1 - AVG(p.p_base_round_w))), 0)        AS z_score_w,                      -- 除法或乘法计算：产出「z_score_w」——**加权候选臂**
+       (SUM(CASE WHEN p.game_pnl > 0 THEN 1 ELSE 0 END)                                             -- 取值表达式：★ **对照臂**之分子——同式改用等权基准（Dixon & Coles 1996：先立无权重基线）
+        - SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END) * AVG(p.p_base_round_unw))               -- 续行：期望胜局按等权基准算
+         / NULLIF(SQRT(SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END)                             -- 除法或乘法计算：除以伯努利标准差
+                       * AVG(p.p_base_round_unw)                                                    -- 续行：等权基准
+                       * (1 - AVG(p.p_base_round_unw))), 0)    AS z_score_unw,                      -- 续行：产出「z_score_unw」——加权之优势须由本臂对照证成
+       (SUM(CASE WHEN p.game_pnl > 0 THEN 1 ELSE 0 END)                                             -- 取值表达式：兼容别名之分子——与 z_score_w 逐字同式
+        - SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END) * AVG(p.p_base_round_w))                 -- 续行：期望胜局按加权基准算
+         / NULLIF(SQRT(SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END)                             -- 除法或乘法计算：除以伯努利标准差
+                       * AVG(p.p_base_round_w)                                                      -- 续行：加权基准
+                       * (1 - AVG(p.p_base_round_w))), 0)        AS z_score,                        -- 续行：产出「z_score」——★ **兼容别名，恒等于 z_score_w**；既有报告与数据契约沿用此名
+       AVG(p.p_base_round_w) - AVG(p.p_base_round_unw)          AS delta_p,                         -- 加减计算：比较层——两臂基准之差，产出「delta_p」
+       CASE WHEN p.is_sentinel_dealer = 1 THEN 'SENTINEL_DEALER'                                    -- 取值表达式：统计资格判定起算——事实层不删，此处只标注资格
+            WHEN AVG(p.p_base_round_w) IS NULL THEN 'NO_BASE_RATE'                                    -- 续行：基准未定义
+            WHEN SUM(CASE WHEN p.game_pnl <> 0 THEN 1 ELSE 0 END) = 0 THEN 'NO_DECISIVE_ROUND'      -- 续行：全为退还局，无胜负可判
+            ELSE 'ELIGIBLE' END                                 AS eligibility_status,               -- 续行：产出「eligibility_status」——日粒度不设局数下限，下限由分析层施加
+       'R03b_20260811_FULL_v1'                              AS comparison_id,                       -- 取值表达式：比较批次号——与 §R03 同规格，两臂须同批次方可比
+       'L1_ELIGIBILITY'                           AS filter_stage,                                  -- 取值表达式：过滤所处之层——★ L0 事实层不删行，此处只标注其在 L1 资格层的去留
+       'v2026-08-11'                              AS filter_rule_version,                            -- 取值表达式：资格规则版本号——改规则须改版本号并记入变更日志，免「同名不同义」
+       '2026-03-21..2026-08-06'                             AS cmp_time_window,                     -- 取值表达式：时间窗，产出「cmp_time_window」
+       'baccarat_bet02_101_all_pairs_incl_sentinel'         AS cmp_population,                      -- 取值表达式：总体定义（含哨兵之全量对）
+       'round_win = game_pnl > 0 (decisive only)'           AS cmp_label,                           -- 取值表达式：标签定义
+       'COMPATIBILITY_ONLY_NOT_PRODUCTION'                  AS z_score_alias_status                 -- 取值表达式：★ 兼容别名状态——禁止作生产输入
 FROM pr p                                                                                           -- 取数来源：取自本条自建的中间结果集 pr
-LEFT JOIN side_base s ON s.bet_side = p.main_side                                                   -- 左连接：取自本条自建的中间结果集 side_base，连接键为 s.bet_side = p.main_side
-GROUP BY p.bet_date, p.member_id, p.dealer_id                                                       -- 分组：按 p.bet_date, p.member_id, p.dealer_id 汇总
-ORDER BY p.bet_date, z_score DESC;                                                                  -- 排序：按 p.bet_date, z_score（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
+-- （已废）旧版在此按 main_side 连 side_base 取基准，2026-08-11 改注单层注额加权                                          -- 注：连接已移至 ordb，本处不再取基准
+GROUP BY p.bet_date, p.member_id, p.dealer_id, p.is_sentinel_dealer                                 -- 分组：按营业日×会员×荷官×哨兵标记汇总
+ORDER BY p.bet_date, p.member_id, p.dealer_id;                                                      -- 排序：★ 2026-08-11 改——按**唯一键**（日×会员×荷官）升序；分页铁律①：排序键须唯一
+/* ★★ 分页（2026-08-11 立，与 §R03 同一纪律）★★
+   旧版 ORDER BY p.bet_date, z_score DESC 之次级键 z_score **不唯一**，
+   分批下载会重、会漏。今改 (bet_date, member_id, dealer_id) —— 三者合成唯一。
+   游标翻页：取上批末行 (BD, M, D)，加
+       WHERE (p.bet_date, CAST(p.member_id AS BIGINT), CAST(p.dealer_id AS BIGINT)) > (BD, M, D)
+   ⚠ 切点同须在**最外层**：本段亦有全局 CTE side_base，上游切片会令基准失真。
+   ⚠ 本段为日粒度，行数远大于 §R03（旧版即 1,814 万行），分批数须按实际先跑 COUNT 预检。
+   ═══════════════════════════════════════════════════════════════════════════ */                                                                  -- 排序：按 p.bet_date, z_score（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
 /* ⚠️ 日粒度下单日有效局数天然偏少，Z-score 噪声比全窗口版大得多。
    本导出**只用于时序对照与趋势观察**，处置判定一律仍以 §R03 全窗口版为准。 */
 
@@ -3901,6 +5291,7 @@ vd AS (                                                                         
     AND NULLIF(TRIM(r.bet08),'') IS NOT NULL                                                        -- 并列条件：限定该值非空，涉 bet08（下注时间）
     AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL                                    -- 并列条件：限定该值为空——本包以左连接加空值判定替代 EXISTS，因 StarRocks 不支持 EXISTS 配多列 IN
     AND NULLIF(TRIM(r.eid),'') IS NOT NULL                                                          -- 并列条件：限定该值非空，涉 eid（荷官工号）
+    AND TRIM(r.eid) NOT IN ('-1', '0')                                                              -- 并列条件：剔除哨兵荷官号——-1／0 非真实荷官，入检即污染榜单与多重比较总体（2026-08-11 增）
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§EX-05）
 dtc AS (                     -- 荷官×桌的注单行数（与 §S-02 的权重同源）
   SELECT eid AS dealer_id, bet39 AS table_id, COUNT(*) AS n_rows                                    -- 取列：计数，取用 bet39（桌号）、eid（荷官工号）、dealer_id（荷官工号），产出「n_rows」
@@ -4354,7 +5745,7 @@ ORDER BY n_cols DESC;                                                           
 --     故本条导出声明已显式标注「不可直接执行」，请先生代入后再跑。
 -- SELECT COUNT(*) AS n_rows_3d
 -- FROM ods_mariadb_2b.<TBL>
--- WHERE dt >= '2026-08-04' AND dt < '2026-08-07';
+-- WHERE dt >= '2026-08-04' AND dt < '2026-08-07'   （跑时自行补分号）
 
 -- ▸ 导出：不需要 —— §EX-14c 七张表的三日窗行数一次点清（免逐张替换模板），屏幕看结果。
 --   ★ 本条以 UNION ALL 一次问齐，省去七次替换；无 dt 分区者其分支会报错，
@@ -6073,7 +7464,7 @@ ORDER BY ORDINAL_POSITION;
 
 -- §TL-10 · 处置事件规范表：一次跳变一行（列义译定后方可投用）
 -- ▸ 导出：需要 —— 存为「数据库/TL10_treatment_ledger.csv」（§TL-10 处置台账·规范事件表）。
--- 做法：content 形如「列:旧值=>新值;」可含多段，以 SPLIT 逐段拆开再逐段解析。
+-- 做法：content 形如「列:旧值=>新值」后接分隔符，可含多段，以 SPLIT 逐段拆开再逐段解析。
 --       剔除 add 类（实测百家乐会员零命中，属新增账户而非处置）。
 -- 读法：每行一次跳变——对谁、何时、哪一列、由何值到何值、谁操作、其层级、是否百家乐会员。
 --       此表即 E4 所要的处置账；惟仍非随机分配，只可作准实验，不可充随机对照。
@@ -6138,3 +7529,410 @@ SELECT  p.member_id,
 FROM        guarded p
 LEFT JOIN   bl ON bl.member_id = p.member_id
 ORDER BY p.action_time, p.member_id, p.field_name;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-11 · 处置节折叠：收紧→解除配对成节（episode），准实验的分析单元
+   ---------------------------------------------------------------------------
+   缘起：§TL-10 以「一次跳变一行」为粒度——收紧与解除各二百余条**不构成
+   数百个独立处置**。准实验的分析单元是「会员 × 处置节」：同一会员同一字段上的
+   「收紧 → 其后首个解除」折叠为一节，时长即节内天数；解除缺席者右删失于窗末。
+   此为报告 @sec-quasi-design 设计细则其一的 SQL 侧落地，与 @sec-quasi-run
+   第①步的 R 侧口径对齐（T0 取首次收紧、t_end 取其后首个解除）。
+   口径三则：
+     ① 只认两枚已译定的处置字段：mem017（canbet 下注权限）、mem016（enable 账户
+        启停）；mem015（login_error 计数）等日常运营列一概不入（列义见 §TL-09）。
+     ② 方向按 value_after 判：N／0 为收紧（TIGHTEN），Y／1 为解除（RELEASE），
+        其余记 OTHER 且不入节——宁缺毋滥，不为不明取值编造方向。
+     ③ 去重键 member × field × action_time × 前后值：同刻重复写入只计一次。
+   读法：每行一节——谁、何字段、何时收紧、由谁操作、何时解除（或右删失）、
+   持续几日、是其第几节。主分析取 episode_seq = 1（首次处置设计），
+   再处置节只入敏感性分析。连续两次收紧共享其后首个解除，属同一逻辑节之延续。
+   此表同时是治理章审计轨迹的节级视图：operator 列即「谁做的」，
+   所缺的「谁批准的」须待 DDL 增列（见报告 @sec-governance）。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- §TL-11 · 处置节折叠表（准实验分析单元；审计轨迹之节级视图）
+-- ▸ 导出：需要 —— 存为「数据库/TL11_treatment_episode.csv」（§TL-11 处置节·收紧→解除配对）。
+-- ★ 2026-08-11 补正六列（外部审计第十条）：is_baccarat_member（本方案口径）、
+--   enforcement_type（处置类别）、business_field（业务列名）、censor_reason（删失成因）、
+--   parse_status / parse_sep（解析状态与所用分隔符）——后二者堵住静默丢弃之漏。
+-- ★ 解析容错：实测 changestatus 有两种写法——「mem016:N=>Y」（冒号）与「mem020 Y=>N」（空格），二者皆以分隔符收束。
+--   旧版只认冒号，空格式 815 条被静默丢弃（所幸皆为 mem020 且皆非百家乐会员）。
+--   今两式并收，并以 parse_sep 记明每行所用者，使丢弃永不再静默。
+WITH ev AS (                                                                                        -- 公共表表达式：开启中间结果集 ev——变更日志原始事件，口径与 §TL-10 一致（§TL-11）
+    SELECT  CAST(lmc02 AS STRING)                         AS member_id,                             -- 取值表达式：取用 lmc02（被改会员号），产出「member_id」
+            SUBSTR(CAST(lmc08 AS STRING), 1, 10)          AS action_date,                           -- 取值表达式：取用 lmc08（操作时间）之日期段，产出「action_date」
+            CAST(lmc08 AS STRING)                         AS action_time,                           -- 取值表达式：取用 lmc08（操作时间），产出「action_time」
+            CAST(lmc06 AS STRING)                         AS operator_id,                           -- 取值表达式：取用 lmc06（操作人账号），产出「operator_id」——审计轨迹之「谁」
+            CAST(lmc07 AS STRING)                         AS operator_lv,                           -- 取值表达式：取用 lmc07（操作人层级），产出「operator_lv」
+            CAST(lmc05 AS STRING)                         AS content                                -- 取值表达式：取用 lmc05（变更内容串），产出「content」
+    FROM    ods_mariadb_2b.ods_a168_log_mem_change                                                  -- 取数来源：取自会员变更日志表（处置痕迹的正主）
+    WHERE   dt >= '2026-03-21'                                                                      -- 过滤条件：限定 dt不少于 '2026-03-21'，涉 dt（营业日）——E1 全局窗起点
+      AND   dt <  '2026-08-07'                                                                      -- 并列条件：限定 dt小于 '2026-08-07'——E1 全局窗终点（冻结字面量）
+      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')                                       -- 并列条件：只留配置修改与状态变更；add 系新增账户与处置无涉
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+seg AS (                                                                                            -- 公共表表达式：开启中间结果集 seg——把多段 content 逐段拆开（§TL-11）
+    SELECT  e.member_id, e.action_date, e.action_time,                                              -- 取列：起始取列子句，本行先列 member_id, action_date, action_time
+            e.operator_id, e.operator_lv,                                                           -- 续行：接续上一取列子句，续列 operator_id, operator_lv
+            TRIM(s.piece)                                 AS piece                                  -- 取值表达式：逐段去空白，产出「piece」
+    FROM ev e, unnest(split(e.content, ';')) AS s(piece)                                            -- 行展开：以 unnest(split(…)) 把分号分隔的多段变更逐段成行（StarRocks 已验语法）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+norm AS (                                                                                           -- 公共表表达式：开启中间结果集 norm——两式并收：冒号式与空格式统一为「列|旧|新」（§TL-11）
+    SELECT  member_id, action_date, action_time, operator_id, operator_lv, piece,                   -- 取列：起始取列子句，透传六要素与原始片段
+            CASE WHEN piece LIKE '%:%' THEN 'COLON' ELSE 'SPACE' END AS parse_sep,                  -- 取值表达式：记明所用分隔符，产出「parse_sep」——★ 使丢弃永不静默
+            CASE WHEN piece LIKE '%:%'                                                              -- 取值表达式：列名解析起算——冒号式取冒号前段
+                 THEN TRIM(SPLIT_PART(piece, ':', 1))                                               -- 续行：冒号式列名
+                 ELSE TRIM(SPLIT_PART(piece, ' ', 1)) END      AS field_name,                       -- 续行：空格式取首个空格前段（如「mem020 Y=>N」），产出「field_name」
+            CASE WHEN piece LIKE '%:%'                                                              -- 取值表达式：旧值解析起算
+                 THEN TRIM(SPLIT_PART(SPLIT_PART(piece, ':', 2), '=>', 1))                          -- 续行：冒号式旧值
+                 ELSE TRIM(SPLIT_PART(SPLIT_PART(piece, ' ', 2), '=>', 1)) END AS value_before,     -- 续行：空格式旧值，产出「value_before」
+            TRIM(SPLIT_PART(piece, '=>', 2))              AS value_after                            -- 取值表达式：新值一律取箭头后段（两式同形），产出「value_after」
+    FROM    seg                                                                                     -- 取数来源：取自本条自建的中间结果集 seg
+    WHERE   piece LIKE '%=>%'                                                                       -- 过滤条件：须含箭头方为有效变更段——两式共有的唯一必要标志
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+enf AS (                                                                                            -- 公共表表达式：开启中间结果集 enf——只留已译定的处置字段并判方向与类别（§TL-11）
+    SELECT  member_id, field_name, action_date, action_time,                                        -- 取列：起始取列子句，透传节要素之前四
+            value_before, value_after, operator_id, operator_lv, parse_sep,                         -- 续行：接续上一取列子句，续列前后值、操作人与分隔符
+            CASE WHEN field_name = 'mem017' THEN 'CANBET_下注权限'                                      -- 取值表达式：处置类别起算——mem017 系下注权限（§TL-09 列义）
+                 WHEN field_name = 'mem016' THEN 'ENABLE_账户启停'                                      -- 续行：mem016 系账户启停
+                 ELSE 'OTHER' END                     AS enforcement_type,                          -- 续行：产出「enforcement_type」——外部审计所要的处置类别列
+            CASE WHEN field_name = 'mem017' THEN 'canbet'                                           -- 取值表达式：业务列名起算——代号译为业务名，免下游再查字典
+                 WHEN field_name = 'mem016' THEN 'enable'                                           -- 续行：mem016 之业务名
+                 ELSE 'unknown' END                   AS business_field,                            -- 续行：产出「business_field」
+            CASE WHEN TRIM(value_after) IN ('N', '0') THEN 'TIGHTEN'                                -- 取值表达式：新值为 N／0 判收紧——禁投或停用
+                 WHEN TRIM(value_after) IN ('Y', '1') THEN 'RELEASE'                                -- 续行：新值为 Y／1 判解除
+                 ELSE 'OTHER' END                     AS direction,                                 -- 续行：其余取值不明记 OTHER，不入节（宁缺毋滥），产出「direction」
+            'OK'                                     AS parse_status                                -- 取值表达式：解析状态，产出「parse_status」——本 CTE 所留者皆已解析成功
+    FROM    norm                                                                                    -- 取数来源：取自本条自建的中间结果集 norm
+    WHERE   field_name IN ('mem016', 'mem017')                                                      -- 过滤条件：只认已译定的处置字段——mem015 已证为 login_error，非处置，一律不入
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+dedup AS (                                                                                          -- 公共表表达式：开启中间结果集 dedup——同刻重复写入只计一次（去重键四元组）
+    SELECT  *,                                                                                      -- 取列：整体承接上游结果集的全部字段，不再逐列列举
+            ROW_NUMBER() OVER (PARTITION BY member_id, field_name, action_time,                     -- 行号窗口表达式：按去重键 member×field×时刻×前后值 分组编号
+                               value_before, value_after ORDER BY operator_id) AS rn                -- 续行：键内任取其一（按操作人序），产出「rn」
+    FROM    enf                                                                                     -- 取数来源：取自本条自建的中间结果集 enf
+    WHERE   direction <> 'OTHER'                                                                    -- 过滤条件：方向不明者不入节
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+tight AS (                                                                                          -- 公共表表达式：开启中间结果集 tight——全部收紧事件，每行是一节的起点（§TL-11）
+    SELECT * FROM dedup WHERE rn = 1 AND direction = 'TIGHTEN'                                      -- 取数来源：去重后的收紧事件
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+rel AS (                                                                                            -- 公共表表达式：开启中间结果集 rel——全部解除事件，用以为每节寻其后首个解除（§TL-11）
+    SELECT * FROM dedup WHERE rn = 1 AND direction = 'RELEASE'                                      -- 取数来源：去重后的解除事件
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+bl AS (                                                                                             -- 公共表表达式：开启中间结果集 bl——本方案口径的百家乐投注会员名单（§TL-11 补列所需）
+    SELECT  DISTINCT CAST(bet05 AS STRING)                AS member_id                              -- 取值表达式：取用 bet05（会员号）去重，产出「member_id」
+    FROM    ods_mariadb_2b.ods_a168_bet02                                                           -- 取数来源：取自注单明细表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(bet02 AS STRING) = '101'                                                           -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+la AS (                                                                                             -- 公共表表达式：开启中间结果集 la——每会员窗内最末一次**投注**，供删失成因分类（§TL-11）
+    SELECT  CAST(bet05 AS STRING)                         AS member_id,                             -- 取值表达式：取用 bet05（会员号），产出「member_id」
+            MAX(dt)                                       AS last_bet_date,                         -- 聚合：该会员窗内最末一次投注之营业日，产出「last_bet_date」
+            COUNT(*)                                      AS n_bets_in_window                       -- 计数表达式：窗内注单数，产出「n_bets_in_window」——覆盖率证据，供删失分类追溯
+    FROM    ods_mariadb_2b.ods_a168_bet02                                                           -- 取数来源：取自注单明细表——★ 2026-08-11 斧正：旧版以「最末一次出现于变更日志」为凭
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗——而变更日志之缺席只说明未再改配置，不说明人已不在
+    GROUP BY CAST(bet05 AS STRING)                                                                  -- 分组：按会员汇总——投注活动方是「仍在观察」的正当凭据
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+lc AS (                                                                                             -- 公共表表达式：开启中间结果集 lc——每会员末次配置变更时刻（§TL-11）
+    SELECT  member_id, MAX(action_time)                   AS last_config_time                       -- 聚合：末次出现于变更日志之时刻，产出「last_config_time」
+    FROM    norm GROUP BY member_id                                                                 -- 取数来源：取自本条自建的中间结果集 norm——★ 此量仅作证据留档，**不再用作删失判据**
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11）
+ep AS (                                                                                             -- 公共表表达式：开启中间结果集 ep——为每次收紧配其后首个解除（§TL-11）
+    SELECT  t.member_id, t.field_name, t.business_field, t.enforcement_type,                        -- 取列：起始取列子句，节起点要素与两枚新增类别列
+            t.action_date, t.action_time, t.value_before, t.value_after,                            -- 续行：接续上一取列子句，续列时点与前后值
+            t.operator_id, t.operator_lv, t.parse_sep, t.parse_status,                              -- 续行：续列操作人、层级与解析两列
+            MIN(r.action_time)                            AS release_time                           -- 聚合：其后（同人同字段）首个解除时刻，无则空，产出「release_time」
+    FROM        tight t                                                                             -- 取数来源：取自本条自建的中间结果集 tight
+    LEFT JOIN   rel   r                                                                             -- 左连接：取自本条自建的中间结果集 rel——解除可缺席（右删失），故用左连接
+           ON   r.member_id  = t.member_id                                                          -- 连接键：同一会员
+          AND   r.field_name = t.field_name                                                         -- 并列键：同一处置字段——canbet 之节不由 enable 之解除关闭
+          AND   r.action_time > t.action_time                                                       -- 并列键：解除须晚于收紧——只认其后者
+    GROUP BY t.member_id, t.field_name, t.business_field, t.enforcement_type,                       -- 分组：按节起点全键汇总，使 MIN 取到「首个」解除
+             t.action_date, t.action_time, t.value_before, t.value_after,                           -- 续行：分组键补齐
+             t.operator_id, t.operator_lv, t.parse_sep, t.parse_status                              -- 续行：分组键补齐
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§TL-11）
+SELECT  p.member_id,                                                                                -- 取列：起始取列子句，本行先取「member_id」——节属谁
+        p.field_name,                                                                               -- 取值表达式：处置字段代号
+        p.business_field,                                                                           -- 取值表达式：业务列名（canbet／enable）——★ 补列，免下游再查字典
+        p.enforcement_type,                                                                         -- 取值表达式：处置类别——★ 补列，区分下注权限与账户启停
+        CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END  AS is_baccarat_member,                    -- 取值表达式：是否本方案口径的百家乐会员——★ 补列，准实验总体由此界定
+        CONCAT_WS('#', p.member_id, p.field_name, p.action_time) AS episode_id,                     -- 取值表达式：三键拼节号，产出「episode_id」——审计轨迹与准实验共用的主键
+        p.action_date                                 AS start_date,                                -- 取值表达式：节起日，产出「start_date」
+        p.action_time                                 AS start_time,                                -- 取值表达式：节起时刻，产出「start_time」
+        p.value_before,                                                                             -- 取值表达式：收紧前取值——留痕以备申诉复核
+        p.value_after,                                                                              -- 取值表达式：收紧后取值
+        p.operator_id                                 AS start_operator,                            -- 取值表达式：收紧操作人，产出「start_operator」——审计轨迹之「谁」
+        p.operator_lv                                 AS start_operator_lv,                         -- 取值表达式：操作人层级，产出「start_operator_lv」
+        p.parse_sep,                                                                                -- 取值表达式：本行所用分隔符（COLON／SPACE）——★ 补列，两式并收之凭据
+        p.parse_status,                                                                             -- 取值表达式：解析状态——★ 补列，恒为 OK；丢弃者见 §TL-11b 对账
+        COALESCE(SUBSTR(p.release_time, 1, 10), '2026-08-07') AS release_date,                      -- 取值表达式：解除日；缺席者以窗末顶替（配合下行 censored 判读），产出「release_date」
+        CASE WHEN p.release_time IS NULL THEN 1 ELSE 0 END    AS censored,                          -- 取值表达式：右删失标志——1 谓至窗末仍收紧，产出「censored」
+        la.last_bet_date,                                                                           -- 取值表达式：末次投注营业日——★ 删失分类之原始证据，供逐节追溯
+        la.n_bets_in_window,                                                                        -- 取值表达式：窗内注单数——★ 覆盖率证据
+        lc.last_config_time,                                                                        -- 取值表达式：末次配置变更时刻——★ 第二重证据（旧判据留档，已不作分类依据）
+        DATEDIFF(DATE '2026-08-06', CAST(la.last_bet_date AS DATE)) AS days_since_last_bet,         -- 取值表达式：末次投注距窗末天数——★ **连续原始量**，供 3D／7D／14D 敏感性，免回访原表
+        7                                             AS censor_cutoff_days,                        -- 取值表达式：本次分类所用的运营切点（日）——★ 显式化：7 日是**工程约定**，非统计真理
+        CASE WHEN p.release_time IS NOT NULL THEN 'NOT_CENSORED'                                    -- 取值表达式：删失成因分类起算——★ KM 无偏性之前提
+             WHEN la.last_bet_date IS NULL THEN 'NO_BET_ACTIVITY'                                   -- 续行：窗内全无投注 → 无从判其去留（先判此项，免 NULL 落入比较而误分）
+             WHEN DATEDIFF(DATE '2026-08-06', CAST(la.last_bet_date AS DATE)) <= 7                  -- 续行：末次投注距窗末不逾切点 → 人尚在、处置尚在
+                  THEN 'WINDOW_END'                                                                 -- 续行：属真窗口右删失
+             ELSE 'INACTIVE_BEFORE_END' END                    AS censor_reason,                    -- 续行：投注早止 → 疑为流失或账户终止型**假删失**，产出「censor_reason」
+        DATEDIFF(CAST(COALESCE(SUBSTR(p.release_time, 1, 10), '2026-08-07') AS DATE),               -- 取值表达式：节时长起算——解除日（或窗末）
+                 CAST(p.action_date AS DATE))         AS duration_days,                             -- 续行：减节起日得持续天数，产出「duration_days」——生存分析之时间轴
+        ROW_NUMBER() OVER (PARTITION BY p.member_id                                                 -- 行号窗口表达式：按会员为其节编序
+                           ORDER BY p.action_time)    AS episode_seq                                -- 续行：产出「episode_seq」——主分析取 1（首次处置设计），其余入敏感性
+FROM        ep p                                                                                    -- 取数来源：取自本条自建的中间结果集 ep
+LEFT JOIN   bl ON bl.member_id = p.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）——标注百家乐口径
+LEFT JOIN   la ON la.member_id = p.member_id                                                        -- 左连接：取自本条自建的中间结果集 la（末次投注日），连接键为 member_id（会员号）
+LEFT JOIN   lc ON lc.member_id = p.member_id                                                        -- 左连接：取自本条自建的中间结果集 lc（末次配置变更），连接键为 member_id（会员号）
+ORDER BY p.member_id, p.action_time;                                                                -- 排序：按会员与节起时刻升序——逐人可读其处置史；导出必带排序，分页方有稳定序
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-11b · 解析对账：进了几条、出了几条、丢了几条、为何而丢
+   ---------------------------------------------------------------------------
+   缘起：旧版 §TL-11 只认冒号式「mem016:N=>Y;」，而实测另有空格式「mem020 Y=>N;」
+   共 815 条，被 LIKE '%:%' **静默丢弃**（所幸皆为 mem020 且皆非百家乐会员）。
+   静默是最坏的失败方式。本查询把每一条原始片段的去向逐类点清，
+   使「丢了多少、因何而丢」永远看得见。
+   读法：DROPPED_* 各类之和 + KEPT 应等于 TOTAL_PIECES。凡 DROPPED_NO_ARROW 之外
+   出现大额其他类别，即须回头查解析规则，不得默认。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §TL-11b 解析对账，屏幕看结果。
+WITH ev AS (                                                                                        -- 公共表表达式：开启中间结果集 ev——与 §TL-11 同源同窗（§TL-11b）
+    SELECT  CAST(lmc05 AS STRING) AS content, CAST(lmc04 AS STRING) AS action_class                 -- 取值表达式：取用 lmc05（变更内容）与 lmc04（事件类别）
+    FROM    ods_mariadb_2b.ods_a168_log_mem_change                                                  -- 取数来源：取自会员变更日志表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')                                       -- 并列条件：只留配置修改与状态变更两类
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11b）
+seg AS (                                                                                            -- 公共表表达式：开启中间结果集 seg——逐段拆开（§TL-11b）
+    SELECT  TRIM(s.piece) AS piece FROM ev e, unnest(split(e.content, ';')) AS s(piece)             -- 行展开：以 unnest(split(…)) 把分号分隔的多段逐段成行
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11b）
+cls AS (                                                                                            -- 公共表表达式：开启中间结果集 cls——为每一片段判其去向（§TL-11b）
+    SELECT  piece,                                                                                  -- 取列：起始取列子句，本行先取「piece」
+            CASE WHEN piece = '' THEN 'DROPPED_EMPTY'                                               -- 取值表达式：**解析**状态分类起算（第一层）——空片段
+                 WHEN piece NOT LIKE '%=>%' THEN 'DROPPED_NO_ARROW'                                 -- 续行：无箭头者非变更段，正当丢弃
+                 WHEN piece LIKE '%//%' THEN 'DROPPED_URL_LIKE'                                     -- 续行：含双斜杠者疑为网址，正当丢弃（沿 §TL-10 护栏）
+                 WHEN piece LIKE 'mem016%' OR piece LIKE 'mem017%' THEN 'KEPT_ENFORCEMENT'          -- 续行：两枚已译定的处置字段——本方案所取者
+                 WHEN piece LIKE '%:%' THEN 'PARSED_COLON_OTHERFIELD'                               -- 续行：冒号式但非处置字段——解析得出，按业务分类排除
+                 ELSE 'PARSED_SPACE_OTHERFIELD' END              AS parse_status,                   -- 续行：空格式且非处置字段——★ 旧版在此静默丢弃，今已收编，产出「parse_status」
+            CASE WHEN piece LIKE 'mem016%' OR piece LIKE 'mem017%'                                  -- 取值表达式：**语义**状态分类起算（第二层，外部审计第二条）
+                 THEN 'CONFIRMED_BY_DICTIONARY'                                                     -- 续行：§TL-09 列义字典已译定（enable／canbet），语义确认
+                 WHEN piece LIKE 'mem015%' THEN 'CONFIRMED_NOT_ENFORCEMENT'                         -- 续行：已译定为 login_error，确认**非**处置，封案
+                 WHEN piece LIKE '%=>%' THEN 'UNKNOWN_PENDING_DICTIONARY'                           -- 续行：解析得出而列义未证——如 mem020、101-mem015
+                 ELSE 'NOT_APPLICABLE' END                       AS semantic_status,                -- 续行：非变更段，无语义可言，产出「semantic_status」
+            CASE WHEN piece LIKE 'mem016%' OR piece LIKE 'mem017%' THEN 'ENFORCEMENT'               -- 取值表达式：**处置**状态分类起算（第三层）
+                 WHEN piece LIKE 'mem015%' THEN 'NOT_ENFORCEMENT'                                   -- 续行：运营追踪事件，明确排除
+                 WHEN piece LIKE '%=>%' THEN 'PENDING'                                              -- 续行：语义未证者一律待定——**解析成功 ≠ 业务语义确认**，不得径入处置总体
+                 ELSE 'NOT_APPLICABLE' END                       AS enforcement_status              -- 续行：产出「enforcement_status」
+    FROM    seg                                                                                     -- 取数来源：取自本条自建的中间结果集 seg
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§TL-11b）
+SELECT  parse_status, semantic_status, enforcement_status,                                          -- 取列：起始取列子句，三状态并列——解析成功、语义确认、处置认定，三者彻底分离
+        COUNT(*)                                      AS n_pieces,                                  -- 计数表达式：该类片段条数，产出「n_pieces」
+        COUNT(*) * 1.0 / SUM(COUNT(*)) OVER ()        AS share,                                     -- 除法或乘法计算：占全部片段之比，产出「share」
+        MIN(piece)                                    AS sample_min,                                -- 取最小值表达式：字母序最小之样例，产出「sample_min」——供人工目检
+        MAX(piece)                                    AS sample_max                                 -- 取最大值表达式：字母序最大之样例，产出「sample_max」
+FROM    cls                                                                                         -- 取数来源：取自本条自建的中间结果集 cls
+GROUP BY parse_status, semantic_status, enforcement_status                                          -- 分组：按三状态组合汇总——每格皆须有明确取值
+ORDER BY n_pieces DESC;                                                                             -- 排序：按条数降序——大宗去向居前
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-12 · 设备维度发现：库内究竟有无设备标识字段
+   ---------------------------------------------------------------------------
+   缘起：本方案的关系维覆盖产品、实体、局、IP、代理，**独缺设备**，且从未查证
+   库内有无此字段。设备共用的基数远小于 IP、指向性远强于 IP——本方案的地理维度
+   正因 IP 被电信基础设施稀释而作废（见报告 @sec-ip-e1），设备或可补此缺。
+   ⚠ 纪律：**找到字段 ≠ 立即纳入模型**。须先过基数、覆盖率、稳定性、
+   跨网络判别力四道体检（见报告 @sec-device），方按 L2 层准入判据定夺。
+   读法：先看 COLUMN_NAME 与 COLUMN_COMMENT 是否真指设备；同名而异义者甚多
+   （如 type、client 可能指业务类型而非客户端），一律回查列义与取值分布再定。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §TL-12 设备字段发现，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( LOWER(COLUMN_NAME) LIKE '%device%'                                                          -- 并列条件：英文候选起算——device 类
+     OR LOWER(COLUMN_NAME) LIKE '%fingerprint%'                                                     -- 续行：指纹类
+     OR LOWER(COLUMN_NAME) LIKE '%imei%'                                                            -- 续行：手机设备串号
+     OR LOWER(COLUMN_NAME) LIKE '%idfa%'                                                            -- 续行：iOS 广告标识
+     OR LOWER(COLUMN_NAME) LIKE '%android%'                                                         -- 续行：Android 标识
+     OR LOWER(COLUMN_NAME) LIKE '%hardware%'                                                        -- 续行：硬件标识
+     OR LOWER(COLUMN_NAME) LIKE '%terminal%'                                                        -- 续行：终端标识
+     OR LOWER(COLUMN_NAME) LIKE '%browser%'                                                         -- 续行：浏览器标识
+     OR LOWER(COLUMN_NAME) LIKE '%client%'                                                          -- 续行：客户端标识（⚠ 或指业务侧客户，须回查列义）
+     OR LOWER(COLUMN_NAME) LIKE '%user_agent%'                                                      -- 续行：UA 全称
+     OR LOWER(COLUMN_NAME) LIKE '%useragent%'                                                       -- 续行：UA 连写
+     OR LOWER(COLUMN_NAME) = 'ua'                                                                   -- 续行：UA 简称——须精确匹配，免误中含 ua 二字之列名
+     OR LOWER(COLUMN_NAME) LIKE '%app_version%'                                                     -- 续行：应用版本
+     OR LOWER(COLUMN_NAME) LIKE '%os_%'                                                             -- 续行：操作系统类
+     OR COLUMN_COMMENT LIKE '%设备%'                                                                  -- 续行：中文候选起算——设备
+     OR COLUMN_COMMENT LIKE '%终端%'                                                                  -- 续行：终端
+     OR COLUMN_COMMENT LIKE '%客户端%'                                                                 -- 续行：客户端
+     OR COLUMN_COMMENT LIKE '%浏览器%'                                                                 -- 续行：浏览器
+     OR COLUMN_COMMENT LIKE '%指纹%'                                                                  -- 续行：指纹
+     OR COLUMN_COMMENT LIKE '%机器码%'                                                                 -- 续行：机器码
+     OR COLUMN_COMMENT LIKE '%型号%' )                                                                -- 续行：设备型号——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-13 · 限额组字典搜寻：`101-mem015` 究竟是不是限红
+   ---------------------------------------------------------------------------
+   缘起：§TL-10 实测有一类字段形如 `101-mem015`（取值为逗号分隔整数串，
+   如 `101-mem015:3,21=>3,4`），百家乐口径 310 条 · 241 名会员，形似产品级限额组 ID。
+   若属限红，这是眼下最能改善准实验功效之一笔。
+   ⚠ 但 §TL-09 已证 `mem015` = login_error。若因名称相同即读作限额，
+   等于刚拆掉一个同名异义、转手又装回一个（与 bet41、bet14 同类之坑）。
+   故须先找到**限额组字典表**（组 ID → 限额金额／层级），六层判据打通方可采信：
+     物理列 → 数据字典 → 旧值/新值 → 业务含义 → 处置动作 → 处置节
+   在此之前，此类一律标注 PENDING_BUSINESS_DICTIONARY，既不入处置组、
+   也不当作「无处置」。
+   读法：找出候选表后，须验证 §TL-10 中出现过的组 ID（如 3、4、21、350）
+   确在该表主键内，且其限额金额可比大小——能比大小，方能判孰紧孰松。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：不需要 —— §TL-13 限额组字典搜寻，屏幕看结果。
+SELECT  TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT                        -- 取列：起始取列子句，逐列列出表名、序位、列名、类型与列义
+FROM    information_schema.columns                                                                  -- 取数来源：取自库内元数据字典（列级）
+WHERE   TABLE_SCHEMA = 'ods_mariadb_2b'                                                             -- 过滤条件：限定本项目所用库
+  AND ( LOWER(TABLE_NAME) LIKE '%limit%'                                                            -- 并列条件：表名候选起算——limit 类
+     OR LOWER(TABLE_NAME) LIKE '%bet_level%'                                                        -- 续行：投注层级类
+     OR LOWER(TABLE_NAME) LIKE '%betlimit%'                                                         -- 续行：投注限额连写
+     OR LOWER(TABLE_NAME) LIKE '%odds_limit%'                                                       -- 续行：赔率限额类
+     OR LOWER(TABLE_NAME) LIKE '%group%'                                                            -- 续行：分组类（限额组多以 group 命名）
+     OR COLUMN_COMMENT LIKE '%限額%'                                                                  -- 续行：列义候选起算——繁体限额
+     OR COLUMN_COMMENT LIKE '%限额%'                                                                  -- 续行：简体限额
+     OR COLUMN_COMMENT LIKE '%限紅%'                                                                  -- 续行：繁体限红
+     OR COLUMN_COMMENT LIKE '%限红%'                                                                  -- 续行：简体限红
+     OR COLUMN_COMMENT LIKE '%注額上限%'                                                                -- 续行：注额上限
+     OR COLUMN_COMMENT LIKE '%最高投注%'                                                                -- 续行：最高投注
+     OR COLUMN_COMMENT LIKE '%最低投注%' )                                                              -- 续行：最低投注——并收束整个候选条件组
+ORDER BY TABLE_NAME, ORDINAL_POSITION;                                                              -- 排序：按表名与列序位升序——逐表可读
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §TL-11c · 最终处置总体对账表：Raw → Event → Episode → Member 四级逐级核对
+   ---------------------------------------------------------------------------
+   缘起：同一批处置在不同口径下数出不同的数（原始片段／解析事件／处置节／唯一会员），
+   四者并不矛盾，却极易被混作同一个「样本量」。外部审计（2026-08-11 二次红队第一条）
+   要求此表**由 SQL 自动生成，不得手工填写**——本条即此。
+   读法：逐级递减须解释得通。凡上下两级之差无法由本表的定义栏说明者，即有解析或口径缺陷。
+   ⚠ 此表是**处置总体冻结**（Treatment Population Freeze）的前置凭据：
+     四级对得上、且 semantic_status 与 censor_reason 皆无 UNKNOWN 之遗漏，方可冻结。
+     冻结之前，PSM 与事件研究一律不得开跑。
+   ═══════════════════════════════════════════════════════════════════════════ */
+-- ▸ 导出：需要 —— 存为「数据库/TL11c_population_reconcile.csv」（§TL-11c 处置总体四级对账）。
+WITH ev AS (                                                                                        -- 公共表表达式：开启中间结果集 ev——与 §TL-11 同源同窗（§TL-11c）
+    SELECT  CAST(lmc02 AS STRING) AS member_id, CAST(lmc05 AS STRING) AS content                    -- 取值表达式：取用 lmc02（被改会员号）与 lmc05（变更内容串）
+    FROM    ods_mariadb_2b.ods_a168_log_mem_change                                                  -- 取数来源：取自会员变更日志表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(lmc04 AS STRING) IN ('edit', 'changestatus')                                       -- 并列条件：只留配置修改与状态变更两类
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11c）
+pieces AS (                                                                                         -- 公共表表达式：开启中间结果集 pieces——第一级：原始片段（§TL-11c）
+    SELECT  e.member_id, TRIM(s.piece) AS piece                                                     -- 取值表达式：逐段去空白，产出「piece」
+    FROM ev e, unnest(split(e.content, ';')) AS s(piece)                                            -- 行展开：以 unnest(split(…)) 把分号分隔的多段逐段成行
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11c）
+enf AS (                                                                                            -- 公共表表达式：开启中间结果集 enf——第二级：已确认处置的解析事件（§TL-11c）
+    SELECT  member_id, piece,                                                                       -- 取列：起始取列子句，本行先列 member_id, piece
+            CASE WHEN TRIM(SPLIT_PART(piece, '=>', 2)) IN ('N','0') THEN 'TIGHTEN'                  -- 取值表达式：方向判定起算——新值 N／0 为收紧
+                 WHEN TRIM(SPLIT_PART(piece, '=>', 2)) IN ('Y','1') THEN 'RELEASE'                  -- 续行：新值 Y／1 为解除
+                 ELSE 'OTHER' END                          AS direction                             -- 续行：产出「direction」
+    FROM    pieces                                                                                  -- 取数来源：取自本条自建的中间结果集 pieces
+    WHERE   piece LIKE '%=>%'                                                                       -- 过滤条件：须含箭头方为有效变更段
+      AND ( piece LIKE 'mem016%' OR piece LIKE 'mem017%' )                                          -- 并列条件：只认语义已确认的两枚处置字段（mem015 已证非处置，封案）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§TL-11c）
+bl AS (                                                                                             -- 公共表表达式：开启中间结果集 bl——本方案口径的百家乐投注会员名单（§TL-11c）
+    SELECT  DISTINCT CAST(bet05 AS STRING) AS member_id                                             -- 取值表达式：取用 bet05（会员号）去重，产出「member_id」
+    FROM    ods_mariadb_2b.ods_a168_bet02                                                           -- 取数来源：取自注单明细表
+    WHERE   dt >= '2026-03-21' AND dt < '2026-08-07'                                                -- 过滤条件：限定 E1 全局窗，涉 dt（营业日）
+      AND   CAST(bet02 AS STRING) = '101'                                                           -- 并列条件：限定百家乐产品大类，涉 bet02（游戏类别）
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§TL-11c）
+SELECT  1 AS lvl, '① 原始片段（raw mutation pieces）' AS level_name,                                      -- 取值表达式：第一级序号与名称，产出「lvl」「level_name」
+        COUNT(*) AS n_all,                                                                          -- 计数表达式：全体计数，产出「n_all」
+        SUM(CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END) AS n_baccarat,                        -- 聚合：其中百家乐会员之计数，产出「n_baccarat」
+        COUNT(DISTINCT p.member_id) AS n_member_all,                                                -- 计数表达式：涉及会员数（去重），产出「n_member_all」
+        COUNT(DISTINCT CASE WHEN bl.member_id IS NOT NULL THEN p.member_id END) AS n_member_bac,    -- 计数表达式：其中百家乐会员数，产出「n_member_bac」
+        '变更日志 content 按分号拆开后的每一段' AS definition                                                     -- 取值表达式：本级定义，产出「definition」——逐级递减须由定义解释得通
+FROM        pieces p                                                                                -- 取数来源：取自本条自建的中间结果集 pieces
+LEFT JOIN   bl ON bl.member_id = p.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一级
+SELECT  2, '② 处置事件（enforcement events）',                                                            -- 取值表达式：第二级序号与名称
+        COUNT(*),                                                                                   -- 计数表达式：全体计数
+        SUM(CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END),                                      -- 聚合：其中百家乐会员之计数
+        COUNT(DISTINCT e.member_id),                                                                -- 计数表达式：涉及会员数（去重）
+        COUNT(DISTINCT CASE WHEN bl.member_id IS NOT NULL THEN e.member_id END),                    -- 计数表达式：其中百家乐会员数
+        '解析成功且语义经字典确认为处置者（mem016／mem017），含收紧与解除两向'                                                  -- 取值表达式：本级定义
+FROM        enf e                                                                                   -- 取数来源：取自本条自建的中间结果集 enf
+LEFT JOIN   bl ON bl.member_id = e.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一级
+SELECT  3, '③ 收紧事件（episode starts）',                                                                -- 取值表达式：第三级序号与名称
+        COUNT(*),                                                                                   -- 计数表达式：全体计数
+        SUM(CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END),                                      -- 聚合：其中百家乐会员之计数
+        COUNT(DISTINCT e.member_id),                                                                -- 计数表达式：涉及会员数（去重）
+        COUNT(DISTINCT CASE WHEN bl.member_id IS NOT NULL THEN e.member_id END),                    -- 计数表达式：其中百家乐会员数——★ 此即处置节口径的唯一处置会员数
+        '处置事件中方向为收紧者；每一条起一个处置节，故其数即处置节数'                                                            -- 取值表达式：本级定义
+FROM        enf e                                                                                   -- 取数来源：取自本条自建的中间结果集 enf
+LEFT JOIN   bl ON bl.member_id = e.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+WHERE   e.direction = 'TIGHTEN'                                                                     -- 过滤条件：只留收紧方向
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一级
+SELECT  4, '④ 解除事件（episode ends）',                                                                  -- 取值表达式：第四级序号与名称
+        COUNT(*),                                                                                   -- 计数表达式：全体计数
+        SUM(CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END),                                      -- 聚合：其中百家乐会员之计数
+        COUNT(DISTINCT e.member_id),                                                                -- 计数表达式：涉及会员数（去重）
+        COUNT(DISTINCT CASE WHEN bl.member_id IS NOT NULL THEN e.member_id END),                    -- 计数表达式：其中百家乐会员数
+        '处置事件中方向为解除者；未必与收紧一一对应，故删失由此而生'                                                             -- 取值表达式：本级定义
+FROM        enf e                                                                                   -- 取数来源：取自本条自建的中间结果集 enf
+LEFT JOIN   bl ON bl.member_id = e.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+WHERE   e.direction = 'RELEASE'                                                                     -- 过滤条件：只留解除方向
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一级
+SELECT  5, '⑤ 左截断：只见解除而未见收紧之会员',                                                                    -- 取值表达式：第五级——★ 2026-08-11 增，解释 ④ 多于 ③ 之差
+        0, 0,                                                                                       -- 计数表达式：本级只计会员，条数置零以免与事件级混淆
+        COUNT(DISTINCT r.member_id),                                                                -- 计数表达式：全体——其收紧发生于窗口之前，本窗只见尾巴
+        COUNT(DISTINCT CASE WHEN bl.member_id IS NOT NULL THEN r.member_id END),                    -- 计数表达式：其中百家乐会员数
+        '窗内有解除而无收紧者：处置起于观察窗之前（左截断），无 T0 故不入处置节，亦不入 KM'                                              -- 取值表达式：本级定义——**须明写，否则 ④ 与 ③ 之差无从解释**
+FROM        ( SELECT DISTINCT member_id FROM enf WHERE direction = 'RELEASE' ) r                    -- 取数来源：解除方会员集合
+LEFT JOIN   ( SELECT DISTINCT member_id FROM enf WHERE direction = 'TIGHTEN' ) t                    -- 左连接：收紧方会员集合
+       ON   t.member_id = r.member_id                                                               -- 连接键：同一会员
+LEFT JOIN   bl ON bl.member_id = r.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+WHERE   t.member_id IS NULL                                                                         -- 过滤条件：只留在收紧集合中查无此人者——即左截断
+UNION ALL                                                                                           -- 集合运算：纵向拼接下一级
+SELECT  6, '⑥ 语义待定：解析成功而列义未经字典确认',                                                                  -- 取值表达式：第六级——★ 2026-08-11 增，与 §TL-11b 的 semantic_status 对齐
+        COUNT(*),                                                                                   -- 计数表达式：全体计数
+        SUM(CASE WHEN bl.member_id IS NULL THEN 0 ELSE 1 END),                                      -- 聚合：其中百家乐会员之计数
+        COUNT(DISTINCT q.member_id),                                                                -- 计数表达式：涉及会员数（去重）
+        COUNT(DISTINCT CASE WHEN bl.member_id IS NOT NULL THEN q.member_id END),                    -- 计数表达式：其中百家乐会员数
+        '含箭头而非 mem015／mem016／mem017 者，如 mem020 与 101-mem015——PENDING，不入处置总体'                        -- 取值表达式：本级定义
+FROM        pieces q                                                                                -- 取数来源：取自本条自建的中间结果集 pieces
+LEFT JOIN   bl ON bl.member_id = q.member_id                                                        -- 左连接：取自本条自建的中间结果集 bl，连接键为 member_id（会员号）
+WHERE   q.piece LIKE '%=>%'                                                                         -- 过滤条件：须为有效变更段
+  AND   q.piece NOT LIKE 'mem015%'                                                                  -- 并列条件：mem015 已封案（login_error），另计
+  AND   q.piece NOT LIKE 'mem016%'                                                                  -- 并列条件：mem016 已确认为处置，另计
+  AND   q.piece NOT LIKE 'mem017%'                                                                  -- 并列条件：mem017 已确认为处置，另计
+ORDER BY lvl;                                                                                       -- 排序：按级序升序——逐级递减一目了然
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-16 · 变更记录（v2斧正版 → v3）
+   ---------------------------------------------------------------------------
+   2026-08-13  v3  一族四档血统同步。
+     改前六元组（v2斧正版）：
+       行数 7,849 · 字节(原样) 1,042,121 · 字节(LF归一) 1,034,272
+       MD5(原样)   30d9db43d5e641538c1e9eeb00527e2b
+       MD5(LF归一) ed7a6b1b5c338b79e2ac9e8b9bf0e3b9
+       CRLF · UTF-8(无BOM) · 字节差 7,849 = 行数 ✅
+     本轮改动（**只增注释与登记，SQL 主体一字未动**）：
+       ① 头部新增「血统关系登记」——一族四档角色与三条同步纪律；
+       ② 头部新增「§Z-13 全包净化审计结论」——154 条逐条核实读数、
+          14 条交付件缺闸清单、三处后果、全文字符扫描；
+       ③ 文末新增本变更记录（§Z-16）。
+     ⚠ 因只增注释，**任何一条查询之行为与产出皆未改变**；
+       14 条缺闸仍待按「Z15_前置净化层_标准前奏与补闸包.sql」处置。
+       补闸落地后须另立 v4，届时 SQL 主体方有改动。
+     改后六元组（v3 · 2026-08-13 实测）：
+       行数 7,932 · 字节(原样) 1,048,666 · 字节(LF归一) 1,040,734
+       MD5(原样)   7e58679d110c53d9d1f807d4512250e6
+       MD5(LF归一) 1e1e4294c067763343eb47c908c37afc
+       CRLF · UTF-8(无BOM) · 字节差 7,932 = 行数 ✅
+       ⚠ 上列六元组系写入本行**之前**之实测；写入本行后文件再变，
+         故取用时以随附 Z13 审计脚本当场重算者为准。
+   ═══════════════════════════════════════════════════════════════════════════ */
