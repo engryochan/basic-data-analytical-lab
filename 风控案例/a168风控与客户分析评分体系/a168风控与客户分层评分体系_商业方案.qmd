@@ -6011,7 +6011,7 @@ aurora_dt(评分设计, caption="四实体 · 赏罚分明评分设计（本表�
 #      真数据在 → 用真数据；真数据缺 → 出「结构演示」图并**满幅红字标注**，
 #      让读者看得到评分骨架长什么样，但**绝不可能误当成实测结论**。
 #    环境由第一个 chunk（setup-python）自举，此处只做守卫，缺包不中断渲染
-import os, sys
+import os, sys, gc
 try:
     import numpy as np, pandas as pd
     import plotly.graph_objects as go
@@ -6068,6 +6068,50 @@ def read_any(path):
             continue
     raise UnicodeDecodeError("read_any", b"", 0, 1,
                              f"{path} 所有候选编码均失败")
+
+
+def read_any_cols(path, want, nrows=None):
+    """★ 2026-08-14 新增（S1 · 渲染中断之根治）：大表只读必需列。
+       【病症】radar-scores 报
+         numpy._core._exceptions._ArrayMemoryError:
+         Unable to allocate 375. MiB for an array with shape (8, 6143388) and data type object
+       【根因】R03b_player_dealer_daily.csv 达 2,104 MB / 614 万行。
+         旧写法以 read_any() 读入**全部八列**，再对 uid 整列 astype(str) ——
+         字符串列在 pandas 中为 object 数组，每格一个 Python 对象指针，
+         614 万行 × 八列即需数百 MiB 连续内存，遂告分配失败。
+       【斧正三条】① 先只读表头定编码与列名，再以 usecols 二次读入，只取必需列；
+         ② 连接键一律用 int64 数值，**绝不转字符串**——数值列为紧凑 ndarray，无对象开销；
+         ③ 用毕即 del + gc.collect() 释放。
+       返回 (df, 全部列名)；所需列一个都不在则 df 为 None。"""
+    for enc in ("utf-8-sig", "utf-8", "gb18030", "gbk", "big5", "latin1"):
+        try:
+            hdr = pd.read_csv(path, encoding=enc, nrows=0)
+        except (UnicodeDecodeError, LookupError):
+            continue
+        except Exception:
+            continue
+        orig = list(hdr.columns)
+        clean = [str(c).strip().replace("\ufeff", "") for c in orig]
+        m = dict(zip(clean, orig))
+        pick = [m[c] for c in want if c in m]
+        if not pick:
+            return None, clean
+        d = pd.read_csv(path, encoding=enc, usecols=pick, nrows=nrows)
+        d.columns = [str(c).strip().replace("\ufeff", "") for c in d.columns]
+        return d, clean
+    return None, []
+
+
+def _ids(path, cols):
+    """自某交付件取一组会员号，返回 int64 ndarray（供 isin 用，零对象开销）。"""
+    d, _ = read_any_cols(path, cols)
+    if d is None or not len(d):
+        return np.array([], dtype="int64")
+    v = pd.concat([pd.to_numeric(d[c], errors="coerce") for c in d.columns], ignore_index=True)
+    v = v.dropna().astype("int64").unique()
+    del d
+    gc.collect()
+    return v
 
 
 ENT_SQL = {"玩家": "S-01（扩编列 S-01ex）", "荷官": "S-02（扩编列 S-02ex）",
@@ -6166,119 +6210,131 @@ for ent, (path, dims) in (ENT.items() if ENV_OK else []):
                     df["对打指数"]     = df["对打指数"].fillna(0.0)
                     df["批量注册嫌疑"] = df["批量注册嫌疑"].fillna(0.0)
                     print(f"ℹ️ [玩家] 已由 C06_hedge_pairs 并入 对打指数/批量注册嫌疑（对打名单 {len(agg)} 人，其余记 0）")
-        ## ── 荷官三罚侧维 ← §R03b 日粒度底表 × §C06fix 对打名单 × §K01b 金标种子 ──
-        ##    算式逐行迻录自 a168风控评分_精要商业报告.qmd L2,093–2,095、L2,121–2,123，
-        ##    值与序皆不动。此三维**非 SQL 缺列**：SQL 总包 §S-02 注释早已写明
+        ## ── 荷官三罚侧维 ← 玩家×荷官底表 × §C06fix 对打名单 × §K01b 金标种子 ──
+        ##    算式逐行迻录自 a168风控评分_精要商业报告.qmd L2,093–2,095、L2,121–2,123。
+        ##    此三维**非 SQL 缺列**：SQL 总包 §S-02 注释早已写明
         ##    「对打局占比/異常对关联在 Python 侧并 §C06fix 名单」，缺的一直是本段代码。
+        ##    ★ 2026-08-14 内存斧正：底表**优先取 §R03 全窗聚合（约 260 MB）**，
+        ##      非 §R03b 日粒度（2,104 MB / 614 万行）——本三维皆为全窗比值，
+        ##      日粒度对结果无增益，只增内存。且一律只读三列、连接键用 int64。
         if ent == "荷官" and not {"对打局占比","异常对关联","風險單密度"} <= set(df.columns):
-            r03p, _hr = resolve_data("R03b_player_dealer_daily.csv")
+            r03p, _hr = resolve_data("R03_player_dealer.csv")
             if r03p is None:
-                r03p, _hr = resolve_data("R03_player_dealer.csv")
+                r03p, _hr = resolve_data("R03b_player_dealer_daily.csv")
+                if r03p is not None:
+                    print("⚠️ [荷官] §R03 未就位，回落 §R03b 日粒度（体量大，仅取三列）")
             c06d, _hc = resolve_data("C06_hedge_pairs.csv")
             sedp, _hs = resolve_data("K01b_seed_manual.csv")
             if r03p is not None:
-                rb = read_any(r03p)
-                rb.columns = [str(c).strip().replace("\ufeff", "") for c in rb.columns]
-                uidc = next((c for c in ("uid","member_id") if c in rb.columns), None)
-                stkc = next((c for c in ("stake_amount","valid_bet","stake") if c in rb.columns), None)
-                if uidc and stkc and "dealer_id" in rb.columns:
-                    hm2, sd2 = set(), set()
-                    if c06d is not None:
-                        c6d = read_any(c06d)
-                        c6d.columns = [str(c).strip() for c in c6d.columns]
-                        for cc in ("m_a","m_b"):
-                            if cc in c6d.columns:
-                                hm2 |= set(pd.to_numeric(c6d[cc], errors="coerce").dropna().astype("int64").astype(str))
-                    if sedp is not None:
-                        sd = read_any(sedp)
-                        sd.columns = [str(c).strip() for c in sd.columns]
-                        if "member_id" in sd.columns:
-                            sd2 = set(pd.to_numeric(sd["member_id"], errors="coerce").dropna().astype("int64").astype(str))
-                    key = pd.to_numeric(rb[uidc], errors="coerce")
-                    rb = rb.assign(_uid=key.dropna().astype("int64").astype(str)
-                                   if key.notna().all() else key.astype(str))
+                rb, _all = read_any_cols(
+                    r03p, ["dealer_id", "uid", "member_id",
+                           "stake_amount", "valid_bet", "stake"])
+                uidc = next((c for c in ("uid", "member_id") if rb is not None and c in rb.columns), None)
+                stkc = next((c for c in ("stake_amount", "valid_bet", "stake")
+                             if rb is not None and c in rb.columns), None)
+                if rb is None or not uidc or not stkc or "dealer_id" not in rb.columns:
+                    print(f"⛔ [荷官] {os.path.basename(r03p)} 缺必需列"
+                          f"（需 dealer_id ＋ uid/member_id ＋ stake_amount/valid_bet/stake）；"
+                          f"实有：{_all}")
+                else:
+                    hm2 = _ids(c06d, ["m_a", "m_b"]) if c06d is not None else np.array([], dtype="int64")
+                    sd2 = _ids(sedp, ["member_id"]) if sedp is not None else np.array([], dtype="int64")
+                    rb["_uid"] = pd.to_numeric(rb[uidc], errors="coerce")
                     rb["_stk"] = pd.to_numeric(rb[stkc], errors="coerce").fillna(0.0)
-                    inh = rb["_uid"].isin(hm2); ins = rb["_uid"].isin(sd2)
-                    agg = rb.assign(_h=rb["_stk"].where(inh, 0.0),
-                                    _s=rb["_stk"].where(ins, 0.0),
-                                    _hu=rb["_uid"].where(inh)).groupby("dealer_id").agg(
-                        対打注额=("_h","sum"), 種子注额=("_s","sum"),
-                        対打客数=("_hu","nunique")).reset_index()
-                    df["dealer_id"] = df["dealer_id"].astype(str)
-                    agg["dealer_id"] = agg["dealer_id"].astype(str)
-                    df = df.merge(agg, on="dealer_id", how="left")
-                    for cc in ("対打注额","種子注额","対打客数"):
-                        df[cc] = df[cc].fillna(0.0)
+                    inh = rb["_uid"].isin(hm2)
+                    ins = rb["_uid"].isin(sd2)
+                    g1 = (rb.assign(_h=rb["_stk"].where(inh, 0.0),
+                                    _s=rb["_stk"].where(ins, 0.0))
+                            .groupby("dealer_id", as_index=False)
+                            .agg(対打注额=("_h", "sum"), 種子注额=("_s", "sum")))
+                    g2 = (rb.loc[inh].groupby("dealer_id")["_uid"].nunique()
+                            .rename("対打客数").reset_index())
+                    agg = g1.merge(g2, on="dealer_id", how="left")
+                    n_rows = len(rb)
+                    del rb, g1, g2, inh, ins
+                    gc.collect()
+                    df["_d"] = df["dealer_id"].astype(str)
+                    agg["_d"] = agg["dealer_id"].astype(str)
+                    df = df.merge(agg.drop(columns=["dealer_id"]), on="_d",
+                                  how="left").drop(columns=["_d"])
+                    for cc in ("対打注额", "種子注额", "対打客数"):
+                        df[cc] = pd.to_numeric(df[cc], errors="coerce").fillna(0.0)
                     df["对打局占比"] = df["対打注额"] / df["在桌洗码量"].clip(lower=1)
                     df["异常对关联"] = df["対打客数"] / df["客群广度"].clip(lower=1)
                     df["風險單密度"] = df["種子注额"] / df["在桌洗码量"].clip(lower=1)
-                    print(f"ℹ️ [荷官] 已由 {os.path.basename(r03p)} × C06fix × K01b 派生"
-                          f" 对打局占比/异常对关联/風險單密度（对打名单 {len(hm2)} 人、种子 {len(sd2)} 人）")
+                    print(f"ℹ️ [荷官] 已由 {os.path.basename(r03p)}（{n_rows:,} 行，只读三列）"
+                          f" × C06fix × K01b 派生 对打局占比/异常对关联/風險單密度"
+                          f"（对打名单 {len(hm2):,} 人、金标种子 {len(sd2):,} 人）")
 
         ## ── 玩家 · IP结构风险 ← §C-00 会员×IP 明细 × §K01b 金标（精要报告 L1,838–1,854）──
         if ent == "玩家" and "IP结构风险" not in df.columns:
             iplp, _hi = resolve_data("I_ip_player.csv")
             if iplp is not None:
-                ip = read_any(iplp)
-                ip.columns = [str(c).strip().replace("\ufeff", "") for c in ip.columns]
-                if {"member_id","bet_ip"} <= set(ip.columns):
-                    g = ip.groupby("member_id")["bet_ip"].nunique().rename("密度").reset_index()
-                    hit = set()
-                    sedp, _hs = resolve_data("K01b_seed_manual.csv")
-                    if sedp is not None:
-                        sd = read_any(sedp)
-                        sd.columns = [str(c).strip() for c in sd.columns]
-                        if "member_id" in sd.columns:
-                            hit = set(pd.to_numeric(sd["member_id"], errors="coerce").dropna().astype("int64"))
-                    g["_m"] = pd.to_numeric(g["member_id"], errors="coerce")
-                    g["命中"] = g["_m"].isin(hit).astype(int)
-                    g["IP结构风险"] = g["密度"] * (1 + g["命中"])
+                ip, _ac = read_any_cols(iplp, ["member_id", "bet_ip"])
+                if ip is None or not {"member_id", "bet_ip"} <= set(ip.columns):
+                    print(f"⛔ [玩家·IP结构风险] I_ip_player 缺 member_id/bet_ip；实有：{_ac}")
+                else:
+                    ip["_m"] = pd.to_numeric(ip["member_id"], errors="coerce")
+                    g = ip.dropna(subset=["_m"]).groupby("_m")["bet_ip"].nunique()
+                    del ip
+                    gc.collect()
+                    g = g.rename("密度").reset_index()
+                    hit = _ids(resolve_data("K01b_seed_manual.csv")[0], ["member_id"]) \
+                          if resolve_data("K01b_seed_manual.csv")[0] is not None \
+                          else np.array([], dtype="int64")
+                    g["IP结构风险"] = g["密度"] * (1 + g["_m"].isin(hit).astype(int))
                     df["_k"] = pd.to_numeric(df["member_id"], errors="coerce")
-                    df = df.merge(g[["_m","IP结构风险"]], left_on="_k", right_on="_m",
-                                  how="left").drop(columns=["_k","_m"])
+                    df = df.merge(g[["_m", "IP结构风险"]], left_on="_k", right_on="_m",
+                                  how="left").drop(columns=["_k", "_m"])
                     df["IP结构风险"] = df["IP结构风险"].fillna(0.0)
-                    print(f"ℹ️ [玩家] 已由 I_ip_player × K01b 派生 IP结构风险（金标命中 {len(hit)} 人加倍计）")
+                    del g
+                    gc.collect()
+                    print(f"ℹ️ [玩家] 已由 I_ip_player × K01b 派生 IP结构风险"
+                          f"（金标命中 {len(hit):,} 人，其密度加倍计）")
 
         ## ── 代理 · 单链密度 ← §C-00（精要报告 L2,314–2,319）；对打渗透率 ← §C06fix（L2,393）──
         if ent == "代理":
             iplp, _hi = resolve_data("I_ip_player.csv")
             if iplp is not None and "单链密度" not in df.columns:
-                ip = read_any(iplp)
-                ip.columns = [str(c).strip().replace("\ufeff", "") for c in ip.columns]
-                if {"lv3","member_per_chain"} <= set(ip.columns):
-                    mx = (ip[["lv3","member_per_chain"]].drop_duplicates()
-                          .groupby("lv3")["member_per_chain"].max().rename("单链密度").reset_index())
-                    df["lv3"] = df["lv3"].astype(str); mx["lv3"] = mx["lv3"].astype(str)
-                    df = df.merge(mx, on="lv3", how="left")
-                    df["单链密度"] = df["单链密度"].fillna(0.0)
+                ip, _ac = read_any_cols(iplp, ["lv3", "member_per_chain"])
+                if ip is not None and {"lv3", "member_per_chain"} <= set(ip.columns):
+                    ip["member_per_chain"] = pd.to_numeric(ip["member_per_chain"], errors="coerce")
+                    mx = ip.groupby("lv3", as_index=False)["member_per_chain"].max() \
+                           .rename(columns={"member_per_chain": "单链密度"})
+                    del ip
+                    gc.collect()
+                    df["_l"] = df["lv3"].astype(str); mx["_l"] = mx["lv3"].astype(str)
+                    df = df.merge(mx.drop(columns=["lv3"]), on="_l", how="left").drop(columns=["_l"])
+                    df["单链密度"] = pd.to_numeric(df["单链密度"], errors="coerce").fillna(0.0)
                     print("ℹ️ [代理] 已由 I_ip_player 派生 单链密度（线内 member_per_chain 最大值）")
+                else:
+                    print(f"⛔ [代理·单链密度] I_ip_player 缺 lv3/member_per_chain；实有：{_ac}")
             if "对打渗透率" not in df.columns:
-                for cand in ("对打占比","对打渗透"):
+                _done = False
+                for cand in ("对打占比", "对打渗透"):
                     if cand in df.columns:
                         df["对打渗透率"] = pd.to_numeric(df[cand], errors="coerce").fillna(0.0)
                         print(f"ℹ️ [代理] 对打渗透率 取自导出件同义列 {cand}")
+                        _done = True
                         break
-                else:
-                    iplp2, _h2 = resolve_data("I_ip_player.csv")
+                if not _done and iplp is not None:
                     c06d2, _h3 = resolve_data("C06_hedge_pairs.csv")
-                    if iplp2 is not None and c06d2 is not None:
-                        ip2 = read_any(iplp2); c62 = read_any(c06d2)
-                        ip2.columns = [str(c).strip() for c in ip2.columns]
-                        c62.columns = [str(c).strip() for c in c62.columns]
-                        if {"lv3","member_id"} <= set(ip2.columns):
-                            hm = set()
-                            for cc in ("m_a","m_b"):
-                                if cc in c62.columns:
-                                    hm |= set(pd.to_numeric(c62[cc], errors="coerce").dropna().astype("int64"))
-                            ip2["_m"] = pd.to_numeric(ip2["member_id"], errors="coerce")
-                            gg = ip2.drop_duplicates(["lv3","_m"]).groupby("lv3").agg(
-                                _n=("_m","nunique"),
-                                _h=("_m", lambda v: v.isin(hm).sum())).reset_index()
-                            gg["对打渗透率"] = gg["_h"] / gg["_n"].clip(lower=1)
-                            df["lv3"] = df["lv3"].astype(str); gg["lv3"] = gg["lv3"].astype(str)
-                            df = df.merge(gg[["lv3","对打渗透率"]], on="lv3", how="left")
-                            df["对打渗透率"] = df["对打渗透率"].fillna(0.0)
-                            print(f"ℹ️ [代理] 已由 I_ip_player × C06fix 派生 对打渗透率（对打名单 {len(hm)} 人）")
+                    ip2, _a2 = read_any_cols(iplp, ["lv3", "member_id"])
+                    if ip2 is not None and {"lv3", "member_id"} <= set(ip2.columns) and c06d2 is not None:
+                        hm = _ids(c06d2, ["m_a", "m_b"])
+                        ip2["_m"] = pd.to_numeric(ip2["member_id"], errors="coerce")
+                        ip2 = ip2.dropna(subset=["_m"]).drop_duplicates(["lv3", "_m"])
+                        ip2["_hit"] = ip2["_m"].isin(hm).astype(int)
+                        gg = ip2.groupby("lv3", as_index=False).agg(_n=("_m", "nunique"),
+                                                                   _h=("_hit", "sum"))
+                        del ip2
+                        gc.collect()
+                        gg["对打渗透率"] = gg["_h"] / gg["_n"].clip(lower=1)
+                        df["_l"] = df["lv3"].astype(str); gg["_l"] = gg["lv3"].astype(str)
+                        df = df.merge(gg[["_l", "对打渗透率"]], on="_l", how="left").drop(columns=["_l"])
+                        df["对打渗透率"] = df["对打渗透率"].fillna(0.0)
+                        print(f"ℹ️ [代理] 已由 I_ip_player × C06fix 派生 对打渗透率"
+                              f"（对打名单 {len(hm):,} 人）")
 
         ## ── 风控专员 · 登记跨度 / 标注停滞度 / 理由空白率 ────────────────────
         ##    ★ 2026-08-14 三处斧正：
