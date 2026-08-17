@@ -2,6 +2,16 @@
 title: "顶级量化风控与百家乐（Baccarat）商业变现实战指南"
 description: "基于赌场真人视讯产品与量化风控铁律的百家乐专精商业落地方案"
 format:
+  pdf:
+    pdf-engine: xelatex
+    CJKmainfont: "KaiTi"
+    CJKoptions:
+      - AutoFakeBold=2.5
+      - AutoFakeSlant=0.2
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    highlight-style: github
   html:
     toc: true
     toc-depth: 3

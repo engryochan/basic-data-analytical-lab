@@ -6,7 +6,7 @@ date: today
 lang: zh-CN
 format:
   html:
-    theme: darkly
+    theme: cosmo
     toc: true
     toc-depth: 3
     toc-location: left
