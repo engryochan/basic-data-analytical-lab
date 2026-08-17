@@ -1,0 +1,230 @@
+---
+title: "D-06X · S_player_tail 覆盖率与商业价值审计"
+subtitle: "结论先行 ｜ 派生自 D-06 ｜ 对应 SQL：D-06X_覆盖率与商业价值审计_SQL.sql"
+author: "Ryo（雷欧）"
+date: last-modified
+version: "1.0.0"
+lang: zh
+format:
+  html:
+    toc: true
+    number-sections: true
+    embed-resources: true
+    df-print: kable
+    theme: cosmo
+execute:
+  echo: true
+  warning: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+## ── 唯一真源：所有数字渲染时从 D-06X 查询结果实算，零硬编码 ────────────
+PARAMS <- list(
+  csv_path   = "数据库/D-06X_population_summary.csv",   # D-06X SQL 结果导出后存放路径
+  gate_n     = 30L                                        # 与 D-06 HAVING 阈值一致，仅用于文字复述，不参与计算
+)
+
+need <- function(p) suppressWarnings(requireNamespace(p, quietly = TRUE))
+HAS <- vapply(c("data.table","DT","plotly","htmltools"), need, logical(1))
+
+fmtn <- function(x, d = 0) if (is.na(x)) "○ 待表" else formatC(x, format="f", big.mark=",", digits=d)
+fmtp <- function(x, d = 2) if (is.na(x)) "○ 待表" else paste0(formatC(100*x, format="f", digits=d), "%")
+fmtc <- function(x, d = 0) if (is.na(x)) "○ 待表" else paste0("¥", formatC(x, format="f", big.mark=",", digits=d))
+
+read_csv_adaptive <- function(path, encs = c("UTF-8","GB18030","GBK","latin1")) {
+  if (!file.exists(path)) return(NULL)
+  raw <- readBin(path, "raw", file.info(path)$size)
+  if (length(raw) >= 3 && identical(as.integer(raw[1:3]), c(239L,187L,191L))) raw <- raw[-(1:3)]
+  for (e in encs) {
+    txt <- try(iconv(rawToChar(raw), from = e, to = "UTF-8"), silent = TRUE)
+    if (inherits(txt, "try-error") || is.na(txt) || !nzchar(txt)) next
+    d <- try(data.table::fread(text = txt, showProgress = FALSE), silent = TRUE)
+    if (!inherits(d, "try-error") && nrow(d) > 0) return(d)
+  }
+  NULL
+}
+
+DTA <- if (HAS[["data.table"]]) read_csv_adaptive(PARAMS$csv_path) else NULL
+
+## 取三行中的 S / 非S / 合计，供下方内联引用；缺数据时全部回落为 NA，
+## 由 fmtn/fmtp/fmtc 统一显示「○ 待表」，不以任何方式编造数字
+g <- function(pop, col) {
+  if (is.null(DTA) || !all(c("population", col) %in% names(DTA))) return(NA_real_)
+  v <- DTA[[col]][DTA$population == pop]
+  if (length(v) == 0) NA_real_ else v[1]
+}
+```
+
+::: {.callout-important}
+## 数据状态告知
+
+```{r}
+#| echo: false
+#| results: asis
+if (is.null(DTA)) {
+  cat("**本文件尚未接入 D-06X 的真实查询结果。** 下方「结论先行」章节的每一个数字，\n",
+      "在数据接入前一律显示「○ 待表」，不是占位符演示，是本文件当前的真实渲染状态——\n",
+      "零行输出不等于无异常，也不等于允许用示意数字代替。\n\n",
+      "**接入方法**：在 Superset SQL Lab 执行 `D-06X_覆盖率与商业价值审计_SQL.sql`，\n",
+      "导出为 `", PARAMS$csv_path, "`，重新渲染本文件即可。\n")
+} else {
+  cat(sprintf("已读入 %d 行（population：%s），下方结论为渲染时实算。\n",
+      nrow(DTA), paste(DTA$population, collapse="、")))
+}
+```
+:::
+
+# 结论先行 {#sec-headline}
+
+::: {.callout-note appearance="minimal"}
+## 一句话结论
+
+`S_player_tail`（局数 ≥ `r PARAMS$gate_n` 的高频段）以
+**`r fmtp(g('S_player_tail','share_of_members'))`** 的会员数量，
+贡献了全平台 **`r fmtp(g('S_player_tail','share_of_ggr'))`** 的毛游戏收入（GGR）与
+**`r fmtp(g('S_player_tail','share_of_ngr'))`** 的净游戏收入（NGR）。
+:::
+
+## 市场份额（人群 vs 营收，四维对照）
+
+```{r}
+#| label: share-table
+#| echo: false
+share_tbl <- data.frame(
+  维度 = c("会员数占比", "总局数占比", "洗码量（营业额）占比", "GGR（毛利润）占比", "NGR（净利润）占比"),
+  S_player_tail = c(
+    fmtp(g('S_player_tail','share_of_members')),
+    fmtp(g('S_player_tail','share_of_rounds')),
+    fmtp(g('S_player_tail','share_of_valid_bet')),
+    fmtp(g('S_player_tail','share_of_ggr')),
+    fmtp(g('S_player_tail','share_of_ngr'))
+  ),
+  非S_player_tail = c(
+    fmtp(g('非S_player_tail','share_of_members')),
+    fmtp(g('非S_player_tail','share_of_rounds')),
+    fmtp(g('非S_player_tail','share_of_valid_bet')),
+    fmtp(g('非S_player_tail','share_of_ggr')),
+    fmtp(g('非S_player_tail','share_of_ngr'))
+  )
+)
+knitr::kable(share_tbl)
+```
+
+**读法**：若「GGR 占比」远高于「会员数占比」，说明利润高度集中在高频段——
+这是资源配置（风控巡检优先级、VIP 服务投入）该看的第一张表，不是 tail_share 或 winrate_diff。
+
+## 营业额与利润（绝对量级）
+
+```{r}
+#| label: absolute-table
+#| echo: false
+abs_tbl <- data.frame(
+  指标 = c("会员数", "总局数", "总洗码量（营业额）", "GGR（毛利润）", "NGR（净利润）",
+           "抽水率·洗码量口径", "抽水率·下注额口径"),
+  S_player_tail = c(
+    fmtn(g('S_player_tail','n_members')),
+    fmtn(g('S_player_tail','total_rounds')),
+    fmtc(g('S_player_tail','total_valid_bet')),
+    fmtc(g('S_player_tail','total_ggr')),
+    fmtc(g('S_player_tail','total_ngr')),
+    fmtp(g('S_player_tail','hold_pct_on_valid_bet'), 3),
+    fmtp(g('S_player_tail','hold_pct_on_stake'), 3)
+  ),
+  非S_player_tail = c(
+    fmtn(g('非S_player_tail','n_members')),
+    fmtn(g('非S_player_tail','total_rounds')),
+    fmtc(g('非S_player_tail','total_valid_bet')),
+    fmtc(g('非S_player_tail','total_ggr')),
+    fmtc(g('非S_player_tail','total_ngr')),
+    fmtp(g('非S_player_tail','hold_pct_on_valid_bet'), 3),
+    fmtp(g('非S_player_tail','hold_pct_on_stake'), 3)
+  ),
+  合计 = c(
+    fmtn(g('合计','n_members')),
+    fmtn(g('合计','total_rounds')),
+    fmtc(g('合计','total_valid_bet')),
+    fmtc(g('合计','total_ggr')),
+    fmtc(g('合计','total_ngr')),
+    fmtp(g('合计','hold_pct_on_valid_bet'), 3),
+    fmtp(g('合计','hold_pct_on_stake'), 3)
+  )
+)
+knitr::kable(abs_tbl)
+```
+
+## 人均／局均产出对比
+
+```{r}
+#| label: per-unit-table
+#| echo: false
+pu_tbl <- data.frame(
+  指标 = c("人均 GGR", "局均 GGR", "人均 NGR", "局均 NGR", "人均局数"),
+  S_player_tail = c(
+    fmtc(g('S_player_tail','avg_ggr_per_member')),
+    fmtc(g('S_player_tail','avg_ggr_per_round'), 4),
+    fmtc(g('S_player_tail','avg_ngr_per_member')),
+    fmtc(g('S_player_tail','avg_ngr_per_round'), 4),
+    fmtn(g('S_player_tail','avg_rounds_per_member'), 1)
+  ),
+  非S_player_tail = c(
+    fmtc(g('非S_player_tail','avg_ggr_per_member')),
+    fmtc(g('非S_player_tail','avg_ggr_per_round'), 4),
+    fmtc(g('非S_player_tail','avg_ngr_per_member')),
+    fmtc(g('非S_player_tail','avg_ngr_per_round'), 4),
+    fmtn(g('非S_player_tail','avg_rounds_per_member'), 1)
+  )
+)
+knitr::kable(pu_tbl)
+```
+
+::: {.callout-warning}
+## 「结构性缺口」≠「提升潜力」——方法论边界，务必保留
+
+上表「局均 GGR」两行相减，会得到一个正数或负数的差值。**这个差值只是描述性算术，
+不是因果推断，不构成"若引导非S组多打几局即可实现"的提升预测**。
+
+理由：`S_player_tail` 与 `非S_player_tail` 的划分依据是**局数门槛（≥30）**，
+这本身就是一种**自选择（self-selection）**——局数多的玩家，可能本来就是风险偏好、
+资金实力、游戏黏性都不同于局数少的玩家的**另一群人**，而不是"同一群人只是打得少"。
+把两组的局均产出之差，乘以非S组的总局数，算出一个"理论提升空间"，
+在统计上等价于用观察性数据的组间差异冒充处置效应（treatment effect）——
+这正是本项目已建立的准实验框架（PSM 1:3 + event-study DID）存在的原因，
+且**三道硬闸尚未全部通过**（见项目待办）。
+
+**本报告只呈现描述性对比，不作因果性提升声明。** 若要回答"能否提升"，
+须走完整的准实验识别流程，不能从这张表直接跳过去。
+:::
+
+---
+
+# 口径说明（渲染时实算之前，先钉死定义）
+
+| 指标 | 计算式 | 视角 | 备注 |
+|:--|:--|:--|:--|
+| `total_ggr`（毛游戏收入） | `-SUM(game_pnl)` | 平台视角 | `game_pnl` 原为玩家视角，负号完成视角转换 |
+| `total_ngr`（净游戏收入） | `-SUM(net_pnl)` | 平台视角 | 恒等式 `NGR = GGR - Σrebate` 可自校验，因 `net_pnl = game_pnl + rebate` |
+| `hold_pct_on_valid_bet`（抽水率·口径一） | `GGR / Σvalid_bet` | — | 亚洲代理返点体系常用，以洗码量为分母 |
+| `hold_pct_on_stake`（抽水率·口径二） | `GGR / Σstake` | — | 西式 handle 口径，以下注额为分母 |
+| `share_of_*`（市场份额系列） | 该群某量 / 合计同量 | — | 合计行占比恒为 100%，作自洽性校验 |
+
+::: {.callout-caution}
+**两种抽水率口径孰为公司内部标准，本文件不擅自裁定**——这是"规范标准 / 最佳实务 /
+项目自定铁律"三者永久有别的具体应用：casino 行业存在两种常见惯例，
+哪一种是贵司代理合同实际采用的分母，需业务方确认后在此钉死，
+不得由分析方自行选定后当作既定事实往下游传。
+:::
+
+# 已知未决事项（继承自 D-06 审计，仍适用于本文件）
+
+- `validbet` 双定义未结（F-02，S1）——`total_valid_bet` 与 `hold_pct_on_valid_bet` 两项因此判级 UNKNOWN，待 V-03 核验
+- `round_key` 局键塌缩——过去会话已有正面证据（"局键健全，塌缩未发生"），但未确认与本次窗口逐字对齐，建议按当前 `WHERE` 条件重跑一次 V-01 后再将本文件的 `total_rounds` 系列升级为 OBSERVED
+- `bs` 层金额字段无 NULL 拦截（F-13 同源）——`total_ggr`／`total_ngr` 存在静默漏计风险，幅度未量化，建议下一版补 V-36 对本文件专项核验
+
+# 变更日志
+
+**v1.0.0**（本版）——首版建立，血统标记 `D-06X`，衍生自 D-06 七层 CTE；
+新增 GGR／NGR／hold%／多维市场份额／人均局均对比；显式声明"结构性缺口≠因果提升"边界；
+数据接入前全字段渲染为「○ 待表」，不使用示意数字。

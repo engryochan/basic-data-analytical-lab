@@ -1,0 +1,638 @@
+---
+title: "D-06 玩家尾段特征抽取管道 · 技术解读与红队审计"
+subtitle: "交付件 `S_player_tail.csv` · 全字段口径 · 阈值溯源 · R4 元审计"
+author: "Ryo（雷欧）"
+date: "2026-08-16"
+version: "v2.0"
+lang: zh
+format:
+  html:
+    toc: true
+    toc-depth: 4
+    number-sections: true
+    embed-resources: true
+    code-tools: true
+    code-fold: true
+    df-print: default
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r setup}
+#| include: false
+pkgs <- c("DT", "htmltools")
+inst <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+if (length(inst)) install.packages(inst, repos = "https://cloud.r-project.org")
+library(DT); library(htmltools)
+
+## ── 渲染时实算参数（本文件不得出现硬编码统计量）────────────────────────
+z <- qnorm(0.975)
+
+## Wilson 二项比例区间总宽（p 未指定时取 p=0.5，即最宽情形）
+wilson_w <- function(n, p = 0.5) {
+  x <- n * p; d <- n + z^2
+  2 * (z / d) * sqrt(x * (n - x) / n + z^2 / 4)
+}
+
+## 达到指定总宽所需最小 n（精确 Wilson，非 Wald 近似）
+n_min_wilson <- function(target, nmax = 5000) {
+  w <- vapply(seq_len(nmax), wilson_w, numeric(1))
+  min(which(w <= target))
+}
+
+## Wald 近似样本量（原 A.4 所引公式，仅作对照）
+n_wald <- function(half) z^2 * 0.25 / half^2
+
+## 尾段随机基线：局内 n 注随机排序，某玩家占 k 注时 P(max_pr >= 0.80)
+p_tail_exact <- function(n, k) {
+  if (n < 2 || k > n) return(NA_real_)
+  m <- sum((seq_len(n) - 1) / (n - 1) >= 0.80)   # 落入尾段的名次个数
+  if (n - m < k) return(1)
+  1 - choose(n - m, k) / choose(n, k)
+}
+p_tail_asym <- function(k) 1 - 0.8^k              # 大 n 极限 1 - 0.8^k
+
+## 观察窗口（左闭右开）
+win_lo  <- as.Date("2026-03-21"); win_hi <- as.Date("2026-08-07")
+win_days <- as.integer(win_hi - win_lo)
+
+## DT 统一渲染器：横纵双向滚动、真实行号、副标题实报行列
+dt_std <- function(df, cap, note = NULL) {
+  sub <- sprintf("实际行数：%s 行 ｜ 实际列数：%s 列 ｜ 省略行数：0 行（0.00%%）",
+                 format(nrow(df), big.mark = ","), ncol(df))
+  DT::datatable(
+    df,
+    caption = htmltools::tags$caption(
+      style = "caption-side:top;text-align:left;",
+      htmltools::strong(cap), htmltools::br(),
+      htmltools::span(style = "font-size:90%;color:#555;", sub),
+      if (!is.null(note)) htmltools::br(),
+      if (!is.null(note)) htmltools::span(style = "font-size:88%;color:#777;", note)
+    ),
+    rownames = TRUE, escape = FALSE, filter = "top",
+    extensions = c("Buttons", "FixedHeader"),
+    options = list(
+      pageLength = nrow(df), lengthMenu = list(c(10, 25, 50, -1),
+                                               c("10", "25", "50", "全部")),
+      scrollX = TRUE, scrollY = "460px", scrollCollapse = TRUE,
+      fixedHeader = TRUE, dom = "Bfrtip",
+      buttons = c("copy", "csv", "excel"), autoWidth = TRUE,
+      language = list(search = "检索：", zeroRecords = "零行输出（0 行 ≠ 无异常，须另行说明）")
+    )
+  )
+}
+```
+
+::: {.callout-important title="本版定位（先读此段）"}
+本文件是对生产级 SQL **「D-06 玩家尾段十一项指标」**（交付件 `S_player_tail.csv`）的技术解读与红队审计。
+
+**v2.0 相对 v1.0 的性质变化：** v1.0 属**不完整解读**——遗漏 1 层核心闸门、10 个输出字段，且含 3 处与 SQL 原文相悖的陈述。本版按 SQL 原文全量补齐并对相悖处作**明示撤回**（见 @sec-changelog）。凡与 v1.0 冲突处，**一律以本版为准**。
+
+**结论前置：** 本管道所服务的「尾段信息优势」业务假设，**已在项目层被证伪**（@sec-falsified）。本文件的存续价值是**方法学与口径存档**，不构成任何风控规则或产品建议的依据。
+:::
+
+# 交付件身份与血统 {#sec-identity}
+
+```{r}
+#| label: tbl-identity
+d <- data.frame(
+  项目 = c("代码块编号", "上游数据源", "代理主档", "交付件路径", "报告取用接口",
+           "观察窗口", "游戏口径", "行数设计上限", "排序锁", "SQL 头注所载既有结论"),
+  内容 = c(
+    "D-06（`a168_取数与核验_SQL总包.sql` 内）",
+    "`ods_mariadb_2b.ods_a168_bet02`（注单明细）",
+    "`ods_mariadb_2b.ods_a168_agent`（五级代理线归属）",
+    "`数据库/S_player_tail.csv`",
+    "`fetch(\"S_player_tail\")`",
+    sprintf("`dt >= '2026-03-21' AND dt < '2026-08-07'`，**左闭右开，共 %d 天**", win_days),
+    "`bet02 = '101'`（仅百家乐）",
+    "由 `HAVING COUNT(*) >= 30` 与 `n_in_round >= 5` 双闸达成",
+    "`ORDER BY member_id`（导出必带稳定序）",
+    "个体层 `winrate_diff > 0` 占比 = 49.7%，与白噪音无异；本块为尾段裁定之**第三重复核**"
+  ), stringsAsFactors = FALSE)
+dt_std(d, "表 1｜交付件身份与血统六要项",
+       "六元组文件身份（文件名／行数／字节数／MD5／换行符／编码）须于导出后由 V-R03B-SIXTUPLE-001.ps1 补录，本表不代填。")
+```
+
+::: {.callout-warning title="窗口天数口径（v1.0 错误已撤回）"}
+`dt < '2026-08-07'` 为**右开区间**，2026-08-07 当日**不在**样本内。窗口实为 `r win_days` 个营业日，与项目锁定的 139 个营业日一致。v1.0 表述「限定在 2026-03-21 至 2026-08-07」读作闭区间（140 天），与代码不符，予以撤回。
+:::
+
+# 核心定义与业务标准
+
+## 核心对象（Object）
+
+在百家乐单局（`round_key`）内，按下注时间升序排列后，**下注时间位于该局后 20% 分位（`pr_in_round >= 0.80`）的注单**，称为尾段注单（Late Bet）。
+
+在**玩家-局**粒度上：若某玩家在该局的**最后一注**满足 `max_pr >= 0.80`，则该「玩家-局」整体被标记为尾段局（`is_tail = 1`）。
+
+## 业务假设（Business Assumption）
+
+尾段下注者可能具备信息优势（看牌延迟、信号先行、跟单反射），其胜率或 ROI 理论上应显著高于常规时段。
+
+::: {.callout-caution title="该假设的现状：已证伪"}
+详见 @sec-falsified。本节保留假设原文，仅为记录**被检验对象**，不代表其成立。
+:::
+
+## 输出目的
+
+生成 `S_player_tail.csv`，供玩家层「尾段是否具备显著正向预期」之检验，原拟用于动态延迟策略（Dynamic Live Time Delay）之标定。**该用途已随假设证伪而撤回。**
+
+# 数据清洗与准入闸门（八层，全量）
+
+v1.0 记载五层闸门，实为 **八层**。以下按代码执行顺序全量列示，新增层以「**（v2.0 补齐）**」标记。
+
+```{r}
+#| label: tbl-gates
+g <- data.frame(
+  层 = c("L1 来源闸", "L2 品类闸", "L3 去重闸", "L4 身份纯净闸", "L5 汇率闸",
+         "L6 时间有效闸", "L7 局规模闸", "L8 玩家样本量闸"),
+  CTE = c("`ta` / `rk`", "`rk`", "`rk`", "`vd`", "`vd` / `bs`", "`vd` / `ord`", "`prd`", "最终 SELECT"),
+  执行标准 = c(
+    "`ods_a168_bet02` 主表 + `ods_a168_agent` 代理主档；`ta` 以 `age022 = '1'` 圈定测试线代理",
+    "`bet02 = '101'`；`dt` 落于左闭右开窗口内",
+    "`ROW_NUMBER() OVER (PARTITION BY bet01 ORDER BY updatetime DESC, sync_time DESC, dt DESC)` + `rn = 1`",
+    "`category = '1'`；`UPPER(TRIM(bet38)) = 'N'`；`CAST(bet05 AS BIGINT) > 0`；`bet18`~`bet22` 五条代理线经五次 LEFT JOIN 后 `COALESCE(...) IS NULL`",
+    "`CAST(bet11 AS DECIMAL(20,8)) > 0`；其后全部金额一律除以 `bet11` 归一化",
+    "`NULLIF(TRIM(bet08),'') IS NOT NULL`",
+    "**`WHERE n_in_round >= 5`**",
+    "**`HAVING COUNT(*) >= 30`**"
+  ),
+  红队解读 = c(
+    "锁死数据血统（E1）。`age022='1'` 为测试线标识，因 StarRocks 不支持相关 EXISTS 配非等值谓词，故以五次 LEFT JOIN + 空值判定实现。",
+    "**v1.0 遗漏**：`bet02='101'` 是全部结论的品类边界，缺此则结论被误读为全站口径。",
+    "防注单**多版本**（同 `bet01` 因回写产生多行）。<br>**注意**：36.49% 重复行的定案成因是 OFFSET 分页下字符串序与数值序错配，**与本层无关**，v1.0 的归因已撤回。",
+    "排除内部测试、测试线代理渠道、空壳会员。<br>**v1.0 遗漏** `category='1'`；且 v1.0「五级代理线」措辞有误，实为**一至五级共五条代理线**全数排除。",
+    "防被零除；且**归一化**语义 v1.0 未记：`stake`、`valid_bet`、`game_pnl`、`rebate`、`net_pnl` 全部为除以汇率后的统一币种口径。",
+    "无时间戳则无法参与局内排序，直接弃用。",
+    "**v1.0 完全遗漏，且为本管道最强的样本裁剪。**`n_in_round` 为**该局全部注单数**（非该玩家注数），<5 注的稀疏局整局剔除。",
+    "**v1.0 记为「把关闸门」但未列入闸门体系。**统计单位为**局数**（已过 L7），非注单数。"
+  ), stringsAsFactors = FALSE)
+dt_std(g, "表 2｜八层准入闸门（按代码执行顺序）",
+       "标粗者为 v2.0 相对 v1.0 的补齐项。列内 HTML 换行已启用（escape = FALSE）。")
+```
+
+# 字段口径字典（上游 → 派生 → 输出）
+
+## 上游取用字段
+
+```{r}
+#| label: tbl-src
+s <- data.frame(
+  字段 = c("bet01","bet02","bet03","bet04","bet05","bet08","bet11","bet13","bet14",
+           "bet16","bet17","bet18~bet22","bet38","bet39","category","validbet",
+           "updatetime","sync_time","dt","age001","age022"),
+  含义 = c("注单号（去重分区键）","游戏类别（`'101'`＝百家乐）","靴号","局内序号","会员号",
+           "下注时间","汇率","下注金额","派彩金额（本表口径）","退水金额","会员净输赢",
+           "一级至五级代理线","测试标识（`'N'`＝非测试）","桌号","注单类别（取 `'1'`）",
+           "有效投注（洗码量）","更新时间","同步时间","营业日分区（＝`bet07` 账务日）",
+           "代理编号","测试线标识（`'1'`）"),
+  本块用途 = c("`ROW_NUMBER` 分区","品类过滤","`round_key` 构件","`round_key` 构件","分组主键",
+               "局内时序排序基准","金额归一化分母","`stake`、`game_pnl` 构件","`game_pnl` 构件",
+               "`rebate`","`net_pnl`","测试线剔除连接键","身份闸","`round_key` 构件 + `table_id`",
+               "身份闸","`valid_bet`（ROI 分母）","去重排序键","去重排序键","窗口过滤 + 去重末位排序键",
+               "`ta` 主键","`ta` 过滤"), stringsAsFactors = FALSE)
+dt_std(s, "表 3｜上游取用字段口径对照",
+       "同名异义陷阱提醒：`bet14` 在 bet01 表义为退水%、在 bet02 表义为派彩；`validbet` 存在两套互斥定义（详见 R4-03）。")
+```
+
+## 最终输出十七项指标（全量）
+
+v1.0 正文称「11 个指标」而表格仅列 **7 个**，实际输出为 **18 列 = `member_id` + 17 指标**。三者互不相等，属命名与清点双重不一致，本版一次性对齐。
+
+```{r}
+#| label: tbl-metrics
+m <- data.frame(
+  序 = 1:17,
+  指标 = c("n_rounds_all","n_rounds_tail","tail_share","tail_win","tail_lose",
+           "tail_winrate","norm_winrate","winrate_diff","tail_stake","tail_valid_bet",
+           "tail_game_pnl","tail_rebate","tail_net_pnl","tail_roi","norm_game_pnl",
+           "norm_roi","tail_profit_share"),
+  计算式 = c(
+    "`COUNT(*)`","`SUM(is_tail)`","`SUM(is_tail)/COUNT(*)`",
+    "`SUM(is_tail*is_win)`","`SUM(is_tail*is_lose)`",
+    "`tail_win/(tail_win+tail_lose)`","`norm_win/(norm_win+norm_lose)`",
+    "`tail_winrate - norm_winrate`","`SUM(is_tail*stake)`","`SUM(is_tail*valid_bet)`",
+    "`SUM(is_tail*game_pnl)`","`SUM(is_tail*rebate)`","`SUM(is_tail*net_pnl)`",
+    "`tail_game_pnl / tail_valid_bet`","`SUM((1-is_tail)*game_pnl)`",
+    "`norm_game_pnl / SUM((1-is_tail)*valid_bet)`",
+    "尾段正盈利额 / 全部正盈利额"),
+  风控用途 = c(
+    "样本量基础（<30 局被 L8 剔除）","尾段局绝对量，`tail_share` 之分子，供还原分母",
+    "压哨偏好度（基线见 @sec-threshold）","尾段胜局数","尾段负局数（**平局不计入两者**，见 R4-05）",
+    "尾段胜率","常规时段胜率（基准）","信息优势量化（本管道的主检验量）",
+    "尾段下注额（规模口径）","尾段洗码量（ROI 分母，口径存疑见 R4-03）",
+    "尾段游戏净输赢","尾段退水（`net_pnl = game_pnl + rebate` 恒等式之构件）",
+    "尾段会员净输赢","尾段资金效率","常规时段游戏净输赢",
+    "常规时段资金效率（`tail_roi` 之对照）","风险集中度：趋近 1 即全部盈利来自压哨"),
+  v1_0状态 = c("已解读","**遗漏**","已解读","**遗漏**","**遗漏**","已解读","已解读","已解读",
+               "**遗漏**","**遗漏**","**遗漏**","**遗漏**","**遗漏**","已解读","**遗漏**",
+               "**遗漏**","已解读"), stringsAsFactors = FALSE)
+dt_std(m, "表 4｜最终输出十七项指标全量对照",
+       "v1.0 已解读 7 项、遗漏 10 项；正文所称「11 项」在代码中无对应集合，属历史命名，见 @sec-naming。")
+```
+
+## 「十一项」命名之对账 {#sec-naming}
+
+代码块标题为「玩家尾段**十一**项指标」，v1.0 正文沿用「11 个」，而实际输出 17 项。三种可能的十一项子集（率类 5 + 金额类 6、或去除四个中间计数项等）均无法由代码复原，**不存在唯一可追溯的分解**。
+
+**处置：** 按项目「31 维分解不一致」同类处理原则，**以代码输出为唯一事实**，标题「十一项」列为待修正的历史命名（NC-D06-01），在 SQL 总包下一版更名为「玩家尾段十七项指标」，或明确写出十一项的成员清单。在更名落地前，任何引用本交付件的文档**不得**再出现「十一项」表述。
+
+# 核心计算逻辑的严密推导（CTE 流水线）
+
+## 局键构造（CTE `bs`）
+
+```sql
+CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key
+```
+
+`round_key = 靴号 | 局内序号 | 桌号`。v1.0 全篇使用 `round_key` 但**从未定义其构成**，属关键口径遗漏。
+
+::: {.callout-important title="R4-01｜局键不含营业日，存在跨日碰撞风险（S1，待验证前 BLOCK）"}
+`round_key` 未纳入 `dt`。若 `bet03`（靴号）按日或按桌重置，则 `r win_days` 天窗口内同一 `round_key` 将横跨多日，导致 `PERCENT_RANK` 在**跨日合并的伪局**上排序，`pr_in_round` 与 `n_in_round` 双双失真，且方向不可预判。
+
+此为**证据链上游缺陷**，非文字问题。在下列验证 SQL 返回零行之前，`S_player_tail.csv` 的一切结论均处 **BLOCK** 态：
+
+```sql
+SELECT CONCAT_WS('|', b.bet03, b.bet04, b.bet39) AS round_key
+     , COUNT(DISTINCT b.dt) AS n_dt
+     , COUNT(*)             AS n_bet
+     , MIN(b.dt) AS dt_min, MAX(b.dt) AS dt_max
+FROM ods_mariadb_2b.ods_a168_bet02 b
+WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+GROUP BY CONCAT_WS('|', b.bet03, b.bet04, b.bet39)
+HAVING COUNT(DISTINCT b.dt) > 1
+ORDER BY n_dt DESC, n_bet DESC
+LIMIT 200;
+```
+
+**零行 ⇒** 局键全局唯一，本条解除。**非零行 ⇒** 必须将 `dt` 并入 `CONCAT_WS`，并整包重跑；且既有 `S_player_tail.csv` 须整份作废、加 `_superseded` 后缀归档，不得局部修补。
+:::
+
+## 局内时间百分位定标（CTE `ord`）
+
+```sql
+PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round
+COUNT(*)      OVER (PARTITION BY round_key)                 AS n_in_round
+```
+
+- **公式**：`pr = (rank − 1) / (n − 1)`；单行分区返回 **0**（非 NULL）。
+- **相对化的理由**：不同赌桌的下注窗口存在两套制式（约 14 秒 7 桌、约 26 秒 23 桌），绝对秒数不可比，相对占比消除速度差。
+- **`n_in_round` 语义（v1.0 遗漏）**：该局**全部注单数**，跨玩家统计，非某玩家的下注次数。此点直接决定 L7 闸的裁剪对象。
+
+::: {.callout-important title="R4-02｜同秒并列使尾段被系统性低估（S2）"}
+`t_bet` 由 `bet08` 转 `DATETIME`，**秒级精度**。在 14~26 秒的下注窗口内，同秒并列极为常见。`PERCENT_RANK` 对并列组一律赋予该组**最低名次**，故并列注单的 `pr` 被压低，`is_tail` 被系统性**漏标**。
+
+方向可判：**尾段量被低估**，`tail_share` 与 `n_rounds_tail` 偏小。须以 `RANK()`／`CUME_DIST()` 双跑做敏感度对照后方可引用绝对水平；差分量 `winrate_diff` 受影响较小但非零。
+:::
+
+## 玩家单局聚合（CTE `prd`）
+
+按 `member_id, round_key, table_id` 聚合至「玩家-局」粒度，并在**聚合前**施加 `WHERE n_in_round >= 5`。
+
+- `max_pr`：该玩家在该局最后一注的时间百分位。
+- `MAX(n_in_round)`：因组内恒等，此聚合为幂等操作，仅为携带列。
+- `table_id`（＝`bet39`）已是 `round_key` 的构件，分组键中并列出现属**函数依赖冗余**，不影响结果，但增加 shuffle 成本，建议下版精简。
+- 盈亏打标：`SUM(game_pnl) > 0 → is_win`；`< 0 → is_lose`；**恰为 0 者两侧皆不计**（见 R4-05）。
+
+## 尾段判定（CTE `fl`）
+
+```sql
+CASE WHEN p.max_pr >= 0.80 THEN 1 ELSE 0 END AS is_tail
+```
+
+v1.0 将此判定归入 `prd`，实际位于**独立的 `fl` 层**。层次归属虽不改变结果，但影响重跑与打点位置，须据实记载。
+
+# 阈值溯源（全部重新推导） {#sec-threshold}
+
+## `pr >= 0.80` 之来源
+
+- **性质**：业务启发式（E1 领域经验），非统计推导所得。
+- **依据**：尾部 20% 时间窗为延迟套利高发区；0.80 便于跨团队沟通。
+- **与生产候选口径的关系**：项目当前的迟投候选口径为 `shoe_pos >= 0.80`（靴内位置），与本块的 `max_pr >= 0.80`（**局内时间百分位**）**并非同一物理量**，仅数值巧合。二者不可互相替代、不可混引。
+
+::: {.callout-warning title="R4-09｜缺 `late_def` 锁列，交付件将被下游拒收"}
+项目已强制迟投定义锁列 `late_def`。本 SQL 的输出中**无此列**，按「无锁列的 CSV 一律高声拒收」之规定，`S_player_tail.csv` 在下游装载时应被拒绝。修复方式：最终 SELECT 增列
+`'pr_in_round>=0.80@round' AS late_def`，并同步更新交付件版本号。
+:::
+
+## `HAVING COUNT(*) >= 30` 之来源
+
+```{r}
+#| label: tbl-wilson
+w <- data.frame(
+  情形 = c("n = 30（代码实际取值）",
+           sprintf("n = %d（Wilson 精确解，总宽 ≤ 0.15）", n_min_wilson(0.15)),
+           sprintf("n ≈ %.0f（Wald 近似，半宽 0.075）", n_wald(0.075))),
+  Wilson总宽 = sprintf("%.4f", c(wilson_w(30), wilson_w(n_min_wilson(0.15)), wilson_w(round(n_wald(0.075))))),
+  半宽 = sprintf("±%.4f", c(wilson_w(30), wilson_w(n_min_wilson(0.15)), wilson_w(round(n_wald(0.075)))) / 2),
+  说明 = c("工程折衷取值，保留样本量",
+           "满足代码注释所称 0.15 宽度的**真实**最小样本量",
+           "v1.0 A.4 所引公式，属 Wald 而非 Wilson，二者不可混称"),
+  stringsAsFactors = FALSE)
+dt_std(w, "表 5｜样本量阈值与 Wilson 区间宽度对照（p = 0.5，最宽情形，渲染时实算）",
+       "全部数值由本文件 R chunk 现算，无硬编码。")
+```
+
+- **代码注释所称**：「低于此样本量的玩家 Wilson CI 宽度 > 0.15，阈值无区分意义」。
+- **复算结论**：`n = 30` 时 Wilson 总宽 `r sprintf("%.4f", wilson_w(30))`，**远大于** 0.15；真正满足 0.15 的最小样本量为 **`r n_min_wilson(0.15)`**。故注释与代码之间存在**目标与取值的落差**：0.15 是理论警示线，30 是工程折衷。
+- **等级定性（v1.0 定级撤回）**：v1.0 称此为「科学的参数设计（**E5 级**）」。本项目证据阶梯中 **E5 = 随机对照试验（RCT）**，一个样本量启发式绝无可能占据该级。正确定性为 **E2（算术可推导）+ 工程折衷**，证据层不高于 E3。此为等级通胀，予以撤回。
+
+## `tail_share` 的随机基线（v1.0 A.3 全条撤回）
+
+v1.0 称「随机基线 20%，0.6 是基线的 3 倍，超过 3σ」。三处皆不成立：
+
+1. `is_tail` 定义在**玩家-局**层的 `max_pr` 上。局内 `n` 注随机排序、该玩家占 `k` 注时，`P(max_pr ≥ 0.80) = 1 − C(n−m, k)/C(n, k)`（`m` 为落入尾段的名次数），大 `n` 极限为 `1 − 0.8^k`。**仅 k = 1 时基线才是 0.20。**
+2. 「3 倍基线」与「3σ」是不同量纲，不可互换表述。
+3. 基线随 `k` 漂移，故 `tail_share` 的阈值必须**按玩家的局均下注次数分层**设定，单一常数阈值无判别效力。
+
+```{r}
+#| label: tbl-baseline
+kk <- 1:6
+b <- data.frame(
+  局内注数k = kk,
+  基线_n5   = sprintf("%.4f", vapply(kk, function(k) p_tail_exact(5,  k), numeric(1))),
+  基线_n10  = sprintf("%.4f", vapply(kk, function(k) p_tail_exact(10, k), numeric(1))),
+  基线_n20  = sprintf("%.4f", vapply(kk, function(k) p_tail_exact(20, k), numeric(1))),
+  大n极限   = sprintf("%.4f", p_tail_asym(kk)),
+  对0_60的判读 = ifelse(p_tail_asym(kk) >= 0.60,
+                        "**基线已≥0.60，阈值 0.6 无判别力**", "阈值 0.6 高于基线"),
+  stringsAsFactors = FALSE)
+dt_std(b, "表 6｜尾段随机基线 P(max_pr ≥ 0.80) 随局内下注次数 k 之漂移（渲染时实算）",
+       "n = 该局全部注单数；k = 该玩家在该局的注数。可见 k ≥ 4 时随机玩家的期望 tail_share 已逼近或超过 0.6。")
+```
+
+**处置：** 阈值 `tail_share > 0.6` 作为「压哨偏好」判据**予以撤回**，不得进入任何规则库。若日后重启，须改用**分层基线的偏离量**（如 `tail_share − E[1−0.8^k]` 的 Wilson 区间下界），并经预注册。
+
+# R4 元审计：漏洞与适用域边界
+
+```{r}
+#| label: tbl-redteam
+r <- data.frame(
+  编号 = sprintf("R4-%02d", 1:10),
+  发现 = c(
+    "`round_key` 不含 `dt`，跨日碰撞未验证",
+    "秒级并列使 `PERCENT_RANK` 系统性低估尾段",
+    "`valid_bet` 取自 `validbet` 列，该名存在两套互斥定义",
+    "局内时间源自应用层 `bet08`，非荷官物理开牌时间",
+    "平局（`SUM(game_pnl) = 0`）两侧皆不计，胜率分母被静默缩减",
+    "胜负判定不含金额权重，小额刷水单与大额单等权",
+    "L7 闸（`n_in_round >= 5`）改变了总体定义，却未在输出中留痕",
+    "无负控制（Negative Control），未检验「时间戳延迟致误标」时段",
+    "输出缺 `late_def` 锁列，违反迟投口径锁定规定",
+    "无输出行数与 721,190 投注会员总体的覆盖率对账"
+  ),
+  严重度 = c("S1","S2","S1","S2","S2","S2","S2","S2","S2","S3"),
+  性质 = c("数据真实性 L1","计算正确性 L2","计算正确性 L2","数据真实性 L1","统计有效性 L3",
+           "统计有效性 L3","统计有效性 L3","因果识别 L4","数据治理 L7","数据治理 L7"),
+  处置 = c(
+    "先跑 @sec-identity 后附验证 SQL；非零行则整包重跑并作废现有交付件",
+    "以 `RANK()` / `CUME_DIST()` 双跑做敏感度对照后方可引用绝对水平",
+    "在 SQL 中显式改写为 `bet41` 或 `bet13` 之一并在文档锁定，禁止沿用裸 `validbet`",
+    "标注为共因缺陷；结论仅在「应用层时序即真实时序」假定下成立",
+    "增列 `tail_draw` / `norm_draw`，或改用三分类，使分母可还原",
+    "补充「注额加权胜率」并列输出，作为 `winrate_diff` 的稳健性对照",
+    "输出中增列 `n_in_round` 的分位摘要，或在文档声明总体已被重定义",
+    "构造伪尾段对照组（随机重排局内时序）跑同一管道，比对 `winrate_diff` 分布",
+    "最终 SELECT 增列 `late_def` 常量并递增交付件版本号",
+    "输出后计算「≥30 局会员数 / 721,190」并写入渲染时副标题"
+  ), stringsAsFactors = FALSE)
+dt_std(r, "表 7｜R4 元审计发现清单（10 条）",
+       "严重度：S1 致命（停止分析）／S2 阻断（不得出正式结论或上生产）／S3 有条件／S4 提示。")
+```
+
+## v1.0 三处相悖陈述之明示撤回 {#sec-retract}
+
+::: {.callout-important title="撤回 RT-01｜「单注鲸鱼被完全排除」不成立"}
+v1.0 §5.2 称「`PERCENT_RANK` 返回 NULL（分母为 0）」「只下大额单注的鲸鱼玩家被完全排除在尾段分析之外」。
+
+**事实：**（a）`PERCENT_RANK` 在单行分区返回 **0**，不返回 NULL；（b）`n_in_round` 统计的是**该局全部注单数**，一名玩家即使在该局只下一注，只要该局总注单数 ≥ 5 即被完整纳入，并按其真实名次取得 `pr`；（c）真正被排除的是**全局注单数 < 5 的稀疏局**——这剔除的是冷桌与冷时段，而非鲸鱼。
+
+**适用域边界的正确表述：** 本指标不适用于「其下注集中于稀疏局（局内总注单 < 5）」的玩家；此类玩家的全部局被剔除后，若剩余局数 < 30，则该玩家整体不出现在交付件中。此边界须以 E1 级注释写入任何引用本交付件的报告。
+:::
+
+::: {.callout-important title="撤回 RT-02｜36.49% 重复行的成因归属错误"}
+v1.0 将 36.49% 重复行归因于「数据同步延迟」并挂靠在 `rn = 1` 去重层。项目定案的成因是 **OFFSET 分页下字符串序与数值序错配**，处置是**禁用 OFFSET、改用 keyset 游标**。本块的 `ROW_NUMBER` 去重解决的是**同一 `bet01` 的多版本回写**，属完全不同的失效模式。两者不得互为佐证。
+:::
+
+::: {.callout-important title="撤回 RT-03｜A.3 随机基线与 3σ 表述全条作废"}
+理由与替代方案见 @sec-threshold 第三节及表 6。
+:::
+
+::: {.callout-note title="撤回 RT-04｜署名违反永久称呼规则"}
+v1.0 署名「Ryo（雷欧）」。项目永久规则：一律称 **Ryo Eng**，禁用 Leo／雷欧。本版已更正。
+:::
+
+# 与项目既有结论的衔接：尾段假说已证伪 {#sec-falsified}
+
+本 SQL 头部注释自陈：**个体层 `winrate_diff > 0` 占比 = 49.7%，与白噪音无异；本块为尾段裁定之第三重复核。**该行注释是理解全块定位的关键，v1.0 未予收录。
+
+项目层对尾段假说的裁定结论如下（**均属既有定案，本次会话未重算**，引用时须标注来源块与日期）：
+
+```{r}
+#| label: tbl-falsify
+f <- data.frame(
+  证据 = c("个体层 `winrate_diff > 0` 占比", "符号检验 p 值", "ROI 方向稳定性",
+           "信噪比 SNR", "辛普森悖论修正", "裁定结果"),
+  取值 = c("49.7%（≈ 50% 白噪音）", "p = 0.5847", "随佣金模式切换而**符号翻转**",
+           "0.077", "分层前低估 56%", "规则移除，产品建议撤回"),
+  含义 = c("正负各半，无方向性", "不拒绝原假设", "结论不具备跨口径稳健性",
+           "信号远弱于噪音", "未分层的汇总结论方向不可信", "尾段不构成可执行风控规则"),
+  stringsAsFactors = FALSE)
+dt_std(f, "表 8｜尾段假说证伪证据摘要（项目既有定案，非本次复算）",
+       "证据等级标注：49.7% 为本 SQL 头注 OBSERVED；其余各项为项目既有结论，须回溯原分析块方可升级为本文件的 VERIFIED。")
+```
+
+::: {.callout-important title="定调"}
+`S_player_tail.csv` 是一份**已完成使命的检验用中间件**：它的价值在于**证伪**，不在于产出规则。任何以本交付件为据、主张「尾段玩家存在信息优势」或据此调整延迟策略的提案，**与本管道自身的实证结论直接冲突**，应予驳回。
+:::
+
+# 复现与校验清单
+
+```{r}
+#| label: tbl-checklist
+c1 <- data.frame(
+  序 = 1:9,
+  检查项 = c(
+    "跑 @sec-identity 后附「局键跨日碰撞」验证 SQL，确认零行",
+    "`validbet` 的物理定义在本块中锁定为 `bet41` 抑或 `bet13`，写入文档",
+    "以 `RANK()` / `CUME_DIST()` 重跑 `pr_in_round`，比对 `tail_share` 差异",
+    "随机重排局内 `t_bet` 生成负控制组，比对 `winrate_diff` 分布",
+    "最终 SELECT 增列 `late_def` 常量与 `tail_draw` / `norm_draw`",
+    "导出后以 `V-R03B-SIXTUPLE-001.ps1` 补录六元组身份",
+    "计算「输出行数 / 721,190」覆盖率并写入报告副标题",
+    "SQL 总包内标题「十一项」更名或补出十一项成员清单（NC-D06-01）",
+    "确认导出全程使用 keyset 游标，未出现任何 OFFSET 分页"
+  ),
+  闸门 = c("S1","S1","S2","S2","S2","S2","S3","S3","S1"),
+  状态 = rep("未完成", 9), stringsAsFactors = FALSE)
+dt_std(c1, "表 9｜上生产前必过校验清单",
+       "状态列须由执行人逐项手工签署；本文件不代填、不预设通过。")
+```
+
+```{r}
+#| label: wilson-demo
+#| echo: true
+#| eval: false
+# ── Wilson 区间复算（外部独立复核用）────────────────────────────
+library(binom)
+binom.confint(x = 15, n = 30,  conf.level = 0.95, methods = "wilson")
+binom.confint(x = 84, n = 167, conf.level = 0.95, methods = "wilson")
+
+# ── 尾段随机基线复算 ────────────────────────────────────────────
+p_tail <- function(n, k) {
+  m <- sum((seq_len(n) - 1) / (n - 1) >= 0.80)
+  if (n - m < k) return(1)
+  1 - choose(n - m, k) / choose(n, k)
+}
+sapply(1:6, function(k) p_tail(20, k))
+```
+
+# 变更日志 {#sec-changelog}
+
+```{r}
+#| label: tbl-changelog
+cl <- data.frame(
+  编号 = sprintf("CL-D06-%03d", 1:14),
+  类别 = c("补齐","补齐","补齐","补齐","补齐","补齐","撤回","撤回","撤回","撤回",
+           "新增","新增","降级","更正"),
+  内容 = c(
+    "补入 L2 品类闸 `bet02='101'`、L7 局规模闸 `n_in_round>=5`、L8 样本量闸，闸门由五层扩为八层",
+    "补入 `category='1'` 身份过滤与汇率归一化语义",
+    "补齐最终输出全部 18 列，新增被遗漏的 10 项指标解读（表 4）",
+    "补入 `round_key` 构成定义、`fl` 层归属、`n_in_round` 语义、`ORDER BY member_id` 排序锁",
+    "补入交付件路径、`fetch` 接口、10 万行设计上限（表 1）",
+    "补入 SQL 头注所载「49.7% 白噪音／第三重复核」及假说证伪结论（第 8 节）",
+    "RT-01：撤回「单注鲸鱼被完全排除」「PERCENT_RANK 返回 NULL」",
+    "RT-02：撤回 36.49% 重复行归因于「数据同步延迟」之表述",
+    "RT-03：撤回 A.3 随机基线 20%、3 倍基线、3σ 三项表述及 `tail_share > 0.6` 判据",
+    "RT-04：撤回署名「Ryo（雷欧）」，更正为 Ryo Eng（黄联富）",
+    "R4 元审计由 3 条扩为 10 条（表 7），含 2 条 S1",
+    "新增上生产前必过校验清单 9 项（表 9）与局键碰撞验证 SQL",
+    "`HAVING >= 30` 的证据定级由 E5 降至 E2 + 工程折衷（E5 保留给 RCT）",
+    "窗口天数口径更正为左闭右开 139 天；Wilson 精确最小 n 更正为 167（171 为 Wald 近似）；n=30 总宽更正为 0.3369"
+  ), stringsAsFactors = FALSE)
+dt_std(cl, "表 10｜v1.0 → v2.0 变更日志",
+       "过程性记述一律收敛于本章；正文各章不含流程叙述。")
+```
+
+**待办（NC 编号）**
+
+- **NC-D06-01**：SQL 总包内代码块标题「十一项」与实际 17 项输出不符，须更名或补出成员清单。
+- **NC-D06-02**：`validbet` 双定义碰撞（S1）在本块中的落点须显式锁定。
+- **NC-D06-03**：`late_def` 锁列缺失，交付件不符合下游装载规约。
+
+# 附录：SQL 原文（去注释精简版）
+
+::: {.callout-note}
+以下为 D-06 的可执行主体，注释列已剥离以便复核逻辑；带行注释的权威原文以 `a168_取数与核验_SQL总包.sql` 为准，本附录不得反向覆盖总包。
+:::
+
+```sql
+WITH ta AS (
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+),
+rk AS (
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet11,
+         b.bet13, b.bet14, b.bet16, b.bet17, b.bet18,
+         b.bet19, b.bet20, b.bet21, b.bet22, b.bet38,
+         b.bet39, b.category, b.validbet,
+         ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+bs AS (
+  SELECT v.bet05 AS member_id,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+),
+ord AS (
+  SELECT b.*, PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round,
+              COUNT(*)      OVER (PARTITION BY round_key)                 AS n_in_round
+  FROM bs b
+),
+prd AS (
+  SELECT member_id, round_key, table_id,
+         MAX(pr_in_round) AS max_pr,
+         MAX(n_in_round)  AS n_in_round,
+         SUM(stake) AS stake, SUM(valid_bet) AS valid_bet,
+         SUM(game_pnl) AS game_pnl, SUM(rebate) AS rebate, SUM(net_pnl) AS net_pnl,
+         CASE WHEN SUM(game_pnl) > 0 THEN 1 ELSE 0 END AS is_win,
+         CASE WHEN SUM(game_pnl) < 0 THEN 1 ELSE 0 END AS is_lose
+  FROM ord WHERE n_in_round >= 5
+  GROUP BY member_id, round_key, table_id
+),
+fl AS (
+  SELECT p.*, CASE WHEN p.max_pr >= 0.80 THEN 1 ELSE 0 END AS is_tail
+  FROM prd p
+)
+SELECT member_id,
+  COUNT(*)                      AS n_rounds_all,
+  SUM(is_tail)                  AS n_rounds_tail,
+  SUM(is_tail) * 1.0 / COUNT(*) AS tail_share,
+  SUM(is_tail * is_win)  AS tail_win,
+  SUM(is_tail * is_lose) AS tail_lose,
+  SUM(is_tail * is_win) * 1.0
+    / NULLIF(SUM(is_tail * is_win) + SUM(is_tail * is_lose), 0) AS tail_winrate,
+  SUM((1 - is_tail) * is_win) * 1.0
+    / NULLIF(SUM((1 - is_tail) * is_win) + SUM((1 - is_tail) * is_lose), 0) AS norm_winrate,
+  SUM(is_tail * is_win) * 1.0
+    / NULLIF(SUM(is_tail * is_win) + SUM(is_tail * is_lose), 0)
+    - SUM((1 - is_tail) * is_win) * 1.0
+    / NULLIF(SUM((1 - is_tail) * is_win) + SUM((1 - is_tail) * is_lose), 0) AS winrate_diff,
+  SUM(is_tail * stake)     AS tail_stake,
+  SUM(is_tail * valid_bet) AS tail_valid_bet,
+  SUM(is_tail * game_pnl)  AS tail_game_pnl,
+  SUM(is_tail * rebate)    AS tail_rebate,
+  SUM(is_tail * net_pnl)   AS tail_net_pnl,
+  SUM(is_tail * game_pnl) / NULLIF(SUM(is_tail * valid_bet), 0) AS tail_roi,
+  SUM((1 - is_tail) * game_pnl) AS norm_game_pnl,
+  SUM((1 - is_tail) * game_pnl)
+    / NULLIF(SUM((1 - is_tail) * valid_bet), 0) AS norm_roi,
+  SUM(CASE WHEN is_tail = 1 AND game_pnl > 0 THEN game_pnl ELSE 0 END)
+    / NULLIF(SUM(CASE WHEN game_pnl > 0 THEN game_pnl ELSE 0 END), 0) AS tail_profit_share
+FROM fl
+GROUP BY member_id
+HAVING COUNT(*) >= 30
+ORDER BY member_id;
+```
+
+---
+
+::: {.callout-note title="版本与归档"}
+本文件为 **v2.0**。原 v1.0 须重命名为 `a168风控_尾段投注_v1_superseded.qmd` 归档保留，**不得删除**。同名不同内容即身份碰撞，版本号必须随内容变更递增。
+:::
+

@@ -1,0 +1,479 @@
+---
+title: "百家乐靴尾投注报告"
+format: html
+---
+
+# 下注时机风控参数分析报告
+
+## 一、分析目的
+
+本次分析用于确定“策略性后段下注”风控规则的合理参数，重点验证：
+
+1. 从第几局开始定义为后段下注；
+2. 后段下注订单占比达到多少视为异常；
+3. 玩家至少累计多少订单后才纳入判断。
+
+最终建议规则：
+
+> **统计第40局及以后下注的订单；第40局及以后订单占玩家总订单比例达到60%及以上；玩家总订单数达到30笔及以上。**
+
+建议输出：
+
+- `player_id`：会员ID；
+- `total_orders`：总订单数；
+- `late_orders`：第40局及以后订单数；
+- `late_ratio`：第40局及以后订单占比；
+- `valid_bet`：有效投注；
+- `profit`：玩家盈利；
+- `roi`：玩家投资回报率；
+- `win_rate`：胜单率。
+
+## 二、数据口径
+
+### 2.1 关键字段
+
+| 字段 | 业务含义 |
+|---|---|
+| `bet02` | 游戏类别，`101`代表本次分析的百家乐游戏 |
+| `bet03` | 场次编号，可视为一靴牌 |
+| `bet04` | 子场次编号，即当前牌靴的局号 |
+| `bet05` | 会员ID |
+| `bet11` | 汇率 |
+| `bet13` | 下注金额 |
+| `bet14` | 派彩金额 |
+| `validbet` | 有效投注 |
+
+### 2.2 核心指标
+
+```text
+total_orders = 玩家在分析期间的百家乐总订单数
+
+late_orders = 玩家在第40局及以后产生的订单数
+
+late_ratio = late_orders / total_orders
+
+profit = Σ[(派彩金额 - 下注金额) / 汇率]
+
+valid_bet = Σ[有效投注 / 汇率]
+
+ROI = profit / valid_bet
+```
+
+“订单数达到30笔”指玩家的百家乐总订单数达到30笔，并非要求第40局及以后订单数达到30笔。
+
+如果业务要求靴尾订单本身也不少于30笔，应额外增加：
+
+```sql
+late_orders >= 30
+```
+
+## 三、牌靴长度验证
+
+以 `bet03` 作为牌靴编号，统计每靴最大局号：
+
+| 统计指标 | 每靴局数 |
+|---|---:|
+| 平均值 | 49.86 |
+| P50 | 50 |
+| P75 | 52 |
+| P90 | 54 |
+| P95 | 55 |
+| P99 | 58 |
+
+一靴牌通常约为50局，因此：
+
+- 第35局大约处于牌靴后30%的位置；
+- 第40局大约处于牌靴最后20%的位置；
+- 第45局大约处于牌靴最后10%的位置；
+- 第50局已经接近多数牌靴的结束位置。
+
+第35局覆盖范围偏宽；第45局虽然异常性更强，但会造成命中人数明显减少。第40局既属于牌靴明显后段，又能保留足够的风险观察样本，因此更适合作为后段下注起始局号。
+
+## 四、玩家平均首次下注局号分析
+
+### 4.1 计算口径
+
+先计算每位玩家在每一靴的首次下注局号：
+
+```text
+first_bet_round = MIN(bet04)
+```
+
+再计算玩家跨牌靴的平均首次下注局号：
+
+```text
+avg_first_round = AVG(first_bet_round)
+```
+
+分析只保留参与至少30靴的玩家，以减少小样本波动。
+
+### 4.2 分位数结果
+
+| 分位数 | 平均首次下注局号 |
+|---|---:|
+| P50 | 24.95 |
+| P75 | 27.46 |
+| P90 | 29.85 |
+| P95 | 31.47 |
+| P99 | 35.03 |
+
+结果表明：
+
+- 50%的活跃玩家平均在第25局以前首次下注；
+- 90%的玩家平均在第30局以前首次下注；
+- 95%的玩家平均在第31至32局以前首次下注；
+- 99%的玩家平均首次下注局号不超过约35局。
+
+因此，平均在第40局及以后才开始下注，已经明显超过P99范围，属于极少数行为。
+
+需要注意，`avg_first_round` 与 `late_ratio` 是两个不同指标：
+
+- `avg_first_round` 描述玩家通常从第几局开始下注；
+- `late_ratio` 描述玩家全部订单中有多少发生在第40局及以后。
+
+首次下注局号分布可以支持“第40局属于极端靠后的入场位置”，但最终规则仍需结合第40局以后订单占比判断。
+
+## 五、为什么选择第40局
+
+在“后段订单占比达到60%、总订单数达到30笔”的条件下：
+
+| 起始局号 | 命中人数 | 平均ROI | ROI P90 | ROI P95 | 盈利玩家占比 |
+|---:|---:|---:|---:|---:|---:|
+| 35 | 11,791 | -4.15% | 20.69% | 30.40% | 36.60% |
+| **40** | **2,644** | **-4.61%** | **25.86%** | **38.62%** | **37.93%** |
+| 45 | 263 | -7.05% | 31.37% | 45.95% | 36.50% |
+
+选择第40局的依据：
+
+1. 第40局处于典型牌靴最后约20%的区间；
+2. 明显晚于玩家平均首次下注位置P99的35.03局；
+3. 命中人数从第35局的11,791人降低到2,644人，过滤能力明显增强；
+4. ROI P95从30.40%提升到38.62%；
+5. 相比第45局，仍能保留更充分的风险观察样本。
+
+第45局虽然具有更高的ROI P95，但只命中263人，容易遗漏在第40至44局集中下注的玩家。第40局在异常程度、风险强度和名单召回率之间更加平衡。
+
+## 六、为什么订单占比选择60%
+
+固定条件为“第40局及以后下注、总订单数达到30笔”：
+
+| 占比阈值 | 命中人数 | 平均ROI | ROI P90 | ROI P95 | 盈利玩家占比 |
+|---:|---:|---:|---:|---:|---:|
+| ≥40% | 15,353 | -3.75% | 20.49% | 30.11% | 37.56% |
+| ≥50% | 6,290 | -4.19% | 23.47% | 33.90% | 37.44% |
+| **≥60%** | **2,644** | **-4.61%** | **25.86%** | **38.62%** | **37.93%** |
+| ≥70% | 1,132 | -4.97% | 27.39% | 43.67% | 37.10% |
+
+分析结果：
+
+- 40%命中15,353人，名单规模过大；
+- 50%仍命中6,290人，区分度有限；
+- 60%命中2,644人，ROI P90和P95均明显提高；
+- 70%虽然ROI P95进一步提高，但命中人数下降到1,132人，召回损失更大。
+
+因此，60%适合作为重点审核阈值；70%可以作为更高异常等级，但不建议作为主筛选阈值。
+
+## 七、为什么订单数选择30笔
+
+固定规则为“第40局及以后下注占比达到60%”：
+
+| 订单门槛 | 命中人数 | 平均ROI | ROI P90 | ROI P95 | 平均有效投注 | 盈利玩家占比 |
+|---:|---:|---:|---:|---:|---:|---:|
+| **≥30** | **2,644** | **-4.61%** | **25.86%** | **38.62%** | **8,704.80** | **37.93%** |
+| ≥50 | 1,170 | -4.10% | 21.66% | 31.27% | 17,885.71 | 37.86% |
+| ≥100 | 393 | -3.31% | 10.88% | 20.46% | 47,136.12 | 37.15% |
+
+30单门槛可以：
+
+- 排除只有少量订单但比例偶然达到100%的玩家；
+- 保留2,644人的可观察名单；
+- 避免50单和100单门槛造成过度漏报；
+- 保留较明显的ROI尾部风险信号。
+
+30单并不代表比例已经达到严格统计稳定，而是异常识别、名单规模和审核能力之间的业务折中。
+
+## 八、最终推荐规则
+
+### 8.1 主规则
+
+```text
+游戏类型为百家乐；
+第40局及以后订单占比达到60%；
+玩家总订单数达到30笔。
+```
+
+对应判断条件：
+
+```sql
+total_orders >= 30
+AND late_orders * 1.0 / total_orders >= 0.60
+```
+
+其中：
+
+```sql
+late_orders =
+SUM(
+    CASE
+        WHEN CAST(bet04 AS INT) >= 40 THEN 1
+        ELSE 0
+    END
+)
+```
+
+### 8.2 风险分层参考
+
+| 层级 | 规则 | 用途 |
+|---|---|---|
+| 观察 | 第40局以后占比≥40%，总订单≥30 | 玩家画像、行为观察 |
+| 关注 | 第40局以后占比≥50%，总订单≥30 | 提高关注等级 |
+| **重点审核** | **第40局以后占比≥60%，总订单≥30** | **推荐主规则** |
+| 高度异常 | 第40局以后占比≥70%，总订单≥30 | 更高异常等级 |
+| 稳定异常 | 第40局以后占比≥60%，总订单≥50 | 二次复核 |
+
+## 九、命中玩家及盈利情况SQL
+
+### 基准档
+
+```sql
+WITH player_stat AS (
+    SELECT
+        CAST(bet05 AS BIGINT) AS player_id,
+
+        COUNT(*) AS total_orders,
+
+        SUM(
+            CASE
+                WHEN CAST(bet04 AS INT) >= 40 THEN 1
+                ELSE 0
+            END
+        ) AS late_orders,
+
+        SUM(
+            CASE
+                WHEN CAST(bet14 AS DECIMAL(20,4))
+                   > CAST(bet13 AS DECIMAL(20,4))
+                THEN 1
+                ELSE 0
+            END
+        ) AS win_orders,
+
+        SUM(
+            (
+                CAST(bet14 AS DECIMAL(20,4))
+                - CAST(bet13 AS DECIMAL(20,4))
+            )
+            / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)
+        ) AS profit,
+
+        SUM(
+            CAST(validbet AS DECIMAL(20,4))
+            / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)
+        ) AS valid_bet
+
+    FROM ods_a168_bet02
+
+    WHERE bet02 = '101'
+      AND bet03 IS NOT NULL
+      AND bet04 IS NOT NULL
+      AND bet05 IS NOT NULL
+
+    GROUP BY CAST(bet05 AS BIGINT)
+)
+
+SELECT
+    player_id,
+    total_orders,
+    late_orders,
+
+    ROUND(
+        late_orders * 1.0 / total_orders,
+        4
+    ) AS late_ratio,
+
+    win_orders,
+
+    ROUND(
+        win_orders * 1.0 / total_orders,
+        4
+    ) AS win_rate,
+
+    ROUND(valid_bet, 2) AS valid_bet,
+    ROUND(profit, 2) AS profit,
+
+    ROUND(
+        profit / NULLIF(valid_bet, 0),
+        4
+    ) AS roi
+
+FROM player_stat
+
+WHERE total_orders >= 30
+  AND late_orders * 1.0 / total_orders >= 0.60
+
+ORDER BY
+    roi DESC,
+    profit DESC;
+```
+
+### 升级档
+
+```{sql, eval = eval}
+-- eval = FALSE
+/* ═══════════════════════════════════════════════════════════════════════
+   D-08 · 靴尾下注（第 40 局起）双口径会员画像
+   规则参数与原报告完全一致：第 40 局 · 靴尾占比 ≥ 0.60 · 总订单 ≥ 30
+   ▸ 导出：「数据库/BASE08_late40_dual_caliber_w139.csv」
+   ▸ 用途：报告 fetch("BASE08")：双口径对比、名单差集、误判率对照
+   ▸ 窗口：dt ∈ [2026-03-21, 2026-08-07)，共 139 个营业日
+   ═══════════════════════════════════════════════════════════════════════ */
+/* --- D-08 强化说明（相对原稿的改动，逐条对应本包已实测的事实）-----------
+   ① 补库名：原稿依赖会话默认库，换人执行即换结果
+   ② 补 139 日营业日窗：dt 取自 bet07；DATE(bet08) 与 dt 实测相差 38.6%
+   ③ 补幂等去重：同一注单多版本，按 bet01 取最新一版
+   ④ 补五级测试线剔除：age022='1' 实测 215 条（窗内 214）；实测只剔一级
+      漏 76.8pp（孤儿率 L1 78.17% → 五级全孤儿 1.371%）
+   ⑤ 补测试单两闸：category='1'、UPPER(TRIM(bet38))='N'
+   ⑥ 全字段 TRIM＋NULLIF＋显式转型；汇率精度对齐 DECIMAL(20,8)
+   ⑦ 闸改为逐行打标而非过滤：过滤会毁掉对照组，打标方能同表并出双口径
+   ⑧ 胜负改剔和分母：和局派彩＝本金，既不计胜也不计负
+   ⑨ 补恒等式残差自校：净输赢 − 游戏输赢 − 退水，实测原值层恒为 0
+   ⑩ 补口径锁列与命中标记；排序改稳定主键序
+   ------------------------------------------------------------------------- */
+WITH ta AS (                                                                                        -- 公共表表达式：开启中间结果集 ta，测试线名册（交付件 BASE08）
+  SELECT DISTINCT TRIM(age001) AS aid                                                               -- 取列：代理号去重作黑名单；实测主档 46,346 行全唯一、无空白，DISTINCT 与 TRIM 属防御性写法
+  FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1'                                       -- 取数来源：代理主档；age022='1' 即测试线，肯定式建册，绝不写 != '1'（否定式会退化为 ∃ 语义，测试线挂任一级皆可放行）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（交付件 BASE08）
+rk AS (                                                                                             -- 公共表表达式：开启中间结果集 rk，幂等去重层（交付件 BASE08）
+  SELECT b.bet01, b.dt, b.bet03, b.bet04, b.bet05, b.bet11,                                         -- 取列：起始取列子句，本行先列 bet01（注单号）、dt（营业日）、bet03（靴号）、bet04（局内序号）、bet05（会员号）、bet11（汇率）
+         b.bet13, b.bet14, b.bet16, b.bet17,                                                        -- 续行：接续上一取列子句，续列 bet13（下注金额）、bet14（派彩金额）、bet16（退水金额）、bet17（会员净输赢）
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,                                               -- 续行：接续上一取列子句，续列一至五级代理线，测试线排除的连接键
+         b.bet38, b.bet39, b.category, b.validbet,                                                  -- 续行：接续上一取列子句，续列 bet38（测试标识）、bet39（桌号）、category（注单类别）、validbet（有效投注（洗码量））
+         ROW_NUMBER() OVER (                                                                        -- 行号窗口表达式：以行号窗口取每组头部或去重，免出重复行
+           PARTITION BY b.bet01                                                                     -- 窗口分区：按 b.bet01 分组开窗，组内各自编号或排名
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                           -- 排序：按 b.updatetime（降序）, b.sync_time（降序）, b.dt（降序）) AS rn 排列；三级排序保证唯一，免并列致随机取行
+  FROM ods_mariadb_2b.ods_a168_bet02 b                                                              -- 取数来源：取自注单明细表（金额与行为口径的第一料源）
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'                            -- 过滤条件：限定 b.dt不少于 '2026-03-21'、b.dt小于 '2026-08-07'、b.bet02等于 '101'，涉 bet02（游戏类别）、dt（营业日）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（交付件 BASE08）
+fx AS (                                                                                             -- 公共表表达式：开启中间结果集 fx，口径归一 ＋ 逐行贴闸（本件设计核心，交付件 BASE08）
+  SELECT CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT)            AS player_id,                          -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「player_id」
+         CAST(NULLIF(TRIM(r.bet04),'') AS INT)               AS round_no,                           -- 取值表达式：同上转型，产出「round_no」（靴内局号）
+         CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4))     AS bet_amt,                            -- 取值表达式：同上转型，产出「bet_amt」（下注金额，原币）
+         CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4))     AS pay_amt,                            -- 取值表达式：同上转型，产出「pay_amt」（派彩金额，原币）——注：bet14 在 bet01 表为退水百分比，同名异义
+         CAST(NULLIF(TRIM(r.bet16),'') AS DECIMAL(20,4))     AS reb_amt,                            -- 取值表达式：同上转型，产出「reb_amt」（退水金额，原币）
+         CAST(NULLIF(TRIM(r.bet17),'') AS DECIMAL(20,4))     AS net_amt,                            -- 取值表达式：同上转型，产出「net_amt」（会员净输赢，原币）
+         CAST(NULLIF(TRIM(r.validbet),'') AS DECIMAL(20,4))  AS vb_amt,                             -- 取值表达式：同上转型，产出「vb_amt」（洗码量，原币）
+         CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))     AS fxr,                                -- 取值表达式：同上转型，产出「fxr」（汇率＝外币单位数÷1人民币）；实测 133 个取值、人民币户恒为 1，故金额皆为原币，须除之归一
+         CASE WHEN r.rn = 1                                                                         -- 条件分支：以下六条同时成立方记为加闸口径有效行——闸作打标而非过滤，删掉 0 行即无从复现原口径
+                   AND r.category = '1'                                                             -- 并列条件：限定 r.category等于 '1'（正式单），涉 category（注单类别）
+                   AND UPPER(TRIM(r.bet38)) = 'N'                                                   -- 并列条件：限定 UPPER(TRIM(r.bet38))等于 'N'（非测试单），涉 bet38（测试标识）
+                   AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                          -- 并列条件：限定汇率大于 0，非仅「非零」；实测全表无空无零无负，本闸属防御
+                   AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                 -- 并列条件：限定会员号大于 0，涉 bet05（会员号）
+                   AND CAST(NULLIF(TRIM(r.bet04),'') AS INT)  > 0                                   -- 并列条件：限定局号大于 0，涉 bet04（局内序号）
+                   AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL                     -- 并列条件：限定该值为空——五级皆未命中测试线；本包以左连接加空值判定替代 EXISTS，因 StarRocks 不支持 EXISTS 配多列 IN
+              THEN 1 ELSE 0 END                              AS ok                                  -- 条件分支：产出「ok」（0/1 逐行闸标记），1＝加闸口径纳入，0＝仅原口径纳入
+  FROM rk r                                                                                         -- 取数来源：取自本条自建的中间结果集 rk
+  LEFT JOIN ta t1 ON t1.aid = TRIM(r.bet18)                                                         -- 左连接：取自本条自建的中间结果集 ta，连接键为 bet18（一级代理线）；实测该级孤儿率 78.17%，故必须五级并查
+  LEFT JOIN ta t2 ON t2.aid = TRIM(r.bet19)                                                         -- 左连接：取自本条自建的中间结果集 ta，连接键为 bet19（二级代理线）；实测孤儿率 72.60%
+  LEFT JOIN ta t3 ON t3.aid = TRIM(r.bet20)                                                         -- 左连接：取自本条自建的中间结果集 ta，连接键为 bet20（三级代理线）；实测孤儿率 38.79%
+  LEFT JOIN ta t4 ON t4.aid = TRIM(r.bet21)                                                         -- 左连接：取自本条自建的中间结果集 ta，连接键为 bet21（四级代理线）；实测孤儿率 8.03%
+  LEFT JOIN ta t5 ON t5.aid = TRIM(r.bet22)                                                         -- 左连接：取自本条自建的中间结果集 ta，连接键为 bet22（五级代理线）；实测孤儿率 5.54%，五级全孤儿仅 1.371%
+  WHERE r.bet03 IS NOT NULL                                                                         -- 过滤条件：限定该值非空，涉 bet03（靴号）——刻意保留原报告三闸，不保留则原口径不可复现，对比失去基准
+    AND r.bet04 IS NOT NULL                                                                         -- 并列条件：限定该值非空，涉 bet04（局内序号）
+    AND r.bet05 IS NOT NULL                                                                         -- 并列条件：限定该值非空，涉 bet05（会员号）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（交付件 BASE08）
+mx AS (                                                                                             -- 公共表表达式：开启中间结果集 mx，会员级双口径汇总（交付件 BASE08）
+  SELECT player_id,                                                                                 -- 取列：起始取列子句，本行先列 player_id（会员号）
+         COUNT(*)                                            AS total_orders_raw,                   -- 计数表达式：产出「total_orders_raw」（原口径总订单数，含重复版本与测试流量）
+         SUM(CASE WHEN round_no >= 40 THEN 1 ELSE 0 END)     AS late_orders_raw,                    -- 汇总表达式：条件分支，取用 round_no（靴内局号），产出「late_orders_raw」
+         SUM(CASE WHEN pay_amt > bet_amt THEN 1 ELSE 0 END)  AS win_orders_raw,                     -- 汇总表达式：条件分支，取用 pay_amt（派彩）、bet_amt（下注），产出「win_orders_raw」；和局落 ELSE，故此口径含和局于分母
+         SUM((pay_amt - bet_amt) / NULLIF(fxr,0))            AS profit_raw,                         -- 汇总表达式：加减计算后除汇率归一，产出「profit_raw」（会员视角，正数＝会员赢）
+         SUM(vb_amt / NULLIF(fxr,0))                         AS valid_bet_raw,                      -- 汇总表达式：除法计算，取用 vb_amt（洗码量），产出「valid_bet_raw」
+         SUM(ok)                                             AS total_orders_ok,                    -- 汇总表达式：取用 ok（闸标记），产出「total_orders_ok」；与 raw 之差即六道闸的净影响
+         SUM(CASE WHEN ok=1 AND round_no >= 40 THEN 1 ELSE 0 END)     AS late_orders_ok,            -- 汇总表达式：条件分支，产出「late_orders_ok」
+         SUM(CASE WHEN ok=1 AND pay_amt >  bet_amt THEN 1 ELSE 0 END) AS win_orders_ok,             -- 汇总表达式：条件分支，产出「win_orders_ok」（胜单）
+         SUM(CASE WHEN ok=1 AND pay_amt <  bet_amt THEN 1 ELSE 0 END) AS lose_orders_ok,            -- 汇总表达式：条件分支，产出「lose_orders_ok」（负单）
+         SUM(CASE WHEN ok=1 AND pay_amt =  bet_amt THEN 1 ELSE 0 END) AS tie_orders_ok,             -- 汇总表达式：条件分支，产出「tie_orders_ok」（和局，派彩＝本金）；须查证退款单与取消单是否亦等额，否则此列含杂
+         SUM(CASE WHEN ok=1 THEN (pay_amt - bet_amt)/NULLIF(fxr,0) ELSE 0 END) AS profit_ok,        -- 汇总表达式：条件分支后除汇率归一，产出「profit_ok」
+         SUM(CASE WHEN ok=1 THEN vb_amt /NULLIF(fxr,0)             ELSE 0 END) AS valid_bet_ok,     -- 汇总表达式：条件分支后除汇率归一，产出「valid_bet_ok」
+         SUM(CASE WHEN ok=1 THEN reb_amt/NULLIF(fxr,0)             ELSE 0 END) AS rebate_ok,        -- 汇总表达式：条件分支后除汇率归一，产出「rebate_ok」（退水，平台成本项）
+         SUM(CASE WHEN ok=1 THEN net_amt/NULLIF(fxr,0)             ELSE 0 END) AS net_pnl_ok,       -- 汇总表达式：条件分支后除汇率归一，产出「net_pnl_ok」（会员净输赢）
+         SUM(CASE WHEN ok=1                                                                         -- 汇总表达式：条件分支，恒等式残差之被加数
+                  THEN (net_amt - (pay_amt - bet_amt) - reb_amt)/NULLIF(fxr,0)                      -- 加减计算后除汇率归一：净输赢 − 游戏输赢 − 退水
+                  ELSE 0 END)                                AS resid_identity,                     -- 产出「resid_identity」：理论恒为 0；实测原值层两户别皆为 0，非零即当场暴露口径漂移（停止准则 A1）
+         COUNT(DISTINCT CAST(NULLIF(TRIM(r_fxr_probe),'') AS DECIMAL(20,8))) AS n_fx_seen           -- 计数表达式：本行为占位说明，实际实现见下方 n_fx_seen 定义；产出「n_fx_seen」（该会员见到几种汇率）
+  FROM (SELECT f.*, CAST(f.fxr AS VARCHAR) AS r_fxr_probe FROM fx f) f2                             -- 取数来源：取自本条自建的中间结果集 fx，外套一层以取汇率去重计数（会员应恒为单币种，多于一种即须查）
+  GROUP BY player_id                                                                                -- 分组：按 player_id 汇总
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（交付件 BASE08）
+SELECT player_id,                                                                                   -- 取列：起始取列子句，本行先列 player_id（会员号，已转 BIGINT，下游关联不会静默失配）
+  'late40_r60_n30'                                           AS rule_def,                           -- 取值表达式：口径锁列，产出「rule_def」；无锁列的旧档一律拒读
+  'dt_ge_2026-03-21_lt_2026-08-07'                           AS window_def,                         -- 取值表达式：口径锁列，产出「window_def」（左闭右开 139 营业日）
+  'amount=CNY_via_bet11'                                     AS ccy_def,                            -- 取值表达式：口径锁列，产出「ccy_def」；声明本件金额已按逐注汇率折为人民币，防下游误认原币
+  total_orders_raw, late_orders_raw,                                                                -- 取列：续列原口径的总订单数与靴尾订单数
+  ROUND(late_orders_raw * 1.0 / NULLIF(total_orders_raw,0), 4) AS late_ratio_raw,                   -- 除法或乘法计算：比率之分子乘 1.0 以避整数除法截断，NULLIF 防零分母，产出「late_ratio_raw」
+  win_orders_raw,                                                                                   -- 取列：续列原口径胜单数
+  ROUND(win_orders_raw  * 1.0 / NULLIF(total_orders_raw,0), 4) AS win_rate_raw,                     -- 除法或乘法计算：分母为总订单数，含和局故系统性偏低，产出「win_rate_raw」——刻意保留，供与剔和口径对读
+  ROUND(valid_bet_raw, 2)                                    AS valid_bet_raw,                      -- 取值表达式：四舍五入至分，产出「valid_bet_raw」
+  ROUND(profit_raw, 2)                                       AS profit_raw,                         -- 取值表达式：四舍五入至分，产出「profit_raw」
+  ROUND(profit_raw / NULLIF(valid_bet_raw,0), 4)             AS roi_raw,                            -- 除法或乘法计算：NULLIF 防零分母，产出「roi_raw」
+  total_orders_ok, late_orders_ok,                                                                  -- 取列：续列加闸口径的总订单数与靴尾订单数
+  ROUND(late_orders_ok  * 1.0 / NULLIF(total_orders_ok,0), 4)  AS late_ratio_ok,                    -- 除法或乘法计算：产出「late_ratio_ok」
+  win_orders_ok, lose_orders_ok, tie_orders_ok,                                                     -- 取列：续列胜、负、和三分
+  ROUND(win_orders_ok * 1.0 / NULLIF(win_orders_ok + lose_orders_ok,0), 4) AS win_rate_ok,          -- 除法或乘法计算：剔和分母——和局既不计胜也不计负，产出「win_rate_ok」
+  ROUND(valid_bet_ok, 2)                                     AS valid_bet_ok,                       -- 取值表达式：四舍五入至分，产出「valid_bet_ok」
+  ROUND(profit_ok, 2)                                        AS profit_ok,                          -- 取值表达式：四舍五入至分，产出「profit_ok」
+  ROUND(rebate_ok, 2)                                        AS rebate_ok,                          -- 取值表达式：四舍五入至分，产出「rebate_ok」
+  ROUND(net_pnl_ok, 2)                                       AS net_pnl_ok,                         -- 取值表达式：四舍五入至分，产出「net_pnl_ok」
+  ROUND(profit_ok / NULLIF(valid_bet_ok,0), 4)               AS roi_ok,                             -- 除法或乘法计算：产出「roi_ok」；未分层前不可作经济解读——ROI 符号随佣金模式翻转
+  ROUND(resid_identity, 4)                                   AS resid_identity,                     -- 取值表达式：产出「resid_identity」（恒等式残差，应为 0）
+  n_fx_seen,                                                                                        -- 取列：产出「n_fx_seen」（该会员出现过的汇率种数；恒为单币种者应为个位数，异常大即须查）
+  CASE WHEN total_orders_raw >= 30                                                                  -- 条件分支：原口径是否入围
+            AND late_orders_raw * 1.0 / NULLIF(total_orders_raw,0) >= 0.60                          -- 并列条件：靴尾占比阈
+       THEN 1 ELSE 0 END                                     AS hit_raw,                            -- 产出「hit_raw」：1＝原口径命中；改收口为标记，两集合方可做名单差集
+  CASE WHEN total_orders_ok >= 30                                                                   -- 条件分支：加闸口径是否入围
+            AND late_orders_ok * 1.0 / NULLIF(total_orders_ok,0) >= 0.60                            -- 并列条件：靴尾占比阈
+       THEN 1 ELSE 0 END                                     AS hit_ok                              -- 产出「hit_ok」：1＝加闸口径命中
+FROM mx                                                                                             -- 取数来源：取自本条自建的中间结果集 mx
+WHERE (total_orders_raw >= 30                                                                       -- 过滤条件：任一口径命中即输出，供名单差集比较；WHERE 用未舍入原式，免 0.59995 被舍入后错误入围
+       AND late_orders_raw * 1.0 / NULLIF(total_orders_raw,0) >= 0.60)                              -- 并列条件：原口径收口
+   OR (total_orders_ok  >= 30                                                                       -- 或：加闸口径收口
+       AND late_orders_ok  * 1.0 / NULLIF(total_orders_ok,0)  >= 0.60)                              -- 并列条件：加闸口径靴尾占比阈
+ORDER BY player_id;                                                                                 -- 排序：按 player_id 排列；已转 BIGINT，非字符串序；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
+```
+
+胜率暂以 `bet14 > bet13` 判断胜单。如存在和局、退款、取消单、重复订单或特殊佣金结算，应根据 `bet17` 的业务取值重新定义胜率。
+
+## 十、使用边界
+
+该规则识别的是：
+
+> **下注订单高度集中在牌靴后段的异常行为玩家。**
+
+它不能单独证明玩家作弊、串通或利用牌面信息，原因包括：
+
+- 命中玩家的平均ROI仍然为负；
+- 异常信号主要体现在ROI的P90和P95尾部；
+- 部分玩家可能只是习惯观察牌路或中途进入游戏；
+- 小额玩家的ROI容易受到单次输赢影响；
+- 当前结论来自有限月份的历史数据，仍需用后续月份进行样本外验证。
+
+因此，本规则适合用于异常行为筛查和人工审核，不建议单独作为自动封禁或处罚依据。
+
+## 十一、最终结论
+
+综合牌靴长度、平均首次下注局号分布和参数扫描结果，建议采用：
+
+> **第40局及以后下注订单占比达到60%，且玩家总订单数达到30笔。**
+
+选择依据：
+
+1. 一靴平均约49.86局，第40局已进入最后约20%的牌局；
+2. 玩家平均首次下注局号P99约为35.03，第40局明显晚于绝大多数玩家的平均入场位置；
+3. 第40局、60%、30单组合命中2,644人，名单规模比第45局规则更充分；
+4. 该组合ROI P90为25.86%、P95为38.62%，高收益尾部特征较明显；
+5. 60%比40%和50%具有更强区分度，同时比70%保留更多风险召回；
+6. 30单可以排除极小样本，并避免50单和100单门槛造成过度漏报。
+
+最终定位：
+
+> **该规则是策略性靴尾下注的行为筛查规则，适合风险观察和人工审核，不应单独作为作弊认定或自动处罚依据。**

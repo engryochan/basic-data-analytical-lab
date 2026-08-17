@@ -1,0 +1,716 @@
+---
+title: "a168 真人百家乐"
+subtitle: "下注时机风控参数分析报告 · 基准档（原文转录，供效率与误判率对照）"
+author: "Ryo（雷欧）"
+date: today
+lang: zh-CN
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-expand: 3
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看代码"
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+---
+
+```{r}
+#| label: setup
+if(!require('pacman')) install.packages('pacman')
+suppressMessages(require('pacman'))
+p_load('data.table', 'here', 'DT', 'jsonlite', 'plotly', 'htmltools', 'knitr')
+
+候选 <- c(tryCatch(here('风控案例', 'a168风控与客户分析评分体系', '数据库'), error = function(e) NA_character_),
+          tryCatch(here('数据库'), error = function(e) NA_character_),
+          file.path(getwd(), '数据库'), '数据库', '../数据库')
+候选 <- 候选[!is.na(候选)]
+路径 <- if (any(dir.exists(候选))) 候选[dir.exists(候选)][1] else NA_character_
+
+读表 <- function(p) {
+  if (is.na(p) || !file.exists(p)) return(NULL)
+  h <- readBin(p, 'raw', n = 8192L); if (length(h) > 3L) h <- h[seq_len(length(h) - 3L)]
+  if (isTRUE(validUTF8(rawToChar(h))))
+    return(data.table::fread(p, encoding = 'UTF-8', showProgress = FALSE))
+  data.table::fread(text = iconv(readLines(p, warn = FALSE), 'GB18030', 'UTF-8', sub = '?'),
+                    showProgress = FALSE)
+}
+数 <- function(x, d = 2) formatC(as.numeric(x), format = 'f', digits = d, big.mark = ',')
+整 <- function(x)        formatC(as.numeric(x), format = 'd', big.mark = ',')
+百 <- function(x, d = 2) ifelse(is.finite(x), paste0(formatC(100 * as.numeric(x), format = 'f', digits = d), '%'), '—')
+互表 <- function(x, 题, 副 = '') DT::datatable(x, rownames = FALSE, class = 'compact stripe hover',
+  caption = htmltools::tags$caption(style = 'caption-side:top;text-align:left;',
+    htmltools::tags$b(题), htmltools::tags$span(style = 'opacity:.75;font-size:90%', 副)),
+  options = list(pageLength = 25, scrollX = TRUE, scrollY = '420px', scrollCollapse = TRUE))
+
+## 导出目录：基准件一律落在此处，文件名不与 SQL 总包 v3 任何输出重名
+读取目录 <- if (!is.na(路径)) 路径 else '.'
+名 <- '下注时机风控参数分析报告_基准档.csv'
+落盘 <- function(dt, 名) {
+  p <- file.path(读取目录, 名)
+  data.table::fwrite(dt, p, bom = TRUE)
+  p
+}
+```
+
+```{r}
+#| label: glossary
+#| results: asis
+术语 <- rbind(
+  data.table(词 = '基准档',       释 = '不改动原方法、原口径、原 SQL 的忠实转录件。它的唯一用途是作为分母：任何改进版都必须与它逐项对照，才谈得上「效率提升了多少、误判降了多少」。'),
+  data.table(词 = '血统关系',     释 = '交付件之间的父子与版本继承。同名不同内容即身份冲突；本档所有导出文件均另立命名空间 BASE*，绝不覆盖 SQL 总包 v3 的既有输出。'),
+  data.table(词 = '靴',           释 = '一副牌自洗牌至用尽的完整周期。本报告以 bet03 场次编号代表一靴，实测平均 49.86 局。'),
+  data.table(词 = '局号',         释 = 'bet04，靴内第几局。本报告以其绝对值 ≥ 40 定义靴尾。'),
+  data.table(词 = '靴尾占比',     释 = 'late_ratio＝第 40 局及以后订单数 ÷ 总订单数。本报告主阈值取 0.60。'),
+  data.table(词 = '首注局号',     释 = 'first_bet_round＝会员在该靴的最小局号；再跨靴取均值得 avg_first_round。'),
+  data.table(词 = '洗码量',       释 = 'valid_bet＝Σ(有效投注 ÷ 汇率)。平台一切退水、占成与结账的分母。'),
+  data.table(词 = 'ROI',          释 = '会员视角回报率＝profit ÷ valid_bet。正数＝会员赚、平台亏。'),
+  data.table(词 = '合成 ROI',     释 = 'Σprofit ÷ Σvalid_bet，按量加权。与「各会员 ROI 的等权均值」是两个数，经济结算只能用前者。'),
+  data.table(词 = '等权平均 ROI', 释 = '每位会员各记一票，30 单者与 3,000 单者同权。原报告各扫描表中的「平均ROI」即为此口径。'),
+  data.table(词 = '尾部分位',     释 = 'ROI 的 P90／P95。原报告以其升高作为「风险信号更强」的依据。'),
+  data.table(词 = '盈利玩家占比', 释 = '名单内 ROI 为正的会员人数占比。原报告三张扫描表中该值稳定在 36.5%–37.9%。'),
+  data.table(词 = '命中人数',     释 = '规则筛出的会员数。它衡量名单规模，不衡量名单质量。'),
+  data.table(词 = '效率',         释 = '本档定义：单位名单规模所换取的可核查风险量。对照口径见「基准指标卡」。'),
+  data.table(词 = '误判率',       释 = '名单中不具备目标行为者的比例，等于 1−精确率。须有外部标签或阴性对照方可测得，本基准档只留接口不填数。'),
+  data.table(词 = '精确率',       释 = '名单中真正具备目标行为者的比例。'),
+  data.table(词 = '召回率',       释 = '全部真正具备目标行为者中，被名单捕获的比例。原报告以「命中人数下降＝召回损失」代指，属代理量而非真召回。'),
+  data.table(词 = '阴性对照',     释 = '以随机等量抽取的假名单跑同一套指标。若假名单表现与真名单相当，该规则区分力即为零。本基准档预留接口。'),
+  data.table(词 = '平台基线',     释 = '全平台会员合成 ROI，项目已锁定约 −1.90%（洗码量为分母）。任何群体指标须与它比，而非与 0 比。'),
+  data.table(词 = '超额 ROI',     释 = '群体 ROI 减平台基线。它是判断「该群是风险源还是价值客」的唯一正确尺度。'),
+  data.table(词 = '样本外验证',   释 = '以未参与选参的后续期数据复跑同一规则。原报告第十节自述尚未完成。'),
+  data.table(词 = '口径锁',       释 = '随交付件落盘的常量列，写明该件依据的定义。无锁列的旧档一律拒读，免新旧口径混用而不自知。'),
+  data.table(词 = '六元组',       释 = '文件身份＝文件名＋行数＋字节数＋MD5＋行尾＋编码。仅凭 MD5 判定版本属识别不足。'),
+  data.table(词 = '证据等级',     释 = 'E1 可指名／E2 算术推导／E3 可重算的观察性差额／E4 准实验／E5 随机对照试验。')
+)
+GL <- setNames(as.list(术语$释), 术语$词)
+cat('<style>
+.gl{border-bottom:1px dotted #7fd1e6;cursor:help;position:relative}
+.gl:hover::after{content:attr(data-tip);position:absolute;left:0;top:1.5em;z-index:9999;
+ width:32em;max-width:78vw;padding:.6em .8em;border-radius:.4em;
+ background:#0d2733;color:#e8f6fb;border:1px solid #3aa7c4;
+ box-shadow:0 6px 18px rgba(0,0,0,.55);font-size:.86rem;line-height:1.5;
+ font-weight:400;white-space:normal;text-align:left}
+</style>\n')
+cat('<script>\n(function(){\nvar GLO = ', jsonlite::toJSON(GL, auto_unbox = TRUE), ';\n', sep = '')
+cat('var TERMS = Object.keys(GLO).sort(function(a,b){return b.length-a.length;});
+var SKIP = {SCRIPT:1,STYLE:1,CODE:1,PRE:1,A:1,TEXTAREA:1,BUTTON:1};
+var CNT = {}, CAP = 3;
+function ann(tn){
+  var t = tn.nodeValue; if(!t || t.length < 2) return;
+  for (var k = 0; k < TERMS.length; k++){
+    var w = TERMS[k];
+    if ((CNT[w] || 0) >= CAP) continue;
+    var p = t.indexOf(w); if (p < 0) continue;
+    CNT[w] = (CNT[w] || 0) + 1;
+    var fr = document.createDocumentFragment(), pre = null, rt = null;
+    if (p > 0){ pre = document.createTextNode(t.slice(0, p)); fr.appendChild(pre); }
+    var sp = document.createElement("span");
+    sp.className = "gl"; sp.setAttribute("data-tip", GLO[w]); sp.textContent = w;
+    fr.appendChild(sp);
+    var rest = t.slice(p + w.length);
+    if (rest){ rt = document.createTextNode(rest); fr.appendChild(rt); }
+    tn.parentNode.replaceChild(fr, tn);
+    if (pre) ann(pre);
+    if (rt) ann(rt);
+    return;
+  }
+}
+function walk(node){
+  var c = node.childNodes;
+  for (var i = c.length - 1; i >= 0; i--){
+    var n = c[i];
+    if (n.nodeType === 1){
+      if (SKIP[n.tagName]) continue;
+      if (n.className && String(n.className).indexOf("gl") === 0) continue;
+      walk(n);
+    } else if (n.nodeType === 3){ ann(n); }
+  }
+}
+function run(){ walk(document.querySelector("main") || document.body); }
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run); else run();
+})();\n</script>\n')
+```
+
+# 本档定位
+
+::: {.callout-important}
+## 三条不可越界
+1. **本档是基准档，不是改进档。** 第一至第十一节为原报告《百家乐下注时机风控参数分析报告.md》的忠实转录：方法不改、口径不改、结论不改、**SQL 一字不改**。凡本档作者的判断，一律只出现在第十二节之后，并以「基准侧注」明确标记，绝不混入原文。
+2. **导出件另立命名空间。** 本档全部落盘文件以 `BASE*` 起头，与 SQL 总包 v3 的任何既有输出（S01–S05、B01、A_anchor、I_ip_player、C01、I_ip_agg、C06、C08、V_ipmatch、R01、R02、R03、R03b、T02、T03、E02、K01、K01b、DX04、DX05、V_recon、S_second_dist、S_player_tail、D03S、T_table_span、L_label_dist、R_rebate_dist、X_combo、P_player_month、B_online_base）**逐一比对确认无重名**，血统关系不被覆盖。
+3. **本档的用途是当分母。** 任何改进版规则，须以第十三节的「基准指标卡」逐项对照，才谈得上效率提升多少、误判降低多少。没有基准，改进无从度量。
+:::
+
+```{r}
+#| label: namespace
+命名 <- data.table(
+  导出件 = c('BASE01_late40_r60_n30.csv', 'BASE02_scan_grid.csv', 'BASE03_baseline_card.csv'),
+  内容 = c('原样 SQL 的执行结果：命中会员及其八项指标',
+           '原报告三张参数扫描表 ＋ 靴长分布 ＋ 首注局号分位（结构化留存）',
+           '基准指标卡：供改进版逐项对照的固定表结构'),
+  是否与总包v3重名 = c('否', '否', '否'),
+  口径锁 = c('late_def=bet04>=40 ; ratio>=0.60 ; total_orders>=30',
+             'source=原报告转录', 'schema=基准卡 v1'))
+knitr::kable(命名, caption = '本档导出件命名与去重声明')
+```
+
+---
+
+# 一、分析目的
+
+本次分析用于确定“策略性后段下注”风控规则的合理参数，重点验证：
+
+1. 从第几局开始定义为后段下注；
+2. 后段下注订单占比达到多少视为异常；
+3. 玩家至少累计多少订单后才纳入判断。
+
+最终建议规则：
+
+> **统计第40局及以后下注的订单；第40局及以后订单占玩家总订单比例达到60%及以上；玩家总订单数达到30笔及以上。**
+
+建议输出：
+
+- `player_id`：会员ID；
+- `total_orders`：总订单数；
+- `late_orders`：第40局及以后订单数；
+- `late_ratio`：第40局及以后订单占比；
+- `valid_bet`：有效投注；
+- `profit`：玩家盈利；
+- `roi`：玩家投资回报率；
+- `win_rate`：胜单率。
+
+# 二、数据口径
+
+## 2.1 关键字段
+
+| 字段 | 业务含义 |
+|---|---|
+| `bet02` | 游戏类别，`101`代表本次分析的百家乐游戏 |
+| `bet03` | 场次编号，可视为一靴牌 |
+| `bet04` | 子场次编号，即当前牌靴的局号 |
+| `bet05` | 会员ID |
+| `bet11` | 汇率 |
+| `bet13` | 下注金额 |
+| `bet14` | 派彩金额 |
+| `validbet` | 有效投注 |
+
+## 2.2 核心指标
+
+```text
+total_orders = 玩家在分析期间的百家乐总订单数
+
+late_orders = 玩家在第40局及以后产生的订单数
+
+late_ratio = late_orders / total_orders
+
+profit = Σ[(派彩金额 - 下注金额) / 汇率]
+
+valid_bet = Σ[有效投注 / 汇率]
+
+ROI = profit / valid_bet
+```
+
+“订单数达到30笔”指玩家的百家乐总订单数达到30笔，并非要求第40局及以后订单数达到30笔。
+
+如果业务要求靴尾订单本身也不少于30笔，应额外增加：
+
+```sql
+late_orders >= 30
+```
+
+# 三、牌靴长度验证
+
+以 `bet03` 作为牌靴编号，统计每靴最大局号：
+
+```{r}
+#| label: shoe-len
+靴长 <- data.table(统计指标 = c('平均值','P50','P75','P90','P95','P99'),
+                   每靴局数 = c(49.86, 50, 52, 54, 55, 58))
+knitr::kable(靴长, caption = '牌靴长度分布（原报告实测，逐字转录）')
+```
+
+一靴牌通常约为50局，因此：
+
+- 第35局大约处于牌靴后30%的位置；
+- 第40局大约处于牌靴最后20%的位置；
+- 第45局大约处于牌靴最后10%的位置；
+- 第50局已经接近多数牌靴的结束位置。
+
+第35局覆盖范围偏宽；第45局虽然异常性更强，但会造成命中人数明显减少。第40局既属于牌靴明显后段，又能保留足够的风险观察样本，因此更适合作为后段下注起始局号。
+
+# 四、玩家平均首次下注局号分析
+
+## 4.1 计算口径
+
+先计算每位玩家在每一靴的首次下注局号：
+
+```text
+first_bet_round = MIN(bet04)
+```
+
+再计算玩家跨牌靴的平均首次下注局号：
+
+```text
+avg_first_round = AVG(first_bet_round)
+```
+
+分析只保留参与至少30靴的玩家，以减少小样本波动。
+
+## 4.2 分位数结果
+
+```{r}
+#| label: first-round
+首注 <- data.table(分位数 = c('P50','P75','P90','P95','P99'),
+                   平均首次下注局号 = c(24.95, 27.46, 29.85, 31.47, 35.03))
+knitr::kable(首注, caption = '平均首次下注局号分位数（原报告实测，逐字转录）')
+```
+
+结果表明：
+
+- 50%的活跃玩家平均在第25局以前首次下注；
+- 90%的玩家平均在第30局以前首次下注；
+- 95%的玩家平均在第31至32局以前首次下注；
+- 99%的玩家平均首次下注局号不超过约35局。
+
+因此，平均在第40局及以后才开始下注，已经明显超过P99范围，属于极少数行为。
+
+需要注意，`avg_first_round` 与 `late_ratio` 是两个不同指标：
+
+- `avg_first_round` 描述玩家通常从第几局开始下注；
+- `late_ratio` 描述玩家全部订单中有多少发生在第40局及以后。
+
+首次下注局号分布可以支持“第40局属于极端靠后的入场位置”，但最终规则仍需结合第40局以后订单占比判断。
+
+# 五、为什么选择第40局
+
+在“后段订单占比达到60%、总订单数达到30笔”的条件下：
+
+```{r}
+#| label: scan-start
+起始局 <- data.table(
+  起始局号 = c(35, 40, 45), 命中人数 = c(11791, 2644, 263),
+  平均ROI = c(-.0415, -.0461, -.0705), ROI_P90 = c(.2069, .2586, .3137),
+  ROI_P95 = c(.3040, .3862, .4595), 盈利玩家占比 = c(.3660, .3793, .3650))
+起始局显 <- copy(起始局)[, `:=`(命中人数 = 整(命中人数), 平均ROI = 百(平均ROI),
+  ROI_P90 = 百(ROI_P90), ROI_P95 = 百(ROI_P95), 盈利玩家占比 = 百(盈利玩家占比))]
+knitr::kable(起始局显, caption = '起始局号扫描（原报告实测，逐字转录）')
+```
+
+选择第40局的依据：
+
+1. 第40局处于典型牌靴最后约20%的区间；
+2. 明显晚于玩家平均首次下注位置P99的35.03局；
+3. 命中人数从第35局的11,791人降低到2,644人，过滤能力明显增强；
+4. ROI P95从30.40%提升到38.62%；
+5. 相比第45局，仍能保留更充分的风险观察样本。
+
+第45局虽然具有更高的ROI P95，但只命中263人，容易遗漏在第40至44局集中下注的玩家。第40局在异常程度、风险强度和名单召回率之间更加平衡。
+
+# 六、为什么订单占比选择60%
+
+固定条件为“第40局及以后下注、总订单数达到30笔”：
+
+```{r}
+#| label: scan-ratio
+占比阈 <- data.table(
+  占比阈值 = c(.40, .50, .60, .70), 命中人数 = c(15353, 6290, 2644, 1132),
+  平均ROI = c(-.0375, -.0419, -.0461, -.0497), ROI_P90 = c(.2049, .2347, .2586, .2739),
+  ROI_P95 = c(.3011, .3390, .3862, .4367), 盈利玩家占比 = c(.3756, .3744, .3793, .3710))
+占比显 <- copy(占比阈)[, `:=`(占比阈值 = 百(占比阈值, 0), 命中人数 = 整(命中人数),
+  平均ROI = 百(平均ROI), ROI_P90 = 百(ROI_P90), ROI_P95 = 百(ROI_P95),
+  盈利玩家占比 = 百(盈利玩家占比))]
+knitr::kable(占比显, caption = '靴尾占比阈值扫描（原报告实测，逐字转录）')
+```
+
+分析结果：
+
+- 40%命中15,353人，名单规模过大；
+- 50%仍命中6,290人，区分度有限；
+- 60%命中2,644人，ROI P90和P95均明显提高；
+- 70%虽然ROI P95进一步提高，但命中人数下降到1,132人，召回损失更大。
+
+因此，60%适合作为重点审核阈值；70%可以作为更高异常等级，但不建议作为主筛选阈值。
+
+# 七、为什么订单数选择30笔
+
+固定规则为“第40局及以后下注占比达到60%”：
+
+```{r}
+#| label: scan-n
+单量阈 <- data.table(
+  订单门槛 = c(30, 50, 100), 命中人数 = c(2644, 1170, 393),
+  平均ROI = c(-.0461, -.0410, -.0331), ROI_P90 = c(.2586, .2166, .1088),
+  ROI_P95 = c(.3862, .3127, .2046), 平均有效投注 = c(8704.80, 17885.71, 47136.12),
+  盈利玩家占比 = c(.3793, .3786, .3715))
+单量显 <- copy(单量阈)[, `:=`(命中人数 = 整(命中人数), 平均ROI = 百(平均ROI),
+  ROI_P90 = 百(ROI_P90), ROI_P95 = 百(ROI_P95), 平均有效投注 = 数(平均有效投注),
+  盈利玩家占比 = 百(盈利玩家占比))]
+knitr::kable(单量显, caption = '订单门槛扫描（原报告实测，逐字转录）')
+```
+
+30单门槛可以：
+
+- 排除只有少量订单但比例偶然达到100%的玩家；
+- 保留2,644人的可观察名单；
+- 避免50单和100单门槛造成过度漏报；
+- 保留较明显的ROI尾部风险信号。
+
+30单并不代表比例已经达到严格统计稳定，而是异常识别、名单规模和审核能力之间的业务折中。
+
+```{r}
+#| label: export-scan
+BASE02 <- rbindlist(list(
+  cbind(扫描维 = '起始局号', 参数 = as.character(起始局$起始局号),
+        起始局[, .(命中人数, 平均ROI, ROI_P90, ROI_P95, 盈利玩家占比)], 平均有效投注 = NA_real_),
+  cbind(扫描维 = '靴尾占比阈', 参数 = as.character(占比阈$占比阈值),
+        占比阈[, .(命中人数, 平均ROI, ROI_P90, ROI_P95, 盈利玩家占比)], 平均有效投注 = NA_real_),
+  cbind(扫描维 = '订单门槛', 参数 = as.character(单量阈$订单门槛),
+        单量阈[, .(命中人数, 平均ROI, ROI_P90, ROI_P95, 盈利玩家占比)],
+        平均有效投注 = 单量阈$平均有效投注)), fill = TRUE)
+BASE02[, 来源 := '原报告转录']
+BASE02[, 口径 := 'late_def=bet04>=40']
+路2 <- try(落盘(BASE02, 'BASE02_scan_grid.csv'), silent = TRUE)
+互表(BASE02, 'BASE02_scan_grid.csv：三张扫描表的结构化留存',
+     paste0('　｜　落盘：', if (inherits(路2, 'try-error')) '目录不可写，仅内存留存' else 路2))
+```
+
+# 八、最终推荐规则
+
+## 8.1 主规则
+
+```text
+游戏类型为百家乐；
+第40局及以后订单占比达到60%；
+玩家总订单数达到30笔。
+```
+
+对应判断条件：
+
+```sql
+total_orders >= 30
+AND late_orders * 1.0 / total_orders >= 0.60
+```
+
+其中：
+
+```sql
+late_orders =
+SUM(
+    CASE
+        WHEN CAST(bet04 AS INT) >= 40 THEN 1
+        ELSE 0
+    END
+)
+```
+
+## 8.2 风险分层参考
+
+| 层级 | 规则 | 用途 |
+|---|---|---|
+| 观察 | 第40局以后占比≥40%，总订单≥30 | 玩家画像、行为观察 |
+| 关注 | 第40局以后占比≥50%，总订单≥30 | 提高关注等级 |
+| **重点审核** | **第40局以后占比≥60%，总订单≥30** | **推荐主规则** |
+| 高度异常 | 第40局以后占比≥70%，总订单≥30 | 更高异常等级 |
+| 稳定异常 | 第40局以后占比≥60%，总订单≥50 | 二次复核 |
+
+# 九、命中玩家及盈利情况SQL
+
+::: {.callout-note}
+## 执行与导出（SQL 本身一字未改）
+下方代码块与原报告**逐字符相同**，本档未作任何增删。于 Superset（StarRocks）执行后，将结果另存为：
+
+> `数据库/BASE01_late40_r60_n30.csv`
+
+该文件名已与 SQL 总包 v3 的全部输出比对，**无重名**，不覆盖既有血统关系。
+:::
+
+```{sql, eval = FALSE}
+WITH player_stat AS (
+    SELECT
+        CAST(bet05 AS BIGINT) AS player_id,
+
+        COUNT(*) AS total_orders,
+
+        SUM(
+            CASE
+                WHEN CAST(bet04 AS INT) >= 40 THEN 1
+                ELSE 0
+            END
+        ) AS late_orders,
+
+        SUM(
+            CASE
+                WHEN CAST(bet14 AS DECIMAL(20,4))
+                   > CAST(bet13 AS DECIMAL(20,4))
+                THEN 1
+                ELSE 0
+            END
+        ) AS win_orders,
+
+        SUM(
+            (
+                CAST(bet14 AS DECIMAL(20,4))
+                - CAST(bet13 AS DECIMAL(20,4))
+            )
+            / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)
+        ) AS profit,
+
+        SUM(
+            CAST(validbet AS DECIMAL(20,4))
+            / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)
+        ) AS valid_bet
+
+    FROM ods_mariadb_2b.ods_a168_bet02
+
+    WHERE dt >= '2026-03-21' --添加开始日期
+      AND dt <  '2026-08-07'--添加结束日期
+      AND bet02 = '101'
+      AND bet03 IS NOT NULL
+      AND bet04 IS NOT NULL
+      AND bet05 IS NOT NULL
+
+    GROUP BY CAST(bet05 AS BIGINT)
+)
+
+SELECT
+    player_id,
+    total_orders,
+    late_orders,
+
+    ROUND(
+        late_orders * 1.0 / total_orders,
+        4
+    ) AS late_ratio,
+
+    win_orders,
+
+    ROUND(
+        win_orders * 1.0 / total_orders,
+        4
+    ) AS win_rate,
+
+    ROUND(valid_bet, 2) AS valid_bet,
+    ROUND(profit, 2) AS profit,
+
+    ROUND(
+        profit / NULLIF(valid_bet, 0),
+        4
+    ) AS roi
+
+FROM player_stat
+
+WHERE total_orders >= 30
+  AND late_orders * 1.0 / total_orders >= 0.60
+
+ORDER BY
+    roi DESC,
+    profit DESC;
+```
+
+胜率暂以 `bet14 > bet13` 判断胜单。如存在和局、退款、取消单、重复订单或特殊佣金结算，应根据 `bet17` 的业务取值重新定义胜率。
+
+# 十、使用边界
+
+该规则识别的是：
+
+> **下注订单高度集中在牌靴后段的异常行为玩家。**
+
+它不能单独证明玩家作弊、串通或利用牌面信息，原因包括：
+
+- 命中玩家的平均ROI仍然为负；
+- 异常信号主要体现在ROI的P90和P95尾部；
+- 部分玩家可能只是习惯观察牌路或中途进入游戏；
+- 小额玩家的ROI容易受到单次输赢影响；
+- 当前结论来自有限月份的历史数据，仍需用后续月份进行样本外验证。
+
+因此，本规则适合用于异常行为筛查和人工审核，不建议单独作为自动封禁或处罚依据。
+
+# 十一、最终结论
+
+综合牌靴长度、平均首次下注局号分布和参数扫描结果，建议采用：
+
+> **第40局及以后下注订单占比达到60%，且玩家总订单数达到30笔。**
+
+选择依据：
+
+1. 一靴平均约49.86局，第40局已进入最后约20%的牌局；
+2. 玩家平均首次下注局号P99约为35.03，第40局明显晚于绝大多数玩家的平均入场位置；
+3. 第40局、60%、30单组合命中2,644人，名单规模比第45局规则更充分；
+4. 该组合ROI P90为25.86%、P95为38.62%，高收益尾部特征较明显；
+5. 60%比40%和50%具有更强区分度，同时比70%保留更多风险召回；
+6. 30单可以排除极小样本，并避免50单和100单门槛造成过度漏报。
+
+最终定位：
+
+> **该规则是策略性靴尾下注的行为筛查规则，适合风险观察和人工审核，不应单独作为作弊认定或自动处罚依据。**
+
+---
+
+*以上第一至第十一节为原报告忠实转录，方法、口径、结论与 SQL 均未改动。以下各节为本基准档新增的对照设施。*
+
+---
+
+# 十二、装载 BASE01 与契约核对
+
+```{r}
+#| label: load-base01
+BASE01 <- 读表(if (!is.na(路径)) file.path(路径, 'BASE01_late40_r60_n30.csv') else NA_character_)
+契约 <- c('player_id','total_orders','late_orders','late_ratio',
+          'win_orders','win_rate','valid_bet','profit','roi')
+缺列 <- if (is.null(BASE01)) 契约 else setdiff(契约, names(BASE01))
+就绪 <- !is.null(BASE01) && !length(缺列) && nrow(BASE01) > 0
+if (就绪) {
+  B <- as.data.table(BASE01)
+  for (j in setdiff(契约, 'player_id')) set(B, j = j, value = suppressWarnings(as.numeric(B[[j]])))
+  set(B, j = 'player_id', value = trimws(as.character(B$player_id)))
+} else B <- NULL
+装载 <- data.table(项 = c('数据目录','文件','命中人数','列数','缺列','状态'),
+  值 = c(ifelse(is.na(路径), '未找到', 路径), 'BASE01_late40_r60_n30.csv',
+         ifelse(is.null(B), '—', 整(nrow(B))), ifelse(is.null(B), '—', as.character(ncol(B))),
+         ifelse(length(缺列), paste(缺列, collapse = '、'), '无'),
+         ifelse(就绪, '通过', '未就位：下节以占位呈现，不以零充数')))
+knitr::kable(装载, caption = '装载与契约核对')
+```
+
+# 十三、基准指标卡（改进版须逐项对照）
+
+```{r}
+#| label: card
+基线ROI <- -0.0190   # 平台合成 ROI，项目已锁（洗码量为分母）
+卡 <- function(B, 标签 = '基准 · 第40局/60%/30单') {
+  if (is.null(B) || !nrow(B)) return(data.table(指标 = character(), 值 = character()))
+  vb <- sum(B$valid_bet, na.rm = TRUE); pf <- sum(B$profit, na.rm = TRUE)
+  roi_pool <- pf / vb
+  q <- stats::quantile(B$roi, c(.05,.5,.9,.95,.99), na.rm = TRUE, names = FALSE)
+  vbs <- sort(B$valid_bet, decreasing = TRUE)
+  top1 <- sum(vbs[seq_len(max(1, ceiling(.01 * length(vbs))))]) / vb
+  data.table(
+    指标 = c('名单规模（命中人数）','名单洗码量','名单洗码量前 1% 集中度',
+             '合成 ROI（按量加权）','等权平均 ROI','超额 ROI（合成 − 平台基线）',
+             'ROI P05','ROI 中位数','ROI P90','ROI P95','ROI P99',
+             '盈利玩家占比','平均总订单数','平均靴尾占比','平均胜单率',
+             '平台在该名单上的毛赢（合成口径）','若该名单仅为平台平均水平的毛赢',
+             '该名单相对平均的额外贡献','贡献倍数（合成 ROI ÷ 平台基线）',
+             '误判率','精确率','召回率','阴性对照 ROI P95'),
+    值 = c(整(nrow(B)), 数(vb), 百(top1),
+           百(roi_pool), 百(mean(B$roi, na.rm = TRUE)), 百(roi_pool - 基线ROI),
+           百(q[1]), 百(q[2]), 百(q[3]), 百(q[4]), 百(q[5]),
+           百(mean(B$roi > 0, na.rm = TRUE)), 数(mean(B$total_orders, na.rm = TRUE), 1),
+           百(mean(B$late_ratio, na.rm = TRUE)), 百(mean(B$win_rate, na.rm = TRUE)),
+           数(-roi_pool * vb), 数(-基线ROI * vb), 数(-(roi_pool - 基线ROI) * vb),
+           formatC(roi_pool / 基线ROI, format = 'f', digits = 2),
+           '○ 待表：须外部标签', '○ 待表：须外部标签', '○ 待表：须真值全集',
+           '○ 待表：须运行第十四节阴性对照'),
+    口径 = c('计数','Σvalid_bet','排序后前 1% 之和 ÷ 总量',
+             'Σprofit ÷ Σvalid_bet','mean(roi)','合成 ROI − (−1.90%)',
+             rep('quantile(roi)', 5),
+             'mean(roi > 0)','mean(total_orders)','mean(late_ratio)','mean(win_rate)',
+             '−合成 ROI × 洗码量','−(−1.90%) × 洗码量','两者之差','比值',
+             '1 − 精确率','标签为真者 ÷ 名单规模','名单捕获数 ÷ 真值全集','随机等量抽样'))
+}
+if (就绪) {
+  BASE03 <- 卡(B)
+  路3 <- try(落盘(BASE03, 'BASE03_baseline_card.csv'), silent = TRUE)
+  互表(BASE03, 'BASE03_baseline_card.csv：基准指标卡（固定表结构，改进版须输出同一 schema）',
+       paste0('　｜　落盘：', if (inherits(路3, 'try-error')) '目录不可写' else 路3))
+} else {
+  knitr::kable(data.table(
+    指标 = c('名单规模','合成 ROI','超额 ROI','误判率'),
+    状态 = rep('○ 待表：BASE01 未就位', 4),
+    说明 = c('执行第九节 SQL 后另存为 数据库/BASE01_late40_r60_n30.csv 即可现算',
+             '同左', '同左', '另需外部标签或阴性对照')),
+    caption = '基准指标卡（占位）')
+}
+```
+
+::: {.callout-note}
+## 这张卡为什么这样设计
+- **前四行是规模与质量的分离。** 名单规模衡量运营负荷，合成 ROI 与超额 ROI 才衡量名单质量。原报告三张扫描表只给等权平均 ROI，二者并列列出，正是为了让改进版能看清差在哪。
+- **「洗码量前 1% 集中度」是稳健性哨兵。** 若该值过高，说明整张名单的经济结论由极少数会员支配，任何 ROI 分位都须重读。
+- **最后四行故意留白。** 误判率、精确率、召回率与阴性对照**无法由本规则自身产生**——它们需要外部标签或对照抽样。基准档不填数，但把位置留出来：改进版若也填不出这四格，则「误判率降低了多少」这句话即无从说起。
+:::
+
+# 十四、对照接口
+
+```{r}
+#| label: compare
+#| eval: false
+## ── 改进版与基准的逐项对照（改进版输出同 schema 的卡即可直接比）─────────
+对照 <- function(基准卡, 改进卡, 标签 = c('基准', '改进')) {
+  m <- merge(基准卡[, .(指标, 基准 = 值)], 改进卡[, .(指标, 改进 = 值)],
+             by = '指标', all = TRUE, sort = FALSE)
+  m[, 变动 := fifelse(基准 == 改进, '持平', paste0(基准, ' → ', 改进))]
+  m[]
+}
+
+## ── 阴性对照：把「命中」换成随机等量抽样，看指标是否同样漂亮 ─────────────
+阴性对照 <- function(全体, 命中ids, B = 200L, seed = 20260807L) {
+  set.seed(seed)
+  n <- length(命中ids)
+  真 <- 全体[player_id %in% 命中ids]
+  真值 <- c(合成ROI = sum(真$profit) / sum(真$valid_bet),
+            ROI_P95 = stats::quantile(真$roi, .95, na.rm = TRUE))
+  假 <- replicate(B, {
+    s <- 全体[sample(.N, n)]
+    c(sum(s$profit) / sum(s$valid_bet), stats::quantile(s$roi, .95, na.rm = TRUE))
+  })
+  data.table(指标 = c('合成 ROI', 'ROI P95'),
+             真名单 = 真值, 假名单均值 = rowMeans(假),
+             假名单P95 = apply(假, 1, stats::quantile, .95),
+             区分力 = fifelse(真值 > apply(假, 1, stats::quantile, .95), '有', '无'))
+}
+## 判读：若「区分力＝无」，则该规则在该指标上的误判率≈随机水平。
+## 注意：本函数需要**全体会员**的同口径数据（含未命中者），
+##       而第九节 SQL 只输出命中者。故须另导一份不含 WHERE 收口的全量件，
+##       建议命名 BASE04_all_players.csv（同样不与总包 v3 重名）。
+```
+
+# 十五、基准侧注（本档作者判断，与原文严格分离）
+
+```{r}
+#| label: notes
+侧注 <- data.table(
+  条 = 1:6,
+  事项 = c('等权平均 ROI 与合成 ROI 并存','平台基线未入原报告','ROI 尾部随样本量变化',
+           '绝对局号与靴长的关系','SQL 与项目铁律的差距','误判率四格留白'),
+  基准侧注 = c(
+    '原报告三张扫描表中的「平均ROI」为等权口径；本档指标卡同时给出合成口径。二者若背离明显，说明名单被少数大户支配。',
+    '原报告将命中群体 ROI 与 0 相比；本档指标卡额外给出与平台基线 −1.90% 的超额 ROI。两种比法的结论方向可能不同。',
+    '第七节三档订单门槛的 ROI 分位差异，与样本量变化同向；本档不在此处下判断，仅记录该现象供改进版检验。',
+    '第三节靴长 P50 为 50、P99 为 58；固定第 40 局在不同靴长下对应的靴内位置不同。本档如实记录，不改口径。',
+    '第九节 SQL 未含营业日窗、幂等去重、测试线剔除等项。本档遵嘱一字未改，仅在此登记，供改进版对照。',
+    '误判率、精确率、召回率与阴性对照四格，基准与改进版均须填；任一版填不出，该版即不得宣称「误判更低」。'),
+  处置 = rep('登记，不改原文；改进版据此逐条应答', 6))
+互表(侧注, '基准侧注：六条登记事项', '　｜　本节为本档作者判断，不属原报告内容')
+```
+
+# 十六、变更日志
+
+```{r}
+#| label: changelog
+版本 <- data.table(条目 = c(
+  '来源：《百家乐下注时机风控参数分析报告.md》；原件未修改，本档为独立转录件',
+  '第一至第十一节：方法、口径、结论、SQL 全部逐字转录，未增未删',
+  '第九节 SQL 代码块与原文逐字符相同；仅在其上方以 callout 标注导出文件名',
+  '导出件：BASE01_late40_r60_n30.csv、BASE02_scan_grid.csv、BASE03_baseline_card.csv，均已确认不与 SQL 总包 v3 任何输出重名',
+  '新增：24 词条术语悬停层',
+  '新增：三张扫描表 ＋ 靴长 ＋ 首注分位由静态表改为现算表并结构化落盘（BASE02）',
+  '新增：基准指标卡 23 项（BASE03），含合成 ROI、超额 ROI、集中度哨兵，并为误判率四项留白',
+  '新增：对照接口与阴性对照函数（第十四节，eval=false）',
+  '新增：基准侧注六条，与原文严格分离',
+  '待办：执行第九节 SQL 导出 BASE01；另导全量件 BASE04_all_players.csv 以支持阴性对照'))
+版本[, 序 := .I]; setcolorder(版本, '序')
+knitr::kable(版本, caption = '本次转录（过程叙述只在本章）')
+```
+
+---
+
+*本档为基准件：原方法、原口径、原 SQL 一字未改；凡本档作者判断，均集中于第十五节并明确标记。原件 `百家乐下注时机风控参数分析报告.md` 未被修改。*

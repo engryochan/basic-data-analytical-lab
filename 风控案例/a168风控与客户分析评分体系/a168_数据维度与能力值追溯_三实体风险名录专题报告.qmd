@@ -1,0 +1,2677 @@
+---
+title: "a168 真人百家乐 · 数据维度 · 能力值追溯 · 三实体风险名录"
+subtitle: "读表正名 → 全维度呈现（逐维悬停）→ 能力值追溯矩阵 → 玩家／荷官／代理三实体：领域雷达 · 能力值名单 · 四族风险名录 · 营业额与盈亏核算"
+author: "Ryo（雷欧）"
+date: today
+lang: zh-CN
+format:
+  html:
+    theme: darkly
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-expand: 3
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看计算代码（本报告全部数字由此现算，无一处手填）"
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+---
+
+```{=html}
+<style>
+body{background:
+  radial-gradient(1100px 500px at 12% -8%, rgba(0,229,160,.14), transparent 60%),
+  radial-gradient(900px 480px at 88% 4%, rgba(34,211,238,.12), transparent 55%),
+  radial-gradient(1200px 700px at 50% 110%, rgba(139,92,246,.16), transparent 60%),
+  #050d1a; color:#dff7ee;}
+h1,h2,h3,h4{color:#7dffd4;}
+table{font-size:.9rem;}
+.callout{border-left-color:#22d3ee;}
+.tbl-scroll{overflow:auto;border:1px solid #1e3a52;border-radius:6px;
+            background:rgba(5,13,26,.35);margin:.6rem 0 1rem;}
+.tbl-scroll table{margin:0;width:100%;}
+.tbl-scroll thead th{position:sticky;top:0;z-index:3;
+            background:#0b1f33;color:#7dffd4;box-shadow:inset 0 -1px 0 #1e3a52;}
+.tbl-scroll caption{position:sticky;left:0;background:transparent;
+            text-align:center;padding:.5rem .6rem;color:#dff7ee;}
+table caption, caption{text-align:center !important;
+            caption-side:top;font-weight:600;line-height:1.5;}
+figure>figcaption,.quarto-figure figcaption,.figure-caption{text-align:center !important;}
+.cell-output-display>table{margin-left:auto;margin-right:auto;}
+table b{color:#7dffd4;font-weight:700;}
+b,strong{color:#9dffe0;}
+table code{background:rgba(34,211,238,.12);padding:0 .25em;border-radius:3px;}
+/* DT 互动桌表：深底可读 */
+.dataTables_wrapper,.dataTables_info,.dataTables_paginate,.dataTables_filter{color:#bfeee0!important;}
+.dataTables_filter input,.dataTables_length select{
+  background:#06283d!important;color:#e7fbf3!important;border:1px solid rgba(34,211,238,.4)!important;}
+table.dataTable{width:100%!important;background:rgba(5,13,26,.45)!important;color:#e7fbf3!important;}
+table.dataTable thead th{background:#0b3d3a!important;color:#7dffd4!important;}
+table.dataTable tbody tr:hover{background:rgba(34,211,238,.14)!important;}
+.paginate_button{color:#7dffd4!important;}
+/* 维度行号：data.table 印法（1: 2: … N:） */
+td.rowidx{color:#8fb3c9!important;font-variant-numeric:tabular-nums;white-space:nowrap;}
+</style>
+```
+
+::: {.callout-note}
+## 本报告的立场、血统与边界
+
+本报告是《a168风控与客户分层评分体系_商业方案》（**主方案**，父）与
+《a168风控评分_精要商业报告》（**精要版**，子）之下的**专题分册**，
+只答先生本次点名的三件事，不重述两档已成之结论：
+
+1. **读取关键数据表**——读了哪几张、各有哪些维度、每一维的行业正名，**全维度直接呈现、逐维悬停**；
+2. **能力值追溯矩阵**——每一维能力值，从领域、赏罚方向、原始量表达式，一路追到料源表、料源列与其**本次是否在位**；
+3. **玩家／荷官／代理三实体**——各领域能力值雷达、能力值名单、四族风险名录（异常 IP · 尾秒下注 · 对打 · 同桌率）
+   及其判定标准与指标、名录全维度，并核算其在**营业额**与**盈亏**两侧的量。
+
+**血统纪律（五档一族，改一档须同步其余四档）**
+
+| 档 | 角色 | 与本档之关系 |
+|---|---|---|
+| `a168风控与客户分层评分体系_商业方案.qmd` | 主方案（父） | 维度字典（§17.2）、统一领域本体 D01–D12、口径裁定之权威出处 |
+| `a168风控评分_精要商业报告.qmd` | 精要版（子） | 能力值算法（分位归一 · 赏−罚）与 `er_radar()` 雷达实现之出处，本档一字不改地承用 |
+| `a168_取数与核验_SQL总包_v3.sql` | 取数层（料源） | 本档一切数字之唯一料源；契约锁列由其输出 |
+| `a168_能力值口径解读_SQL转R.qmd` | 对照本（校验） | 口径逐条对照与同源同值指纹自检 |
+| **本档** | **专题分册（孙）** | 承上二档之数据契约、维度字典与全部纪律，只做「维度 · 追溯 · 名录 · 结账」四事 |
+
+**四条先说破的边界，全篇有效**
+
+- **一切数字渲染现算**。凡料源未就位者，一律以占位表点名「所待文件 · SQL 编号 · 受影响输出」，
+  **绝不以合成数据、近似量或记忆中的旧数字顶替**。
+- **名录是调查候选，不是定罪。** 四族名录皆为筛查信号；判定须另有结构证据与人工复核。
+- **本报告的经济量是「会计差额」，不是「因果损失」**——证据等级 **E3**。
+  「若该群体表现同于全体」是**情景基准**，非反事实；真实增减益须随机对照实验方能结账（见 @sec-limit）。
+- **尾秒下注一族**：主方案 §E1 已裁定其信息优势**未能证实**（五重检验含 Simpson 分解与符号检验）。
+  故本报告的尾秒名录**只作画像**，其经济量**一律不计入漏损合计**，并单列其检验结果。
+
+**禁读清单（永久）**：`候选_同桌异常_最终版_已去重.csv` **不得读取**——
+该件无可追溯的生成声明，且疑有局键塌缩污染。本报告的同桌率一族一律取
+`R02_same_table.csv`（SQL §R02）现算，绝不取用该件。
+:::
+
+```{r}
+#| label: setup
+# echo: false
+suppressMessages({
+  ok  <- function(p) requireNamespace(p, quietly = TRUE)
+  HAS <- list(dt = ok("data.table"), DT = ok("DT"), js = ok("jsonlite"),
+              ec = ok("echarts4r"), ht = ok("htmltools"), pl = ok("plotly"))
+})
+PAL <- list(bg="#050d1a", fg="#dff7ee", ac="#22d3ee", good="#00e5a0",
+            warn="#ffd64d", bad="#ff6b8b", violet="#8b5cf6")
+if (isTRUE(HAS$dt)) try(data.table::setDTthreads(2L), silent = TRUE)
+gc2 <- function() invisible(suppressWarnings(gc(verbose = FALSE)))
+mem <- function(tag = "") {
+  g <- suppressWarnings(gc(verbose = FALSE))
+  message(sprintf("🧮 内存[%s] 已用 %.0f MB", tag, sum(g[, 2], na.rm = TRUE)))
+  invisible(NULL)
+}
+numv <- function(v) suppressWarnings(as.numeric(v))
+amt  <- function(x) ifelse(is.finite(numv(x)),
+          formatC(numv(x), format = "f", digits = 0, big.mark = ","), "—")
+amt2 <- function(x) ifelse(is.finite(numv(x)),
+          formatC(numv(x), format = "f", digits = 2, big.mark = ","), "—")
+pct  <- function(x, d = 2) ifelse(is.finite(numv(x)),
+          paste0(formatC(100 * numv(x), format = "f", digits = d), "%"), "—")
+`%||%` <- function(a, b) if (is.null(a) || !length(a)) b else a
+
+## ══ 编码出口闸 u8()：R 符号表在 Windows 中文 locale 下以 GBK 存中文，
+##    jsonlite 序列化时会静默丢弃非法字节（维名自中间消失）。凡出口一律过此闸。
+u8 <- function(x) {
+  x <- as.character(x); if (!length(x)) return(x)
+  need <- !is.na(x) & !validUTF8(x)
+  if (any(need)) {
+    for (fr in c("", "GB18030", "GBK", "CP936", "latin1")) {
+      y <- suppressWarnings(iconv(x[need], from = fr, to = "UTF-8"))
+      if (!any(is.na(y))) { x[need] <- y; break }
+    }
+    x[is.na(x)] <- "?"
+  }
+  enc2utf8(x)
+}
+u8df <- function(d) {
+  if (!is.data.frame(d)) return(d)
+  names(d) <- u8(names(d))
+  for (cc in which(vapply(d, is.character, TRUE))) d[[cc]] <- u8(d[[cc]])
+  d
+}
+
+## ══ 数据目录：按序搜寻，取第一个存在者（与两档父报告同一惯例）
+DATA_DIR <- NULL
+for (cand in c("数据库", file.path("..", "数据库"), file.path("data", "数据库"),
+               "database", ".")) {
+  if (dir.exists(cand) &&
+      length(list.files(cand, pattern = "\\.csv$", ignore.case = TRUE))) {
+    DATA_DIR <- cand; break
+  }
+}
+OUT_DIR <- file.path(if (is.null(DATA_DIR)) "." else DATA_DIR, "_名录导出")
+dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+
+## ══ 禁读清单（永久铁律）：无生成声明或疑有污染者，读取即违纪
+FORBIDDEN <- c("候选_同桌异常_最终版_已去重.csv")
+
+## ══ 编码自适应读取（承精要版成法）：只探首行字节定编码，绝不「读完全表再重读」
+read_any <- function(name, select = NULL, must = NULL) {
+  if (is.null(DATA_DIR)) return(NULL)
+  fn <- paste0(name, ".csv")
+  if (fn %in% FORBIDDEN) {
+    message(sprintf("⛔ [%s] 在禁读清单内，本报告不予读取（无生成声明／疑局键塌缩）", fn))
+    return(NULL)
+  }
+  p <- file.path(DATA_DIR, fn)
+  if (!file.exists(p)) {                       # 忽略大小写与前缀近似（另存变体）
+    fs <- list.files(DATA_DIR)
+    ci <- fs[tolower(fs) == tolower(fn)]
+    if (length(ci)) p <- file.path(DATA_DIR, ci[1]) else {
+      cand <- fs[startsWith(tolower(fs), tolower(name)) &
+                 grepl("\\.csv$", fs, ignore.case = TRUE)]
+      cand <- setdiff(cand, FORBIDDEN)
+      if (!length(cand)) return(NULL)
+      p <- file.path(DATA_DIR, cand[which.max(file.info(file.path(DATA_DIR, cand))$size)])
+      message(sprintf("ℹ️ [%s] 前缀近似命中：%s", name, basename(p)))
+    }
+  }
+  t0 <- Sys.time()
+  con <- file(p, "rb"); raw1 <- readBin(con, "raw", 65536L); close(con)
+  nl <- which(raw1 == as.raw(10L))[1]; if (is.na(nl)) nl <- length(raw1) + 1L
+  hdr_raw <- rawToChar(raw1[seq_len(nl - 1L)])
+  pickenc <- NULL; hdr <- NULL
+  for (enc in c("UTF-8", "GB18030", "GBK", "BIG5", "latin1")) {
+    h <- try(suppressWarnings(iconv(hdr_raw, from = enc, to = "UTF-8")), silent = TRUE)
+    if (inherits(h, "try-error") || is.na(h)) next
+    v <- trimws(strsplit(sub("^\ufeff", "", h), ",", fixed = TRUE)[[1]])
+    v <- gsub('^"|"$', "", v)
+    if (!length(v) || any(grepl("\uFFFD", v))) next
+    if (!is.null(must) && !all(enc2utf8(must) %in% v)) next
+    pickenc <- enc; hdr <- v; break
+  }
+  if (is.null(pickenc)) {
+    message(sprintf("⛔ [%s] 首行编码探测全败%s——本表不装载", name,
+      if (is.null(must)) "" else sprintf("（须含列：%s）", paste(must, collapse = "、"))))
+    return(NULL)
+  }
+  sel <- if (pickenc == "UTF-8") select else NULL
+  x <- NULL
+  if (HAS$dt) {
+    x <- try(suppressWarnings(data.table::fread(p, select = sel, showProgress = FALSE,
+           encoding = if (pickenc == "UTF-8") "UTF-8" else "unknown")), silent = TRUE)
+    if (inherits(x, "try-error")) x <- NULL else x <- as.data.frame(x)
+  }
+  if (is.null(x)) {
+    x <- try(suppressWarnings(utils::read.csv(p,
+           fileEncoding = if (pickenc == "latin1") "latin1" else pickenc,
+           check.names = FALSE)), silent = TRUE)
+    if (inherits(x, "try-error")) { message(sprintf("⛔ [%s] 读取失败", name)); return(NULL) }
+  } else {
+    if (pickenc != "UTF-8")
+      for (cc in which(vapply(x, is.character, TRUE)))
+        x[[cc]] <- suppressWarnings(iconv(x[[cc]], from = pickenc, to = "UTF-8"))
+    if (is.null(sel) && length(hdr) == ncol(x)) names(x) <- hdr
+    else if (pickenc != "UTF-8")
+      names(x) <- suppressWarnings(iconv(names(x), from = pickenc, to = "UTF-8"))
+  }
+  attr(x, "全列名") <- hdr           # ★ Schema 证据：与实际读入列解耦，不受 select 截断
+  attr(x, "文件")   <- basename(p)
+  attr(x, "编码")   <- pickenc
+  if (!is.null(select) && is.null(sel)) x <- x[, intersect(select, names(x)), drop = FALSE]
+  if (!is.null(must) && !all(enc2utf8(must) %in% enc2utf8(names(x)))) {
+    message(sprintf("⛔ [%s] 契约列缺失：%s——本表不装载（契约锁）", name,
+      paste(setdiff(enc2utf8(must), enc2utf8(names(x))), collapse = "、")))
+    return(NULL)
+  }
+  message(sprintf("✅ [%s] %s · %s 行 × %d 列 · %.1f 秒", name, pickenc,
+    format(nrow(x), big.mark = ","), ncol(x),
+    as.numeric(difftime(Sys.time(), t0, units = "secs"))))
+  x
+}
+
+## ══ 取列闸：缺列不得静默，亦不得停摆——点名登记 ＋ NA 占位 ＋ 汇总成表
+GAPS <- new.env(parent = emptyenv()); GAPS$rows <- list()
+pick <- function(df, cols, src = deparse(substitute(df)), impact = "") {
+  if (is.null(df)) return(NULL)
+  miss <- setdiff(cols, names(df))
+  if (length(miss)) {
+    GAPS$rows[[length(GAPS$rows) + 1L]] <- data.frame(check.names = FALSE,
+      来源表 = src, 缺列 = paste(miss, collapse = "、"),
+      在列 = paste(utils::head(setdiff(names(df), cols), 8), collapse = "、"),
+      受影响输出 = if (nzchar(impact)) impact else "（未标注）", stringsAsFactors = FALSE)
+    message(sprintf("⛔ [%s] 缺列：%s → 受影响：%s（按 NA 占位，已登记）",
+                    src, paste(miss, collapse = "、"), impact))
+    for (m in miss) df[[m]] <- NA
+  }
+  df[, cols, drop = FALSE]
+}
+## ══ 别名裁决：同义异名列（口径变更的常见入口）一律显式裁决并登记，杜绝「隐性夺权」
+ALIAS <- new.env(parent = emptyenv()); ALIAS$rows <- list()
+col1 <- function(df, cands, role = "", src = "") {
+  if (is.null(df)) return(NA_character_)
+  hit <- cands[cands %in% names(df)][1]
+  ALIAS$rows[[length(ALIAS$rows) + 1L]] <- data.frame(check.names = FALSE,
+    来源表 = src, 语义角色 = role, 候选别名 = paste(cands, collapse = " / "),
+    本次采用 = if (is.na(hit)) "⬜ 全不在列" else hit,
+    裁决 = if (is.na(hit)) "该角色本次不可得，受其影响之输出一律点名缺席"
+           else if (identical(hit, cands[1])) "首选名在列，直接采用"
+           else "首选名不在列，降级采用次选名（已登记，不静默）",
+    stringsAsFactors = FALSE)
+  hit
+}
+```
+
+```{r}
+#| label: render-kit
+# echo: false
+## ══ 表题瘦身：「｜解释：…」一段收进 ⓘ 悬停浮层，正文只留主标题
+cap_tip <- function(caption) {
+  if (is.null(caption) || !nzchar(caption)) return(caption)
+  k <- regexpr("｜解释：", caption, fixed = TRUE)
+  if (k < 0) return(htmltools::HTML(caption))
+  head0 <- substr(caption, 1, k - 1); tip0 <- substring(caption, k + 4)
+  tip0 <- gsub("｜", "　▸ ", tip0, fixed = TRUE)
+  tip0 <- gsub("[*`]", "", tip0)
+  tip0 <- gsub("&", "&amp;", tip0, fixed = TRUE)
+  tip0 <- gsub("<", "&lt;",  tip0, fixed = TRUE)
+  tip0 <- gsub(">", "&gt;",  tip0, fixed = TRUE)
+  tip0 <- gsub('"', "&quot;", tip0, fixed = TRUE)
+  pos <- regexpr("：|——", head0)
+  if (pos > 0) {
+    cut <- attr(pos, "match.length")
+    main <- substr(head0, 1, pos - 1); sub0 <- substring(head0, pos + cut)
+  } else { main <- head0; sub0 <- "" }
+  htmltools::HTML(paste0(
+    '<span class="cap-main" style="display:block;font-size:1.02em;">', main,
+    ' <span class="gl-tip" data-tip="解释：', tip0, '" style="font-weight:600">ⓘ</span></span>',
+    if (nzchar(sub0)) paste0('<span class="cap-sub" style="display:block;font-size:.86em;',
+      'font-weight:400;opacity:.78;margin-top:.15rem;">', sub0, '</span>') else ''))
+}
+md_cell <- function(v) {
+  if (!is.character(v)) return(v)
+  v <- gsub("\\*\\*(.+?)\\*\\*", "<b>\\1</b>", v, perl = TRUE)
+  v <- gsub("`([^`]+)`", "<code>\\1</code>", v, perl = TRUE)
+  v
+}
+## 静态表（短表专用）；长表一律走 dt_all()
+kb <- function(x, caption = NULL, escape = TRUE, scroll = NULL) {
+  d <- u8df(as.data.frame(x, check.names = FALSE))
+  if (isFALSE(escape)) {
+    for (j in seq_along(d)) d[[j]] <- md_cell(d[[j]])
+    names(d) <- md_cell(names(d))
+  }
+  out <- knitr::kable(d, format = "html", escape = escape,
+           caption = if (is.null(caption)) NULL else cap_tip(caption))
+  if (is.null(scroll)) return(out)
+  knitr::asis_output(paste0('<div class="tbl-scroll" style="max-height:', scroll, 'px;">',
+    paste(as.character(out), collapse = "\n"), '</div>'))
+}
+## 行内数字挂悬停：阈值与结账结果一律以 tip() 包裹，鼠标停留即见其算法
+tip <- function(txt, why) {
+  why <- gsub("[*`]", "", why)
+  why <- gsub("&", "&amp;", why, fixed = TRUE); why <- gsub("<", "&lt;", why, fixed = TRUE)
+  why <- gsub(">", "&gt;", why, fixed = TRUE);  why <- gsub('"', "&quot;", why, fixed = TRUE)
+  paste0('<span class="gl-tip" data-tip="', why, '">', txt, '</span>')
+}
+## 占位（铁律：缺数据必须点名文件、SQL 编号与受影响输出）
+ph <- function(file, sql, hit) {
+  kb(data.frame(check.names = FALSE, 状态 = "⬜ 待数据（非错误）", 所待文件 = file,
+                `SQL 编号` = sql, 受影响输出 = hit,
+                下一步 = sprintf("按运行手册以 %s 导出 %s 至 `%s/`，重渲染即自动出表",
+                                 sql, file, if (is.null(DATA_DIR)) "数据库" else DATA_DIR)),
+     caption = "本节以占位呈现（非错误）")
+}
+## ══ 互动桌表 dt_all()：行数与列数一律实测现算；行号取 data.table 印法（1: 2: … N:）
+##    纪律：① 列一律不截断；② 行原则上不截断，超上限者写全量 CSV 并于副标题
+##    明列省略行数与占比；③ 零行结果显式点名，绝不静默留白。
+DT_MAX_ROWS <- 20000L
+dt_all <- function(x, caption, note = "", order_by = NULL, desc = TRUE,
+                   export = NULL, len = 12) {
+  if (is.null(x) || !is.data.frame(x)) {
+    return(kb(data.frame(状态 = "⬜ 本表未生成（料源缺席）", 说明 = note), caption = caption))
+  }
+  d <- u8df(as.data.frame(x, check.names = FALSE))
+  n_all <- nrow(d); n_col <- ncol(d)
+  if (n_all == 0L) {
+    return(kb(data.frame(check.names = FALSE, 状态 = "⚠️ 零行结果（显式点名，非留白）",
+      本表 = caption, 列数 = n_col,
+      读法 = paste0("零行有两义：其一，判据在本窗口内确无命中；其二，料源列虽在而取值全空。",
+                    "二者不可混为一谈——请对照上一节的『维度在位』表判读。", note)),
+      caption = caption))
+  }
+  if (!is.null(order_by) && order_by %in% names(d))
+    d <- d[order(numv(d[[order_by]]), decreasing = desc, na.last = TRUE), , drop = FALSE]
+  ## 全量落盘：显示可截，数据不可截
+  exp_path <- NA_character_
+  if (!is.null(export)) {
+    exp_path <- file.path(OUT_DIR, paste0(export, ".csv"))
+    try(utils::write.csv(d, exp_path, row.names = FALSE, fileEncoding = "UTF-8"), silent = TRUE)
+  }
+  n_show <- min(n_all, DT_MAX_ROWS); n_omit <- n_all - n_show
+  ds <- d[seq_len(n_show), , drop = FALSE]
+  idx <- data.frame(i = paste0(format(seq_len(n_show), trim = TRUE), ":"),
+                    stringsAsFactors = FALSE)
+  nm0 <- names(ds)
+  ds <- cbind(idx, ds); names(ds) <- c("#", nm0)   # 行号取 data.table 印法（1: 2: … N:）
+  sub <- sprintf("总行数 %s ｜ 总列数 %d ｜ 省略 %s 行（%s）%s",
+    amt(n_all), n_col, amt(n_omit), pct(n_omit / n_all, 2),
+    if (is.na(exp_path)) "" else sprintf(" ｜ 全量已落盘：`%s`", exp_path))
+  cap <- paste0(caption, "：", sub, if (nzchar(note)) paste0("｜解释：", note) else "")
+  if (!isTRUE(HAS$DT)) return(kb(ds, caption = cap, escape = FALSE, scroll = 460))
+  DT::datatable(ds, rownames = FALSE, escape = FALSE, caption = cap_tip(cap),
+    extensions = "Buttons", width = "100%",
+    options = list(pageLength = len, dom = "Bfrtip", buttons = c("copy", "csv"),
+      scrollX = TRUE, scrollY = "460px", scrollCollapse = TRUE, autoWidth = FALSE,
+      columnDefs = list(list(className = "rowidx", targets = 0),
+                        list(className = "dt-head-left", targets = "_all"))),
+    class = "display compact cell-border stripe")
+}
+```
+
+```{r}
+#| label: radar-kit
+# echo: false
+## ══ 版面三件（承精要版，一字不改）：按显示宽度折行 · 标题分主副 · JSON 出口
+w_ <- function(x, width = 16, sep = "<br>") {
+  vapply(as.character(x), function(t) {
+    if (is.na(t) || !nzchar(t)) return(t)
+    ch <- strsplit(t, "", fixed = TRUE)[[1]]
+    wd <- ifelse(grepl("[\u2e80-\u9fff\uff00-\uffef\u3000-\u303f]", ch), 2L, 1L)
+    out <- character(0); line <- ""; acc <- 0L
+    for (k in seq_along(ch)) {
+      if (acc + wd[k] > width && nzchar(line)) { out <- c(out, line); line <- ""; acc <- 0L }
+      line <- paste0(line, ch[k]); acc <- acc + wd[k]
+    }
+    paste(c(out, line), collapse = sep)
+  }, character(1), USE.NAMES = FALSE)
+}
+EJ <- function(x) if (isTRUE(HAS$js))
+  as.character(jsonlite::toJSON(x, auto_unbox = TRUE, digits = 6, na = "null")) else "null"
+er_ttl <- function(title, width = 40) {
+  pos <- regexpr("：|——", title)
+  if (pos > 0) {
+    cut <- attr(pos, "match.length")
+    list(main = w_(substring(title, 1, pos - 1), width, "\n"),
+         sub  = w_(substring(title, pos + cut), width + 10, "\n"))
+  } else list(main = w_(title, width, "\n"), sub = "")
+}
+## 轴名装饰：单行、赏罚标记、缺名点名、待表标注
+radar_txt <- function(labels, dirs = NULL, pend = NULL) {
+  labels <- u8(labels)
+  lb <- trimws(as.character(labels))
+  bad <- which(!nzchar(lb) | is.na(lb))
+  if (length(bad)) lb[bad] <- paste0("⚠维度名缺失#", bad)
+  if (!is.null(dirs)) lb <- paste0(lb, " ", ifelse(dirs > 0, "赏", "罚"))
+  if (!is.null(pend)) lb[pend] <- paste0(trimws(labels)[pend], " 待表零")
+  lb
+}
+## ECharts 运行库：优先取 echarts4r 内附本地档（配合 embed-resources 内联，离线可看）
+er_dep <- function() {
+  d <- if (isTRUE(HAS$ec)) system.file("htmlwidgets", package = "echarts4r") else ""
+  if (!nzchar(d) || !dir.exists(d)) return(NULL)
+  h <- list.files(d, pattern = "^echarts\\.min\\.js$", recursive = TRUE, full.names = TRUE)
+  if (!length(h)) h <- list.files(d, pattern = "^echarts\\.js$", recursive = TRUE, full.names = TRUE)
+  if (!length(h)) return(NULL)
+  f <- h[which.max(file.size(h))]
+  message(sprintf("✅ ECharts 取自 echarts4r 本地档（%.1f MB）：%s",
+                  file.size(f) / 1048576, basename(f)))
+  htmltools::htmlDependency("echarts", "5", src = c(file = dirname(f)),
+                            script = basename(f), all_files = FALSE)
+}
+er_id <- local({ i <- 0L; function(p) { i <<- i + 1L; sprintf("er-radar-%s-%d", p, i) } })
+## ── ECharts 雷达图（承精要版 er_radar()，一字不改）─────────────────────
+er_radar <- function(tag, title, labels, series, cols,
+                     dirs = NULL, pend = NULL, note = "", height = 620) {
+  txt <- radar_txt(labels, dirs, pend)
+  n <- length(txt)
+  message(sprintf("🧭 雷达轴名[%s] %d 条：%s", tag, n, paste(txt, collapse = " ｜ ")))
+  J <- function(x) EJ(x)
+  ind <- J(lapply(seq_len(n), function(i) list(name = txt[i], max = 100)))
+  dat <- J(lapply(seq_along(series), function(i) {
+    v <- as.numeric(series[[i]]); v[!is.finite(v)] <- 0
+    list(name = names(series)[i], value = round(v, 2),
+         lineStyle = list(color = cols[i], width = 2),
+         itemStyle = list(color = cols[i]),
+         areaStyle = list(color = cols[i], opacity = 0.13))
+  }))
+  id <- er_id(tag)
+  paste0(
+'<div class="er-radar" id="', id, '" style="width:100%;height:', height, 'px;"></div>\n',
+'<script>\n',
+'(function(){\n',
+'  var IND = ', ind, ';\n',
+'  var NMS = ', J(txt), ';\n',
+'  var DAT = ', dat, ';\n',
+'  var LEG = ', J(names(series)), ';\n',
+'  var NOTE  = ', J(note), ';\n',
+'  var OPT = {\n',
+'    backgroundColor: "transparent",\n',
+'    title: {text: ', EJ(er_ttl(title)$main), ', subtext: ', EJ(er_ttl(title)$sub), ',\n',
+'            left: "center", top: 2, textAlign: "center",\n',
+'            textStyle: {color: "', PAL$fg, '", fontSize: 14, fontWeight: "normal",\n',
+'                        lineHeight: 20},\n',
+'            subtextStyle: {color: "', PAL$fg, '", fontSize: 11, opacity: .78,\n',
+'                           lineHeight: 17}},\n',
+'    tooltip: {trigger: "item", confine: true,\n',
+'      backgroundColor: "rgba(5,13,26,.96)", borderColor: "', PAL$ac, '",\n',
+'      textStyle: {color: "', PAL$fg, '", fontSize: 12},\n',
+'      formatter: function(p){\n',
+'        var v = (p && p.value) ? p.value : [];\n',
+'        var s = "<b>" + p.name + "</b><br/>";\n',
+'        for (var i = 0; i < NMS.length; i++) {\n',
+'          s += NMS[i] + "：" + Math.round(v[i] || 0) + " 分<br/>";\n',
+'        }\n',
+'        return s + "<span style=\\"opacity:.72\\">" + NOTE + "</span>";\n',
+'      }},\n',
+'    legend: {bottom: 2, itemGap: 16, data: LEG,\n',
+'             textStyle: {color: "', PAL$fg, '", fontSize: 11}},\n',
+'    radar: {center: ["50%", "55%"], radius: "56%", startAngle: 90,\n',
+'      indicator: IND,\n',
+'      axisName: {fontSize: 12, padding: [3, 5],\n',
+'        formatter: function(nm){\n',
+'          if (/待表零$/.test(nm)) { return "{pend|" + nm + "}"; }\n',
+'          if (/罚$/.test(nm))     { return "{bad|"  + nm + "}"; }\n',
+'          if (/赏$/.test(nm))     { return "{good|" + nm + "}"; }\n',
+'          return "{neu|" + nm + "}";\n',
+'        },\n',
+'        rich: {good: {color: "', PAL$good, '", fontSize: 12},\n',
+'               bad:  {color: "', PAL$bad,  '", fontSize: 12},\n',
+'               pend: {color: "', PAL$warn, '", fontSize: 12},\n',
+'               neu:  {color: "', PAL$fg,   '", fontSize: 12}}},\n',
+'      splitLine: {lineStyle: {color: "#1e3a52"}},\n',
+'      axisLine:  {lineStyle: {color: "#1e3a52"}},\n',
+'      splitArea: {areaStyle: {color: ["rgba(10,25,45,.55)", "rgba(10,25,45,.30)"]}}},\n',
+'    series: [{type: "radar", symbolSize: 4, data: DAT}]\n',
+'  };\n',
+'  var el = document.getElementById("', id, '"), chart = null;\n',
+'  function boot(){\n',
+'    if (!window.echarts || !el) { return false; }\n',
+'    if (!(el.clientWidth > 1)) { return false; }\n',
+'    if (!chart) { chart = echarts.init(el); chart.setOption(OPT); }\n',
+'    return true;\n',
+'  }\n',
+'  function fit(){ if (chart) { chart.resize(); } else { boot(); } }\n',
+'  if (!boot()) {\n',
+'    var k = 0, iv = setInterval(function(){\n',
+'      if (boot() || ++k > 200) {\n',
+'        clearInterval(iv);\n',
+'        if (!chart && el) {\n',
+'          el.innerHTML = "<p style=\\"color:', PAL$bad, ';text-align:center;padding:2em\\">'
+, '⬜ ECharts 未能载入（所待：R 包 echarts4r，或联网取用 CDN）；受影响输出：本雷达图</p>";\n',
+'        }\n',
+'      }\n',
+'    }, 100);\n',
+'  }\n',
+'  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(fit); }\n',
+'  window.addEventListener("resize", fit);\n',
+'  if (window.ResizeObserver) { new ResizeObserver(fit).observe(el); }\n',
+'  if (window.IntersectionObserver) {\n',
+'    new IntersectionObserver(function(es){\n',
+'      es.forEach(function(e){ if (e.isIntersecting) { fit(); } });\n',
+'    }).observe(el);\n',
+'  }\n',
+'})();\n',
+'</script>\n')
+}
+## 分位归一 0–100（四实体同一套，逐字同主方案 §17.2）
+pq <- function(v) {
+  v <- numv(v)
+  r <- rank(v, na.last = "keep", ties.method = "average")
+  100 * (r - 1) / max(sum(!is.na(v)) - 1, 1)
+}
+## 名单拼装：基础段 ＋ 领域段 ＋ 维度段；列名显式赋值（cbind 的 check.names 会改名）
+bind_roster <- function(base, dom, dimn) {
+  parts <- list(base); nms <- names(base)
+  if (!is.null(dom) && ncol(dom)) {
+    parts <- c(parts, list(round(dom, 1))); nms <- c(nms, paste0("领域｜", names(dom)))
+  }
+  if (!is.null(dimn) && ncol(dimn)) {
+    parts <- c(parts, list(round(dimn, 1))); nms <- c(nms, paste0("维度｜", names(dimn)))
+  }
+  out <- do.call(cbind, parts); names(out) <- nms; out
+}
+```
+
+```{r}
+#| label: echarts-lib
+# echo: false
+if (isTRUE(HAS$ec) && !is.null(.ecdep <- er_dep())) {
+  htmltools::attachDependencies(htmltools::tagList(), list(.ecdep))
+} else {
+  message(paste0("⚠️ 未装 echarts4r（所待：install.packages(\"echarts4r\")；",
+                 "受影响输出：玩家／荷官／代理三张领域雷达图）——改由 CDN 载入，须联网"))
+  knitr::asis_output(paste0(
+    "<script src=\"https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js\"",
+    "></script>"))
+}
+```
+
+# 一、读取关键数据表：读了哪几张 · 各有哪些维度 · 维度正名 {#sec-tables}
+
+> 本章回答三问：**读了哪几张表**、**每张表有哪些维度**、**每一维的行业正名是什么**。
+> 三问的答案一律**由本次渲染实测**：表清单来自装载器的返回，维度清单来自各件 CSV 的**实际表头**
+> （不是记忆中的契约，也不是本报告的字典），正名与释义来自下方维度词典。
+> **全文任意位置，把鼠标停在任一列名或任一维名上，即浮出该维的正名、语义、单位、粒度与用途。**
+
+## 维度词典：一处登记，全文悬停 {#sec-dimdict}
+
+```{r}
+#| label: dimdict
+# echo: false
+## ══ 维度词典（本报告唯一权威）：表 · 列 · 正名 · 语义 · 单位 · 粒度 · 方向 · 用途
+##    新增列只改此处一处，全维度总表、悬停浮层、追溯矩阵三处同步生效。
+##    ★ 一律以**带引号的字符串**登记，绝不经 R 符号表——中文经符号表往返即受损。
+DIMDICT <- do.call(rbind, lapply(list(
+ # 表, 列, 正名, 语义, 单位, 粒度, 方向, 用途
+ c("B01_bt_panel","member_id","会员编号","平台唯一玩家标识（对 bet02.bet05）","无","会员","身份","三实体一切经济核算的连接键"),
+ c("B01_bt_panel","bet_date","营业日","注单归属的营业日（非自然日）","日期","日","时间","窗口端点、日粒度面板的时间轴"),
+ c("B01_bt_panel","validbet","有效投注（洗码量）","该会员当日的有效投注额，**不是流水**","货币","会员×日","越大规模越大","营业额口径的唯一基数"),
+ c("B01_bt_panel","net_pnl","会员净输赢（含退水）","账户口径：游戏输赢 ＋ 退水","货币","会员×日","会员为正即平台亏","NGR₂ 之来源；平台净贡献 ＝ −Σnet_pnl"),
+ c("B01_bt_panel","game_pnl","游戏输赢（剔退水）","纯游戏口径：派彩 − 本金","货币","会员×日","会员为正即平台亏","GGR 之来源；平台毛利 ＝ −Σgame_pnl"),
+ c("K01_risk_feature_matrix","member_id","会员编号","同上","无","会员","身份","风险特征矩阵主键"),
+ c("K01_risk_feature_matrix","validbet","有效投注（洗码量）","该会员全窗口有效投注合计","货币","会员","越大规模越大","流水贡献维之原始量"),
+ c("K01_risk_feature_matrix","hedge_rate","对打率","与固定搭档反向下注的注单占比","比率 0–1","会员","越大越可疑","对打指数维；真实流水之折减因子"),
+ c("K01_risk_feature_matrix","side_entropy","投注产品结构熵","下注分散于几种投注产品的信息熵","奈特","会员","越大越分散","专攻高赔率边注者熵低"),
+ c("K01_risk_feature_matrix","n_days","出勤天数","该会员在窗口内有下注的营业日数","天","会员","越大越活跃","活跃稳定维之分子"),
+ c("K01_risk_feature_matrix","night_share","夜场占比","夜段（低监管密度时段）注单占比","比率 0–1","会员","越大越可疑","行为画像辅助维"),
+ c("K01_risk_feature_matrix","rebate_dep","退水依赖度","退水收入 ÷ 该会员总收益","比率","会员","越大越可疑","T3 打水型主判据"),
+ c("K01_risk_feature_matrix","roi_game","游戏 ROI（剔退水）","游戏输赢 ÷ 有效投注","比率","会员","越大越可疑","分辨「靠赢钱」与「靠退水」"),
+ c("K01_risk_feature_matrix","n_ip","IP 数","该会员在窗口内用过的下注 IP 个数","个","会员","越大越可疑","规避能力（EVA）之代理量"),
+ c("K01_risk_feature_matrix","stake_cv","注额变异系数","注额标准差 ÷ 注额均值","比率","会员","越大越不稳","注额突变的过程指标"),
+ c("K01b_seed_manual","member_id","人工風險單种子会员","被风控人工标记（風險單／劃單）者","无","会员","身份","金标准正例来源之一；人工标记史维"),
+ c("C06_hedge_pairs","bet_ip","下注 IP","注单侧 IP，**与登录日志的网关 IP 不同**","无","IP","身份","对打对的共处位置"),
+ c("C06_hedge_pairs","m_a","对打成员甲","该对中的一方会员","无","会员","身份","对打族名录之来源"),
+ c("C06_hedge_pairs","m_b","对打成员乙","该对中的另一方会员","无","会员","身份","同上"),
+ c("C06_hedge_pairs","n_same_round","同局次数","甲乙二人同处一局的局数","局","会员对","越大证据越强","对打判据的样本量门槛"),
+ c("C06_hedge_pairs","opposite_rate","反向下注率","同局中一庄一闲（完全对冲）的占比","比率 0–1","会员对","＝1 即完全反向","对打族的主判据"),
+ c("R01_late_shoe","late_def","靴末段口径锁","口径常量列：靴末段之定义（相对靴位）","文本","常量","锁","**契约锁列**：旧版 CSV 无此列即当场不装载"),
+ c("R01_late_shoe","uid","会员编号","同 member_id","无","会员","身份","尾秒族与晚注画像之主键"),
+ c("R01_late_shoe","n_orders_all","全部注单数","该会员窗口内注单总数","笔","会员","越大越活跃","尾段占比之分母"),
+ c("R01_late_shoe","n_orders_late","靴末段注单数","落在靴末段的注单数","笔","会员","—","尾段占比之分子"),
+ c("R01_late_shoe","late_share","靴末段注单占比","靴末段注单 ÷ 全部注单","比率 0–1","会员","越大越专押尾段","尾秒族主参数（**画像用，不判罚**）"),
+ c("R01_late_shoe","stake_ramp","注额斜率","靴内注额随局序上升的斜率","比率","会员","越陡越可疑","加注模式的过程指标"),
+ c("R01_late_shoe","roi_late","靴末段 ROI","靴末段投注的回报率（剔退水）","比率","会员","—","尾段优势检验之处理臂"),
+ c("R01_late_shoe","roi_early","靴前中段 ROI","非末段投注的回报率（剔退水）","比率","会员","—","尾段优势检验之对照臂"),
+ c("R02_same_table","uid1","同桌成员甲","该对中的一方会员","无","会员","身份","同桌族名录之来源"),
+ c("R02_same_table","uid2","同桌成员乙","该对中的另一方会员","无","会员","身份","同上"),
+ c("R02_same_table","n_same_orders","同桌同局注单数","甲乙同桌同局的注单数","笔","会员对","越大证据越强","同桌判据之样本量门槛"),
+ c("R02_same_table","same_rate","裸同桌率","同桌注单 ÷ 该对较少一方的注单","比率 0–1","会员对","越大越可疑","**须活跃度校正**，裸值会被高频客污染"),
+ c("R03_player_dealer","uid","会员编号","同 member_id","无","会员","身份","玩家×荷官关联主键之一"),
+ c("R03_player_dealer","dealer_id","荷官工号","荷官身份键（对 bet02.eid）；**字符型，不得数值化**","无","荷官","身份","荷官侧一切归因之主键"),
+ c("R03_player_dealer","stake_amount","关联投注额","该玩家在该荷官桌上的投注额","货币","玩家×荷官","越大敞口越大","荷官侧营业额归因之基数"),
+ c("R03_player_dealer","profit_amount","关联盈亏","该玩家在该荷官桌上的输赢","货币","玩家×荷官","会员为正即平台亏","荷官侧盈亏归因之基数"),
+ c("R03_player_dealer","win_rate","关联胜率","该组合的决胜局胜率（**和局退还不入分母**）","比率 0–1","玩家×荷官","—","R-03 判定之原口径"),
+ c("R03_player_dealer","n_related_orders","关联注单数","该组合的注单数","笔","玩家×荷官","越大越可信","样本量门槛"),
+ c("R03_player_dealer","n_rounds_eff","有效局数","该组合的决胜局数","局","玩家×荷官","越大越可信","Z 分数之样本量"),
+ c("R03_player_dealer","z_score","投注产品基准 Z 分数","实测胜率高出该**投注产品自身基准**几个标准差","标准差","玩家×荷官","越大越异常","R-03 统计修正轨主判据"),
+ c("R03b_player_dealer_daily","bet_date","营业日","同上","日期","日","时间","荷官日粒度归因之时间轴"),
+ c("R03b_player_dealer_daily","eligibility_status","资格状态","SQL 侧的分层裁定（ELIGIBLE／SENTINEL_DEALER…）","文本","行","—","**血统第一等证据**：哨兵剔除以其为准，不靠 R 侧推断"),
+ c("I_ip_player","bet_ip","下注 IP","注单侧 IP","无","IP","身份","异常 IP 族之位置键"),
+ c("I_ip_player","member_id","会员编号","同上","无","会员","身份","玩家×IP 连接键"),
+ c("I_ip_player","n_orders_ip","该 IP 下注单数","该会员在该 IP 的注单数","笔","会员×IP","越大越主力","有效关联之样本量门槛"),
+ c("I_ip_player","ip_order_share","该 IP 注单占比","该 IP 注单 ÷ 该会员全部注单","比率 0–1","会员×IP","越大越是主场","分辨「主力在此 IP」与「偶尔路过」"),
+ c("I_ip_player","stake_ip","该 IP 下投注额","该会员在该 IP 的投注额","货币","会员×IP","越大敞口越大","异常 IP 族营业额口径"),
+ c("I_ip_player","net_pnl_ip","该 IP 下净输赢","含退水口径","货币","会员×IP","会员为正即平台亏","异常 IP 族盈亏口径"),
+ c("I_ip_player","game_pnl_ip","该 IP 下游戏输赢","剔退水口径","货币","会员×IP","会员为正即平台亏","异常 IP 族毛利口径"),
+ c("I_ip_player","lv3","三级代理线","该会员所属 LV3 代理线","无","代理线","身份","**代理侧一切归因之主键**"),
+ c("I_ip_agg","n_member_eff","该 IP 有效关联会员数","达到有效关联标准的会员数","人","IP","越大越可疑","异常 IP 之聚集度主判据"),
+ c("C01_ip_chain","member_per_chain","单链会员密度","一条代理线在该 IP 下塞了几个会员","人","IP","越大越可疑","AX-A5：IP 结构风险维之原始量"),
+ c("S_player_tail","n_rounds_tail","尾段有效局数","该会员的尾段有效局数","局","会员","越大越可信","尾段胜率之样本量门槛"),
+ c("S_player_tail","tail_share","尾段注单占比","尾段注单 ÷ 全部注单","比率 0–1","会员","—","尾秒族主参数（画像）"),
+ c("S_player_tail","tail_winrate","尾段胜率","尾段投注的胜率","比率 0–1","会员","—","与同产品基准并读方有意义"),
+ c("S_player_tail","winrate_diff","胜率差","该会员胜率 − 同投注产品基准胜率","百分点","会员","—","**须与 Lift 并看**，低基准产品上绝对差会失真"),
+ c("S_player_tail","tail_stake","尾段投注额","尾段投注金额合计","货币","会员","—","尾秒族营业额口径"),
+ c("S_player_tail","tail_game_pnl","尾段游戏输赢","尾段的纯游戏输赢","货币","会员","—","尾秒族盈亏口径"),
+ c("S_player_tail","tail_roi","尾段 ROI","尾段投注的回报率（剔退水）","比率","会员","—","**E1 已裁定其优势未能证实**"),
+ c("T03_arbitrage","rebate","退水金额","该会员获得的退水合计","货币","会员","越大成本越高","T3 打水型：漏损直接来源"),
+ c("E02_segment_econ","segment","客户分层","经济账的分层键","无","分层","—","分层经济账之主键"),
+ c("E02_segment_econ","ggr","GGR（赌场毛利）","客人游戏输赢取负号汇总，**不是营业额**","货币","分层","越大越好","毛利口径（**该件绝对额与 bet02 差 5.24 倍，只可取比率**）"),
+ c("P_player_month","ym","年月","月粒度键","年月","会员×月","时间","下线留存与新客质量之时间轴")
+), function(v) data.frame(check.names = FALSE,
+     表 = v[1], 列 = v[2], 正名 = v[3], 语义 = v[4], 单位 = v[5],
+     粒度 = v[6], 方向 = v[7], 用途 = v[8], stringsAsFactors = FALSE)))
+DIMDICT <- u8df(DIMDICT)
+## 通用列（跨表同义）：一处登记，凡同名列皆可套用
+DIM_GLOBAL <- unique(DIMDICT[!duplicated(DIMDICT$列), c("列","正名","语义","单位","粒度","方向","用途")])
+kb(data.frame(check.names = FALSE,
+   登记维度条数 = nrow(DIMDICT),
+   涉及数据表 = length(unique(DIMDICT$表)),
+   去重后列名数 = nrow(DIM_GLOBAL),
+   说明 = "本词典为本报告唯一权威：全维度总表、悬停浮层、能力值追溯矩阵三处同取此表"),
+   caption = "维度词典规模（渲染现算）")
+```
+
+```{r}
+#| label: glossary-def
+# echo: false
+## ══ 术语库：方法与口径词条 ＋ 维度词典逐条并入 → 全文悬停
+GLOSSARY <- do.call(rbind, lapply(list(
+ c("洗码量","口径正名","有效投注（`validbet`），即计退水与占成的投注基数。**不是流水**。","营业额口径的唯一基数；本报告一切「营业额」皆指此"),
+ c("GGR","口径正名","赌场毛利：客人游戏输赢取负号汇总（剔退水前）。","盈亏口径的第一层；与营业额是两件事，不可混称"),
+ c("NGR","口径正名","净收入：GGR 逐层扣除退水、占成、优惠、通道等成本。**本平台只能算到第三层**。","盈亏口径的第二层；本报告以 NGR₂（扣退水）为准并明示其层数"),
+ c("会计差额","经济核算","「若该群体表现同于全体，平台本可多得多少」——以全体为**情景基准**算出的差额。","本报告经济量的唯一口径，证据等级 E3；**不是因果损失**"),
+ c("因果损失","经济核算","若该行为不曾发生，平台本可多得多少——须反事实，须随机对照。","本报告**不作此断言**；升级路径见局限章"),
+ c("证据等级","治理","E0–E7 的证据强度阶梯：E1 全局查询、E3 会计差额、E5 因果归因。","本报告全部结论停在 **E3**，不得以 E3 之数作 E5 之陈述"),
+ c("分位归一","评分方法","把原始量换成它在全体中的百分位（0–100），对重尾与异常值稳健。","四实体能力值同一套刻度，逐字同主方案 §17.2"),
+ c("赏罚方向","评分方法","每一维明示是赏（越大越好）还是罚（越大越糟）。","综合分 ＝ 赏侧均值 − 罚侧均值"),
+ c("领域能力值","评分方法","把维度按统一领域 D01–D12 归并后的分数，罚侧取反向后再平均。","**唯一可跨实体横比的坐标**；本报告领域雷达之纵轴"),
+ c("统一领域本体","评分方法","D01 获客／D02 激活／D03 充值／D04 活跃／D05 留存／D06 收入／D07 盈利／D08 风险／D09 效率／D10 质量／D11 网络／D12 合规。","领域统一、实体不统一；空着的领域是信息，不得以邻近维填补"),
+ c("哨兵荷官","数据治理","`dealer_id` 取 −1 或 0 者——非真实荷官，凭样本量优势会窜居榜首。","装载处一次剔清，其后各处只作断言式自检"),
+ c("事实层不删","数据治理","L0 事实层原样留账，L1 合格层才是分析所取者。","本报告一切分母皆为 L1，L0 与 L1 之差在资格分层表中列明"),
+ c("活跃度校正","风控规则","裸同桌率会被活跃度污染：桌少人多时高同桌率是天然结果，不是团伙证据。","同桌族一律以相对倍数判读，绝不以裸值定案"),
+ c("CGNAT","网络","运营商级地址转换：成千上万用户共用一个出口 IP。","异常 IP 族必须条件化，否则榜首会被电信基础设施统治"),
+ c("Wilson 区间","统计推断","小样本比率的稳健区间估计，比正态近似在样本少时准得多。","样本量门槛由其宽度收敛至 0.15 反解，不由人拍"),
+ c("Lift","效果度量","实际值相对基准值的提升倍数；1.0 即与基准无异。","一切「高」与「低」皆须对基准而言，不用绝对值自说自话"),
+ c("索提诺比率","风险调整收益","超额收益 ÷ **下行**波动，只罚亏损那一侧。","**在罚侧**：赢得稳才是持续正向优势的指纹，赢得多不是"),
+ c("归因口径","方法边界","荷官与代理侧的风险量并非其自身行为，而是其**在场／在链**的玩家行为汇总而来。","荷官与代理名录一律标注此口径；**不得读作其本人作弊**"),
+ c("调查候选","方法边界","筛查信号所得的名单，须人工复核与结构证据方可定性。","四族名录的法定性质，全篇一致")
+), function(v) data.frame(check.names = FALSE, 术语 = v[1], 类别 = v[2],
+     定义 = v[3], 在本报告的用途 = v[4], stringsAsFactors = FALSE)))
+## 维度词典并入：列代号与行业正名两路皆可悬停
+G2 <- data.frame(check.names = FALSE, 术语 = DIM_GLOBAL$列, 类别 = "字段代号",
+  定义 = paste0(DIM_GLOBAL$正名, "——", DIM_GLOBAL$语义,
+                "（单位：", DIM_GLOBAL$单位, "；粒度：", DIM_GLOBAL$粒度,
+                "；方向：", DIM_GLOBAL$方向, "）"),
+  在本报告的用途 = DIM_GLOBAL$用途, stringsAsFactors = FALSE)
+G3 <- data.frame(check.names = FALSE, 术语 = DIM_GLOBAL$正名, 类别 = "维度正名",
+  定义 = paste0(DIM_GLOBAL$语义, "（库内列名：", DIM_GLOBAL$列,
+                "；单位：", DIM_GLOBAL$单位, "；粒度：", DIM_GLOBAL$粒度, "）"),
+  在本报告的用途 = DIM_GLOBAL$用途, stringsAsFactors = FALSE)
+GLOSSARY <- rbind(GLOSSARY, G2, G3)
+GLOSSARY <- GLOSSARY[!duplicated(GLOSSARY$术语), ]
+GLOSSARY <- GLOSSARY[nchar(GLOSSARY$术语) >= 2, ]      # 单字词条会误伤正文，一律不注
+GLOSSARY <- u8df(GLOSSARY)
+```
+
+```{r}
+#| label: glossary-inject
+#| results: asis
+# echo: false
+## 把术语库注入页面：CSS 悬停浮层 ＋ 自动加注脚本（承主方案成法，一字不改其结构）
+## 脚本全程走 DOM API（区间切分 ＋ setAttribute），结构上不可能被注入残片。
+plain <- function(x) {
+  x <- gsub("\\$[^$]*\\$", "〔公式见正文〕", x)
+  x <- gsub("\\*\\*([^*]+)\\*\\*", "\\1", x)
+  x <- gsub("`([^`]+)`", "\\1", x)
+  x <- gsub("[\r\n]+", " ", x)
+  trimws(x)
+}
+esc_js <- function(x) {
+  x <- gsub("\\\\", "\\\\\\\\", x); x <- gsub('"', '\\\\"', x)
+  x <- gsub("[\r\n\t]+", " ", x); gsub("</", "<\\\\/", x, fixed = TRUE)
+}
+js_str <- function(x) esc_js(plain(x))
+gj <- paste0("{", paste(sprintf('"%s":"%s"',
+  esc_js(GLOSSARY$术语),
+  js_str(paste0("【", GLOSSARY$类别, "】", GLOSSARY$定义,
+                "　▸ 本报告用途：", GLOSSARY$`在本报告的用途`))),
+  collapse = ","), "}")
+local({
+  lone <- gsub("\\\\\\\\", "", gj)
+  if (grepl("\\", lone, fixed = TRUE)) {
+    message("⛔ 术语字典仍含落单反斜杠，浮层脚本降级为空字典——请核对维度词典中的转义")
+    gj <<- "{}"
+  }
+})
+JS_A <- '
+<style>
+.gl-tip{border-bottom:1px dotted var(--ac,#22d3ee);cursor:help;}
+#gl-pop{position:fixed;z-index:2147483647;display:none;
+  max-width:min(46rem,calc(100vw - 2rem));padding:.7rem .9rem;border-radius:8px;
+  font-size:.86rem;line-height:1.6;font-weight:400;text-align:left;
+  white-space:normal;word-break:break-word;overflow-wrap:anywhere;
+  background:linear-gradient(135deg,rgba(8,36,60,.985),rgba(11,61,58,.985));
+  color:#e7fbf3;border:1px solid rgba(34,211,238,.55);
+  box-shadow:0 12px 36px rgba(0,0,0,.6);pointer-events:none;}
+</style>
+<script>
+(function(){
+  const GL = '
+JS_B <- ';
+  const terms = Object.keys(GL).sort((a,b)=>b.length-a.length);
+  const SKIP = new Set(["PRE","SCRIPT","STYLE","TEXTAREA","A","OPTION","BUTTON","SUMMARY"]);
+  function ready(fn){
+    if(document.readyState === "loading"){ document.addEventListener("DOMContentLoaded", fn); }
+    else { fn(); }
+    window.addEventListener("load", function(){ try{ fn(); }catch(e){} });
+  }
+  let GL_DONE = false;
+  ready(function(){
+    if(GL_DONE) return; GL_DONE = true;
+    const scope = document.querySelector("main") || document.body;
+    const secs = scope.querySelectorAll("section, div.callout, table");
+    const targets = secs.length ? secs : [scope];
+    const pop0 = document.getElementById("gl-pop") || document.createElement("div");
+    pop0.id = "gl-pop";
+    if(!pop0.parentNode) document.body.appendChild(pop0);
+    targets.forEach(function(sec){
+      try{
+      const walker = document.createTreeWalker(sec, NodeFilter.SHOW_TEXT, {
+        acceptNode: function(n){
+          let p = n.parentNode;
+          while(p && p !== sec){ if(SKIP.has(p.tagName) || (p.classList &&
+            p.classList.contains("gl-tip"))) return NodeFilter.FILTER_REJECT; p = p.parentNode; }
+          return n.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }});
+      const nodes = []; while(walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(function(node){
+        const txt = node.nodeValue;
+        const hits = [];
+        terms.forEach(function(t){
+          let i = txt.indexOf(t);
+          while(i >= 0){ hits.push({t: t, i: i}); i = txt.indexOf(t, i + t.length); }
+        });
+        if(!hits.length) return;
+        hits.sort(function(a,b){ return a.i - b.i || b.t.length - a.t.length; });
+        const picked = []; let last = -1;
+        hits.forEach(function(h){ if(h.i >= last){ picked.push(h); last = h.i + h.t.length; } });
+        if(!picked.length) return;
+        const frag = document.createDocumentFragment();
+        let pos = 0;
+        picked.forEach(function(h){
+          if(h.i > pos) frag.appendChild(document.createTextNode(txt.slice(pos, h.i)));
+          const sp = document.createElement("span");
+          sp.className = "gl-tip";
+          sp.setAttribute("data-tip", GL[h.t]);
+          sp.textContent = h.t;
+          frag.appendChild(sp);
+          pos = h.i + h.t.length;
+        });
+        if(pos < txt.length) frag.appendChild(document.createTextNode(txt.slice(pos)));
+        if(node.parentNode) node.parentNode.replaceChild(frag, node);
+      });
+      }catch(e){ }
+    });
+    const pop = pop0;
+    function place(t){
+      pop.textContent = t.getAttribute("data-tip") || "";
+      pop.style.display = "block";
+      pop.style.left = "0px"; pop.style.top = "0px";
+      const r = t.getBoundingClientRect();
+      const w = pop.offsetWidth, h = pop.offsetHeight, M = 10;
+      let x = r.left, y = r.bottom + 6;
+      if(x + w > window.innerWidth - M) x = window.innerWidth - w - M;
+      if(x < M) x = M;
+      if(y + h > window.innerHeight - M) y = r.top - h - 6;
+      if(y < M) y = M;
+      pop.style.left = x + "px"; pop.style.top = y + "px";
+    }
+    document.body.addEventListener("mouseover", function(ev){
+      const t = ev.target;
+      if(t && t.classList && t.classList.contains("gl-tip")) place(t);
+    }, true);
+    document.body.addEventListener("mouseout", function(ev){
+      const t = ev.target;
+      if(t && t.classList && t.classList.contains("gl-tip")) pop.style.display = "none";
+    }, true);
+    window.addEventListener("scroll", function(){ pop.style.display = "none"; }, true);
+  });
+})();
+</script>
+'
+FENCE <- strrep("`", 3L)
+cat("\n", FENCE, "{=html}\n", JS_A, gj, JS_B, "\n", FENCE, "\n", sep = "")
+```
+
+## 装载：读了哪几张表 {#sec-load}
+
+```{r}
+#| label: load-core
+## ══ 关键数据表装载。契约锁 must= 挂在装载处：口径变更即缺列、缺列即当场不装载，
+##    使「新文字配旧数字」的静默语义漂移在装载处即显形，不拖到深处哑错。
+B01  <- read_any("B01_bt_panel",
+                 must = c("member_id","bet_date","validbet","net_pnl","game_pnl"))
+K01  <- read_any("K01_risk_feature_matrix",
+                 must = c("member_id","validbet","hedge_rate","side_entropy","n_days"))
+SEED <- read_any("K01b_seed_manual")
+C06  <- read_any("C06_hedge_pairs")
+R01  <- read_any("R01_late_shoe", must = c("late_def","uid","late_share"))
+R02  <- read_any("R02_same_table")
+R03  <- read_any("R03_player_dealer")
+R03b <- read_any("R03b_player_dealer_daily",
+                 select = c("bet_date","uid","dealer_id","stake_amount","profit_amount",
+                            "net_pnl","win_rate","n_related_orders","n_rounds_eff",
+                            "z_score","eligibility_status"))
+IPL  <- read_any("I_ip_player", must = c("member_id","bet_ip"))
+IPA  <- read_any("I_ip_agg")
+C01  <- read_any("C01_ip_chain")
+C08s <- read_any("C08_subnet_sparse")
+TAIL <- read_any("S_player_tail")
+T03  <- read_any("T03_arbitrage")
+E02  <- read_any("E02_segment_econ")
+S01  <- read_any("S01_player_score")
+S02  <- read_any("S02_dealer_score")
+S03  <- read_any("S03_agent_score")
+PPM  <- read_any("P_player_month")
+gc2(); mem("全表装载毕")
+
+## ══ 资格分层：装载即分层，其后一律取合格层（承主方案与精要版同一判据）
+##    判据与 SQL §R03 之 is_sentinel_dealer 逐字同义：TRIM(eid) IN ('-1','0')。
+##    ★ 空字符串不入哨兵——`""` 与 NA 是两种状态，混为一谈即制造口径分裂。
+SENTINEL_IDS <- c("-1", "0")
+is_sentinel  <- function(v) { s <- trimws(as.character(v)); !is.na(s) & s %in% SENTINEL_IDS }
+QUAL <- NULL
+for (nm in c("R03","R03b")) {
+  x <- get(nm)
+  if (is.null(x) || !("dealer_id" %in% names(x))) next
+  x$dealer_id <- ifelse(is.na(x$dealer_id), NA_character_, trimws(as.character(x$dealer_id)))
+  sent <- is_sentinel(x$dealer_id)
+  keep <- !sent
+  n_sql <- if ("eligibility_status" %in% names(x))
+    sum(trimws(as.character(x$eligibility_status)) == "SENTINEL_DEALER", na.rm = TRUE) else NA_integer_
+  if ("eligibility_status" %in% names(x))
+    keep <- keep & (trimws(as.character(x$eligibility_status)) %in% "ELIGIBLE")
+  QUAL[[nm]] <- list(表 = nm, n_full = nrow(x), n_sent = sum(sent), n_keep = sum(keep),
+                     d_full = length(unique(x$dealer_id)),
+                     d_keep = length(unique(x$dealer_id[keep])),
+                     n_sql_sent = n_sql, has_elig = "eligibility_status" %in% names(x),
+                     n_na = sum(is.na(x$dealer_id)))
+  assign(nm, x[keep, , drop = FALSE])
+  rm(x, sent, keep); gc2()
+}
+WIN <- if (!is.null(B01)) list(a = min(B01$bet_date, na.rm = TRUE),
+                               b = max(B01$bet_date, na.rm = TRUE),
+                               n = length(unique(B01$bet_date))) else NULL
+```
+
+```{r}
+#| label: tbl-inventory
+# echo: false
+## 表清单：状态、行列数、编码、SQL 编号一律实测现算；缺席者点名所待文件
+REG <- list(
+ c("B01_bt_panel","§B01","会员×营业日投注面板（经济核算底座）","三实体全部营业额与盈亏核算"),
+ c("K01_risk_feature_matrix","§K01","会员风险特征矩阵","玩家能力值原始量、对打率、退水依赖"),
+ c("K01b_seed_manual","§K01b","人工風險單种子（金标准）","人工标记史维、金标准命中率"),
+ c("C06_hedge_pairs","§C06fix","对打对（同局一庄一闲）","对打族名录（三实体）"),
+ c("R01_late_shoe","§R01","靴末段下注画像（含口径锁 late_def）","尾秒族名录与画像"),
+ c("R02_same_table","§R02","同桌对（会员对粒度）","同桌率族名录（三实体）"),
+ c("R03_player_dealer","§R03","玩家×荷官关联（全窗聚合）","荷官侧一切归因与荷官能力值"),
+ c("R03b_player_dealer_daily","§R03b","玩家×荷官×日关联","荷官日粒度归因、当值时长、节奏稳定度"),
+ c("I_ip_player","C-00","玩家×IP×三级代理线","异常 IP 族、代理侧归因主键 lv3"),
+ c("I_ip_agg","C-02","IP 汇总（有效关联会员数与盈利口径）","异常 IP 之聚集度判据"),
+ c("C01_ip_chain","C-01","IP 单链会员密度","IP 结构风险维、异常 IP 主判据"),
+ c("C08_subnet_sparse","AX-A5","/24 稀疏网段名单","异常 IP 的**条件化闸**：滤除 CGNAT 公共出口"),
+ c("S_player_tail","D-06","玩家尾段十一项指标","尾秒族全维度与其检验"),
+ c("T03_arbitrage","§T03","打水型明细（退水与净额）","退水漏损核算"),
+ c("E02_segment_econ","§E02c","客户分层经济账","分层对照（**只可取比率**）"),
+ c("S01_player_score","S-01ex","玩家能力值导出件","在包即直读，缺席即由包内表复算"),
+ c("S02_dealer_score","S-02ex","荷官能力值导出件","同上"),
+ c("S03_agent_score","S-03ex","代理能力值导出件","同上"),
+ c("P_player_month","P-01","会员×月面板","下线留存、新增会员质量"))
+OBJ <- list(B01=B01, K01=K01, SEED=SEED, C06=C06, R01=R01, R02=R02, R03=R03, R03b=R03b,
+            IPL=IPL, IPA=IPA, C01=C01, C08s=C08s, TAIL=TAIL, T03=T03, E02=E02,
+            S01=S01, S02=S02, S03=S03, PPM=PPM)
+KEYS <- c("B01","K01","SEED","C06","R01","R02","R03","R03b","IPL","IPA","C01","C08s",
+          "TAIL","T03","E02","S01","S02","S03","PPM")
+INV <- do.call(rbind, lapply(seq_along(REG), function(i) {
+  o <- OBJ[[KEYS[i]]]
+  data.frame(check.names = FALSE,
+    数据表 = REG[[i]][1], `SQL 编号` = REG[[i]][2], 行业正名 = REG[[i]][3],
+    状态 = if (is.null(o)) "⬜ 未就位" else "🟢 已装载",
+    行数 = if (is.null(o)) "—" else amt(nrow(o)),
+    读入列数 = if (is.null(o)) "—" else as.character(ncol(o)),
+    表头全列数 = if (is.null(o)) "—" else as.character(length(attr(o, "全列名") %||% names(o))),
+    编码 = if (is.null(o)) "—" else (attr(o, "编码") %||% "—"),
+    在本报告的用途 = REG[[i]][4],
+    stringsAsFactors = FALSE)
+}))
+dt_all(INV, caption = "关键数据表清单",
+  note = paste0("状态、行列数与编码皆由本次渲染实测；「读入列数 < 表头全列数」者系为省内存",
+                "只读必要列，其**全列名**仍另路留存（Schema 证据与分析载荷解耦），",
+                "故下一节的全维度总表不受读入范围影响"),
+  export = "01_数据表清单", len = 20)
+```
+
+```{r}
+#| label: qual-layer
+# echo: false
+if (is.null(QUAL) || !length(QUAL)) {
+  ph("数据库/R03_player_dealer.csv 与 R03b_player_dealer_daily.csv", "§R03 / §R03b",
+     "资格分层账、荷官能力值与荷官侧一切归因")
+} else {
+  QL <- do.call(rbind, lapply(QUAL, function(q) data.frame(check.names = FALSE,
+    表 = q$表,
+    `L0 事实层行数` = amt(q$n_full),
+    `哨兵行数（R 侧判据）` = amt(q$n_sent),
+    `哨兵行数（SQL 裁定）` = if (is.na(q$n_sql_sent)) "⬜ 该件无 eligibility_status 列" else amt(q$n_sql_sent),
+    `哨兵占比` = pct(q$n_sent / max(q$n_full, 1)),
+    `L1 合格层行数` = amt(q$n_keep),
+    `留存率` = pct(q$n_keep / max(q$n_full, 1)),
+    `荷官数 L0→L1` = paste0(amt(q$d_full), " → ", amt(q$d_keep)),
+    `dealer_id 缺失` = amt(q$n_na),
+    stringsAsFactors = FALSE)))
+  dt_all(QL, caption = "资格分层实况（事实层不删，分析层才筛）",
+    note = paste0("两路哨兵数并存且不可互替：SQL 裁定是血统第一等证据（P1），",
+                  "R 侧判据是间接证据（P2）；二者不一致即须先查两侧口径，不得径取其一"),
+    export = "02_资格分层账")
+}
+```
+
+## 全维度总表：所有数据表的**所有维度**逐维呈现 {#sec-alldims}
+
+> 下表的每一行是**一个维度**（＝一张表的一列）。列清单取自各件 CSV 的**实际表头**，
+> 不取本报告的字典——**字典缺了什么，本表会点名，而不是掩盖**。
+> 表内任一列名或正名，鼠标停留即出释义。
+
+```{r}
+#| label: all-dims
+# echo: false
+ALLDIM <- do.call(rbind, lapply(seq_along(KEYS), function(i) {
+  o <- OBJ[[KEYS[i]]]; tb <- REG[[i]][1]
+  if (is.null(o)) return(NULL)
+  cols <- attr(o, "全列名") %||% names(o)
+  cols <- u8(cols)
+  if (!length(cols)) return(NULL)
+  d1 <- DIMDICT[DIMDICT$表 == tb, , drop = FALSE]
+  do.call(rbind, lapply(seq_along(cols), function(j) {
+    cc <- cols[j]
+    r <- d1[d1$列 == cc, , drop = FALSE]
+    if (!nrow(r)) r <- DIM_GLOBAL[DIM_GLOBAL$列 == cc, , drop = FALSE]
+    hit <- nrow(r) > 0
+    inmem <- cc %in% names(o)
+    v <- if (inmem) o[[cc]] else NULL
+    nv <- if (inmem) numv(v) else NA_real_
+    isnum <- inmem && sum(is.finite(nv)) > 0.6 * length(nv)
+    data.frame(check.names = FALSE,
+      数据表 = tb, 列序 = j, 列名 = cc,
+      行业正名 = if (hit) r$正名[1] else "⚠️ 词典未覆盖",
+      语义 = if (hit) r$语义[1] else "⚠️ 本报告字典未登记此列——须补登记后方可用于计算",
+      单位 = if (hit) r$单位[1] else "—",
+      粒度 = if (hit) r$粒度[1] else "—",
+      方向 = if (hit) r$方向[1] else "—",
+      本次读入 = if (inmem) "✅ 已读入" else "◻️ 未读入（仅留表头证据）",
+      非空率 = if (inmem) pct(mean(!is.na(v)), 1) else "—",
+      不同值数 = if (inmem) amt(length(unique(v))) else "—",
+      实测极值 = if (isnum) paste0(amt2(min(nv, na.rm = TRUE)), " ~ ", amt2(max(nv, na.rm = TRUE)))
+                 else if (inmem) paste0("文本／类别（示例：",
+                        paste(utils::head(unique(as.character(v[!is.na(v)])), 3), collapse = "、"), "）")
+                 else "—",
+      在本报告的用途 = if (hit) r$用途[1] else "—",
+      stringsAsFactors = FALSE)
+  }))
+}))
+if (is.null(ALLDIM)) {
+  ph("数据库/*.csv（关键数据表）", "SQL 总包 §B01/§K01/§R01/§R02/§R03/C-00 等",
+     "全维度总表与其后一切计算")
+} else {
+  dt_all(ALLDIM, caption = "全维度总表：逐表逐维（列清单取自实际表头）",
+    note = paste0("非空率、不同值数与实测极值皆由本次渲染现算；「⚠️ 词典未覆盖」者即本报告",
+                  "维度词典尚未登记之列——**登记之前不得用于任何计算**，此为口径纪律，",
+                  "不是显示问题"),
+    export = "03_全维度总表", len = 15)
+}
+```
+
+```{r}
+#| label: dim-cover
+# echo: false
+GAPDIM <- if (is.null(ALLDIM)) NULL else
+  ALLDIM[ALLDIM$行业正名 == "⚠️ 词典未覆盖", c("数据表","列名","本次读入","非空率","实测极值")]
+if (is.null(ALLDIM)) {
+  kb(data.frame(状态 = "⬜ 全维度总表未生成，覆盖自检无从进行"), caption = "维度词典覆盖自检")
+} else {
+  kb(data.frame(check.names = FALSE,
+    实测维度总数 = amt(nrow(ALLDIM)),
+    词典已覆盖 = amt(nrow(ALLDIM) - nrow(GAPDIM)),
+    词典未覆盖 = amt(nrow(GAPDIM)),
+    覆盖率 = pct(1 - nrow(GAPDIM) / nrow(ALLDIM), 2),
+    裁定 = if (nrow(GAPDIM) == 0) "✅ 全覆盖：本次实测的每一维皆有正名与语义登记"
+           else "⚠️ 未全覆盖：未覆盖之列已于下表点名，**补登记前不得入计算**"),
+    caption = "维度词典覆盖自检（渲染现算）", escape = FALSE)
+}
+```
+
+```{r}
+#| label: dim-gap-list
+# echo: false
+if (is.null(GAPDIM) || !nrow(GAPDIM)) {
+  kb(data.frame(状态 = "✅ 本次无未覆盖之维度：实测每一列皆有正名与语义登记"),
+     caption = "词典未覆盖之维度（点名清单）")
+} else {
+  dt_all(GAPDIM, caption = "词典未覆盖之维度（点名清单）",
+    note = "补登记路径：于 dimdict 代码块的 DIMDICT 增行，重渲染即自动消解",
+    export = "04_词典未覆盖维度")
+}
+```
+
+```{r}
+#| label: gap-log
+# echo: false
+if (!length(GAPS$rows)) {
+  kb(data.frame(状态 = "✅ 本次渲染未触发取列缺口：所需之列一律在位"),
+     caption = "取列缺口登记")
+} else {
+  dt_all(do.call(rbind, GAPS$rows), caption = "取列缺口登记（缺列不静默、不停摆）",
+    note = "凡此处有行者，其「受影响输出」列所指之处一律以 NA 占位并在正文点名",
+    export = "05_取列缺口")
+}
+```
+
+# 二、能力值追溯矩阵：每一维，从领域一路追到料源列 {#sec-trace}
+
+> 追溯矩阵回答的不是「这一维得几分」，而是**「这一分是从哪来的」**：
+> 它属哪个统一领域、是赏是罚、原始量怎么算、料源是哪张表哪几列、
+> **这几列本次在不在位**、其证据等级到哪一级。
+> 凡「料源不在位」者，其维在雷达上一律**以待表零示之并于轴名标注**，绝不合成数值顶替。
+
+## 统一领域本体 D01–D12：领域是统一的，实体不是 {#sec-domain}
+
+```{r}
+#| label: domain-ontology
+# echo: false
+DOMAIN <- do.call(rbind, lapply(list(
+ c("D01","获客","谁把人带进来，且带进来的是客人而非人头","新增会员首月净贡献"),
+ c("D02","激活","谁把注册者带到首投","首投转化率（**本平台无表，空着即是信息**）"),
+ c("D03","充值","谁带来真金白银的入金","充值额（**待证，不得以投注额顶替**）"),
+ c("D04","活跃","谁在持续地玩、玩得分散还是专攻","出勤天数、产品结构熵、客群广度"),
+ c("D05","留存","谁还在，且下个月还在","次月留存、生命周期阶段"),
+ c("D06","收入","谁带来营业额（洗码量）","有效投注（**四实体皆有，故是唯一可横比的坐标**）"),
+ c("D07","盈利","营业额里留下多少","游戏输赢贡献、退水消耗比"),
+ c("D08","风险","谁在做不该做的事","对打、索提诺、人工标记、關聯異常"),
+ c("D09","效率","单位投入产出多少","当值时长、节奏稳定度"),
+ c("D10","质量","做得对不对、可不可复核","判定详尽度（**本报告三实体皆空**）"),
+ c("D11","网络","谁和谁连在一起","IP 结构风险、单链密度、特定玩家复现率"),
+ c("D12","合规","流程是否合规","（**现有维度一个都没落到，空白如实呈现**）")
+), function(v) data.frame(check.names = FALSE, 领域ID = v[1], 领域名 = v[2],
+     所答之问 = v[3], 可观测结局 = v[4], stringsAsFactors = FALSE)))
+kb(DOMAIN, caption = paste0("统一领域本体 D01–D12（承主方案）",
+   "｜解释：领域统一而实体不统一——某实体在某领域无维，是「理论上存在而当前数据不足」，",
+   "**绝不可当作 0**；空着即是信息"), escape = FALSE)
+```
+
+::: {.callout-important}
+## 三条不可退让的读法
+
+**其一，`○` 不是 0。** 某实体在某领域没有维度，意思是「此处无证据」，
+不是「此处得零分」。雷达上以**待表零**标注者同理——**那是坐标轴的占位，不是分数**。
+
+**其二，只有 D06 收入可作跨实体横比。** 三实体皆有该领域之维（玩家流水贡献、
+荷官在桌洗码量、代理真实流水）；其余领域至少缺一实体，横比即是拿有证据者与无证据者相较。
+
+**其三，本报告的领域分是「同向化」之后的呈现量。** 领域内若混有赏罚两向之维，
+一律先把罚侧取反（$\tilde v = 100 - v$）再平均，使雷达上**越外圈越好**。
+此为**呈现变换**；综合分仍照主方案 §17.2 原式 $\text{赏}-\text{罚}$ 计，**一字未改**。
+:::
+
+## 追溯矩阵（渲染现算：料源在位与否逐维判定） {#sec-trace-matrix}
+
+```{r}
+#| label: cap-dict
+# echo: false
+## ══ 能力值字典：实体 · 领域 · 维度 · 赏罚 · 原始量表达式 · 料源表 · 料源列 · 证据等级
+##    ★ 一律以字符串登记，不用具名向量——中文若经 R 符号表往返，字符会自中间丢失。
+CAPDICT <- do.call(rbind, lapply(list(
+ # 实体, 领域ID, 维度, 赏罚(+1/-1), 原始量表达式, 料源表(分号分隔), 料源列(分号分隔), 证据等级, 备注
+ c("玩家","D06","流水贡献","1","validbet × (1 − hedge_rate)","K01_risk_feature_matrix","validbet;hedge_rate","E1","剔对打嫌疑流水后的真实洗码量"),
+ c("玩家","D07","游戏输赢贡献","1","−Σ game_pnl（平台视角取负号）","B01_bt_panel","game_pnl","E1","GGR 口径，剔退水"),
+ c("玩家","D04","活跃稳定","1","n_days ÷ 在册跨度","K01_risk_feature_matrix;B01_bt_panel","n_days;bet_date","E1","出勤率"),
+ c("玩家","D04","投注产品结构熵","1","side_entropy","K01_risk_feature_matrix","side_entropy","E1","专攻高赔率边注者熵低"),
+ c("玩家","D05","生命周期阶段","1","跨度 × exp(−距末次下注天数 ÷ 14)","B01_bt_panel","bet_date","E1","衰减常数 14 日为情景参数，非估计量"),
+ c("玩家","D08","索提诺稳定性","-1","日净额均值 ÷ 下行标准差","B01_bt_panel","net_pnl;validbet","E2","**在罚侧**：赢得稳才是持续正向优势之指纹"),
+ c("玩家","D08","对打指数","-1","max(opposite_rate)","C06_hedge_pairs","m_a;m_b;opposite_rate","E1","完全反向即 1"),
+ c("玩家","D11","批量注册嫌疑","-1","1 ÷ (1 + 最小搭档号距)","C06_hedge_pairs","m_a;m_b","E2","号距为代理量，注册时戳不可得"),
+ c("玩家","D11","IP结构风险","-1","max(member_per_chain) × (1 + 稀疏段命中)","C01_ip_chain;C08_subnet_sparse","member_per_chain","E1","**须条件化**：不滤 CGNAT 则榜首为电信基础设施"),
+ c("玩家","D08","人工标记史","-1","是否在人工風險單名单","K01b_seed_manual","member_id","E1","金标准正例来源之一"),
+ c("荷官","D06","在桌洗码量","1","Σ stake_amount","R03_player_dealer","dealer_id;stake_amount","E1","荷官桌上的有效投注"),
+ c("荷官","D04","客群广度","1","该荷官服务过的独立会员数","R03_player_dealer","dealer_id;uid","E1","去重会员数"),
+ c("荷官","D09","当值时长","1","有在场记录的营业日数","R03b_player_dealer_daily","dealer_id;bet_date","E2","**日粒度代理量**：本包无开台／收台时戳"),
+ c("荷官","D09","节奏稳定度","1","1 ÷ (1 + 日局数变异系数)","R03b_player_dealer_daily","dealer_id;bet_date;n_rounds_eff","E2","衡量节奏稳不稳，**不衡量快不快**，不可替代局速"),
+ c("荷官","D08","对打局占比","-1","对打名单会员注额 ÷ 在桌洗码量","R03_player_dealer;C06_hedge_pairs","dealer_id;uid;stake_amount;opposite_rate","E2","**归因口径**"),
+ c("荷官","D08","异常对关联","-1","对打名单客数 ÷ 客群广度","R03_player_dealer;C06_hedge_pairs","dealer_id;uid;opposite_rate","E2","同上"),
+ c("荷官","D08","風險單密度","-1","人工种子会员注额 ÷ 在桌洗码量","R03_player_dealer;K01b_seed_manual","dealer_id;uid;stake_amount","E2","同上"),
+ c("荷官","D11","特定玩家复现率","-1","前五大客注额 ÷ 在桌洗码量","R03_player_dealer","dealer_id;uid;stake_amount","E1","集中度诊断"),
+ c("代理","D01","线下规模","1","该线活跃会员数","I_ip_player","lv3;member_id","E1","LV3 线粒度"),
+ c("代理","D06","真实流水","1","Σ validbet × (1 − hedge_rate)","I_ip_player;K01_risk_feature_matrix","lv3;member_id;validbet;hedge_rate","E1","剔对打后的洗码量"),
+ c("代理","D05","下线留存","1","相邻月留存率均值","I_ip_player;P_player_month","lv3;member_id;ym","E1","逐月交集比"),
+ c("代理","D01","新增会员质量","1","新客首月净贡献均值","I_ip_player;P_player_month","lv3;member_id;ym;net_pnl","E2","「拉客人」与「拉人头」之别"),
+ c("代理","D08","对打渗透率","-1","线下进入对打名单者 ÷ 线下会员数","I_ip_player;C06_hedge_pairs","lv3;member_id;opposite_rate","E1","**归因口径**"),
+ c("代理","D11","单链密度","-1","线下会员所踩 IP 的 member_per_chain 最大值","I_ip_player;C01_ip_chain","lv3;bet_ip;member_per_chain","E1","一条线塞几千号"),
+ c("代理","D07","退水消耗比","-1","线下退水支出 ÷ 线下游戏赢利","I_ip_player;B01_bt_panel","lv3;member_id;net_pnl;game_pnl","E2","洗码链的命门；分母非正者按 1 计并点名"),
+ c("风控专员","D09","标注产量","1","关注名单条数","S04_analyst_score","—","E1","**本报告不计算**：先生本次点名三实体，专员留位以存血统"),
+ c("风控专员","D11","覆盖IP广度","1","标注覆盖的独立 IP 数","S04_analyst_score","—","E1","同上"),
+ c("风控专员","D10","判定详尽度","1","备注字数","S04_analyst_score","—","E1","同上"),
+ c("风控专员","D09","登记跨度","1","首末登记时间跨度","S04_analyst_score","—","E1","同上"),
+ c("风控专员","D10","理由空白率","-1","理由空白数 ÷ 标注产量","S04_analyst_score","—","E1","同上"),
+ c("风控专员","D09","标注停滞度","-1","距全体最近登记日天数 ÷ 该员登记跨度","S04_analyst_score","—","E1","同上")
+), function(v) data.frame(check.names = FALSE, 实体 = v[1], 领域ID = v[2], 维度 = v[3],
+     赏罚 = as.numeric(v[4]), 原始量表达式 = v[5], 料源表 = v[6], 料源列 = v[7],
+     证据等级 = v[8], 备注 = v[9], stringsAsFactors = FALSE)))
+CAPDICT <- u8df(CAPDICT)
+CAPDICT$领域名 <- DOMAIN$领域名[match(CAPDICT$领域ID, DOMAIN$领域ID)]
+CAPDICT$方向 <- ifelse(CAPDICT$赏罚 > 0, "赏（越大越好）", "罚（越大越糟）")
+
+## ── 料源在位判定：逐维核对其所需之表与列，本次是否俱在 ──────────────────
+TBL2OBJ <- setNames(KEYS, vapply(REG, function(v) v[1], ""))
+avail_of <- function(tbls, cols) {
+  tv <- trimws(strsplit(tbls, ";", fixed = TRUE)[[1]])
+  cv <- trimws(strsplit(cols, ";", fixed = TRUE)[[1]]); cv <- cv[cv != "—"]
+  ## 表判定：所需之表有一不在即判缺表
+  getk <- function(t) if (t %in% names(TBL2OBJ)) TBL2OBJ[[t]] else NA_character_
+  miss_t <- tv[vapply(tv, function(t) {
+    k <- getk(t); is.na(k) || is.null(OBJ[[k]])
+  }, TRUE)]
+  ## 列判定：某列只要在**任一所需表**中出现即算在位（跨表取数之常态）
+  have_all <- unique(unlist(lapply(tv, function(t) {
+    k <- getk(t); o <- if (is.na(k)) NULL else OBJ[[k]]
+    if (is.null(o)) character(0) else unique(c(names(o), attr(o, "全列名") %||% character(0)))
+  })))
+  miss_c <- setdiff(cv, have_all)
+  list(miss_t = unique(miss_t), miss_c = miss_c,
+       ok = length(miss_t) == 0 && length(miss_c) == 0)
+}
+TRACE <- do.call(rbind, lapply(seq_len(nrow(CAPDICT)), function(i) {
+  r <- CAPDICT[i, ]
+  if (r$实体 == "风控专员") {
+    st <- "◻️ 本报告不计算（留位存血统）"; note <- "先生本次点名玩家／荷官／代理三实体"
+  } else {
+    a <- avail_of(r$料源表, r$料源列)
+    st <- if (a$ok) "🟢 料源在位" else
+          if (length(a$miss_t)) paste0("⬜ 缺表：", paste(a$miss_t, collapse = "、")) else
+          paste0("🟠 缺列：", paste(a$miss_c, collapse = "、"))
+    note <- if (a$ok) "本次渲染可现算" else "该维在雷达上以**待表零**示之，并于轴名标注；绝不合成数值"
+  }
+  data.frame(check.names = FALSE,
+    实体 = r$实体, 领域 = paste0(r$领域ID, " ", r$领域名), 维度 = r$维度,
+    赏罚方向 = r$方向, 原始量表达式 = r$原始量表达式,
+    料源表 = gsub(";", " ＋ ", r$料源表), 料源列 = gsub(";", "、", r$料源列),
+    本次料源状态 = st, 证据等级 = r$证据等级, 备注 = paste0(r$备注, "；", note),
+    stringsAsFactors = FALSE)
+}))
+```
+
+```{r}
+#| label: trace-matrix
+# echo: false
+dt_all(TRACE, caption = "能力值追溯矩阵：实体 × 领域 × 维度 × 料源 × 在位状态",
+  note = paste0("「本次料源状态」由本次渲染逐维核对得出：缺表与缺列分列两态，不可混为一谈——",
+                "缺表是文件没到，缺列是文件到了而口径不符，二者的处置全然不同。",
+                "证据等级 E1 ＝ 全局查询直接聚合；E2 ＝ 须以代理量派生（其局限已写在备注）；",
+                "本报告任一维皆**不达 E5**，故不作因果归因之陈述"),
+  export = "06_能力值追溯矩阵", len = 15)
+```
+
+```{r}
+#| label: trace-cover
+# echo: false
+COV <- do.call(rbind, lapply(split(TRACE, TRACE$实体), function(g) {
+  ok <- sum(grepl("^🟢", g$本次料源状态))
+  data.frame(check.names = FALSE, 实体 = g$实体[1], 维度数 = nrow(g),
+    料源在位 = ok, 缺表 = sum(grepl("缺表", g$本次料源状态)),
+    缺列 = sum(grepl("缺列", g$本次料源状态)),
+    不计算 = sum(grepl("不计算", g$本次料源状态)),
+    在位率 = pct(ok / nrow(g), 1),
+    涉及领域 = paste(sort(unique(substr(g$领域, 1, 3))), collapse = " "),
+    stringsAsFactors = FALSE)
+}))
+kb(COV[order(-COV$维度数), ], escape = FALSE,
+   caption = paste0("追溯矩阵覆盖自检（渲染现算）",
+     "｜解释：在位率＝该实体料源俱在之维数 ÷ 其维度总数",
+     "｜本报告用途：在位率低于 100% 者，其雷达必有待表零之轴，读图时须先看轴名标注"))
+```
+
+```{r}
+#| label: alias-table
+# echo: false
+if (length(ALIAS$rows)) {
+  A <- do.call(rbind, ALIAS$rows)
+  A <- A[!duplicated(paste(A$来源表, A$语义角色)), ]
+  dt_all(A, caption = "别名裁决登记：同义异名列的取用，一律显式裁决",
+    note = paste0("同名异义与同义异名是本平台已实测的两类陷阱（如 bet14 在 bet01 为退水率、",
+                  "在 bet02 为派彩）。凡本报告以别名取数者皆登记于此，杜绝「隐性夺权」——",
+                  "即口径悄悄换了名字而无人察觉"),
+    export = "07_别名裁决")
+} else {
+  kb(data.frame(状态 = "本次渲染未触发任何别名降级：所需列一律以首选名命中"),
+     caption = "别名裁决登记")
+}
+```
+
+```{r}
+#| label: econ-engine
+# echo: false
+## ══════════════════════════════════════════════════════════════════════════
+##  经济核算引擎（三实体共用一套，口径只此一处）
+##  营业额口径 ＝ 有效投注（洗码量）validbet
+##  盈亏口径   ＝ GGR ＝ −Σ game_pnl（剔退水）
+##                NGR₂ ＝ −Σ net_pnl（扣退水后；本平台只能算到第三层，此为第二层）
+##                退水支出 ＝ GGR − NGR₂ ＝ Σ(net_pnl − game_pnl)
+##  ★ 「会计差额」＝（全体 NGR₂ 率 − 该群体 NGR₂ 率）× 该群体洗码量
+##    读法：**若该群体表现同于全体，平台本可多得多少**。这是情景基准下的差额，
+##    证据等级 E3，**不是因果损失**——真实增减益须随机对照方能结账。
+## ══════════════════════════════════════════════════════════════════════════
+econ_ids <- function(ids, lab = "") {
+  if (is.null(B01) || is.null(ids) || !length(ids)) return(NULL)
+  key <- as.character(B01$member_id)
+  sel <- key %in% as.character(ids)
+  if (!any(sel)) return(list(lab = lab, n = 0L, vb = 0, ggr = 0, ngr = 0, reb = 0))
+  vb  <- sum(numv(B01$validbet[sel]),  na.rm = TRUE)
+  gp  <- sum(numv(B01$game_pnl[sel]),  na.rm = TRUE)
+  np  <- sum(numv(B01$net_pnl[sel]),   na.rm = TRUE)
+  list(lab = lab, n = length(unique(key[sel])), vb = vb,
+       ggr = -gp, ngr = -np, reb = np - gp)
+}
+ECON_ALL <- econ_ids(if (is.null(B01)) NULL else unique(B01$member_id), "全体")
+rate_ngr_all <- if (is.null(ECON_ALL) || ECON_ALL$vb <= 0) NA_real_ else ECON_ALL$ngr / ECON_ALL$vb
+rate_ggr_all <- if (is.null(ECON_ALL) || ECON_ALL$vb <= 0) NA_real_ else ECON_ALL$ggr / ECON_ALL$vb
+econ_row <- function(e, 族, 口径 = "会员直接口径") {
+  if (is.null(e)) return(NULL)
+  r_ngr <- if (e$vb > 0) e$ngr / e$vb else NA_real_
+  r_ggr <- if (e$vb > 0) e$ggr / e$vb else NA_real_
+  gapv  <- if (is.finite(rate_ngr_all) && e$vb > 0) (rate_ngr_all - r_ngr) * e$vb else NA_real_
+  data.frame(check.names = FALSE,
+    风险族 = 族, 归因口径 = 口径, 命中实体数 = amt(e$n),
+    `营业额（洗码量）` = amt(e$vb),
+    `占全体营业额` = if (!is.null(ECON_ALL) && ECON_ALL$vb > 0) pct(e$vb / ECON_ALL$vb, 3) else "—",
+    `GGR（毛利）` = amt(e$ggr), `GGR 率` = pct(r_ggr, 3),
+    `NGR₂（扣退水）` = amt(e$ngr), `NGR₂ 率` = pct(r_ngr, 3),
+    `退水支出` = amt(e$reb),
+    `全体 NGR₂ 率` = pct(rate_ngr_all, 3),
+    `会计差额（若同于全体，平台本可多得）` = amt(gapv),
+    `差额占全体 NGR₂` = if (!is.null(ECON_ALL) && ECON_ALL$ngr != 0) pct(gapv / ECON_ALL$ngr, 3) else "—",
+    stringsAsFactors = FALSE)
+}
+## 样本量下限：由 Wilson 区间宽度收敛至 0.15 反解，**不由人拍**
+wilson_w <- function(n, p = 0.5, z = 1.959964) {
+  d <- 1 + z^2 / n
+  2 * (z * sqrt(p * (1 - p) / n + z^2 / (4 * n^2)) / d)
+}
+n_min_wilson <- function(target = 0.15, p = 0.5) {
+  n <- 5L; while (n < 20000L && wilson_w(n, p) > target) n <- n + 1L; n
+}
+N_MIN <- n_min_wilson(0.15, 0.5)
+qthr <- function(v, p) { v <- numv(v); v <- v[is.finite(v)]
+  if (!length(v)) return(NA_real_); as.numeric(stats::quantile(v, p, na.rm = TRUE)) }
+```
+
+```{r}
+#| label: fam-engine
+# echo: false
+## ══════════════════════════════════════════════════════════════════════════
+##  四族风险判定引擎：异常 IP · 尾秒下注 · 对打 · 同桌率
+##  纪律三条：
+##   ① **阈值一律由本窗口分布现算**（分位或反解），硬编码阈值一概不用；
+##   ② 每族皆须过**样本量门槛**——局数不足者其比率不可信，一律不进名单；
+##   ③ 名单是**调查候选**，不是定罪；荷官与代理侧一律标注为**归因口径**。
+## ══════════════════════════════════════════════════════════════════════════
+FAM <- list(); CRIT <- list()
+add_crit <- function(族, 指标, 口径, 阈值, 阈值来源, 命中) {
+  CRIT[[length(CRIT) + 1L]] <<- data.frame(check.names = FALSE,
+    风险族 = 族, 判定指标 = 指标, 计算口径 = 口径,
+    本次阈值 = 阈值, 阈值来源 = 阈值来源, 命中数 = 命中, stringsAsFactors = FALSE)
+}
+
+## ── 一族：异常 IP ─────────────────────────────────────────────────────────
+if (!is.null(IPL) && "member_id" %in% names(IPL) && "bet_ip" %in% names(IPL)) {
+  ip <- IPL
+  for (cc in c("n_orders_ip","ip_order_share","stake_ip","net_pnl_ip","game_pnl_ip","n_rounds_ip"))
+    if (cc %in% names(ip)) ip[[cc]] <- numv(ip[[cc]]) else ip[[cc]] <- NA_real_
+  if (!is.null(C01) && all(c("bet_ip","member_per_chain") %in% names(C01))) {
+    c1 <- data.frame(bet_ip = C01$bet_ip, member_per_chain = numv(C01$member_per_chain))
+    ip <- merge(ip, c1, by = "bet_ip", all.x = TRUE)
+  } else ip$member_per_chain <- NA_real_
+  if (!is.null(IPA) && "bet_ip" %in% names(IPA) && "n_member_eff" %in% names(IPA)) {
+    ia <- data.frame(bet_ip = IPA$bet_ip, n_member_eff = numv(IPA$n_member_eff))
+    ip <- merge(ip, ia, by = "bet_ip", all.x = TRUE)
+  } else ip$n_member_eff <- NA_real_
+  ## 条件化闸：稀疏网段命中方为可疑；无此件即**不得称已条件化**
+  sparse_ok <- !is.null(C08s)
+  ip$稀疏段命中 <- NA
+  if (sparse_ok) {
+    sc <- col1(C08s, c("subnet","bet_ip","ip_prefix","net24"), "稀疏网段键", "C08_subnet_sparse")
+    if (!is.na(sc)) {
+      sub24 <- function(x) sub("^((\\d+\\.){3}).*$", "\\1", as.character(x))
+      ip$稀疏段命中 <- sub24(ip$bet_ip) %in% sub24(C08s[[sc]]) | ip$bet_ip %in% C08s[[sc]]
+    } else sparse_ok <- FALSE
+  }
+  t_chain <- qthr(unique(ip[, c("bet_ip","member_per_chain")])$member_per_chain, .99)
+  t_share <- qthr(ip$ip_order_share, .90)
+  hit <- rep(TRUE, nrow(ip))
+  hit <- hit & (is.finite(ip$member_per_chain) & ip$member_per_chain >= t_chain)
+  hit <- hit & (is.finite(ip$ip_order_share)   & ip$ip_order_share   >= t_share)
+  hit <- hit & (is.finite(ip$n_orders_ip)      & ip$n_orders_ip      >= N_MIN)
+  if (sparse_ok) hit <- hit & (ip$稀疏段命中 %in% TRUE)
+  hit[is.na(hit)] <- FALSE
+  IPHIT <- ip[hit, , drop = FALSE]
+  add_crit("异常 IP", "单链会员密度 member_per_chain", "该会员所踩 IP 的一线塞号数",
+           amt2(t_chain), "本窗口 IP 分布 P99（现算）", amt(sum(hit)))
+  add_crit("异常 IP", "该 IP 注单占比 ip_order_share", "该 IP 注单 ÷ 该会员全部注单",
+           amt2(t_share), "本窗口分布 P90（现算）", "同上（与式合取）")
+  add_crit("异常 IP", "该 IP 下注单数 n_orders_ip", "样本量门槛",
+           amt(N_MIN), sprintf("Wilson 区间宽度收敛至 0.15 反解（p=0.5，%d 局）", N_MIN), "同上（与式合取）")
+  add_crit("异常 IP", "稀疏网段条件化", "滤除 CGNAT／公共出口，否则榜首为电信基础设施",
+           if (sparse_ok) "已启用（C08 在位）" else "⚠️ 未启用（C08 缺席）",
+           if (sparse_ok) "AX-A5 /24 稀疏段名单" else "**本次名单未条件化，含公共出口噪声风险**",
+           if (sparse_ok) "已计入" else "—")
+  FAM[["异常 IP"]] <- list(tbl = IPHIT, ids = unique(IPHIT$member_id),
+    key = "member_id", export = "10_玩家_异常IP名录")
+} else {
+  FAM[["异常 IP"]] <- list(tbl = NULL, ids = character(0), key = "member_id",
+    export = "10_玩家_异常IP名录")
+  add_crit("异常 IP", "—", "料源缺席", "—", "所待：I_ip_player（C-00）＋ C01_ip_chain（C-01）", "—")
+}
+
+## ── 二族：尾秒下注（**画像口径**：E1 已裁定其信息优势未能证实）───────────
+TL <- NULL
+if (!is.null(TAIL) && "member_id" %in% names(TAIL)) {
+  TL <- TAIL; TL$uid <- TL$member_id; TLsrc <- "S_player_tail（D-06）"
+} else if (!is.null(R01) && "uid" %in% names(R01)) {
+  TL <- R01; TLsrc <- "R01_late_shoe（§R01，靴末段口径）"
+}
+if (!is.null(TL)) {
+  share_c <- col1(TL, c("tail_share","late_share"), "尾段注单占比", TLsrc)
+  nrd_c   <- col1(TL, c("n_rounds_tail","n_orders_late"), "尾段样本量", TLsrc)
+  TL$.share <- if (is.na(share_c)) NA_real_ else numv(TL[[share_c]])
+  TL$.n     <- if (is.na(nrd_c))   NA_real_ else numv(TL[[nrd_c]])
+  t_share2 <- qthr(TL$.share, .99)
+  hit2 <- is.finite(TL$.share) & TL$.share >= t_share2 & is.finite(TL$.n) & TL$.n >= N_MIN
+  hit2[is.na(hit2)] <- FALSE
+  TLHIT <- TL[hit2, , drop = FALSE]
+  add_crit("尾秒下注（画像）", if (is.na(share_c)) "—" else share_c, "尾段注单 ÷ 全部注单",
+           amt2(t_share2), "本窗口分布 P99（现算）", amt(sum(hit2)))
+  add_crit("尾秒下注（画像）", if (is.na(nrd_c)) "—" else nrd_c, "样本量门槛",
+           amt(N_MIN), "Wilson 区间宽度 0.15 反解", "同上（与式合取）")
+  add_crit("尾秒下注（画像）", "经济量是否计入合计", "E1 五重检验裁定其优势未能证实",
+           "**不计入**", "主方案 §E1 尾段裁定（含 Simpson 分解与符号检验）", "—")
+  FAM[["尾秒下注（画像）"]] <- list(tbl = TLHIT, ids = unique(TLHIT$uid),
+    key = "uid", export = "11_玩家_尾秒下注画像名录", 画像 = TRUE)
+} else {
+  FAM[["尾秒下注（画像）"]] <- list(tbl = NULL, ids = character(0), key = "uid",
+    export = "11_玩家_尾秒下注画像名录", 画像 = TRUE)
+  add_crit("尾秒下注（画像）", "—", "料源缺席", "—", "所待：S_player_tail（D-06）或 R01_late_shoe（§R01）", "—")
+}
+
+## ── 三族：对打 ───────────────────────────────────────────────────────────
+if (!is.null(C06) && all(c("m_a","m_b") %in% names(C06))) {
+  cp <- C06
+  or_c <- col1(cp, c("opposite_rate"), "反向下注率", "C06_hedge_pairs")
+  ns_c <- col1(cp, c("n_same_round","n_same_orders"), "同局次数", "C06_hedge_pairs")
+  cp$.or <- if (is.na(or_c)) NA_real_ else numv(cp[[or_c]])
+  cp$.ns <- if (is.na(ns_c)) NA_real_ else numv(cp[[ns_c]])
+  t_or <- if (any(cp$.or >= 1, na.rm = TRUE)) 1 else qthr(cp$.or, .99)
+  ns_floor <- suppressWarnings(min(N_MIN, max(cp$.ns, na.rm = TRUE)))
+  hit3 <- is.finite(cp$.or) & cp$.or >= t_or &
+          (!is.finite(cp$.ns) | cp$.ns >= ns_floor)
+  hit3[is.na(hit3)] <- FALSE
+  CPHIT <- cp[hit3, , drop = FALSE]
+  ids3 <- unique(c(as.character(CPHIT$m_a), as.character(CPHIT$m_b)))
+  add_crit("对打", if (is.na(or_c)) "—" else or_c, "同局一庄一闲（完全对冲）之占比",
+           amt2(t_or), if (t_or >= 1) "完全反向（＝1）实测存在，故取其为阈"
+                       else "本窗口分布 P99（现算，无完全反向对）", amt(nrow(CPHIT)))
+  add_crit("对打", if (is.na(ns_c)) "—" else ns_c, "同局次数（样本量门槛）",
+           if (is.na(ns_c)) "⚠️ 该列缺席，本族未设样本量门槛" else amt(ns_floor),
+           "Wilson 反解与实测上限取小者，避免门槛高过全体最大值而名单恒空", "—")
+  FAM[["对打"]] <- list(tbl = CPHIT, ids = ids3, key = "m_a",
+    export = "12_玩家_对打名录", 对表 = TRUE)
+} else {
+  FAM[["对打"]] <- list(tbl = NULL, ids = character(0), key = "m_a",
+    export = "12_玩家_对打名录", 对表 = TRUE)
+  add_crit("对打", "—", "料源缺席", "—", "所待：C06_hedge_pairs（§C06fix）", "—")
+}
+
+## ── 四族：同桌率（**须活跃度校正**：裸值会被高频客污染）──────────────────
+if (!is.null(R02) && all(c("uid1","uid2") %in% names(R02))) {
+  st <- R02
+  sr_c <- col1(st, c("same_rate"), "裸同桌率", "R02_same_table")
+  so_c <- col1(st, c("n_same_orders","n_same_round"), "同桌注单数", "R02_same_table")
+  st$.sr <- if (is.na(sr_c)) NA_real_ else numv(st[[sr_c]])
+  st$.so <- if (is.na(so_c)) NA_real_ else numv(st[[so_c]])
+  med_sr <- stats::median(st$.sr, na.rm = TRUE)
+  st$相对倍数 <- if (is.finite(med_sr) && med_sr > 0) st$.sr / med_sr else NA_real_
+  t_sr <- qthr(st$.sr, .99)
+  t_so <- min(N_MIN, suppressWarnings(max(st$.so, na.rm = TRUE)))
+  hit4 <- is.finite(st$.sr) & st$.sr >= t_sr &
+          (!is.finite(st$.so) | st$.so >= t_so)
+  hit4[is.na(hit4)] <- FALSE
+  STHIT <- st[hit4, , drop = FALSE]
+  ids4 <- unique(c(as.character(STHIT$uid1), as.character(STHIT$uid2)))
+  add_crit("同桌率", if (is.na(sr_c)) "—" else sr_c, "同桌同局注单 ÷ 该对较少一方注单",
+           amt2(t_sr), "本窗口分布 P99（现算）", amt(nrow(STHIT)))
+  add_crit("同桌率", "相对倍数（活跃度校正代理量）", "裸同桌率 ÷ 全体中位数",
+           amt2(if (is.finite(med_sr) && med_sr > 0) t_sr / med_sr else NA_real_),
+           paste0("**校正未完备**：完备校正须桌数与局数分母（本包导出件不含），",
+                  "故本族名单只作候选，不作判定"), "—")
+  add_crit("同桌率", if (is.na(so_c)) "—" else so_c, "同桌注单数（样本量门槛）",
+           amt(t_so), "Wilson 反解与实测上限取小者", "同上（与式合取）")
+  FAM[["同桌率"]] <- list(tbl = STHIT, ids = ids4, key = "uid1",
+    export = "13_玩家_同桌率名录", 对表 = TRUE)
+} else {
+  FAM[["同桌率"]] <- list(tbl = NULL, ids = character(0), key = "uid1",
+    export = "13_玩家_同桌率名录", 对表 = TRUE)
+  add_crit("同桌率", "—", "料源缺席", "—", "所待：R02_same_table（§R02）", "—")
+}
+CRITTBL <- if (length(CRIT)) do.call(rbind, CRIT) else NULL
+## 出表助手：一族一表，一表一块（不在循环内出互动件——循环内的 widget 依赖挂不上）
+fam_out <- function(nm) {
+  f <- FAM[[nm]]
+  if (is.null(f)) return(kb(data.frame(状态 = "⬜ 该族未生成（料源缺席）"), caption = nm))
+  note <- paste0("本表列出该族命中记录的**全部维度**，一列不删；",
+    if (isTRUE(f$对表)) "本族以**会员对**为记录单位，故一行两名会员；" else "",
+    if (isTRUE(f$画像)) "**画像口径**：其经济量不计入漏损合计（E1 已裁定其优势未能证实）；" else "",
+    "名单性质为**调查候选**，须人工复核与结构证据方可定性")
+  dt_all(f$tbl, caption = sprintf("玩家 · %s 命中名录（全维度）", nm),
+         note = note, export = f$export)
+}
+gc2(); mem("四族判定毕")
+```
+
+# 三、玩家：领域雷达 · 能力值名单 · 四族名录 · 营业额与盈亏 {#sec-player}
+
+```{r}
+#| label: player-cap
+# echo: false
+## ══ 玩家十维原始量 → 分位归一 → 领域分（罚侧同向化）→ 综合分（赏−罚，口径不改）
+PL <- NULL; PDIM_OK <- character(0); NP <- NULL
+agg_sum <- function(keys, vals) {
+  s <- tapply(numv(vals), as.character(keys), sum, na.rm = TRUE)
+  data.frame(id = names(s), v = as.numeric(s), stringsAsFactors = FALSE)
+}
+if (!is.null(K01) && "member_id" %in% names(K01)) {
+  PL <- data.frame(member_id = as.character(K01$member_id), stringsAsFactors = FALSE)
+} else if (!is.null(B01)) {
+  PL <- data.frame(member_id = unique(as.character(B01$member_id)), stringsAsFactors = FALSE)
+}
+if (!is.null(PL)) {
+  setdim <- function(nm, v) { PL[[nm]] <<- v; PDIM_OK <<- unique(c(PDIM_OK, nm)) }
+  ## D06 流水贡献
+  if (!is.null(K01) && all(c("validbet","hedge_rate") %in% names(K01)))
+    setdim("流水贡献", numv(K01$validbet) * (1 - pmin(pmax(numv(K01$hedge_rate), 0), 1)))
+  ## D07 游戏输赢贡献（平台视角）
+  if (!is.null(B01)) {
+    g <- agg_sum(B01$member_id, B01$game_pnl)
+    setdim("游戏输赢贡献", -g$v[match(PL$member_id, g$id)])
+    ## 在册跨度与末次下注
+    dtv <- as.numeric(as.Date(B01$bet_date))
+    f <- tapply(dtv, as.character(B01$member_id), min, na.rm = TRUE)
+    l <- tapply(dtv, as.character(B01$member_id), max, na.rm = TRUE)
+    nd <- tapply(as.character(B01$bet_date), as.character(B01$member_id),
+                 function(z) length(unique(z)))
+    span <- as.numeric(l[PL$member_id]) - as.numeric(f[PL$member_id]) + 1
+    lastd <- as.numeric(l[PL$member_id])
+    ndays <- if (!is.null(K01) && "n_days" %in% names(K01)) numv(K01$n_days)
+             else as.numeric(nd[PL$member_id])
+    setdim("活跃稳定", ndays / pmax(span, 1))
+    wend <- suppressWarnings(max(dtv, na.rm = TRUE))
+    setdim("生命周期阶段", span * exp(-pmax(wend - lastd, 0) / 14))
+  }
+  ## D04 投注产品结构熵
+  if (!is.null(K01) && "side_entropy" %in% names(K01)) setdim("投注产品结构熵", numv(K01$side_entropy))
+  ## D08 索提诺稳定性（平台视角日收益：均值 ÷ 下行标准差）
+  if (!is.null(B01) && all(c("net_pnl","validbet") %in% names(B01))) {
+    r <- -numv(B01$net_pnl) / pmax(numv(B01$validbet), 1)
+    kk <- as.character(B01$member_id)
+    nn <- tapply(r, kk, function(z) sum(is.finite(z)))
+    mu <- tapply(r, kk, function(z) mean(z[is.finite(z)]))
+    dn <- tapply(r, kk, function(z) { z <- z[is.finite(z) & z < 0]
+                                      if (length(z) > 1) stats::sd(z) else NA_real_ })
+    so <- ifelse(as.numeric(nn[PL$member_id]) >= 5 & is.finite(as.numeric(dn[PL$member_id])) &
+                 as.numeric(dn[PL$member_id]) > 0,
+                 as.numeric(mu[PL$member_id]) / as.numeric(dn[PL$member_id]), NA_real_)
+    setdim("索提诺稳定性", so)
+  }
+  ## D08 对打指数 · D11 批量注册嫌疑
+  if (!is.null(C06) && all(c("m_a","m_b") %in% names(C06))) {
+    orv <- if ("opposite_rate" %in% names(C06)) numv(C06$opposite_rate) else rep(NA_real_, nrow(C06))
+    lg <- data.frame(id = c(as.character(C06$m_a), as.character(C06$m_b)),
+                     or = c(orv, orv),
+                     gap = suppressWarnings(abs(numv(C06$m_a) - numv(C06$m_b))),
+                     stringsAsFactors = FALSE)
+    mo <- tapply(lg$or, lg$id, function(z) suppressWarnings(max(z, na.rm = TRUE)))
+    mg <- tapply(lg$gap, lg$id, function(z) suppressWarnings(min(z, na.rm = TRUE)))
+    v1 <- as.numeric(mo[PL$member_id]); v1[!is.finite(v1)] <- 0
+    setdim("对打指数", v1)
+    v2 <- 1 / (1 + as.numeric(mg[PL$member_id])); v2[!is.finite(v2)] <- 0
+    setdim("批量注册嫌疑", v2)
+  }
+  ## D11 IP结构风险
+  if (!is.null(IPL) && !is.null(C01) && all(c("bet_ip","member_per_chain") %in% names(C01)) &&
+      all(c("member_id","bet_ip") %in% names(IPL))) {
+    j <- merge(data.frame(member_id = as.character(IPL$member_id), bet_ip = IPL$bet_ip,
+                          stringsAsFactors = FALSE),
+               data.frame(bet_ip = C01$bet_ip, mpc = numv(C01$member_per_chain),
+                          stringsAsFactors = FALSE), by = "bet_ip")
+    mm <- tapply(j$mpc, j$member_id, function(z) suppressWarnings(max(z, na.rm = TRUE)))
+    v3 <- as.numeric(mm[PL$member_id]); v3[!is.finite(v3)] <- 0
+    setdim("IP结构风险", v3)
+  }
+  ## D08 人工标记史
+  if (!is.null(SEED) && "member_id" %in% names(SEED))
+    setdim("人工标记史", as.numeric(PL$member_id %in% as.character(SEED$member_id)))
+  ## 分位归一
+  if (length(PDIM_OK)) {
+    NP <- as.data.frame(lapply(PDIM_OK, function(d) pq(PL[[d]])), stringsAsFactors = FALSE)
+    names(NP) <- PDIM_OK
+    dpos <- CAPDICT$维度[CAPDICT$实体 == "玩家" & CAPDICT$赏罚 > 0]
+    dneg <- CAPDICT$维度[CAPDICT$实体 == "玩家" & CAPDICT$赏罚 < 0]
+    pp <- intersect(PDIM_OK, dpos); nn2 <- intersect(PDIM_OK, dneg)
+    PL$赏 <- if (length(pp)) rowMeans(NP[pp], na.rm = TRUE) else NA_real_
+    PL$罚 <- if (length(nn2)) rowMeans(NP[nn2], na.rm = TRUE) else NA_real_
+    PL$综合分 <- PL$赏 - PL$罚
+    message(sprintf("✅ 玩家维度自检：%d/%d 维在位（%s）", length(PDIM_OK),
+      sum(CAPDICT$实体 == "玩家"), paste(u8(PDIM_OK), collapse = "、")))
+  }
+}
+## ══ 领域同向化与领域分（三实体共用）
+domain_scores <- function(NORM, dims_ok, entity) {
+  cd <- CAPDICT[CAPDICT$实体 == entity & CAPDICT$维度 %in% dims_ok, ]
+  if (!nrow(cd)) return(NULL)
+  doms <- unique(cd$领域ID)
+  out <- as.data.frame(lapply(doms, function(d) {
+    dd <- cd[cd$领域ID == d, ]
+    m <- as.data.frame(lapply(seq_len(nrow(dd)), function(i) {
+      v <- NORM[[dd$维度[i]]]
+      if (dd$赏罚[i] > 0) v else 100 - v          # 罚侧同向化：越外圈越好
+    }))
+    rowMeans(m, na.rm = TRUE)
+  }), stringsAsFactors = FALSE)
+  names(out) <- paste0(doms, " ", DOMAIN$领域名[match(doms, DOMAIN$领域ID)])
+  attr(out, "领域构成") <- cd
+  out
+}
+PD <- if (!is.null(NP)) domain_scores(NP, PDIM_OK, "玩家") else NULL
+```
+
+## 3.1 玩家各领域能力值雷达图 {#sec-player-radar}
+
+```{r}
+#| label: radar-player
+#| results: asis
+# echo: false
+if (is.null(PD) || is.null(PL) || !nrow(PL)) {
+  ph("数据库/K01_risk_feature_matrix.csv ＋ B01_bt_panel.csv", "§K01 ＋ §B01",
+     "玩家领域雷达、玩家能力值名单与玩家侧一切经济核算")
+} else {
+  allD <- paste0(DOMAIN$领域ID, " ", DOMAIN$领域名)
+  have <- names(PD)
+  ser_names <- allD
+  vals <- function(ix) vapply(allD, function(d)
+    if (d %in% have) mean(PD[[d]][ix], na.rm = TRUE) else 0, numeric(1))
+  q95 <- stats::quantile(PL$综合分, .95, na.rm = TRUE)
+  q05 <- stats::quantile(PL$综合分, .05, na.rm = TRUE)
+  grp <- list(`优质组（综合分≥P95）` = which(PL$综合分 >= q95),
+              `全体均值`             = seq_len(nrow(PL)),
+              `高危组（综合分≤P5）`  = which(PL$综合分 <= q05))
+  ser <- lapply(grp, vals)
+  names(ser) <- sprintf("%s（%s 人）", names(grp), amt(vapply(grp, length, 1L)))
+  pend <- which(!(allD %in% have))
+  cat(er_radar(tag = "玩家领域", labels = allD, series = ser,
+    cols = c(PAL$good, PAL$ac, PAL$bad), pend = if (length(pend)) pend else NULL,
+    title = sprintf("玩家 · 十二领域能力值雷达（在位 %d/12 领域 · %s 人 · 分位 0–100）",
+                    length(have), amt(nrow(PL))),
+    note = paste0("罚侧维已同向化（100−分位），故**越外圈越好**；标「待表零」之轴系本实体",
+                  "在该领域无维，是无证据而非零分；综合分仍照 §17.2 原式赏−罚计")))
+}
+```
+
+**读法**：十二条轴是**统一领域**，不是维度——领域统一方能跨实体横比（见 @sec-domain）。
+绿线（综合分前 5%）应在多数领域外扩，红线（后 5%）应内缩；
+两线在 **D08 风险**与 **D11 网络**两轴的分离度，即本套评分对玩家分层是否有效的直接凭据。
+标注**待表零**之轴（D02 激活 · D03 充值 · D10 质量 · D12 合规）是本平台的结构性空缺，
+`r if (!is.null(PD)) "" else ""`**空着即是信息，不得以邻近维填补**。
+
+## 3.2 玩家各领域能力值名单 {#sec-player-roster}
+
+```{r}
+#| label: roster-player
+# echo: false
+if (is.null(PD) || is.null(PL)) {
+  ph("数据库/K01_risk_feature_matrix.csv ＋ B01_bt_panel.csv", "§K01 ＋ §B01", "玩家能力值名单")
+} else {
+  M <- vapply(FAM, function(z) PL$member_id %in% as.character(z$ids),
+              logical(nrow(PL)))
+  if (is.null(dim(M))) M <- matrix(M, nrow = nrow(PL))
+  colnames(M) <- names(FAM)
+  flagv <- rep("—", nrow(PL))
+  ixh <- which(rowSums(M) > 0)
+  if (length(ixh)) flagv[ixh] <- apply(M[ixh, , drop = FALSE], 1,
+    function(rr) paste(colnames(M)[rr], collapse = " ＋ "))
+  RO <- bind_roster(
+    data.frame(check.names = FALSE, 会员编号 = PL$member_id,
+      综合分 = round(PL$综合分, 2), 赏侧均值 = round(PL$赏, 2),
+      罚侧均值 = round(PL$罚, 2), 综合分分位 = round(pq(PL$综合分), 1),
+      命中风险族 = flagv, stringsAsFactors = FALSE),
+    PD, NP[PDIM_OK])
+  dt_all(RO, caption = "玩家能力值名单：逐人 × 领域分 × 维度分",
+    note = paste0("列分三段：领域段（同向化后，越大越好）、维度段（分位原值，罚侧越大越糟）、",
+                  "以及命中风险族标记。按综合分升序排列——**列首者为处置优先级最高者，",
+                  "不是「最坏的人」**；综合分只定排队顺序，不定性质"),
+    order_by = "综合分", desc = FALSE, export = "20_玩家_能力值名单", len = 12)
+}
+```
+
+## 3.3 四族风险的判定标准与指标 {#sec-player-crit}
+
+```{r}
+#| label: crit-table
+# echo: false
+if (is.null(CRITTBL)) {
+  ph("四族料源（I_ip_player／S_player_tail／C06_hedge_pairs／R02_same_table）",
+     "C-00／D-06／§C06fix／§R02", "四族判定标准表与其后全部名录")
+} else {
+  dt_all(CRITTBL, caption = "四族风险判定标准与指标（阈值一律现算，不得硬编码）",
+    note = paste0("每一族皆为**合取式**：分位阈 ∧ 样本量门槛 ∧（异常 IP 另加）条件化闸。",
+                  "样本量门槛由 Wilson 区间宽度收敛至 0.15 反解，不由人拍；",
+                  "凡阈值来源写「⚠️」者，即该闸本次未能启用，其名单的性质随之降级，已于该行注明"),
+    export = "08_四族判定标准", len = 15)
+}
+```
+
+::: {.callout-important}
+## 四族名录的法定性质（三实体一体适用）
+
+- **异常 IP**：多账户共处同一网络位置且该位置塞号密度居于分布顶端者。
+  **必须条件化**——不滤 CGNAT 与公共出口，榜首会被电信基础设施占据，那不是团伙。
+- **尾秒下注**：主方案 §E1 五重检验已裁定其信息优势**未能证实**（含 Simpson 分解与符号检验）。
+  故本族**只作画像**，其经济量**不计入漏损合计**——不因均值好看而硬留。
+- **对打**：同局一庄一闲、反向下注率达完全反向者。这是**洗码套利**的指纹，
+  其漏损出在**退水与占成**，不出在赌桌输赢。
+- **同桌率**：裸同桌率会被活跃度污染——桌少人多时高同桌率是天然结果。
+  本次仅以相对倍数作**代理校正**，完备校正须桌数与局数分母（本包不含），
+  故本族一律只作**候选**，不作判定。
+:::
+
+## 3.4 四族命中名录：全维度呈现 {#sec-player-lists}
+
+### 异常 IP 命中名录
+
+```{r}
+#| label: list-player-ip
+# echo: false
+fam_out("异常 IP")
+```
+
+### 尾秒下注命中名录（画像口径）
+
+```{r}
+#| label: list-player-tail
+# echo: false
+fam_out("尾秒下注（画像）")
+```
+
+### 对打命中名录
+
+```{r}
+#| label: list-player-hedge
+# echo: false
+fam_out("对打")
+```
+
+### 同桌率命中名录
+
+```{r}
+#| label: list-player-same
+# echo: false
+fam_out("同桌率")
+```
+
+## 3.5 玩家侧结账：营业额与盈亏各损失多少 {#sec-player-econ}
+
+```{r}
+#| label: econ-player
+# echo: false
+if (is.null(B01)) {
+  ph("数据库/B01_bt_panel.csv", "§B01", "三实体全部营业额与盈亏核算")
+} else {
+  rows <- list(econ_row(ECON_ALL, "【基准】全体会员", "全窗口全体"))
+  for (nm in names(FAM)) {
+    e <- econ_ids(FAM[[nm]]$ids, nm)
+    if (!is.null(e)) rows[[length(rows) + 1L]] <- econ_row(e,
+      paste0(nm, if (isTRUE(FAM[[nm]]$画像)) "（画像·不计入合计）" else ""), "会员直接口径")
+  }
+  ## 去重合计：三族（尾秒画像除外）取并集，容斥后一次性核算
+  cnt <- setdiff(names(FAM), names(FAM)[vapply(FAM, function(z) isTRUE(z$画像), TRUE)])
+  uni <- unique(unlist(lapply(cnt, function(nm) as.character(FAM[[nm]]$ids))))
+  eu <- econ_ids(uni, "去重并集")
+  if (!is.null(eu)) rows[[length(rows) + 1L]] <- econ_row(eu,
+    paste0("【合计】", paste(cnt, collapse = " ∪ "), "（去重并集）"), "容斥去重后一次核算")
+  ECONTBL <- do.call(rbind, rows)
+  dt_all(ECONTBL, caption = "玩家侧：四族在营业额与盈亏两侧的量（渲染现算）",
+    note = paste0("营业额＝有效投注（洗码量）；GGR＝−Σgame_pnl；NGR₂＝−Σnet_pnl；",
+                  "退水支出＝GGR−NGR₂。**会计差额**＝（全体 NGR₂ 率 − 该群体 NGR₂ 率）× 该群体洗码量，",
+                  "读作「若该群体表现同于全体，平台本可多得多少」——**情景基准下的差额，非因果损失**。",
+                  "合计一律取去重并集，**绝不逐族相加**：同一会员可同时命中数族，相加即重复计算"),
+    export = "30_玩家_经济结账", len = 12)
+}
+```
+
+```{r}
+#| label: overlap-player
+# echo: false
+if (length(FAM) > 1) {
+  ks <- names(FAM)
+  OV <- do.call(rbind, lapply(ks, function(a) {
+    row <- data.frame(check.names = FALSE, 风险族 = a,
+                      命中人数 = amt(length(unique(as.character(FAM[[a]]$ids)))),
+                      stringsAsFactors = FALSE)
+    for (b in ks) row[[paste0("∩ ", b)]] <-
+      amt(length(intersect(as.character(FAM[[a]]$ids), as.character(FAM[[b]]$ids))))
+    row
+  }))
+  dt_all(OV, caption = "四族命中集合的重叠矩阵（容斥核算之凭据）",
+    note = paste0("对角线为各族自身规模，非对角为两族交集。重叠愈大，逐族相加的重复计算愈严重——",
+                  "这正是合计一律取去重并集的理由。若某两族交集恒为零，须先怀疑**是否根本没有命中**，",
+                  "而不是急于断言二者独立"),
+    export = "31_玩家_族间重叠")
+}
+```
+
+```{r}
+#| label: tail-verdict
+# echo: false
+## 尾秒一族：不止不计入合计，还须把「为何不计入」的检验结果摆出来
+TV <- NULL
+if (!is.null(TAIL) && all(c("tail_roi") %in% names(TAIL))) {
+  d <- numv(TAIL$tail_roi)
+  if ("norm_game_pnl" %in% names(TAIL) && "tail_stake" %in% names(TAIL) &&
+      "tail_game_pnl" %in% names(TAIL)) {
+    roi_t <- numv(TAIL$tail_game_pnl) / pmax(numv(TAIL$tail_stake), 1)
+    d <- roi_t
+  }
+  d <- d[is.finite(d)]
+  if (length(d) >= 30) {
+    bt <- suppressWarnings(stats::binom.test(sum(d > 0), length(d), 0.5))
+    tt <- suppressWarnings(stats::t.test(d))
+    TV <- data.frame(check.names = FALSE,
+      检验 = c("符号检验（尾段 ROI > 0 之比例对 0.5）", "单样本 t 检验（尾段 ROI 均值对 0）"),
+      统计量 = c(sprintf("正号 %s / %s（%s）", amt(sum(d > 0)), amt(length(d)),
+                        pct(mean(d > 0), 2)),
+                 sprintf("t = %.3f，df = %.0f", tt$statistic, tt$parameter)),
+      `p 值` = c(formatC(bt$p.value, format = "e", digits = 3),
+                 formatC(tt$p.value, format = "e", digits = 3)),
+      `95% 区间` = c(paste0(pct(bt$conf.int[1], 2), " ~ ", pct(bt$conf.int[2], 2)),
+                     paste0(amt2(tt$conf.int[1]), " ~ ", amt2(tt$conf.int[2]))),
+      裁定 = c(if (bt$p.value < 0.05) "在 5% 水平上偏离 0.5" else "**未能拒绝**「与掷硬币无异」",
+               if (tt$p.value < 0.05) "均值在 5% 水平上异于 0" else "**未能拒绝**「均值为 0」"),
+      stringsAsFactors = FALSE)
+  }
+}
+if (is.null(TV)) {
+  kb(data.frame(check.names = FALSE, 状态 = "⬜ 本次未能复算尾段检验",
+     所待 = "S_player_tail.csv（D-06）之 tail_roi／tail_stake／tail_game_pnl 三列",
+     说明 = "主方案 §E1 之五重检验裁定不因本表缺席而改变：尾段优势**未能证实**"),
+     caption = "尾秒一族：为何不计入漏损合计", escape = FALSE)
+} else {
+  kb(TV, escape = FALSE, caption = paste0("尾秒一族：本次复算的两项检验",
+    "｜解释：p 值大即「碰巧」的可能性不低，不足以支持尾段有信息优势",
+    "｜本报告用途：此即该族经济量不计入漏损合计的凭据，非仅援引旧结论"))
+}
+```
+
+::: {.callout-warning}
+## 三句必须与上表并读的话
+
+**其一，营业额不是损失。** 命中群体的洗码量是**敞口**，不是漏出去的钱——
+该群体照样在贡献毛利。把敞口当损失，是本行业最常见的一处夸大。
+
+**其二，会计差额不是因果损失。** 上表的差额答的是「若他们表现同于全体」，
+而不是「若他们不这么做」。二者之别即 **E3 与 E5 之别**：
+前者只需一次聚合，后者须处置台账、平行趋势与随机对照。
+
+**其三，对打族的钱不在赌桌上。** 其游戏输赢趋近于零而退水照领——
+故其漏损须看**退水支出**一列，不是看 GGR。
+处置亦随之：**调返水档位与结算复核，不是封号**。
+:::
+
+# 四、荷官：领域雷达 · 能力值名单 · 四族归因名录 · 营业额与盈亏 {#sec-dealer}
+
+::: {.callout-important}
+## 先立口径：荷官侧一律是**归因**，不是行为
+
+荷官的四族风险量，**不是荷官自己做的事**，而是「其在场时段、其桌上的玩家做了什么」
+汇总而来。故荷官名录的正确读法是：**先查玩家，再看这些玩家为何总落在同一位荷官的桌上**。
+罚侧四维与四族归因**皆是抽查线索，不是定罪证据**——
+桌面盈亏更不可直读作荷官贡献：限红、客群、时长、桌位、产品皆不同，
+高毛利可能只是坐在好桌上。
+:::
+
+```{r}
+#| label: dealer-cap
+# echo: false
+DE <- NULL; DDIM_OK <- character(0); ND <- NULL; DEALER_STAKE <- NULL
+if (!is.null(R03) && all(c("dealer_id","uid") %in% names(R03))) {
+  r <- R03
+  stk <- col1(r, c("stake_amount","validbet","stake"), "关联投注额", "R03_player_dealer")
+  pfl <- col1(r, c("profit_amount","net_pnl","game_pnl"), "关联盈亏", "R03_player_dealer")
+  r$.stake <- if (is.na(stk)) NA_real_ else numv(r[[stk]])
+  r$.prof  <- if (is.na(pfl)) NA_real_ else numv(r[[pfl]])
+  r$dealer_id <- as.character(r$dealer_id); r$uid <- as.character(r$uid)
+  gsum <- function(v, k) { s <- tapply(v, k, sum, na.rm = TRUE)
+                           data.frame(id = names(s), v = as.numeric(s), stringsAsFactors = FALSE) }
+  a1 <- gsum(r$.stake, r$dealer_id)
+  DE <- data.frame(dealer_id = a1$id, 在桌洗码量 = a1$v, stringsAsFactors = FALSE)
+  DDIM_OK <- "在桌洗码量"
+  nb <- tapply(r$uid, r$dealer_id, function(z) length(unique(z)))
+  DE$客群广度 <- as.numeric(nb[DE$dealer_id]); DDIM_OK <- c(DDIM_OK, "客群广度")
+  pf <- gsum(r$.prof, r$dealer_id)
+  DE$桌面盈亏_平台 <- -pf$v[match(DE$dealer_id, pf$id)]
+  ## 特定玩家复现率：前五大客注额 ÷ 在桌洗码量
+  top5 <- tapply(seq_len(nrow(r)), r$dealer_id, function(ix) {
+    s <- tapply(r$.stake[ix], r$uid[ix], sum, na.rm = TRUE)
+    s <- sort(s, decreasing = TRUE)
+    sum(utils::head(s, 5), na.rm = TRUE) / max(sum(s, na.rm = TRUE), 1)
+  })
+  DE$特定玩家复现率 <- as.numeric(top5[DE$dealer_id]); DDIM_OK <- c(DDIM_OK, "特定玩家复现率")
+  ## 归因三维：对打局占比 · 异常对关联 · 風險單密度
+  hedge_ids <- as.character(FAM[["对打"]]$ids)
+  if (length(hedge_ids)) {
+    ish <- r$uid %in% hedge_ids
+    hs <- tapply(ifelse(ish, r$.stake, 0), r$dealer_id, sum, na.rm = TRUE)
+    hn <- tapply(ifelse(ish, r$uid, NA_character_), r$dealer_id,
+                 function(z) length(unique(z[!is.na(z)])))
+    DE$对打局占比 <- as.numeric(hs[DE$dealer_id]) / pmax(DE$在桌洗码量, 1)
+    DE$异常对关联 <- as.numeric(hn[DE$dealer_id]) / pmax(DE$客群广度, 1)
+    DDIM_OK <- c(DDIM_OK, "对打局占比", "异常对关联")
+  }
+  if (!is.null(SEED) && "member_id" %in% names(SEED)) {
+    iss <- r$uid %in% as.character(SEED$member_id)
+    ss <- tapply(ifelse(iss, r$.stake, 0), r$dealer_id, sum, na.rm = TRUE)
+    DE$風險單密度 <- as.numeric(ss[DE$dealer_id]) / pmax(DE$在桌洗码量, 1)
+    DDIM_OK <- c(DDIM_OK, "風險單密度")
+  }
+  DEALER_STAKE <- r[, c("dealer_id","uid",".stake",".prof")]
+  ## 当值时长与节奏稳定度：须日粒度件
+  if (!is.null(R03b) && all(c("dealer_id","bet_date") %in% names(R03b))) {
+    rb <- R03b; rb$dealer_id <- as.character(rb$dealer_id)
+    nd <- tapply(as.character(rb$bet_date), rb$dealer_id, function(z) length(unique(z)))
+    DE$当值时长 <- as.numeric(nd[DE$dealer_id]); DDIM_OK <- c(DDIM_OK, "当值时长")
+    if ("n_rounds_eff" %in% names(rb)) {
+      key <- paste(rb$dealer_id, as.character(rb$bet_date), sep = "\u0001")
+      dr <- tapply(numv(rb$n_rounds_eff), key, sum, na.rm = TRUE)
+      dd <- data.frame(dealer_id = sub("\u0001.*$", "", names(dr)),
+                       v = as.numeric(dr), stringsAsFactors = FALSE)
+      cvv <- tapply(dd$v, dd$dealer_id, function(z) {
+        m <- mean(z, na.rm = TRUE); s <- stats::sd(z)
+        if (!is.finite(m) || m <= 0 || !is.finite(s)) NA_real_ else s / m })
+      DE$节奏稳定度 <- 1 / (1 + as.numeric(cvv[DE$dealer_id]))
+      DDIM_OK <- c(DDIM_OK, "节奏稳定度")
+    }
+  }
+  DDIM_OK <- intersect(CAPDICT$维度[CAPDICT$实体 == "荷官"], DDIM_OK)
+  if (length(DDIM_OK)) {
+    ND <- as.data.frame(lapply(DDIM_OK, function(d) pq(DE[[d]])), stringsAsFactors = FALSE)
+    names(ND) <- DDIM_OK
+    dpos <- CAPDICT$维度[CAPDICT$实体 == "荷官" & CAPDICT$赏罚 > 0]
+    dneg <- CAPDICT$维度[CAPDICT$实体 == "荷官" & CAPDICT$赏罚 < 0]
+    pp <- intersect(DDIM_OK, dpos); nn2 <- intersect(DDIM_OK, dneg)
+    DE$赏 <- if (length(pp)) rowMeans(ND[pp], na.rm = TRUE) else NA_real_
+    DE$罚 <- if (length(nn2)) rowMeans(ND[nn2], na.rm = TRUE) else NA_real_
+    DE$综合分 <- DE$赏 - DE$罚
+    message(sprintf("✅ 荷官维度自检：%d/%d 维在位（%s）", length(DDIM_OK),
+      sum(CAPDICT$实体 == "荷官"), paste(u8(DDIM_OK), collapse = "、")))
+  }
+}
+DD <- if (!is.null(ND)) domain_scores(ND, DDIM_OK, "荷官") else NULL
+gc2(); mem("荷官能力值毕")
+```
+
+## 4.1 荷官各领域能力值雷达图 {#sec-dealer-radar}
+
+```{r}
+#| label: radar-dealer
+#| results: asis
+# echo: false
+if (is.null(DD) || is.null(DE) || !nrow(DE)) {
+  ph("数据库/R03_player_dealer.csv（＋ R03b_player_dealer_daily.csv）", "§R03（＋§R03b）",
+     "荷官领域雷达、荷官能力值名单与荷官侧一切归因")
+} else {
+  allD <- paste0(DOMAIN$领域ID, " ", DOMAIN$领域名); have <- names(DD)
+  vals <- function(ix) vapply(allD, function(d)
+    if (d %in% have) mean(DD[[d]][ix], na.rm = TRUE) else 0, numeric(1))
+  q95 <- stats::quantile(DE$综合分, .95, na.rm = TRUE)
+  q05 <- stats::quantile(DE$综合分, .05, na.rm = TRUE)
+  grp <- list(`优质组（综合分≥P95）` = which(DE$综合分 >= q95),
+              `全体均值`             = seq_len(nrow(DE)),
+              `高危组（综合分≤P5）`  = which(DE$综合分 <= q05))
+  ser <- lapply(grp, vals)
+  names(ser) <- sprintf("%s（%s 位）", names(grp), amt(vapply(grp, length, 1L)))
+  pend <- which(!(allD %in% have))
+  cat(er_radar(tag = "荷官领域", labels = allD, series = ser,
+    cols = c(PAL$good, PAL$ac, PAL$bad), pend = if (length(pend)) pend else NULL,
+    title = sprintf("荷官 · 十二领域能力值雷达（在位 %d/12 领域 · %s 位 · 分位 0–100）",
+                    length(have), amt(nrow(DE))),
+    note = paste0("罚侧维已同向化，越外圈越好；荷官侧全部维度皆为**过程项**——",
+                  "短期输赢是波动，故雷达上没有「输赢」这条轴，也不该有")))
+}
+```
+
+**读法**：荷官雷达上**没有盈亏轴**，这是设计而非遗漏——荷官的短期输赢是波动，
+把它算进绩效，等于用运气考核人。可用者只有 **D06 收入**（在桌洗码量）、
+**D04 活跃**（客群广度）、**D09 效率**（当值时长 · 节奏稳定度）、
+**D08 风险**与 **D11 网络**（皆为归因项）。
+须并读一处实测局限：**局速在数学上不可算**——本包无开台／收台时戳，日期只到日粒度，
+分母无从取得，故以**节奏稳定度**作过程代理，它衡量「稳不稳」，不衡量「快不快」，二者不可互替。
+
+## 4.2 荷官各领域能力值名单 {#sec-dealer-roster}
+
+```{r}
+#| label: roster-dealer
+# echo: false
+if (is.null(DD) || is.null(DE)) {
+  ph("数据库/R03_player_dealer.csv", "§R03", "荷官能力值名单")
+} else {
+  RD <- bind_roster(
+    data.frame(check.names = FALSE, 荷官工号 = DE$dealer_id,
+      综合分 = round(DE$综合分, 2), 赏侧均值 = round(DE$赏, 2),
+      罚侧均值 = round(DE$罚, 2), 综合分分位 = round(pq(DE$综合分), 1),
+      `在桌洗码量（原值）` = round(DE$在桌洗码量, 2),
+      `桌面盈亏·平台视角（原值）` = round(DE$桌面盈亏_平台, 2),
+      stringsAsFactors = FALSE),
+    DD, ND[DDIM_OK])
+  dt_all(RD, caption = "荷官能力值名单：逐位 × 领域分 × 维度分",
+    note = paste0("「桌面盈亏·平台视角」只作**背景量**，不入任何维度、不入综合分——",
+                  "桌面盈亏受限红、客群、桌位与产品左右，直读即以运气考核人。",
+                  "按综合分升序：列首者为抽查优先级最高者"),
+    order_by = "综合分", desc = FALSE, export = "21_荷官_能力值名单")
+}
+```
+
+## 4.3 荷官四族归因：判定标准与名录 {#sec-dealer-lists}
+
+```{r}
+#| label: dealer-attr
+# echo: false
+DATTR <- NULL; DCRIT <- NULL
+if (!is.null(DEALER_STAKE) && !is.null(DE)) {
+  base <- data.frame(dealer_id = DE$dealer_id, 在桌洗码量 = DE$在桌洗码量,
+                     客群广度 = DE$客群广度, stringsAsFactors = FALSE)
+  t_scale <- qthr(base$在桌洗码量, .50)     # 规模门槛：小样本荷官不入名单
+  mk <- function(ids, nm) {
+    ids <- as.character(ids)
+    if (!length(ids)) return(NULL)
+    sel <- DEALER_STAKE$uid %in% ids
+    st <- tapply(ifelse(sel, DEALER_STAKE$.stake, 0), DEALER_STAKE$dealer_id, sum, na.rm = TRUE)
+    pf <- tapply(ifelse(sel, DEALER_STAKE$.prof, 0), DEALER_STAKE$dealer_id, sum, na.rm = TRUE)
+    nu <- tapply(ifelse(sel, DEALER_STAKE$uid, NA_character_), DEALER_STAKE$dealer_id,
+                 function(z) length(unique(z[!is.na(z)])))
+    d <- base
+    d$风险族 <- nm
+    d$归因命中客数 <- as.numeric(nu[d$dealer_id])
+    d$归因客占比 <- d$归因命中客数 / pmax(d$客群广度, 1)
+    d$归因投注额 <- as.numeric(st[d$dealer_id])
+    d$归因注额占比 <- d$归因投注额 / pmax(d$在桌洗码量, 1)
+    d$归因盈亏_平台 <- -as.numeric(pf[d$dealer_id])
+    d
+  }
+  parts <- lapply(names(FAM), function(nm) mk(FAM[[nm]]$ids, nm))
+  parts <- parts[!vapply(parts, is.null, TRUE)]
+  if (length(parts)) {
+    DATTR <- do.call(rbind, parts)
+    DATTR$命中 <- FALSE
+    for (nm in unique(DATTR$风险族)) {
+      ix <- which(DATTR$风险族 == nm)
+      tt <- qthr(DATTR$归因注额占比[ix], .99)
+      DATTR$命中[ix] <- is.finite(DATTR$归因注额占比[ix]) &
+        DATTR$归因注额占比[ix] >= tt & DATTR$在桌洗码量[ix] >= t_scale
+      DCRIT <- rbind(DCRIT, data.frame(check.names = FALSE,
+        风险族 = nm, 判定指标 = "归因注额占比（该族命中玩家注额 ÷ 该荷官在桌洗码量）",
+        计算口径 = "归因口径：其桌上的玩家行为汇总，**非荷官自身行为**",
+        本次阈值 = amt2(tt), 阈值来源 = "本窗口荷官分布 P99（现算）",
+        规模门槛 = paste0("在桌洗码量 ≥ ", amt(t_scale), "（全体 P50，现算）"),
+        命中荷官数 = amt(sum(DATTR$命中[ix], na.rm = TRUE)), stringsAsFactors = FALSE))
+    }
+    DATTR$命中[is.na(DATTR$命中)] <- FALSE
+  }
+}
+## 出表助手：一族一表，一表一块
+dlr_out <- function(nm) {
+  if (is.null(DATTR)) return(kb(data.frame(状态 = "⬜ 荷官归因未生成（料源缺席）"), caption = nm))
+  sub <- DATTR[DATTR$风险族 == nm & DATTR$命中, , drop = FALSE]
+  if (!is.null(DE)) {
+    ## 并表前先剔已在列者，免生 .x／.y 后缀（重复列名读者无从分辨）
+    keep <- setdiff(intersect(c(DDIM_OK, "综合分", "赏", "罚"), names(DE)), names(sub))
+    if (length(keep)) sub <- merge(sub, DE[, c("dealer_id", keep), drop = FALSE],
+                                   by = "dealer_id", all.x = TRUE)
+  }
+  dt_all(sub, caption = sprintf("荷官 · %s 归因命中名录（全维度）", nm),
+    note = paste0("本表含该荷官的全部能力值维度与四项归因量（命中客数 · 客占比 · ",
+                  "归因投注额 · 归因注额占比 · 归因盈亏）。",
+                  if (isTRUE(FAM[[nm]]$画像)) "**画像口径**：其经济量不计入合计。" else "",
+                  "读法：**先查这些玩家，再问他们为何总落在同一桌**"),
+    order_by = "归因注额占比", export = paste0("14_荷官_", nm, "_归因名录"))
+}
+```
+
+```{r}
+#| label: dealer-crit-out
+# echo: false
+if (is.null(DCRIT)) {
+  ph("数据库/R03_player_dealer.csv ＋ 四族料源", "§R03 ＋ C-00／D-06／§C06fix／§R02",
+     "荷官四族归因判定标准与名录")
+} else {
+  dt_all(DCRIT, caption = "荷官四族归因的判定标准与指标",
+    note = paste0("两道闸皆为现算：**分位闸**取该族归因注额占比的 P99，",
+                  "**规模闸**取在桌洗码量的 P50——不设规模闸，榜首必是只开过几局的荷官。",
+                  "命中即列入抽查，**不代表该荷官有任何违规**"),
+    export = "09_荷官_归因判定标准")
+}
+```
+
+### 荷官 · 异常 IP（归因）
+
+```{r}
+#| label: list-dealer-ip
+# echo: false
+dlr_out("异常 IP")
+```
+
+### 荷官 · 尾秒下注（归因 · 画像口径）
+
+```{r}
+#| label: list-dealer-tail
+# echo: false
+dlr_out("尾秒下注（画像）")
+```
+
+### 荷官 · 对打（归因）
+
+```{r}
+#| label: list-dealer-hedge
+# echo: false
+dlr_out("对打")
+```
+
+### 荷官 · 同桌率（归因）
+
+```{r}
+#| label: list-dealer-same
+# echo: false
+dlr_out("同桌率")
+```
+
+## 4.4 荷官侧结账：营业额与盈亏各损失多少 {#sec-dealer-econ}
+
+```{r}
+#| label: econ-dealer
+# echo: false
+if (is.null(DATTR)) {
+  ph("数据库/R03_player_dealer.csv", "§R03", "荷官侧经济结账")
+} else {
+  tot_stake <- sum(DE$在桌洗码量, na.rm = TRUE)
+  tot_pf    <- sum(DE$桌面盈亏_平台, na.rm = TRUE)
+  rate_all  <- if (tot_stake > 0) tot_pf / tot_stake else NA_real_
+  rows <- list(data.frame(check.names = FALSE, 风险族 = "【基准】全体荷官桌面",
+    命中荷官数 = amt(nrow(DE)), `归因营业额（注额）` = amt(tot_stake),
+    `占全体桌面注额` = pct(1, 2), `归因盈亏（平台视角）` = amt(tot_pf),
+    `归因留成率` = pct(rate_all, 3), `全体留成率` = pct(rate_all, 3),
+    `会计差额（若同于全体）` = amt(0), stringsAsFactors = FALSE))
+  for (nm in unique(DATTR$风险族)) {
+    s <- DATTR[DATTR$风险族 == nm & DATTR$命中, , drop = FALSE]
+    vb <- sum(s$归因投注额, na.rm = TRUE); pf <- sum(s$归因盈亏_平台, na.rm = TRUE)
+    rr <- if (vb > 0) pf / vb else NA_real_
+    gapv <- if (is.finite(rate_all) && vb > 0) (rate_all - rr) * vb else NA_real_
+    rows[[length(rows) + 1L]] <- data.frame(check.names = FALSE,
+      风险族 = paste0(nm, if (isTRUE(FAM[[nm]]$画像)) "（画像·不计入合计）" else ""),
+      命中荷官数 = amt(nrow(s)), `归因营业额（注额）` = amt(vb),
+      `占全体桌面注额` = pct(vb / max(tot_stake, 1), 3),
+      `归因盈亏（平台视角）` = amt(pf), `归因留成率` = pct(rr, 3),
+      `全体留成率` = pct(rate_all, 3), `会计差额（若同于全体）` = amt(gapv),
+      stringsAsFactors = FALSE)
+  }
+  dt_all(do.call(rbind, rows), caption = "荷官侧：四族归因在营业额与盈亏两侧的量",
+    note = paste0("**归因营业额**＝该族命中玩家在该荷官桌上的投注额，是**敞口**不是损失；",
+                  "**归因盈亏**＝其桌上该族玩家输赢的平台视角合计；",
+                  "**留成率**＝归因盈亏 ÷ 归因营业额。三者皆为归因量——",
+                  "荷官侧不得逐族相加，亦不得读作荷官造成的损失"),
+    export = "32_荷官_经济结账")
+}
+```
+
+# 五、代理：领域雷达 · 能力值名单 · 四族归因名录 · 营业额与盈亏 {#sec-agent}
+
+```{r}
+#| label: agent-cap
+# echo: false
+AG <- NULL; ADIM_OK <- character(0); NAG <- NULL; MAP3 <- NULL
+if (!is.null(IPL) && all(c("member_id","lv3") %in% names(IPL))) {
+  MAP3 <- unique(data.frame(member_id = as.character(IPL$member_id),
+                            lv3 = as.character(IPL$lv3), stringsAsFactors = FALSE))
+  MAP3 <- MAP3[!is.na(MAP3$lv3) & nzchar(MAP3$lv3), , drop = FALSE]
+  MAP3 <- MAP3[!duplicated(MAP3$member_id), , drop = FALSE]   # 一员一线：取首现，重复归属另行登记
+  nmem <- tapply(MAP3$member_id, MAP3$lv3, function(z) length(unique(z)))
+  AG <- data.frame(lv3 = names(nmem), 线下规模 = as.numeric(nmem), stringsAsFactors = FALSE)
+  ADIM_OK <- "线下规模"
+  ## 真实流水
+  if (!is.null(K01) && all(c("member_id","validbet","hedge_rate") %in% names(K01))) {
+    k2 <- data.frame(member_id = as.character(K01$member_id),
+                     rv = numv(K01$validbet) * (1 - pmin(pmax(numv(K01$hedge_rate), 0), 1)),
+                     stringsAsFactors = FALSE)
+    k2 <- merge(k2, MAP3, by = "member_id")
+    s <- tapply(k2$rv, k2$lv3, sum, na.rm = TRUE)
+    AG$真实流水 <- as.numeric(s[AG$lv3]); ADIM_OK <- c(ADIM_OK, "真实流水")
+  }
+  ## 退水消耗比
+  if (!is.null(B01) && all(c("net_pnl","game_pnl") %in% names(B01))) {
+    b <- data.frame(member_id = as.character(B01$member_id),
+                    reb = numv(B01$net_pnl) - numv(B01$game_pnl),
+                    ggr = -numv(B01$game_pnl), stringsAsFactors = FALSE)
+    b <- merge(b, MAP3, by = "member_id")
+    r1 <- tapply(b$reb, b$lv3, sum, na.rm = TRUE)
+    g1 <- tapply(b$ggr, b$lv3, sum, na.rm = TRUE)
+    den <- as.numeric(g1[AG$lv3]); nbad <- sum(den <= 0, na.rm = TRUE)
+    if (nbad > 0) message(sprintf("ℹ️ 退水消耗比：%d 条线游戏赢利非正，分母按 1 计并点名", nbad))
+    AG$退水消耗比 <- as.numeric(r1[AG$lv3]) / pmax(den, 1); ADIM_OK <- c(ADIM_OK, "退水消耗比")
+    AG$线下GGR <- den; AG$线下退水 <- as.numeric(r1[AG$lv3])
+  }
+  ## 对打渗透率
+  if (length(as.character(FAM[["对打"]]$ids))) {
+    hh <- MAP3[MAP3$member_id %in% as.character(FAM[["对打"]]$ids), , drop = FALSE]
+    hc <- table(hh$lv3)
+    v <- as.numeric(hc[AG$lv3]); v[is.na(v)] <- 0
+    AG$对打渗透率 <- v / pmax(AG$线下规模, 1); ADIM_OK <- c(ADIM_OK, "对打渗透率")
+  }
+  ## 单链密度
+  if (!is.null(C01) && all(c("bet_ip","member_per_chain") %in% names(C01)) &&
+      "bet_ip" %in% names(IPL)) {
+    li <- unique(data.frame(bet_ip = IPL$bet_ip, lv3 = as.character(IPL$lv3),
+                            stringsAsFactors = FALSE))
+    li <- merge(li, data.frame(bet_ip = C01$bet_ip, mpc = numv(C01$member_per_chain),
+                               stringsAsFactors = FALSE), by = "bet_ip")
+    mx <- tapply(li$mpc, li$lv3, function(z) suppressWarnings(max(z, na.rm = TRUE)))
+    v <- as.numeric(mx[AG$lv3]); v[!is.finite(v)] <- 0
+    AG$单链密度 <- v; ADIM_OK <- c(ADIM_OK, "单链密度")
+  }
+  ## 下线留存 · 新增会员质量
+  if (!is.null(PPM) && all(c("member_id","ym") %in% names(PPM))) {
+    pm <- data.frame(member_id = as.character(PPM$member_id), ym = as.character(PPM$ym),
+                     net = if ("net_pnl" %in% names(PPM)) numv(PPM$net_pnl) else NA_real_,
+                     stringsAsFactors = FALSE)
+    pm <- merge(pm, MAP3, by = "member_id")
+    if (nrow(pm)) {
+      rt <- tapply(seq_len(nrow(pm)), pm$lv3, function(ix) {
+        g <- pm[ix, ]; ms <- sort(unique(g$ym))
+        if (length(ms) < 2) return(NA_real_)
+        mean(vapply(seq_len(length(ms) - 1), function(i) {
+          s0 <- unique(g$member_id[g$ym == ms[i]]); s1 <- unique(g$member_id[g$ym == ms[i + 1]])
+          if (length(s0)) length(intersect(s0, s1)) / length(s0) else NA_real_
+        }, numeric(1)), na.rm = TRUE)
+      })
+      AG$下线留存 <- as.numeric(rt[AG$lv3]); ADIM_OK <- c(ADIM_OK, "下线留存")
+      ym0 <- min(pm$ym, na.rm = TRUE)
+      fm <- tapply(pm$ym, pm$member_id, min)
+      pm$fm <- as.character(fm[pm$member_id])
+      nw <- pm[pm$ym == pm$fm & pm$fm > ym0, , drop = FALSE]
+      if (nrow(nw)) {
+        nq <- tapply(-nw$net, nw$lv3, mean, na.rm = TRUE)
+        AG$新增会员质量 <- as.numeric(nq[AG$lv3]); ADIM_OK <- c(ADIM_OK, "新增会员质量")
+      }
+    }
+  }
+  ADIM_OK <- intersect(CAPDICT$维度[CAPDICT$实体 == "代理"], ADIM_OK)
+  if (length(ADIM_OK)) {
+    NAG <- as.data.frame(lapply(ADIM_OK, function(d) pq(AG[[d]])), stringsAsFactors = FALSE)
+    names(NAG) <- ADIM_OK
+    dpos <- CAPDICT$维度[CAPDICT$实体 == "代理" & CAPDICT$赏罚 > 0]
+    dneg <- CAPDICT$维度[CAPDICT$实体 == "代理" & CAPDICT$赏罚 < 0]
+    pp <- intersect(ADIM_OK, dpos); nn2 <- intersect(ADIM_OK, dneg)
+    AG$赏 <- if (length(pp)) rowMeans(NAG[pp], na.rm = TRUE) else NA_real_
+    AG$罚 <- if (length(nn2)) rowMeans(NAG[nn2], na.rm = TRUE) else NA_real_
+    AG$综合分 <- AG$赏 - AG$罚
+    message(sprintf("✅ 代理维度自检：%d/%d 维在位（%s）", length(ADIM_OK),
+      sum(CAPDICT$实体 == "代理"), paste(u8(ADIM_OK), collapse = "、")))
+  }
+}
+AD <- if (!is.null(NAG)) domain_scores(NAG, ADIM_OK, "代理") else NULL
+gc2(); mem("代理能力值毕")
+```
+
+```{r}
+#| label: agent-coverage
+# echo: false
+## 归属覆盖率：代理侧一切结账皆以此为分母上限，先说破再看数
+if (is.null(MAP3) || is.null(B01)) {
+  ph("数据库/I_ip_player.csv（须含 lv3）", "C-00", "代理归属映射与代理侧一切结账")
+} else {
+  allm <- unique(as.character(B01$member_id))
+  cov <- length(intersect(allm, MAP3$member_id)) / max(length(allm), 1)
+  vb_all <- sum(numv(B01$validbet), na.rm = TRUE)
+  vb_map <- sum(numv(B01$validbet[as.character(B01$member_id) %in% MAP3$member_id]), na.rm = TRUE)
+  kb(data.frame(check.names = FALSE,
+    `有经济记录的会员数` = amt(length(allm)),
+    `可归属到 LV3 线者` = amt(length(intersect(allm, MAP3$member_id))),
+    `会员归属覆盖率` = pct(cov, 2),
+    `洗码量归属覆盖率` = pct(vb_map / max(vb_all, 1), 2),
+    `代理线条数` = amt(nrow(AG %||% data.frame())),
+    裁定 = if (cov > 0.99) "✅ 近乎全覆盖：代理侧合计与玩家侧合计可直接对照"
+           else "⚠️ 未全覆盖：**代理侧合计必然小于玩家侧合计**，差额即未归属者，不得读作漏算"),
+    caption = paste0("代理归属覆盖率（渲染现算）",
+      "｜解释：一员一线取首现映射，重复归属者本次只计一次",
+      "｜本报告用途：代理侧一切结账之分母上限，先说破再看数"), escape = FALSE)
+}
+```
+
+## 5.1 代理各领域能力值雷达图 {#sec-agent-radar}
+
+```{r}
+#| label: radar-agent
+#| results: asis
+# echo: false
+if (is.null(AD) || is.null(AG) || !nrow(AG)) {
+  ph("数据库/I_ip_player.csv（须含 lv3）＋ K01 ＋ B01", "C-00 ＋ §K01 ＋ §B01",
+     "代理领域雷达、代理能力值名单与代理侧一切归因")
+} else {
+  allD <- paste0(DOMAIN$领域ID, " ", DOMAIN$领域名); have <- names(AD)
+  vals <- function(ix) vapply(allD, function(d)
+    if (d %in% have) mean(AD[[d]][ix], na.rm = TRUE) else 0, numeric(1))
+  q95 <- stats::quantile(AG$综合分, .95, na.rm = TRUE)
+  q05 <- stats::quantile(AG$综合分, .05, na.rm = TRUE)
+  grp <- list(`优质组（综合分≥P95）` = which(AG$综合分 >= q95),
+              `全体均值`             = seq_len(nrow(AG)),
+              `高危组（综合分≤P5）`  = which(AG$综合分 <= q05))
+  ser <- lapply(grp, vals)
+  names(ser) <- sprintf("%s（%s 条线）", names(grp), amt(vapply(grp, length, 1L)))
+  pend <- which(!(allD %in% have))
+  cat(er_radar(tag = "代理领域", labels = allD, series = ser,
+    cols = c(PAL$good, PAL$ac, PAL$bad), pend = if (length(pend)) pend else NULL,
+    title = sprintf("代理 · 十二领域能力值雷达（在位 %d/12 领域 · %s 条线 · 分位 0–100）",
+                    length(have), amt(nrow(AG))),
+    note = paste0("罚侧维已同向化，越外圈越好；代理是唯一在 **D01 获客**有维的实体——",
+                  "其赏侧答「这条线养不养家」，罚侧答「这条线干不干净」，二者可同时高")))
+}
+```
+
+**读法**：代理的两副面孔可以同时成立——**赏侧高（养家）与罚侧高（不干净）并不矛盾**，
+处置随之分立：**佣金照结（赏侧，可等），结算复核照做（罚侧，不能等）**。
+罚侧三维中，**退水消耗比**是洗码链的命门：线下退水支出吃掉线下毛利者，
+其漏损出在成本结构，不出在赌桌——**该调的是返水档位，不是封线**。
+
+## 5.2 代理各领域能力值名单 {#sec-agent-roster}
+
+```{r}
+#| label: roster-agent
+# echo: false
+if (is.null(AD) || is.null(AG)) {
+  ph("数据库/I_ip_player.csv（须含 lv3）", "C-00", "代理能力值名单")
+} else {
+  RA <- bind_roster(
+    data.frame(check.names = FALSE, `LV3 代理线` = AG$lv3,
+      综合分 = round(AG$综合分, 2), 赏侧均值 = round(AG$赏, 2),
+      罚侧均值 = round(AG$罚, 2), 综合分分位 = round(pq(AG$综合分), 1),
+      stringsAsFactors = FALSE),
+    AD, NAG[ADIM_OK])
+  dt_all(RA, caption = "代理能力值名单：逐线 × 领域分 × 维度分",
+    note = "按综合分升序：列首者为结算复核优先级最高者。赏侧与罚侧须分开读，不可合并为一句结论",
+    order_by = "综合分", desc = FALSE, export = "22_代理_能力值名单")
+}
+```
+
+## 5.3 代理四族归因：判定标准与名录 {#sec-agent-lists}
+
+```{r}
+#| label: agent-attr
+# echo: false
+AATTR <- NULL; ACRIT <- NULL
+if (!is.null(MAP3) && !is.null(AG)) {
+  t_size <- qthr(AG$线下规模, .50)
+  for (nm in names(FAM)) {
+    ids <- as.character(FAM[[nm]]$ids)
+    hh <- MAP3[MAP3$member_id %in% ids, , drop = FALSE]
+    hc <- table(hh$lv3)
+    d <- data.frame(check.names = FALSE, lv3 = AG$lv3, 风险族 = nm,
+      线下规模 = AG$线下规模, stringsAsFactors = FALSE)
+    v <- as.numeric(hc[d$lv3]); v[is.na(v)] <- 0
+    d$线下命中会员数 <- v
+    d$线下渗透率 <- v / pmax(d$线下规模, 1)
+    if (!is.null(B01)) {
+      bsel <- as.character(B01$member_id) %in% ids
+      bm <- data.frame(member_id = as.character(B01$member_id)[bsel],
+                       vb = numv(B01$validbet)[bsel], gp = numv(B01$game_pnl)[bsel],
+                       np = numv(B01$net_pnl)[bsel], stringsAsFactors = FALSE)
+      bm <- merge(bm, MAP3, by = "member_id")
+      if (nrow(bm)) {
+        s1 <- tapply(bm$vb, bm$lv3, sum, na.rm = TRUE)
+        s2 <- tapply(bm$gp, bm$lv3, sum, na.rm = TRUE)
+        s3 <- tapply(bm$np, bm$lv3, sum, na.rm = TRUE)
+        d$归因营业额 <- as.numeric(s1[d$lv3]); d$归因营业额[is.na(d$归因营业额)] <- 0
+        d$归因GGR <- -as.numeric(s2[d$lv3]);  d$归因GGR[is.na(d$归因GGR)] <- 0
+        d$归因NGR2 <- -as.numeric(s3[d$lv3]); d$归因NGR2[is.na(d$归因NGR2)] <- 0
+        d$归因退水 <- d$归因GGR - d$归因NGR2
+      }
+    }
+    tt <- qthr(d$线下渗透率, .99)
+    d$命中 <- is.finite(d$线下渗透率) & d$线下渗透率 >= tt & d$线下规模 >= t_size
+    d$命中[is.na(d$命中)] <- FALSE
+    AATTR <- rbind(AATTR, d)
+    ACRIT <- rbind(ACRIT, data.frame(check.names = FALSE, 风险族 = nm,
+      判定指标 = "线下渗透率（该族命中会员数 ÷ 线下会员数）",
+      计算口径 = "归因口径：其线下会员的行为汇总，**非代理自身行为**",
+      本次阈值 = amt2(tt), 阈值来源 = "本窗口代理线分布 P99（现算）",
+      规模门槛 = paste0("线下规模 ≥ ", amt(t_size), "（全体 P50，现算）"),
+      命中线数 = amt(sum(d$命中, na.rm = TRUE)), stringsAsFactors = FALSE))
+  }
+}
+## 出表助手：一族一表，一表一块
+agt_out <- function(nm) {
+  if (is.null(AATTR)) return(kb(data.frame(状态 = "⬜ 代理归因未生成（料源缺席）"), caption = nm))
+  sub <- AATTR[AATTR$风险族 == nm & AATTR$命中, , drop = FALSE]
+  keep <- setdiff(intersect(c(ADIM_OK, "综合分", "赏", "罚"), names(AG)), names(sub))
+  if (length(keep)) sub <- merge(sub, AG[, c("lv3", keep), drop = FALSE],
+                                 by = "lv3", all.x = TRUE)
+  dt_all(sub, caption = sprintf("代理 · %s 归因命中名录（全维度）", nm),
+    note = paste0("本表含该线的全部能力值维度与归因量（线下命中会员数 · 线下渗透率 · ",
+                  "归因营业额 · 归因 GGR · 归因 NGR₂ · 归因退水）。",
+                  if (isTRUE(FAM[[nm]]$画像)) "**画像口径**：其经济量不计入合计。" else "",
+                  "处置指向**结算环节**，不涉线下会员账户本身"),
+    order_by = "线下渗透率", export = paste0("15_代理_", nm, "_归因名录"))
+}
+```
+
+```{r}
+#| label: agent-crit-out
+# echo: false
+if (is.null(ACRIT)) {
+  ph("数据库/I_ip_player.csv（须含 lv3）＋ 四族料源", "C-00 ＋ D-06／§C06fix／§R02",
+     "代理四族归因判定标准与名录")
+} else {
+  dt_all(ACRIT, caption = "代理四族归因的判定标准与指标",
+    note = paste0("与荷官侧同构：分位闸取线下渗透率 P99，规模闸取线下规模 P50——",
+                  "不设规模闸，榜首必是只有三五个会员的小线。",
+                  "命中即列入结算复核，**不代表该线有任何违规**"),
+    export = "09b_代理_归因判定标准")
+}
+```
+
+### 代理 · 异常 IP（归因）
+
+```{r}
+#| label: list-agent-ip
+# echo: false
+agt_out("异常 IP")
+```
+
+### 代理 · 尾秒下注（归因 · 画像口径）
+
+```{r}
+#| label: list-agent-tail
+# echo: false
+agt_out("尾秒下注（画像）")
+```
+
+### 代理 · 对打（归因）
+
+```{r}
+#| label: list-agent-hedge
+# echo: false
+agt_out("对打")
+```
+
+### 代理 · 同桌率（归因）
+
+```{r}
+#| label: list-agent-same
+# echo: false
+agt_out("同桌率")
+```
+
+## 5.4 代理侧结账：营业额与盈亏各损失多少 {#sec-agent-econ}
+
+```{r}
+#| label: econ-agent
+# echo: false
+if (is.null(AATTR) || !("归因营业额" %in% names(AATTR))) {
+  ph("数据库/I_ip_player.csv（须含 lv3）＋ B01_bt_panel.csv", "C-00 ＋ §B01", "代理侧经济结账")
+} else {
+  rows <- list()
+  if (!is.null(ECON_ALL)) rows[[1]] <- data.frame(check.names = FALSE,
+    风险族 = "【基准】全体（玩家侧全量）", 命中线数 = "—",
+    `归因营业额` = amt(ECON_ALL$vb), `归因GGR` = amt(ECON_ALL$ggr),
+    `归因NGR₂` = amt(ECON_ALL$ngr), `归因退水` = amt(ECON_ALL$reb),
+    `NGR₂ 率` = pct(rate_ngr_all, 3),
+    `会计差额（若同于全体）` = amt(0), stringsAsFactors = FALSE)
+  for (nm in unique(AATTR$风险族)) {
+    s <- AATTR[AATTR$风险族 == nm & AATTR$命中, , drop = FALSE]
+    vb <- sum(s$归因营业额, na.rm = TRUE); gg <- sum(s$归因GGR, na.rm = TRUE)
+    ng <- sum(s$归因NGR2, na.rm = TRUE);  rb <- sum(s$归因退水, na.rm = TRUE)
+    rr <- if (vb > 0) ng / vb else NA_real_
+    gapv <- if (is.finite(rate_ngr_all) && vb > 0) (rate_ngr_all - rr) * vb else NA_real_
+    rows[[length(rows) + 1L]] <- data.frame(check.names = FALSE,
+      风险族 = paste0(nm, if (isTRUE(FAM[[nm]]$画像)) "（画像·不计入合计）" else ""),
+      命中线数 = amt(nrow(s)), `归因营业额` = amt(vb), `归因GGR` = amt(gg),
+      `归因NGR₂` = amt(ng), `归因退水` = amt(rb), `NGR₂ 率` = pct(rr, 3),
+      `会计差额（若同于全体）` = amt(gapv), stringsAsFactors = FALSE)
+  }
+  dt_all(do.call(rbind, rows), caption = "代理侧：四族归因在营业额与盈亏两侧的量",
+    note = paste0("代理侧的量**只统计命中线**（渗透率过 P99 且规模过 P50 者），",
+                  "故其合计小于玩家侧合计——差额是未命中线上的同族会员，**不是漏算**。",
+                  "归因退水一列尤须细看：对打族与打水型的漏损皆出在此，不出在 GGR"),
+    export = "33_代理_经济结账")
+}
+```
+
+# 六、三实体并读：一张总表，五条不可越界 {#sec-cross}
+
+```{r}
+#| label: cross-entity
+# echo: false
+CX <- do.call(rbind, lapply(list(
+  list(e = "玩家", obj = PL, dim = PDIM_OK, dom = PD, id = "会员"),
+  list(e = "荷官", obj = DE, dim = DDIM_OK, dom = DD, id = "荷官"),
+  list(e = "代理", obj = AG, dim = ADIM_OK, dom = AD, id = "LV3 线")
+), function(z) {
+  ntot <- sum(CAPDICT$实体 == z$e)
+  data.frame(check.names = FALSE, 实体 = z$e, 计数单位 = z$id,
+    实体数 = if (is.null(z$obj)) "⬜ 未生成" else amt(nrow(z$obj)),
+    `维度在位／登记` = sprintf("%d / %d", length(z$dim), ntot),
+    `领域在位／十二` = if (is.null(z$dom)) "0 / 12" else sprintf("%d / 12", ncol(z$dom)),
+    `在位维度` = if (length(z$dim)) paste(u8(z$dim), collapse = "、") else "—",
+    `本报告口径` = if (z$e == "玩家") "**行为口径**：其量即其自身所为"
+                   else "**归因口径**：其量由其在场／在链的玩家行为汇总而来",
+    stringsAsFactors = FALSE)
+}))
+dt_all(CX, caption = "三实体并读总表（渲染现算）",
+  note = paste0("「维度在位／登记」之分母是追溯矩阵所登记之维数，分子是本次料源俱在者；",
+                "「领域在位」之分母恒为十二——空着的领域是结构性空缺，不随数据多寡而变"),
+  export = "40_三实体并读总表")
+```
+
+::: {.callout-important}
+## 五条不可越界之处
+
+**一、跨实体横比只许在 D06 收入。** 三实体皆有该领域之维；其余领域至少缺一实体，
+横比即是拿有证据者与无证据者相较。
+
+**二、荷官与代理的量不得读作其过错。** 二者皆为归因口径。
+真要判荷官，须其自身的过程证据（局速、赔付偏差后验），而这两样本平台**眼下都不可得**。
+
+**三、四族不得逐族相加。** 同一会员可同时命中数族，相加即重复计算；
+合计一律取**去重并集**，重叠矩阵已列于 @sec-player-econ。
+
+**四、尾秒一族的经济量不得计入合计。** E1 已裁定其信息优势未能证实，
+本报告另行复算了两项检验以为凭据，非仅援引旧结论。
+
+**五、本报告的一切金额皆为会计差额（E3）。** 它答「若该群体表现同于全体」，
+不答「若该行为不曾发生」。要回答后者，须处置台账 ＋ 平行趋势 ＋ 随机对照——
+证据阶梯见下章。
+:::
+
+# 七、局限与不承诺 {#sec-limit}
+
+```{r}
+#| label: limits
+# echo: false
+LIM <- do.call(rbind, lapply(list(
+ c("经济量的性质","本报告一切金额皆为**会计差额**（情景基准：若该群体表现同于全体），证据等级 E3。",
+   "不得写「本方案挽回 X 元」；只可写「该群体较全体少留 X 元（会计口径）」"),
+ c("因果空缺","无随机对照、无处置台账接入，故**不作因果归因**。",
+   "升级路径：接处置台账 → 事件研究 DID（须右删失）→ 灰度随机对照"),
+ c("同桌率校正未完备","完备的活跃度校正须桌数与局数分母，本包导出件不含；本次仅以相对倍数代理。",
+   "所待：§R02 增列每对的桌数与可同桌局数分母"),
+ c("异常 IP 条件化","若 C08 稀疏网段件缺席，名单**未条件化**，榜首可能被 CGNAT 公共出口统治。",
+   "所待：C08_subnet_sparse.csv（AX-A5）"),
+ c("荷官局速不可算","本包无开台／收台时戳，日期只到日粒度，分母无从取得；以节奏稳定度作过程代理。",
+   "所待：bet02 的时刻列，或排班／桌台开闭日志"),
+ c("代理归属覆盖","一员一线取首现映射，重复归属者只计一次；未归属者不入代理侧合计。",
+   "差额是未归属者，**不是漏算**；覆盖率已于 @sec-agent 首表列明"),
+ c("四个领域全空","D02 激活 · D03 充值 · D10 质量 · D12 合规——三实体一个维都没落到。",
+   "**空着即是信息**，不得以邻近维填补；补表路径见主方案"),
+ c("名单性质","四族名录皆为调查候选，须人工复核与结构证据方可定性。",
+   "误伤好客的代价是终身价值，故本报告偏向保精确率，不追召回")
+), function(v) data.frame(check.names = FALSE, 局限 = v[1], 内容 = v[2],
+     所待或对策 = v[3], stringsAsFactors = FALSE)))
+dt_all(LIM, caption = "局限与不承诺（本报告的诚实边界）",
+  note = "凡上表所列者，正文中一律如实点名，不以措辞回避，亦不以近似量顶替",
+  export = "50_局限与不承诺")
+```
+
+## 增利证据阶梯：本报告停在哪一级 {#sec-ladder}
+
+```{r}
+#| label: ladder
+# echo: false
+kb(data.frame(check.names = FALSE,
+  级 = c("E1","E2","E3","E4","E5"),
+  含义 = c("全局查询已核实（分母、口径、分布皆实测）",
+           "以代理量派生的指标（其局限须随量同行）",
+           "**会计差额**：以情景基准算出的差额",
+           "准实验：有处置台账、有对照、过平行趋势闸",
+           "因果归因：随机对照或等效识别策略"),
+  本报告 = c("✅ 已达（表清单、全维度总表、四族分布皆现算）",
+             "✅ 已达（节奏稳定度、批量注册嫌疑等已标注为代理量）",
+             "✅ **本报告止于此级**",
+             "⬜ 未达：处置台账未接入本册",
+             "⬜ 未达：无随机对照"),
+  可写的话 = c("「本窗口实测如下」","「以代理量衡量，其表现为」",
+               "「该群体较全体少留 X 元（会计口径）」",
+               "「处置后该组相对对照组变动 X，已过平行趋势闸」",
+               "「本方案使平台增利 X 元」")),
+  caption = paste0("增利证据阶梯与本报告之位置",
+    "｜解释：级差不可跳——E3 之数不得以 E5 之句式陈述",
+    "｜本报告用途：对外表述的许可句式一律照末列，不得自行加码"), escape = FALSE)
+```
+
+# 八、交付自检与变更日志 {#sec-changelog}
+
+```{r}
+#| label: liveness
+# echo: false
+## 现算纪律自检：本报告用到的每一个阈值，逐条列出其来源；凡写不出来源者即为硬编码
+LIVE <- list()
+if (!is.null(CRITTBL)) LIVE[[length(LIVE) + 1L]] <- data.frame(check.names = FALSE,
+  参数 = CRITTBL$判定指标, 取值 = CRITTBL$本次阈值, 来源 = CRITTBL$阈值来源,
+  性质 = ifelse(grepl("现算|反解|实测", CRITTBL$阈值来源), "🟢 渲染现算", "🟠 情景／外生参数"),
+  stringsAsFactors = FALSE)
+LIVE[[length(LIVE) + 1L]] <- data.frame(check.names = FALSE,
+  参数 = c("样本量门槛 N_MIN", "生命周期衰减常数", "索提诺最少活跃日", "分位归一刻度",
+           "荷官／代理规模闸"),
+  取值 = c(amt(N_MIN), "14 日", "5 日", "0–100", "各实体规模分布 P50"),
+  来源 = c("Wilson 区间宽度收敛至 0.15 反解（现算）",
+           "**情景参数**：承主方案 §17.2，非估计量，改之须同步四档",
+           "**情景参数**：少于此数则下行标准差不可信",
+           "承主方案 §17.2，四实体同刻度",
+           "渲染现算（本窗口分布）"),
+  性质 = c("🟢 渲染现算", "🟠 情景／外生参数", "🟠 情景／外生参数", "🟢 承上位档", "🟢 渲染现算"),
+  stringsAsFactors = FALSE)
+LV <- do.call(rbind, LIVE)
+dt_all(LV, caption = "现算纪律自检：每一个阈值的出处",
+  note = paste0("判别法只有一条：**数据变了，这个数字该不该跟着变**？该变而不变者即硬编码。",
+                "标🟠者是情景参数，其性质已明写——情景参数不是错误，隐瞒它才是"),
+  export = "60_现算纪律自检")
+```
+
+```{r}
+#| label: six-tuple
+# echo: false
+## 版本身份六元组：文件名 ＋ 行数 ＋ 字节数 ＋ MD5 ＋ 行尾 ＋ 编码
+##   MD5 单独不足以定身份：CRLF 与 LF 之别必产生不同 MD5，其字节差恰等于行数。
+six_tuple <- function(p) {
+  if (!file.exists(p)) return(NULL)
+  sz <- file.info(p)$size
+  if (!is.finite(sz) || sz < 2) return(NULL)
+  raw1 <- readBin(p, "raw", n = as.integer(min(sz, 4e6)))
+  ncrlf <- sum(raw1[-length(raw1)] == as.raw(13L) & raw1[-1] == as.raw(10L))
+  nlf   <- sum(raw1 == as.raw(10L))
+  eol <- if (ncrlf > 0 && ncrlf >= nlf * 0.9) "CRLF" else if (nlf > 0) "LF" else "无换行"
+  md5 <- tryCatch(as.character(tools::md5sum(p)), error = function(e) NA_character_)
+  hd  <- tryCatch(suppressWarnings(readLines(p, n = 50, warn = FALSE)),
+                  error = function(e) character(0))
+  lines <- tryCatch(length(suppressWarnings(readLines(p, warn = FALSE))),
+                    error = function(e) NA_integer_)
+  data.frame(check.names = FALSE, 文件 = basename(p), 行数 = amt(lines),
+             字节数 = amt(sz), MD5 = substr(md5, 1, 32), 行尾 = eol,
+             编码 = if (!length(hd)) "—"
+                    else if (all(validUTF8(hd))) "UTF-8" else "非 UTF-8（须查）",
+             stringsAsFactors = FALSE)
+}
+cands <- c("a168风控与客户分层评分体系_商业方案.qmd", "a168风控评分_精要商业报告.qmd",
+           "a168_取数与核验_SQL总包_v3.sql", "a168_能力值口径解读_SQL转R.qmd",
+           "a168_数据维度与能力值追溯_三实体风险名录专题报告.qmd")
+ST <- do.call(rbind, lapply(cands, function(f) {
+  for (d in c(".", "..", if (!is.null(DATA_DIR)) dirname(DATA_DIR) else NULL)) {
+    p <- file.path(d, f); r <- six_tuple(p); if (!is.null(r)) return(r)
+  }
+  data.frame(check.names = FALSE, 文件 = f, 行数 = "—", 字节数 = "—",
+             MD5 = "⬜ 本次渲染目录未见此档", 行尾 = "—", 编码 = "—", stringsAsFactors = FALSE)
+}))
+dt_all(ST, caption = "一族五档的版本身份六元组（渲染现算）",
+  note = paste0("MD5 单独不足以定身份：CRLF 与 LF 之别必产生不同 MD5，",
+                "其字节差恰等于行数——故换行符须先比对，再论版本冲突。",
+                "凡显示「未见此档」者，只是本次渲染目录内不在，不代表该档不存在"),
+  export = "61_版本六元组")
+```
+
+```{r}
+#| label: changelog
+# echo: false
+kb(data.frame(check.names = FALSE,
+  版本 = "v1.0（本册新立）",
+  日期 = format(Sys.Date()),
+  本册所立 = paste0(
+    "① 维度词典立为本册唯一权威，全维度总表以**实际表头**为准并对未覆盖之列点名；",
+    "② 能力值追溯矩阵成表：实体 × 领域 × 维度 × 赏罚 × 原始量表达式 × 料源表列 × 在位状态 × 证据等级；",
+    "③ 领域雷达改以统一领域 D01–D12 为轴（罚侧同向化），使三实体可在同一坐标下并读，",
+    "而综合分仍照 §17.2 原式赏−罚，一字未改；",
+    "④ 四族判定阈值一律现算（分位与 Wilson 反解），硬编码阈值零；",
+    "⑤ 荷官与代理侧一律标注**归因口径**，并各设分位闸与规模闸；",
+    "⑥ 经济结账立「会计差额」口径并显式封顶于 E3；四族合计取去重并集，附重叠矩阵；",
+    "⑦ 尾秒一族只作画像，另复算两项检验以为「不计入合计」之凭据。"),
+  承自上位档 = paste0("er_radar() 七件、分位归一与赏−罚合成、资格分层（哨兵二员判据）、",
+    "契约锁 must=、占位点名成法、悬停浮层机制——**一字未改**"),
+  与上位档之别 = paste0("本册不重述主方案的规则设计与回测，只做「维度 · 追溯 · 名录 · 结账」四事；",
+    "凡与主方案口径不一致者，一律以主方案为准并须在此登记——本次无不一致项")),
+  caption = "变更日志", escape = FALSE)
+```
+
+```{r}
+#| label: delivery-check
+# echo: false
+CK <- data.frame(check.names = FALSE,
+  点名要求 = c("读取关键数据表：哪些表、各有哪些维度、维度正名",
+               "直接显示那些数据表的**所有**维度",
+               "所有维度需要悬停",
+               "能力值追溯矩阵",
+               "玩家：领域雷达 · 能力值名单 · 四族名单与判定标准 · 名单全维度 · 营业额与盈亏",
+               "荷官：同上（归因口径）",
+               "代理：同上（归因口径）"),
+  本册落点 = c("@sec-tables 表清单 ＋ @sec-dimdict 维度词典",
+               "@sec-alldims 全维度总表（列清单取自实际表头，非字典）",
+               "@sec-dimdict 注入：列名与正名两路皆可悬停，全文任意位置有效",
+               "@sec-trace-matrix（含料源在位逐维判定与覆盖自检）",
+               "@sec-player-radar ／ @sec-player-roster ／ @sec-player-crit ／ @sec-player-lists ／ @sec-player-econ",
+               "@sec-dealer-radar ／ @sec-dealer-roster ／ @sec-dealer-lists ／ @sec-dealer-econ",
+               "@sec-agent-radar ／ @sec-agent-roster ／ @sec-agent-lists ／ @sec-agent-econ"),
+  本次状态 = c(
+    if (exists("INV")) "🟢 已出表" else "⬜ 料源缺席，已占位点名",
+    if (!is.null(ALLDIM)) "🟢 已出表" else "⬜ 料源缺席，已占位点名",
+    if (nrow(GLOSSARY) > 0) sprintf("🟢 已注入 %d 条词条", nrow(GLOSSARY)) else "⬜",
+    if (exists("TRACE")) sprintf("🟢 已出表（%d 维）", nrow(TRACE)) else "⬜",
+    if (!is.null(PD)) "🟢 已出图出表" else "⬜ 料源缺席，已占位点名",
+    if (!is.null(DD)) "🟢 已出图出表" else "⬜ 料源缺席，已占位点名",
+    if (!is.null(AD)) "🟢 已出图出表" else "⬜ 料源缺席，已占位点名"))
+kb(CK, caption = paste0("交付自检：先生点名的七项，逐项对到章节",
+  "｜解释：本表由渲染现算，凡状态为 ⬜ 者即该项之料源本次未就位，其占位表已在对应章节点名所待文件",
+  "｜本报告用途：验收表——先看此表，再看正文"), escape = FALSE)
+```
+
+::: {.callout-note}
+## 一句收束
+
+本册把「**维度 → 追溯 → 名录 → 结账**」四步串成一条可逐格倒查的链：
+任一金额都能回溯到其命中判据，任一判据都能回溯到其阈值来源，
+任一阈值都能回溯到本窗口的分布，任一分布都能回溯到某张表的某一列，
+而那一列的正名、单位与粒度，鼠标停上去就有。
+**链上任何一格断了，本报告的对应之处就是一张点名占位表，不是一个好看的数字。**
+:::

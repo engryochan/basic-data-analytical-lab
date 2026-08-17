@@ -1,0 +1,318 @@
+---
+title: "a168 真人百家乐"
+subtitle: "风控之局内尾段篇"
+author: "Ryo（雷欧）"
+date: today
+lang: zh-CN
+format:
+  html:
+    theme: darkly
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-expand: 3
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看计算代码（本报告全部数字由此现算，无一处手填）"
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+---
+
+# 概况
+
+## 设置
+
+```{r}
+if(!require('pacman')) {
+  install.packages('pacman')
+}
+suppressMessages(require('pacman'))
+
+if(!require('BBmisc')) {
+  install.packages('BBmisc')
+}
+suppressMessages(require('BBmisc'))
+
+p_load('data.table', 'tidyverse', 'here', 'purrr', 'kableExtra', 'gt', 'knitr')
+路径 <- here('风控案例', 'a168风控与客户分析评分体系', '数据库')
+```
+
+## 简介
+
+根据**a168风控与客户分层评分体系_商业方案.qmd**和**a168风控评分_精要商业报告.qmd**，此报告只列出玩家、荷官并识别与分类：
+- 玩家尾段投注
+- 异常IP × 尾注（尾注侧仅作画像）
+
+## 索引
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+/*
+   ═══ 执行总索引 ═══════════════════════════════════════════════════════════
+   【第〇批 · 时区与营业日守卫】新增，导任何日粒度表之前必跑，只看屏幕
+     §TZ-01 会话与全局时区          §TZ-02 库时钟 vs UTC 偏移
+     §TZ-03 注单表实际覆盖端点      §TZ-04 末三日逐小时量（截断检测）
+     §TZ-04b 全窗逐小时分布（反推落库时区 —— 决定「日」的切点）
+     §TZ-05 日结报表切日点核对      §PIT-01 修订滞后（快照有效性）
+
+   【第一批 · 地基体检】卷一，只看屏幕，不导出
+     00-0 通用取列工具    00-1 哨兵局断言（预期 0）    00-2 注单去重率（0.74%）
+     00-3 铁律分母：窗口内下注会员数（721,190）        00-4 桌台数核对
+     E1-03 三方 IP 重合度   E1-08 测试线规模（214）    V2 game_No 位数核验
+     卷二 §00 COUNT 预检    §00b 辅助表列名核对        §00c 表行数复核
+     §DX-01 bet09 玩法编码普查（★ 跑任何含对打的查询前必做）
+     §DX-02 注释提前终止的成因存档                     §DX-03 通用取列定义
+
+   【第二批 · 评分底料（必导，不导则雷达与回测全空）】
+     S-01 → 数据库/S01_player_score.csv          玩家评分
+     S-02 → 数据库/S02_dealer_score.csv          荷官评分
+     S-03 → 数据库/S03_agent_score.csv           代理评分
+     §S04p → 数据库/S04_analyst_score.csv        风控员评分（⛔ 勿用 S-04a）
+     S-05 → 数据库/S05_member_month_panel.csv    净化滚动回测面板
+     §B01 → 数据库/B01_bt_panel.csv              会员×日回测面板
+     §B01-D → 数据库/B01_bt_panel_delta.csv      每日增量（影子期起）
+
+   【第三批 · 异常 IP 与对打主线】
+     A-01 → 数据库/A_anchor.csv                  L0 金标准 17 IP 锚点
+     C-00 → 数据库/I_ip_player.csv               会员×IP 明细
+     C-01 → 数据库/C01_ip_chain.csv              信用枢纽排序
+     C-02 → 数据库/I_ip_agg.csv                  IP 汇总三版本口径
+     §C06fix → 数据库/C06_hedge_pairs.csv        对打对名单（⛔ 勿用 C-06）
+     C-08 → 数据库/C08_subnet_all.csv            /24 网段全量
+     N1   → 数据库/C08_subnet_sparse.csv         稀疏段靶向
+     V-01 → 数据库/V_ipmatch.csv                 三方 IP 明细对照
+
+   【第四批 · 规则、经济学与特征】
+     §R01 → 数据库/R01_late_shoe.csv             靴末段下注
+     §R02 → 数据库/R02_same_table.csv            同桌对 Jaccard / Lift
+     §R03 → 数据库/R03_player_dealer.csv         玩家×荷官（全窗聚合）
+     §R03b → 数据库/R03b_player_dealer_daily.csv 玩家×荷官（日粒度，时序对照必需）
+     §T02 → 数据库/T02_daily_roi.csv             会员×日 ROI
+     §T03 → 数据库/T03_arbitrage.csv             打水型画像
+     §E02c → 数据库/E02_segment_econ.csv         分群单位经济学（含占成 κ）
+     §K01 → 数据库/K01_risk_feature_matrix.csv   扩样特征矩阵
+     §K01b → 数据库/K01b_seed_manual.csv         种子名单
+     §DX-04 → 数据库/DX04_bet09_profile.csv      玩法 × 会员子分类底料
+     §DX-05 → 数据库/DX05_product_panorama.csv   产品全景覆盖度
+
+   【第五批 · 存档与画像】
+     A-06M → 数据库/V_recon.csv        D-05 → 数据库/S_second_dist.csv
+     D-06  → 数据库/S_player_tail.csv  D-03S → 数据库/D03S_daily_roi_diff.csv
+     E1-07 → 数据库/T_table_span.csv   E1-10 → 数据库/L_label_dist.csv
+     E1-11 → 数据库/R_rebate_dist.csv  X-01  → 数据库/X_combo.csv
+     P-01  → 数据库/P_player_month.csv B-01  → 数据库/B_online_base.csv
+...
+...
+...
+*/
+```
+
+# 数据
+
+## 数据源
+
+### 查询并下载
+
+从Superset (StarRocks)数据源，查询并下载储存为关键数据表。
+
+### 同桌投注
+
+#### 导出数据表
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+-- ▸ 导出：需要 —— 存为「数据库/R02_same_table.csv」（§R02 同桌对 Jaccard / Lift）。
+WITH mr AS (                          -- 阶段一：会员 × 物理局，去重后每人每局一行
+  SELECT DISTINCT                                                                                   -- 取列：承接上一子句，构成完整语句，属 §R02 之取数
+         b.bet05 AS member_id,                                                                      -- 取值表达式：取用 bet05（会员号）、member_id（会员号），产出「member_id」
+         CONCAT_WS('|', b.bet03, b.bet04, b.bet39) AS round_key,                                    -- 取值表达式：取用 bet03（靴号）、bet04（局内序号）、bet39（桌号），产出「round_key」
+         b.bet39 AS table_id,                                                                       -- 取值表达式：取用 bet39（桌号），产出「table_id」
+         b.dt    AS bet_date                                                                        -- 取值表达式：取用 dt（营业日）、bet_date（营业日），产出「bet_date」
+  FROM ods_mariadb_2b.ods_a168_bet02 b            -- ★ 表名开关
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                                                -- 过滤条件：限定 b.dt不少于 '2026-03-21'、b.dt小于 '2026-08-07'，涉 dt（营业日）
+    AND b.bet02 = '101' AND b.category = '1'                                                        -- 并列条件：限定 b.bet02等于 '101'、b.category等于 '1'，涉 bet02（游戏类别）
+    AND UPPER(TRIM(b.bet38)) = 'N'                                                                  -- 并列条件：限定 UPPER(TRIM(b.bet38))等于 'N'，涉 bet38（测试标识）
+    AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0                                                -- 并列条件：限定 CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT)大于 0，涉 bet05（会员号）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R02）
+act AS (                              -- 候选池：局数不够就不可能凑到 100 局同桌
+  --   ★ 门槛由 100 提至 300（降内存斧正三）：候选池是配对数的平方项底数，
+  --     门槛提三倍，配对数约降一个数量级。判据本要求同桌 ≥100 笔，
+  --     总局数不足 300 者几无可能构成稳定团伙对。要复原口径改回 100 即可，
+  --     但须改走 §R02-1 分批模板。
+  SELECT member_id, COUNT(*) AS n_rounds                                                            -- 取列：计数，取用 member_id（会员号），产出「n_rounds」
+  FROM mr GROUP BY member_id HAVING COUNT(*) >= 300                                                 -- 取数来源：取自本条自建的中间结果集 mr
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R02）
+mr2 AS (                                                                                            -- 公共表表达式：开启中间结果集 mr2，其后各行为其定义体（§R02）
+  SELECT m.* FROM mr m JOIN act a ON a.member_id = m.member_id                                      -- 取列：整体承接上游结果集的全部字段，不再逐列列举，取自本条自建的中间结果集 mr
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R02）
+pair AS (                             -- 阶段二：同局自连接（已压到候选池）
+  SELECT x.member_id AS uid1, y.member_id AS uid2,                                                  -- 取列：起始取列子句，本行先取「uid2」，涉 member_id（会员号）
+         COUNT(*)                    AS same_rounds,                                                -- 计数表达式：产出「same_rounds」
+         COUNT(DISTINCT x.table_id)  AS n_tables,                                                   -- 计数表达式：统计去重个数，产出「n_tables」
+         MIN(x.bet_date)             AS first_day,                                                  -- 取最小值表达式：取用 bet_date（营业日），产出「first_day」
+         MAX(x.bet_date)             AS last_day                                                    -- 取最大值表达式：取用 bet_date（营业日），产出「last_day」
+  FROM mr2 x                                                                                        -- 取数来源：取自本条自建的中间结果集 mr2
+  JOIN mr2 y ON x.round_key = y.round_key AND x.member_id < y.member_id                             -- 连接：取自本条自建的中间结果集 mr2，连接键为 round_key（局键）、member_id（会员号）
+  GROUP BY x.member_id, y.member_id                                                                 -- 分组：按 x.member_id, y.member_id 汇总
+  HAVING COUNT(*) >= 100                           -- 需求：同桌订单数 > 100 笔
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R02）
+td AS (                               -- Lift 零假设的分子件：每人每桌每日局数
+  SELECT table_id, bet_date, member_id, COUNT(*) AS n_md                                            -- 取列：计数，取用 member_id（会员号）、bet_date（营业日），产出「n_md」
+  FROM mr2 GROUP BY table_id, bet_date, member_id                                                   -- 取数来源：取自本条自建的中间结果集 mr2
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R02）
+tot AS (                              -- Lift 零假设的分母件：每桌每日总局数
+  SELECT table_id, bet_date, COUNT(DISTINCT round_key) AS n_td                                      -- 取列：统计去重个数，产出「n_td」
+  FROM mr2 GROUP BY table_id, bet_date                                                              -- 取数来源：取自本条自建的中间结果集 mr2
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R02）
+expct AS (                            -- E[same] = Σ n_a(t,d)·n_b(t,d) / N(t,d)
+  --   ★ 降内存斧正一（决定性）：改以 pair 为**驱动表**，只为实际存在的对算期望。
+  --     原式先算「同桌同日」的全组合再 LEFT JOIN 取用——同桌同日的候选会员
+  --     可达数千，配对数按其平方增长，且绝大多数对根本不在 pair 里，算了白算。
+  --     今由 pair 驱动，配对数降为「pair 对数 × 其共同桌日数」。
+  --     期望值的定义式一字未动，输出逐值一致。
+  SELECT p.uid1, p.uid2,                                                                            -- 取列：起始取列子句，本行先列 p.uid1, p.uid2
+         SUM(a.n_md * b.n_md * 1.0 / NULLIF(t.n_td,0)) AS exp_same                                  -- 汇总表达式：产出「exp_same」
+  FROM pair p                                                                                       -- 取数来源：取自本条自建的中间结果集 pair
+  JOIN td a  ON a.member_id = p.uid1                                                                -- 连接：取自本条自建的中间结果集 td，连接键为 member_id（会员号）
+  JOIN td b  ON b.member_id = p.uid2                                                                -- 连接：取自本条自建的中间结果集 td，连接键为 member_id（会员号）
+            AND b.table_id  = a.table_id                                                            -- 并列条件：限定 b.table_id等于 a.table_id
+            AND b.bet_date  = a.bet_date                                                            -- 并列条件：限定 b.bet_date等于 a.bet_date，涉 bet_date（营业日）
+  JOIN tot t ON t.table_id  = a.table_id AND t.bet_date = a.bet_date                                -- 连接：取自本条自建的中间结果集 tot，连接键为 bet_date（营业日）
+  GROUP BY p.uid1, p.uid2                                                                           -- 分组：按 p.uid1, p.uid2 汇总
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§R02）
+SELECT p.uid1, p.uid2,                                                                              -- 取列：起始取列子句，本行先列 p.uid1, p.uid2
+       p.same_rounds                                          AS n_same_orders,                     -- 取值表达式：产出「n_same_orders」
+       a1.n_rounds                                            AS rounds_1,                          -- 取值表达式：产出「rounds_1」
+       a2.n_rounds                                            AS rounds_2,                          -- 取值表达式：产出「rounds_2」
+       p.same_rounds * 1.0                                                                          -- 取值表达式：比率之分子，乘 1.0 以避整数除法截断
+         / NULLIF(LEAST(a1.n_rounds, a2.n_rounds),0)          AS same_rate,   -- 需求口径
+       p.same_rounds * 1.0                                                                          -- 取值表达式：比率之分子，乘 1.0 以避整数除法截断
+         / NULLIF(a1.n_rounds + a2.n_rounds - p.same_rounds,0) AS jaccard,    -- 对照口径
+       p.same_rounds * 1.0 / NULLIF(e.exp_same, 0)            AS lift,        -- ★ 去巧合
+       e.exp_same, p.n_tables, p.first_day, p.last_day                                              -- 续行：接续上一取列子句，续列 e.exp_same, p.n_tables, p.first_day, p.last_day
+FROM pair p                                                                                         -- 取数来源：取自本条自建的中间结果集 pair
+JOIN act a1 ON a1.member_id = p.uid1                                                                -- 连接：取自本条自建的中间结果集 act，连接键为 member_id（会员号）
+JOIN act a2 ON a2.member_id = p.uid2                                                                -- 连接：取自本条自建的中间结果集 act，连接键为 member_id（会员号）
+LEFT JOIN expct e ON e.uid1 = p.uid1 AND e.uid2 = p.uid2                                            -- 左连接：取自本条自建的中间结果集 expct，连接键为 e.uid1 = p.uid1 AND e.uid2 = p.uid2
+ORDER BY lift DESC, same_rate DESC;                                                                 -- 排序：按 lift（降序）, same_rate（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
+/* ⚠️ 同上：**故意不加** same_rate >= 0.30 的 WHERE。阈值网格（@sec-r02 的 r02-grid）
+   要扫 30%/40%/50%/70% × Lift 1/2/3/5 十六格，只导 30% 以上就扫不出下沿。
+   若行数仍过大，把 act 的门槛再往上提，而不是加 same_rate 条件。 */
+```
+
+#### 导出的数据表维度
+
+```{r}
+if(file.exists(here(路径, 'R02_same_table.csv'))) {
+  同桌 <- fread(here(路径, 'R02_same_table.csv'))
+}
+同桌
+```
+
+#### 方法论
+
+这份代码是一个**生产级玩家行为特征抽取管道**（ETL Pipeline），用于从原始注单明细表中，计算每个玩家在“局内尾段（Late Bet）”与“常规时段”的差异化表现指标。
+
+基于您已建立的 **R3 铁律** 和 **EAV-QMS 治理框架**，我将从 **“标准的来源”** 与 **“执行的严密性”** 两个维度，对这段 SQL 进行彻底解剖。
+
+---
+
+###### 第一部分：核心定义与业务标准（它到底想抓什么？）
+
+-   **核心对象（Object）**：在百家乐游戏中，单局（`round_key`）内按时间排序，**下注时间位于该局后 20% 分位（`pr_in_round >= 0.80`）** 的注单。
+-   **业务假设（Business Assumption）**：尾段下注者可能拥有信息优势（如看牌延迟、信号快人一步），其胜率（`winrate`）或投资回报率（`ROI`）理论上应显著高于常规时段。
+-   **输出目的**：生成 `S_player_tail.csv`，供后续分析“尾段玩家是否真的具备显著的正向预期”，以优化风控延迟策略（Dynamic Live Time Delay）。
+
+---
+
+###### 第二部分：数据清洗与准入标准（“闸门”执行细节）
+
+代码在进入核心计算前，设立了**五层严苛的数据闸门**，确保进入分析池的只有“纯净的真实自然人玩家数据”。
+
+| 闸门层 | CTE 名称 | 执行标准（硬阈值） | 红队解读（防御对象） |
+| :--- | :--- | :--- | :--- |
+| **L1 来源闸** | `ta` / `rk` | 锁定 `ods_a168_bet02` 与代理表 `ods_a168_agent`。 | 锁死数据血统（E1 证据层）。 |
+| **L2 去重闸** | `rk` | `ROW_NUMBER() OVER(PARTITION BY bet01 ORDER BY updatetime DESC)`。 | **严格**防重：因数据同步延迟曾导致 36.49% 重复行，此处通过 `rn=1` **强拦截**，重复注单直接弃用。 |
+| **L3 身份纯净闸** | `vd` | 1. `UPPER(TRIM(bet38)) = 'N'`（非测试账号）<br>2. `COALESCE(五级代理线) IS NULL`（排除非自然流量渠道）<br>3. `CAST(bet05 AS BIGINT) > 0`（会员ID有效） | **严密**排除内部测试、代理刷水渠道及空壳账号，防止分母被污染。 |
+| **L4 货币汇率闸** | `vd` / `bs` | `CAST(bet11 AS DECIMAL) > 0` 且非空。 | 防止汇率归零或为空导致后续除法**溢出（被零除）**，这是生产事故的底线防御。 |
+| **L5 时间有效性闸** | `vd` / `ord` | `dt` 限定在 2026-03-21 至 2026-08-07；`bet08`（下注时间）非空。 | 锁定观察窗口，且丢弃时间戳缺失的记录（无法计算局内排序）。 |
+
+---
+
+###### 第三部分：核心计算逻辑的严密推导（CTE 流水线）
+
+这是代码最精华的部分，涉及**相对排序计算**与**分层聚合**。
+
+####### 1. 局内时间百分位定标（CTE `ord`）
+这是定义“尾段”的数学核心：
+```sql
+PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round
+```
+- **标准**：在同一靴牌同一局（`round_key`）内，将该玩家的下注时间戳按升序排列。
+- **计算公式**：`pr = (Rank - 1) / (Total_Rows - 1)`。
+- **深层含义**：当 `pr >= 0.80` 时，意味着**该注单的下注时间晚于该局内 80% 的其他注单**。这比绝对时间（如“倒数第5秒”）更科学，因为不同赌桌的荷官派牌速度不同，**相对占比**消除了速度差异。
+
+####### 2. 玩家单局行为聚合（CTE `prd`）
+按 `member_id, round_key, table_id` 聚合成“玩家-局”粒度：
+- `max_pr`：取该玩家在该局的最大时间百分位（即该玩家在该局下的**最后一注**的位置）。
+- **判定尾段**：`CASE WHEN max_pr >= 0.80 THEN 1 ELSE 0 END`。**只要该玩家在该局打过一次尾段注，该局即被标记为“尾段局”**。
+- **盈亏打标**：`SUM(game_pnl) > 0` 为该局赢（`is_win`），反之为输。
+
+####### 3. 玩家级十一项指标输出（最终 SELECT）
+代码最终输出 **11 个关键指标**，构成风控画像的“北斗七星”：
+
+| 指标名称 | 计算逻辑（E2 算术级） | 风控用途（业务意义） |
+| :--- | :--- | :--- |
+| `n_rounds_all` | 总局数 | 样本量基础（低于 30 局被 `HAVING` 强杀） |
+| `tail_share` | 尾段局数 / 总局数 | **打水嫌疑**：正常人随机分布，若该值 > 0.6 说明极度偏好压哨 |
+| `tail_winrate` | 尾段盈利局 / 尾段总局数 | **核心收益**：尾段是否真的能赢 |
+| `norm_winrate` | 常规时段盈利局 / 常规总局数 | **基准对比** |
+| `winrate_diff` | `tail_winrate - norm_winrate` | **信息优势量化**：若 > 0，说明存在尾段套利空间 |
+| `tail_roi` | 尾段净盈利 / 尾段有效投注额 | **资金效率**：剔除下注额影响后的真实回报 |
+| `tail_profit_share` | 尾段盈利 / 总盈利 | **风险集中度**：若该值接近 1，证明所有钱都是压哨赚的 |
+
+---
+
+###### 第四部分：把关闸门（HAVING 与阈值来源）
+
+- **`HAVING COUNT(*) >= 30`**：
+    - **标准来源**：代码注释明确指出“低于此样本量的玩家 Wilson CI 宽度 > 0.15，阈值无区分意义”。
+    - **严格性判断**：这与您之前 R2 中被红队否决的“`n>=30` 伪普适定理”不同。此处是**针对比例型指标（胜率）的特定最小样本量要求**，且关联了 Wilson 置信区间宽度，属于**科学的参数设计（E5 级）**，而非手拍。
+
+---
+
+###### 第五部分：从 R3 与 EAV-QMS 视角的元审计（漏洞与局限）
+
+即使代码跑得通，作为 R4 元审计，必须指出其**内在的证明力边界**：
+
+1.  **“局内时间”依赖系统时钟（共因缺陷）**：
+    - `t_bet` 来源于应用层时间（`bet08`），而非荷官开牌物理时间。若数据库时间同步偏差（NTP 漂移），整张表的 `pr_in_round` 排序基础将系统性失真。
+    - **结论**：该验证器（Validator）缺少 **Negative Control（负控制）**——未检测是否存在“因时间戳延迟导致尾段误标”的时段。
+
+2.  **单局仅一注的玩家被天然排除**：
+    - 如果某局内只有一个注单，`PERCENT_RANK` 返回 `NULL`（因为分母为 0）或固定值，无法达到 0.8。这意味着，**只下大额单注的鲸鱼玩家被完全排除在“尾段分析”之外**，而这群人恰恰是最值得关注的利润贡献者。
+    - **定性**：该验证器的 **Applicability Boundary（适用域）** 明确排除了单注局玩家，此结论必须在输出报告中用 **E1 级注释** 明确说明。
+
+3.  **未引入金额权重阈值（E2 级盲区）**：
+    - 该代码仅通过 `game_pnl > 0` 判断输赢（`is_win`），**未考虑下注额权重**。押 10 块钱赢 1 块钱的局，与押 1 万块钱赢 1 块钱的局，在胜率计算中地位相同。这导致 `winrate_diff` 极易被小额刷水单扭曲。
+
+---
+
+###### 最终总结（定调）
+
+- **标准层面**：该代码**严格**执行了字段级清洗和去重，**严密**地构建了相对时间排序算法，且样本量阈值有统计理论支撑（Wilson CI），是高质量的 **E2（算术推导）+ E3（SQL 可重算）** 产物。
+- **执行层面**：作为一个“行为指纹提取器”，它运行高效且逻辑自洽。
+- **改进方向（R3 强制要求）**：生产使用前，必须补全 **VP-04（适用域边界）**——即“本指标不适用于仅投一注的玩家”，并建议在后续迭代中引入 **“注额加权胜率（Stake-weighted Winrate）”**，以堵住小额刷水扭曲大额结论的漏洞。
+
+## 读取数据表
+
+
+

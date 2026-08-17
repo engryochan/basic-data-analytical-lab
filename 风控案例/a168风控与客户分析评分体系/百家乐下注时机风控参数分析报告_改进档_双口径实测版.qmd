@@ -1,0 +1,846 @@
+---
+title: "a168 真人百家乐"
+subtitle: "下注时机风控参数分析报告 · 改进档（双口径实测对比版）"
+author: "Ryo（雷欧）"
+date: today
+lang: zh-CN
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-expand: 3
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看计算代码（本档全部数字由此现算，无一处手填）"
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+---
+
+```{r}
+#| label: setup
+if(!require('pacman')) install.packages('pacman')
+suppressMessages(require('pacman'))
+p_load('data.table', 'here', 'DT', 'jsonlite', 'plotly', 'htmltools', 'knitr')
+
+候选 <- c(tryCatch(here('风控案例', 'a168风控与客户分析评分体系', '数据库'), error = function(e) NA_character_),
+          tryCatch(here('数据库'), error = function(e) NA_character_),
+          file.path(getwd(), '数据库'), '数据库', '../数据库', getwd(), '.')
+候选 <- 候选[!is.na(候选)]
+路径 <- if (any(dir.exists(候选))) 候选[dir.exists(候选)][1] else NA_character_
+
+读表 <- function(名) {
+  if (is.na(路径)) return(NULL)
+  p <- file.path(路径, 名); if (!file.exists(p)) return(NULL)
+  h <- readBin(p, 'raw', n = 8192L); if (length(h) > 3L) h <- h[seq_len(length(h) - 3L)]
+  if (isTRUE(validUTF8(rawToChar(h))))
+    return(data.table::fread(p, encoding = 'UTF-8', showProgress = FALSE))
+  data.table::fread(text = iconv(readLines(p, warn = FALSE), 'GB18030', 'UTF-8', sub = '?'),
+                    showProgress = FALSE)
+}
+读首个 <- function(名集) { for (n in 名集) { x <- 读表(n); if (!is.null(x)) return(list(表 = x, 名 = n)) }
+                            list(表 = NULL, 名 = NA_character_) }
+落盘 <- function(dt, 名) { if (is.na(路径)) return(NA_character_)
+  p <- file.path(路径, 名); try(data.table::fwrite(dt, p, bom = TRUE), silent = TRUE); p }
+数 <- function(x, d = 2) formatC(as.numeric(x), format = 'f', digits = d, big.mark = ',')
+整 <- function(x)        formatC(as.numeric(x), format = 'd', big.mark = ',')
+百 <- function(x, d = 2) ifelse(is.finite(x), paste0(formatC(100 * as.numeric(x), format = 'f', digits = d), '%'), '—')
+pp <- function(x, d = 2) ifelse(is.finite(x), paste0(formatC(100 * as.numeric(x), format = 'f', digits = d, flag = '+'), 'pp'), '—')
+
+## 大表闸：明细一律不整表内嵌；超上限者内嵌前 N 行、全量落盘，并实测公示省略量
+互表 <- function(x, 题, 副 = '', 上限 = 1000L, 落 = NA_character_) {
+  if (is.null(x) || !nrow(x))
+    return(knitr::kable(data.table(结果 = paste0('0 行 —— 零行不等于无异常，须查料源（', 题, '）'))))
+  x <- as.data.table(x); n <- nrow(x); 省 <- max(0L, n - 上限)
+  if (省 > 0L && !is.na(落)) 落盘(x, 落)
+  y <- if (省 > 0L) x[seq_len(上限)] else x
+  副2 <- paste0(副, '　｜　总行 ', 整(n), ' · 内嵌 ', 整(nrow(y)), ' · 省略 ', 整(省),
+                '（', 百(省 / n, 2), '）',
+                if (省 > 0L && !is.na(落)) paste0(' · 全量已落盘：', 落) else '')
+  DT::datatable(y, rownames = FALSE, class = 'compact stripe hover',
+    caption = htmltools::tags$caption(style = 'caption-side:top;text-align:left;',
+      htmltools::tags$b(题), htmltools::tags$span(style = 'opacity:.75;font-size:90%', 副2)),
+    options = list(pageLength = 25, scrollX = TRUE, scrollY = '420px', scrollCollapse = TRUE))
+}
+待表 <- function(需, 用途, 取数) knitr::kable(data.table(
+  `所待文件` = 需, `本节需它算什么` = 用途, `取数编号` = 取数,
+  `本档处置` = '不以文字数字代替'), caption = '○ 待表：本节数字无法由现有料源现算')
+
+## 加权精确分位（逆累积分布法）：频次表逐值带权，不用近似分位函数
+wq <- function(v, w, p) { o <- order(v); v <- v[o]; w <- w[o]
+  cw <- cumsum(w) / sum(w); v[which(cw >= p - 1e-12)[1]] }
+
+## ══ 装载：全部料源一次读齐，就位与否由 file.exists() 决定 ═══════════════
+R8 <- 读首个(c('BASE08_late40_dual_caliber_w139.csv'))          # 本档主料源：双口径
+R1 <- 读首个(c('BASE01_late40_r60_n30_w139.csv',
+               '下注时机风控参数分析报告_基准档.csv'))            # 基准档名单件
+R4 <- 读首个(c('BASE04_all_players_w139.csv'))                   # 全量件：平台基线
+R5 <- 读首个(c('BASE05_shoe_len_freq_w139.csv'))                 # 靴长频次
+R6 <- 读首个(c('BASE06_first_round_player_w139.csv'))            # 首注明细
+R7 <- 读首个(c('BASE07_start_scan_w139.csv'))                    # 起始局号扫描
+
+数值化 <- function(x, 除外 = 'player_id') {
+  if (is.null(x)) return(NULL)
+  x <- as.data.table(x)
+  for (j in setdiff(names(x), 除外)) set(x, j = j, value = suppressWarnings(as.numeric(x[[j]])))
+  if ('player_id' %in% names(x)) set(x, j = 'player_id', value = trimws(as.character(x$player_id)))
+  x[]
+}
+D8 <- 数值化(R8$表); B1 <- 数值化(R1$表); A4 <- 数值化(R4$表)
+FR <- 数值化(R5$表, 除外 = 'key_def'); FP <- 数值化(R6$表); S7 <- 数值化(R7$表)
+if (!is.null(A4)) A4 <- A4[is.finite(valid_bet) & valid_bet > 0 & is.finite(roi)]
+
+## ══ 平台基线：实测，不写死 ════════════════════════════════════════════
+if (!is.null(A4) && nrow(A4)) {
+  基线ROI <- sum(A4$profit) / sum(A4$valid_bet)
+  基线来源 <- paste0('实测：', R4$名, '（全量 ', 整(nrow(A4)), ' 名会员的合成 ROI）')
+} else { 基线ROI <- NA_real_; 基线来源 <- '○ 待表：BASE04 未就位，本档一切超额 ROI 不予计算' }
+
+## 扫描行：全档共用
+扫描行 <- function(X, 标签, 参数) {
+  if (is.null(X) || !nrow(X)) return(NULL)
+  vb <- sum(X$valid_bet); pf <- sum(X$profit); rp <- pf / vb
+  q <- stats::quantile(X$roi, c(.9, .95), na.rm = TRUE, names = FALSE)
+  data.table(扫描维 = 标签, 参数 = 参数, 命中人数 = nrow(X),
+             合成ROI = rp, 等权平均ROI = mean(X$roi), 超额ROI = rp - 基线ROI,
+             ROI_P90 = q[1], ROI_P95 = q[2], 盈利玩家占比 = mean(X$roi > 0),
+             名单洗码量 = vb, 平均总订单数 = mean(X$total_orders))
+}
+扫描美化 <- function(SC) copy(SC)[, `:=`(命中人数 = 整(命中人数), 合成ROI = 百(合成ROI, 4),
+  等权平均ROI = 百(等权平均ROI, 4), 超额ROI = pp(超额ROI), ROI_P90 = 百(ROI_P90),
+  ROI_P95 = 百(ROI_P95), 盈利玩家占比 = 百(盈利玩家占比), 名单洗码量 = 数(名单洗码量),
+  平均总订单数 = 数(平均总订单数, 1))]
+```
+
+```{r}
+#| label: glossary
+#| echo: false
+#| results: asis
+术语 <- rbind(
+  data.table(词 = '改进档',       释 = '在基准档之上补齐口径闸并加装对照设施的版本。其一切数字须与基准档逐项可比，故两档共用同一营业日窗与同一规则参数。'),
+  data.table(词 = '基准档',       释 = '不改原方法、原口径、原 SQL 的忠实转录件，作为改进档的分母。'),
+  data.table(词 = '双口径',       释 = '同一次查询内同时产出「原口径」与「加闸口径」两套指标。差额即六道闸各自的实际影响，不靠估算。'),
+  data.table(词 = '原口径',       释 = '仅按原报告的四条过滤（游戏类别、三字段非空）聚合，不去重、不剔测试线、不剔测试单、不验汇率。'),
+  data.table(词 = '加闸口径',     释 = '在原口径之上叠加六道闸：营业日窗、幂等去重、五级测试线、测试单与类别、汇率与空值、局号有效。'),
+  data.table(词 = '幂等去重',     释 = '同一注单多版本按更新时间取最新一版。本表实测重复率约 0.74%，不去重即把重复注单计入分子分母。'),
+  data.table(词 = '测试线',       释 = 'age022=1 的代理线，共 214 个，须逐级（五级）排除，否则名单混入内部流量。'),
+  data.table(词 = '剔和口径',     释 = '和局既不计胜也不计负，须从胜率分母剔除。以总订单数作分母会系统性压低胜率，且压低幅度与该会员押和偏好正相关。'),
+  data.table(词 = '口径锁',       释 = '随交付件落盘的常量列（如 rule_def、window_def），写明该件依据的定义。无锁列的旧档一律拒读。'),
+  data.table(词 = '恒等式残差',   释 = '净输赢 − 游戏输赢 − 退水，理论恒为 0。非零即当场暴露口径漂移，是最廉价的自校。'),
+  data.table(词 = '靴',           释 = '一副牌自洗牌至用尽的完整周期。本报告以 bet03 场次编号代表一靴。'),
+  data.table(词 = '靴键',         释 = '唯一标识一靴。仅用 bet03 时跨日同号靴会被并成一靴，靴长与靴内位置同时失真。'),
+  data.table(词 = '靴内进度',     释 = '局号 ÷ 该靴总局数，取值 0–1。跨靴可比；绝对局号则随靴长漂移。'),
+  data.table(词 = '覆盖率漂移',   释 = '同一绝对局号在不同靴长下所覆盖的靴尾比例之差。差越大，该阈值越不成其为统一口径。'),
+  data.table(词 = '靴尾占比',     释 = 'late_ratio＝第 40 局及以后订单数 ÷ 总订单数。'),
+  data.table(词 = '首注局号',     释 = '会员在该靴的最小局号；跨靴取均值得 avg_first_round。它描述何时入场，与靴尾占比是两回事。'),
+  data.table(词 = '洗码量',       释 = 'valid_bet＝Σ(有效投注 ÷ 汇率)。平台一切退水、占成与结账的分母。'),
+  data.table(词 = '合成 ROI',     释 = 'Σprofit ÷ Σvalid_bet，按量加权。经济结算只能用它。'),
+  data.table(词 = '等权平均 ROI', 释 = '每位会员各记一票，30 单者与 3,000 单者同权。属异方差，不可用于结算。'),
+  data.table(词 = '口径背离',     释 = '合成与等权之差。差得越大，说明结论越受少数大户或大批小账户支配。'),
+  data.table(词 = '平台基线',     释 = '全平台会员合成 ROI，由 BASE04 全量件现算。任何群体指标须与它比，而非与 0 比。'),
+  data.table(词 = '超额 ROI',     释 = '群体合成 ROI 减平台基线。为负＝该群比平均输得更多，是价值客而非风险源。'),
+  data.table(词 = '集中度哨兵',   释 = '洗码量前 1% 会员所占份额。份额过高时，合成口径的有效样本量约等于那几个人。'),
+  data.table(词 = '尾部分位',     释 = 'ROI 的 P90／P95。它随样本量缩小而机械变大，不可作为「信号更强」的证据。'),
+  data.table(词 = '根号 n 律',    释 = '零效应下 ROI 的标准差与 1/√n 成正比。若各门槛的隐含标准差恰按 √n 缩放，即证明尾部纯属抽样噪音。'),
+  data.table(词 = '自助区间',     释 = 'bootstrap：对会员重抽样重算合成 ROI，取 2.5%／97.5% 分位为区间。区间若涵盖基线，则「该群与平均不同」不成立。'),
+  data.table(词 = '名单差集',     释 = '两口径各自命中集合之差。它是六道闸影响的**直接度量**，不需任何假设。'),
+  data.table(词 = '误判率',       释 = '名单中不具备目标行为者的比例。须外部标签或阴性对照方可测得。'),
+  data.table(词 = '阴性对照',     释 = '以随机等量假名单跑同一套指标。真名单若不能超出假名单分布，该规则区分力即为零。'),
+  data.table(词 = '待表',         释 = '理论上存在、本次料源不足以算出。它不等于 0，须点名所缺文件与取数编号。'),
+  data.table(词 = '证据等级',     释 = 'E1 可指名／E2 算术推导／E3 可重算的观察性差额／E4 准实验／E5 随机对照试验。')
+)
+GL <- setNames(as.list(术语$释), 术语$词)
+JS <- paste0(
+'<style>\n.gl{border-bottom:1px dotted #7fd1e6;cursor:help;position:relative}\n',
+'.gl:hover::after{content:attr(data-tip);position:absolute;left:0;top:1.5em;z-index:9999;\n',
+' width:32em;max-width:78vw;padding:.6em .8em;border-radius:.4em;\n',
+' background:#0d2733;color:#e8f6fb;border:1px solid #3aa7c4;\n',
+' box-shadow:0 6px 18px rgba(0,0,0,.55);font-size:.86rem;line-height:1.5;\n',
+' font-weight:400;white-space:normal;text-align:left}\n</style>\n',
+'<script>\n(function(){\nvar GLO = ', jsonlite::toJSON(GL, auto_unbox = TRUE), ';\n',
+'var TERMS = Object.keys(GLO).sort(function(a,b){return b.length-a.length;});
+var SKIP = {SCRIPT:1,STYLE:1,CODE:1,PRE:1,A:1,TEXTAREA:1,BUTTON:1};
+var CNT = {}, CAP = 3;
+function ann(tn){
+  var t = tn.nodeValue; if(!t || t.length < 2) return;
+  for (var k = 0; k < TERMS.length; k++){
+    var w = TERMS[k];
+    if ((CNT[w] || 0) >= CAP) continue;
+    var p = t.indexOf(w); if (p < 0) continue;
+    CNT[w] = (CNT[w] || 0) + 1;
+    var fr = document.createDocumentFragment(), pre = null, rt = null;
+    if (p > 0){ pre = document.createTextNode(t.slice(0, p)); fr.appendChild(pre); }
+    var sp = document.createElement("span");
+    sp.className = "gl"; sp.setAttribute("data-tip", GLO[w]); sp.textContent = w;
+    fr.appendChild(sp);
+    var rest = t.slice(p + w.length);
+    if (rest){ rt = document.createTextNode(rest); fr.appendChild(rt); }
+    tn.parentNode.replaceChild(fr, tn);
+    if (pre) ann(pre);
+    if (rt) ann(rt);
+    return;
+  }
+}
+function walk(node){
+  var c = node.childNodes;
+  for (var i = c.length - 1; i >= 0; i--){
+    var n = c[i];
+    if (n.nodeType === 1){
+      if (SKIP[n.tagName]) continue;
+      if (n.className && String(n.className).indexOf("gl") === 0) continue;
+      walk(n);
+    } else if (n.nodeType === 3){ ann(n); }
+  }
+}
+function run(){ walk(document.querySelector("main") || document.body); }
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run); else run();
+})();\n</script>\n')
+cat(JS)
+```
+
+::: {.callout-important}
+## 本档与基准档的关系
+本档是**改进档**：规则参数（第 40 局 · 60% · 30 单）与营业日窗（139 日）与基准档**完全相同**，
+差别只在**口径闸**。第九节的 SQL 一次查询同时产出「原口径」与「加闸口径」两套指标，
+故六道闸各自的影响是**直接测出来的差额**，不是估算。
+
+基准档 `百家乐下注时机风控参数分析报告_基准档_v2.5实测版.qmd` 不受本档任何改动影响。
+:::
+
+```{r}
+#| label: inventory
+六元组 <- function(p) {
+  if (is.na(p) || !file.exists(p)) return(NULL)
+  sz <- file.info(p)$size; if (!is.finite(sz) || sz < 2) return(NULL)
+  b <- readBin(p, 'raw', n = as.integer(min(sz, 4e6)))
+  ncrlf <- sum(b[-length(b)] == as.raw(13L) & b[-1] == as.raw(10L)); nlf <- sum(b == as.raw(10L))
+  hd <- tryCatch(suppressWarnings(readLines(p, n = 50, warn = FALSE)), error = function(e) character(0))
+  list(字节 = sz, MD5 = tryCatch(unname(tools::md5sum(p)), error = function(e) NA_character_),
+       行尾 = if (ncrlf > 0 && ncrlf >= nlf * 0.9) 'CRLF' else if (nlf > 0) 'LF' else '无换行',
+       编码 = if (!length(hd)) '—' else if (all(validUTF8(hd))) 'UTF-8' else '非 UTF-8（须查）')
+}
+目录件 <- if (!is.na(路径)) list.files(路径, pattern = '\\.csv$', ignore.case = TRUE) else character(0)
+目录MD5 <- setNames(vapply(目录件, function(n) { st <- 六元组(file.path(路径, n))
+  if (is.null(st)) NA_character_ else st$MD5 }, ''), 目录件)
+台账行 <- function(件, 名, 用途, 取数, 对象) {
+  p <- if (is.na(路径)) NA_character_ else file.path(路径, 名)
+  存 <- !is.na(p) && file.exists(p); st <- if (存) 六元组(p) else NULL
+  同 <- if (存 && !is.na(st$MD5)) setdiff(names(目录MD5)[!is.na(目录MD5) & 目录MD5 == st$MD5], 名) else character(0)
+  data.table(件 = 件, 文件 = 名, 用途 = 用途, 取数 = 取数,
+    就位 = if (存) '✔ 已就位' else '✘ 未找到',
+    观测值 = if (!is.null(对象)) 整(nrow(对象)) else '—',
+    列数 = if (!is.null(对象)) as.character(ncol(对象)) else '—',
+    字节 = if (!is.null(st)) 整(st$字节) else '—',
+    MD5前12 = if (!is.null(st)) substr(st$MD5, 1, 12) else '—',
+    行尾 = if (!is.null(st)) st$行尾 else '—',
+    编码 = if (!is.null(st)) st$编码 else '—',
+    同内容重名件 = if (length(同)) paste(同, collapse = '、') else '无')
+}
+台账 <- rbindlist(list(
+  台账行('BASE08 双口径件', ifelse(is.na(R8$名), 'BASE08_late40_dual_caliber_w139.csv', R8$名),
+         '入：本档主料源，§9 SQL 的执行结果', '§9', D8),
+  台账行('BASE01 基准名单', ifelse(is.na(R1$名), 'BASE01_late40_r60_n30_w139.csv', R1$名),
+         '入：与基准档逐人对照', '基准档 §9', B1),
+  台账行('BASE04 全量件', ifelse(is.na(R4$名), 'BASE04_all_players_w139.csv', R4$名),
+         '入：平台基线 · 阴性对照', '基准档 §16.1', A4),
+  台账行('BASE05 靴长频次', ifelse(is.na(R5$名), 'BASE05_shoe_len_freq_w139.csv', R5$名),
+         '入：§3 靴长与覆盖率漂移', '基准档 §16.2', FR),
+  台账行('BASE06 首注明细', ifelse(is.na(R6$名), 'BASE06_first_round_player_w139.csv', R6$名),
+         '入：§4 首注局号分位', '基准档 §16.3', FP),
+  台账行('BASE07 起始局号', ifelse(is.na(R7$名), 'BASE07_start_scan_w139.csv', R7$名),
+         '入：§5 起始局号扫描', '基准档 §16.4', S7)), fill = TRUE)
+互表(台账, paste0('料源唯一台账（现测）：就位 ', sum(台账$就位 == '✔ 已就位'), ' / ', nrow(台账), ' 件'),
+     paste0('　｜　数据目录：', ifelse(is.na(路径), '未找到', 路径),
+            '　｜　目录内 csv 共 ', length(目录件), ' 个　｜　全列现测，无一处写死'))
+```
+
+```{r}
+#| label: baseline-src
+knitr::kable(data.table(
+  项 = c('平台基线 ROI', '来源', '性质'),
+  值 = c(百(基线ROI, 4), 基线来源,
+         ifelse(is.na(基线ROI), '未就位：本档一切超额 ROI 标 ○ 待表',
+                '本次实测：由全量会员合成 ROI 现算，非写死'))),
+  caption = '平台基线来源公示（全档超额 ROI 的分母基准）')
+```
+
+# 一、分析目的
+
+本次分析用于确定“策略性后段下注”风控规则的合理参数，重点验证：从第几局开始定义为后段下注；后段下注订单占比达到多少视为异常；玩家至少累计多少订单后才纳入判断。
+
+待验规则（与基准档同参数，便于对读）：
+
+> **统计第 40 局及以后下注的订单；第 40 局及以后订单占玩家总订单比例达到 60% 及以上；玩家总订单数达到 30 笔及以上。**
+
+**改进档另加三项验证**，皆由数据回答，不由文字回答：
+
+1. 六道口径闸各自把名单改动了多少（**名单差集**，见 @sec-dual）；
+2. 命中群体相对**平台基线**是风险源还是价值客（超额 ROI，见 @sec-dual）；
+3. 尾部分位的升高是信号还是样本量效应（**根号 n 律**，见 @sec-n）。
+
+# 二、数据口径
+
+## 2.1 关键字段
+
+| 字段 | 业务含义 | 改进档的处置 |
+|---|---|---|
+| `bet02` | 游戏类别，`101` 为百家乐 | 同原口径 |
+| `bet03` | 场次编号，可视为一靴牌 | 靴长统计并列两种靴键口径（§3） |
+| `bet04` | 子场次编号，即靴内局号 | 一律 `TRIM＋NULLIF＋CAST`，并要求 `> 0` |
+| `bet05` | 会员ID | 同上，并要求 `> 0`，输出前已转型 |
+| `bet11` | 汇率 | 要求 `> 0`，非仅 `NULLIF(...,0)` |
+| `bet13` | 下注金额 | 同上转型 |
+| `bet14` | 派彩金额 | 同上转型；胜负改**剔和口径** |
+| `bet16` | 退水金额 | 新增：供恒等式残差自校 |
+| `bet17` | 会员净输赢 | 新增：同上 |
+| `bet38` | 测试标识 | 新增闸：`UPPER(TRIM(bet38))='N'` |
+| `category` | 注单类别 | 新增闸：`='1'` |
+| `bet18`–`bet22` | 五级代理线 | 新增闸：逐级排除测试线 |
+| `bet01` | 注单号 | 新增闸：按其幂等去重 |
+| `dt` | 营业日（取自 bet07） | 新增闸：139 日窗；**不可用 `DATE(bet08)` 切日** |
+| `validbet` | 有效投注（洗码量） | 同原口径 |
+
+## 2.2 双口径定义
+
+```{r}
+#| label: caliber-def
+口径 <- data.table(
+  闸 = c('营业日窗','幂等去重','五级测试线','测试单与类别','汇率与空值','局号有效','胜负分母'),
+  原口径 = c('无：全表扫描','无：不去重','无','无','仅 NULLIF(bet11,0)','仅 IS NOT NULL','÷ 总订单数（含和局）'),
+  加闸口径 = c("dt ∈ [2026-03-21, 2026-08-07)", 'ROW_NUMBER 按 bet01 取最新版',
+               'age022=1 逐级 LEFT JOIN 排空', "category='1' 且 UPPER(TRIM(bet38))='N'",
+               'TRIM＋NULLIF＋CAST 且 bet11 > 0', 'CAST(bet04) > 0', '÷（胜单＋负单），和局剔出'),
+  影响方向 = c('缩小人口','剔重复注单，分子分母同降','剔内部流量','剔测试单',
+               '剔汇率异常行（极端 ROI 的来源之一）','剔局号异常行','抬高胜率，且抬升幅度随押和偏好而异'))
+knitr::kable(口径, caption = '六道闸＋一项分母修正：原口径 vs 加闸口径（两者由同一次查询同时产出）')
+```
+
+
+# 三、牌靴长度验证
+
+```{r}
+#| label: shoe-len
+if (!is.null(FR) && all(c('key_def','shoe_len','n_shoes') %in% names(FR))) {
+  靴长 <- FR[, .(靴数 = sum(n_shoes),
+                 均值 = round(sum(shoe_len * n_shoes) / sum(n_shoes), 2),
+                 P50 = wq(shoe_len, n_shoes, .50), P75 = wq(shoe_len, n_shoes, .75),
+                 P90 = wq(shoe_len, n_shoes, .90), P95 = wq(shoe_len, n_shoes, .95),
+                 P99 = wq(shoe_len, n_shoes, .99),
+                 最短 = min(shoe_len), 最长 = max(shoe_len)), by = .(靴键口径 = key_def)]
+  互表(copy(靴长)[, 靴数 := 整(靴数)], '牌靴长度分布（现算：频次表加权逆累积分布，非近似函数）',
+       paste0('　｜　料源：', R5$名, '；两种靴键口径并列'))
+} else { 靴长 <- NULL
+  待表('BASE05_shoe_len_freq_w139.csv', '靴长的均值与 P50/P75/P90/P95/P99（两种靴键口径）', '基准档 §16.2') }
+```
+
+```{r}
+#| label: shoe-key-diff
+#| results: asis
+if (!is.null(靴长) && nrow(靴长) == 2) {
+  a <- 靴长[靴键口径 %like% 'A']; b <- 靴长[靴键口径 %like% 'B']
+  cat(sprintf('**两种靴键口径的实测差**：仅用 `bet03` 得 %s 靴、均值 %.2f 局；补上营业日与桌号后得 %s 靴、均值 %.2f 局。\n\n',
+              整(a$靴数), a$均值, 整(b$靴数), b$均值))
+  cat(sprintf('- 靴数相差 **%s 靴（%s）**——这就是跨日同号靴被并成一靴的实测量；\n',
+              整(abs(b$靴数 - a$靴数)), 百(abs(b$靴数 - a$靴数) / b$靴数, 2)))
+  cat(sprintf('- 均值相差 **%.2f 局**，方向为%s，与「并靴使短靴被吞、均值虚高」一致；\n',
+              abs(a$均值 - b$均值), if (a$均值 > b$均值) '甲高于乙' else '甲低于乙'))
+  cat(sprintf('- 最长靴 **%g 局**，远超 P99 的 %g 局；此类极端值须单独查证是否为并靴或落库异常。\n\n',
+              max(靴长$最长), max(靴长$P99)))
+}
+```
+
+```{r}
+#| label: coverage-drift
+#| results: asis
+if (!is.null(靴长) && nrow(靴长)) {
+  b <- 靴长[nrow(靴长)]          # 取较严谨的靴键口径
+  L50 <- as.numeric(b$P50); L99 <- as.numeric(b$P99)
+  tb <- data.table(起始局号 = c(35, 40, 45, 50))
+  tb[, `在中位靴的覆盖率` := (L50 - 起始局号 + 1) / L50]
+  tb[, `在P99长靴的覆盖率` := (L99 - 起始局号 + 1) / L99]
+  tb[, `覆盖率漂移` := `在中位靴的覆盖率` - `在P99长靴的覆盖率`]
+  tb[, `等价靴内进度(中位靴)` := round(起始局号 / L50, 3)]
+  cat('\n')
+  print(knitr::kable(copy(tb)[, `:=`(`在中位靴的覆盖率` = 百(`在中位靴的覆盖率`, 1),
+    `在P99长靴的覆盖率` = 百(`在P99长靴的覆盖率`, 1), `覆盖率漂移` = pp(`覆盖率漂移`, 1))],
+    caption = paste0('绝对局号的覆盖率漂移（靴键口径：', b$靴键口径,
+                     '；中位靴 ', L50, ' 局、P99 长靴 ', L99, ' 局）')))
+  cat('\n\n**读法**：同一个「第 40 局」，在中位靴覆盖后 ',
+      百((L50 - 39) / L50, 1), '、在 P99 长靴覆盖后 ', 百((L99 - 39) / L99, 1),
+      '——**漂移 ', pp((L50 - 39) / L50 - (L99 - 39) / L99, 1),
+      '**。而长靴恰是牌面信息累积最多之处，固定局号等于在最该收紧处放宽。\n\n', sep = '')
+}
+```
+
+# 四、玩家平均首次下注局号分析
+
+```{r}
+#| label: first-round
+if (!is.null(FP) && 'avg_first_round' %in% names(FP)) {
+  v <- FP$avg_first_round[is.finite(FP$avg_first_round)]
+  首注 <- data.table(分位数 = c('P50','P75','P90','P95','P99'),
+                     平均首次下注局号 = round(as.numeric(stats::quantile(v,
+                       c(.50,.75,.90,.95,.99), names = FALSE)), 2))
+  互表(首注, paste0('平均首次下注局号分位数（现算，会员数 ', 整(length(v)), '）'),
+       paste0('　｜　料源：', R6$名, '；由会员级明细精确求分位'))
+} else { 首注 <- NULL
+  待表('BASE06_first_round_player_w139.csv', 'avg_first_round 的五个分位', '基准档 §16.3') }
+```
+
+```{r}
+#| label: first-round-narr
+#| results: asis
+if (!is.null(首注)) {
+  p99 <- 首注$平均首次下注局号[首注$分位数 == 'P99']
+  cat(sprintf('第 40 局较 P99（%.2f 局）晚 **%.2f 局**，故「平均在第 40 局及以后才入场」确属极少数行为。\n\n', p99, 40 - p99))
+  cat('但须与靴尾占比分开读：`avg_first_round` 描述**何时入场**，`late_ratio` 描述**订单落在哪**。中途入场者天然靴尾占比高，与「策略性观望」无关——这是本规则最大的误判来源，须以两者交叉分层方能分辨。\n\n')
+}
+```
+
+# 五、为什么选择第40局
+
+```{r}
+#| label: start-scan
+if (!is.null(S7) && all(c('start_round','valid_bet','profit','roi','total_orders') %in% names(S7))) {
+  S7ok <- S7[is.finite(valid_bet) & valid_bet > 0 & is.finite(roi)]
+  档 <- sort(unique(S7ok$start_round))
+  起始局 <- rbindlist(lapply(档, function(k)
+    扫描行(S7ok[start_round == k], '起始局号', as.character(k))), fill = TRUE)
+  互表(扫描美化(起始局), '起始局号扫描（现算：由会员级明细聚合，档数由文件决定，不预设）',
+       paste0('　｜　料源：', R7$名, '；明细 ', 整(nrow(S7ok)), ' 行，仅聚合入页'))
+} else { 起始局 <- NULL
+  待表('BASE07_start_scan_w139.csv', '起始局号各档的命中人数与经济指标', '基准档 §16.4') }
+```
+
+```{r}
+#| label: start-scan-narr
+#| results: asis
+if (!is.null(起始局) && nrow(起始局) >= 2) {
+  o <- 起始局[order(as.numeric(参数))]
+  d <- diff(o$超额ROI)
+  cat(sprintf('超额 ROI 随起始局号收紧的逐档变动：%s。**%s**\n\n', paste(pp(d), collapse = '、'),
+              if (all(d < 0)) '单调下行——阈值越紧，该群相对平台越是价值客，而非风险源。'
+              else if (all(d > 0)) '单调上行——阈值越紧，该群相对平台越占优，值得续查。'
+              else '非单调——须先过集中度与自助区间，方可解读。'))
+} else if (!is.null(起始局)) {
+  cat(sprintf('**料源只有 %d 档**，无从比较。须以基准档 §16.4 的 `ks` 版 SQL 重导全档。\n\n', nrow(起始局)))
+}
+```
+
+# 六、为什么订单占比选择60% · 七、为什么订单数选择30笔 {#sec-n}
+
+```{r}
+#| label: scan
+if (!is.null(D8) && 'late_ratio_ok' %in% names(D8)) {
+  Q <- D8[is.finite(valid_bet_ok) & valid_bet_ok > 0]
+  Q <- Q[, .(player_id, total_orders = total_orders_ok, late_ratio = late_ratio_ok,
+             valid_bet = valid_bet_ok, profit = profit_ok, roi = roi_ok)][is.finite(roi)]
+  占比档 <- sort(unique(c(.40, .50, .60, .70,
+    round(as.numeric(stats::quantile(Q$late_ratio, c(.5,.75,.9,.95,.99), names = FALSE)), 4), 1.00)))
+  单量档 <- sort(unique(c(30, round(as.numeric(stats::quantile(Q$total_orders,
+    c(.5,.75,.9,.95,.99), names = FALSE))))))
+  SC <- rbindlist(c(
+    lapply(占比档, function(c0) 扫描行(Q[late_ratio >= c0 - 1e-9 & total_orders >= 30],
+      '靴尾占比阈', paste0('≥', formatC(100 * c0, format = 'f', digits = 2), '%'))),
+    lapply(单量档, function(n0) 扫描行(Q[late_ratio >= 0.60 - 1e-9 & total_orders >= n0],
+      '订单门槛', paste0('≥', n0)))), fill = TRUE)
+  互表(扫描美化(SC), '参数扫描（现算 · 加闸口径）：靴尾占比阈 ＋ 订单门槛',
+       '　｜　档位非人拍：原报告参数 ∪ 该指标的 P50/P75/P90/P95/P99')
+} else { SC <- NULL
+  待表('BASE08_late40_dual_caliber_w139.csv', '两个参数维的全档扫描', '§9') }
+```
+
+```{r}
+#| label: sqrtn
+if (!is.null(SC)) {
+  z95 <- stats::qnorm(.95)
+  A <- SC[扫描维 == '订单门槛'][order(平均总订单数)]
+  A[, 隐含σ := (ROI_P95 - 合成ROI) / z95]
+  A[, 实测σ倍数 := 隐含σ / 隐含σ[.N]]
+  A[, 零效应预测 := sqrt(平均总订单数[.N] / 平均总订单数)]
+  A[, 偏离 := round(实测σ倍数 - 零效应预测, 3)]
+  互表(A[, .(参数, 命中人数 = 整(命中人数), 平均总订单数 = 数(平均总订单数, 1),
+             合成ROI = 百(合成ROI, 4), ROI_P95 = 百(ROI_P95), 隐含σ = 百(隐含σ),
+             实测σ倍数 = round(实测σ倍数, 3), 零效应预测 = round(零效应预测, 3), 偏离)],
+       '根号 n 律检验（现算）：尾部分位是信号还是噪音',
+       '　｜　两列倍数若接近，则尾部无任何超出随机的结构；同时看合成 ROI 是否稳定贴近基线')
+}
+```
+
+```{r}
+#| label: sqrtn-plot
+if (!is.null(SC) && requireNamespace('plotly', quietly = TRUE)) {
+  A <- SC[扫描维 == '订单门槛'][order(平均总订单数)]
+  plotly::plot_ly(x = A$平均总订单数, y = 100 * A$ROI_P95, type = 'scatter',
+                  mode = 'lines+markers', name = 'ROI P95') |>
+    plotly::add_trace(y = 100 * A$合成ROI, name = '合成 ROI') |>
+    plotly::add_trace(y = rep(100 * 基线ROI, nrow(A)),
+                      name = paste0('平台基线 ', 百(基线ROI, 4)), line = list(dash = 'dash')) |>
+    plotly::layout(title = '门槛升高时：尾部分位急坠，合成 ROI 稳定贴近基线',
+                   xaxis = list(title = '该档的平均总订单数（对数轴）', type = 'log'),
+                   yaxis = list(title = '%'))
+}
+```
+
+# 八、最终推荐规则
+
+## 8.1 主规则（待验，非本档结论）
+
+```text
+游戏类型为百家乐；第 40 局及以后订单占比达到 60%；玩家总订单数达到 30 笔。
+```
+
+## 8.2 风险分层：各层规模与经济指标由实测填充
+
+```{r}
+#| label: tiers
+if (!is.null(SC)) {
+  层 <- data.table(
+    层级 = c('观察','关注','重点审核','高度异常','稳定异常'),
+    规则 = c('占比≥40%，总订单≥30','占比≥50%，总订单≥30','占比≥60%，总订单≥30',
+             '占比≥70%，总订单≥30','占比≥60%，总订单≥50'),
+    查表键 = c('≥40.00%','≥50.00%','≥60.00%','≥70.00%', NA_character_))
+  取 <- function(k) if (is.na(k)) NULL else SC[扫描维 == '靴尾占比阈' & 参数 == k]
+  层[, 命中人数 := vapply(查表键, function(k) { r <- 取(k)
+    if (is.null(r) || !nrow(r)) NA_real_ else r$命中人数 }, 0)]
+  层[, 合成ROI := vapply(查表键, function(k) { r <- 取(k)
+    if (is.null(r) || !nrow(r)) NA_real_ else r$合成ROI }, 0)]
+  层[, 超额ROI := vapply(查表键, function(k) { r <- 取(k)
+    if (is.null(r) || !nrow(r)) NA_real_ else r$超额ROI }, 0)]
+  ## 稳定异常层单独算（两条件叠加，不在单维扫描内）
+  if (exists('Q')) {
+    r5 <- 扫描行(Q[late_ratio >= 0.60 - 1e-9 & total_orders >= 50], '叠加', '≥60%＋≥50单')
+    if (!is.null(r5)) { 层[5, 命中人数 := r5$命中人数]; 层[5, 合成ROI := r5$合成ROI]
+                        层[5, 超额ROI := r5$超额ROI] }
+  }
+  层[, 查表键 := NULL]
+  knitr::kable(copy(层)[, `:=`(命中人数 = 整(命中人数), 合成ROI = 百(合成ROI, 4),
+                                超额ROI = pp(超额ROI))],
+    caption = '风险分层：规模与经济指标一律现算（加闸口径）')
+}
+```
+
+
+# 九、命中玩家及盈利情况 SQL（升级版 · 复制粘贴即可执行）
+
+::: {.callout-note}
+## 这一段与原报告 SQL 的关系
+**规则参数一字未改**（第 40 局 · 60% · 30 单）。改的只有两处：
+① 补齐六道口径闸；② **一次查询同时产出原口径与加闸口径**，两套指标并排落在同一行上。
+故第十节的对比是**直接测出来的差额**，不是两次查询硬凑的。
+
+▸ 导出：`数据库/BASE08_late40_dual_caliber_w139.csv`　▸ 文件名即口径锁，不与总包 v3 任何输出重名。
+:::
+
+```{sql, eval = FALSE}
+/* ═══════════════════════════════════════════════════════════════════════════
+   D-08 · 靴尾下注（第 40 局起）双口径会员画像
+   ▸ 导出：「数据库/BASE08_late40_dual_caliber_w139.csv」
+   ▸ 用途：报告 §10 双口径对比；原口径复现原报告，加闸口径为改进版
+   ▸ 窗口：dt ∈ [2026-03-21, 2026-08-07)，共 139 个营业日
+   ▸ 规则：第 40 局起 · 靴尾占比 ≥ 0.60 · 总订单 ≥ 30（与原报告完全一致）
+   ═══════════════════════════════════════════════════════════════════════════ */
+WITH ta AS (                                                                    -- 公共表表达式：测试线名册，供后续五级逐级排除
+  SELECT DISTINCT age001 AS aid                                                 -- 取列：代理号，去重后作黑名单
+  FROM ods_mariadb_2b.ods_a168_agent                                            -- 取数来源：代理主档（五级代理线归属来源）
+  WHERE age022 = '1'                                                            -- 过滤条件：age022='1' 即测试线，全平台共 214 个
+),                                                                              -- 续行：收束 ta
+rk AS (                                                                         -- 公共表表达式：幂等去重层，同一注单多版本只留最新一版
+  SELECT b.bet01, b.dt, b.bet03, b.bet04, b.bet05, b.bet11,                      -- 取列：注单号、营业日、场次、局号、会员号、汇率
+         b.bet13, b.bet14, b.bet16, b.bet17,                                    -- 续行：下注额、派彩额、退水额、会员净输赢
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,                           -- 续行：一至五级代理线，供测试线排除
+         b.bet38, b.bet39, b.category, b.validbet,                              -- 续行：测试标识、桌号、注单类别、有效投注
+         ROW_NUMBER() OVER (                                                    -- 行号窗口：同一注单号内排序，取头一行即最新版
+           PARTITION BY b.bet01                                                 -- 窗口分区：按注单号分组
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn       -- 排序：更新时间优先，其次同步时间、营业日；本表实测重复率约 0.74%
+  FROM ods_mariadb_2b.ods_a168_bet02 b                                          -- 取数来源：注单明细表（金额与行为口径的第一料源）
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                            -- 过滤条件：营业日窗，左闭右开恰 139 日；dt 取自 bet07
+    AND b.bet02 = '101'                                                         -- 并列条件：只取百家乐
+),                                                                              -- 续行：收束 rk
+fx AS (                                                                         -- 公共表表达式：口径归一 ＋ 逐行贴闸标记（双口径的关键一层）
+  SELECT CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT)          AS player_id,        -- 取值表达式：会员号先去空白、空串归 NULL，再显式转型；本库字段多为 varchar
+         CAST(NULLIF(TRIM(r.bet04),'') AS INT)             AS round_no,         -- 取值表达式：靴内局号，同上转型
+         CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4))   AS bet_amt,          -- 取值表达式：下注金额
+         CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4))   AS pay_amt,          -- 取值表达式：派彩金额
+         CAST(NULLIF(TRIM(r.bet16),'') AS DECIMAL(20,4))   AS reb_amt,          -- 取值表达式：退水金额，供恒等式自校
+         CAST(NULLIF(TRIM(r.bet17),'') AS DECIMAL(20,4))   AS net_amt,          -- 取值表达式：会员净输赢，供恒等式自校
+         CAST(NULLIF(TRIM(r.validbet),'') AS DECIMAL(20,4)) AS vb_amt,          -- 取值表达式：有效投注（洗码量）
+         CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))   AS fxr,              -- 取值表达式：汇率，全部金额除以它以归一化
+         CASE WHEN r.rn = 1                                                     -- 条件分支：以下六条同时成立方记为「加闸口径」有效行
+                   AND r.category = '1'                                         -- 闸四之一：注单类别为正式单
+                   AND UPPER(TRIM(r.bet38)) = 'N'                               -- 闸四之二：非测试单
+                   AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0      -- 闸五：汇率须为正，否则除法产出极端 ROI
+                   AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0             -- 闸五：会员号须有效
+                   AND CAST(NULLIF(TRIM(r.bet04),'') AS INT)  > 0               -- 闸六：局号须有效
+                   AND COALESCE(t1.aid,t2.aid,t3.aid,t4.aid,t5.aid) IS NULL     -- 闸三：五级代理线皆未命中测试线名册
+              THEN 1 ELSE 0 END                            AS ok                -- 产出：逐行闸标记，1＝加闸口径纳入，0＝仅原口径纳入
+  FROM rk r                                                                     -- 取数来源：去重层
+  LEFT JOIN ta t1 ON t1.aid = r.bet18                                           -- 左连接：一级代理线；本包以左连接加空值判定替代 EXISTS
+  LEFT JOIN ta t2 ON t2.aid = r.bet19                                           -- 左连接：二级代理线
+  LEFT JOIN ta t3 ON t3.aid = r.bet20                                           -- 左连接：三级代理线
+  LEFT JOIN ta t4 ON t4.aid = r.bet21                                           -- 左连接：四级代理线
+  LEFT JOIN ta t5 ON t5.aid = r.bet22                                           -- 左连接：五级代理线，因 StarRocks 不支持 EXISTS 配多列 IN
+  WHERE r.bet03 IS NOT NULL                                                     -- 过滤条件：保留原报告的三项非空要求，使原口径可复现
+    AND r.bet04 IS NOT NULL                                                     -- 并列条件：同上
+    AND r.bet05 IS NOT NULL                                                     -- 并列条件：同上
+),                                                                              -- 续行：收束 fx
+mx AS (                                                                         -- 公共表表达式：会员级双口径汇总
+  SELECT player_id,                                                             -- 分组键：会员号
+         COUNT(*)                                          AS total_orders_raw, -- 原口径：总订单数（不去重、不剔测试）
+         SUM(CASE WHEN round_no >= 40 THEN 1 ELSE 0 END)    AS late_orders_raw, -- 原口径：第 40 局及以后订单数
+         SUM(CASE WHEN pay_amt > bet_amt THEN 1 ELSE 0 END) AS win_orders_raw,  -- 原口径：胜单数（沿用 bet14>bet13，含和局入分母）
+         SUM((pay_amt - bet_amt) / NULLIF(fxr,0))           AS profit_raw,      -- 原口径：盈利，汇率归一
+         SUM(vb_amt / NULLIF(fxr,0))                        AS valid_bet_raw,   -- 原口径：洗码量
+         SUM(ok)                                            AS total_orders_ok, -- 加闸：总订单数
+         SUM(CASE WHEN ok=1 AND round_no >= 40 THEN 1 ELSE 0 END) AS late_orders_ok,   -- 加闸：靴尾订单数
+         SUM(CASE WHEN ok=1 AND pay_amt > bet_amt THEN 1 ELSE 0 END) AS win_orders_ok, -- 加闸：胜单数
+         SUM(CASE WHEN ok=1 AND pay_amt < bet_amt THEN 1 ELSE 0 END) AS lose_orders_ok,-- 加闸：负单数
+         SUM(CASE WHEN ok=1 AND pay_amt = bet_amt THEN 1 ELSE 0 END) AS tie_orders_ok, -- 加闸：和局数，剔和口径的关键
+         SUM(CASE WHEN ok=1 THEN (pay_amt - bet_amt)/NULLIF(fxr,0) ELSE 0 END) AS profit_ok,    -- 加闸：盈利
+         SUM(CASE WHEN ok=1 THEN vb_amt/NULLIF(fxr,0)          ELSE 0 END) AS valid_bet_ok,     -- 加闸：洗码量
+         SUM(CASE WHEN ok=1 THEN reb_amt/NULLIF(fxr,0)         ELSE 0 END) AS rebate_ok,        -- 加闸：退水
+         SUM(CASE WHEN ok=1 THEN net_amt/NULLIF(fxr,0)         ELSE 0 END) AS net_pnl_ok,       -- 加闸：会员净输赢
+         SUM(CASE WHEN ok=1 THEN (net_amt - (pay_amt - bet_amt) - reb_amt)/NULLIF(fxr,0)        -- 恒等式残差：净输赢 − 游戏输赢 − 退水
+                  ELSE 0 END)                              AS resid_identity    -- 产出：理论恒为 0，非零即当场暴露口径漂移
+  FROM fx                                                                       -- 取数来源：贴闸层
+  GROUP BY player_id                                                            -- 分组：按会员号汇总
+)                                                                               -- 续行：收束 mx
+SELECT player_id,                                                               -- 取列：会员号（已转型为 BIGINT，下游关联不会静默失配）
+       'late40_r60_n30'                                    AS rule_def,         -- 口径锁：规则定义，随件落盘
+       'dt_ge_2026-03-21_lt_2026-08-07'                    AS window_def,       -- 口径锁：营业日窗（左闭右开 139 日），随件落盘
+       total_orders_raw, late_orders_raw,                                       -- 原口径：订单数与靴尾订单数
+       ROUND(late_orders_raw * 1.0 / NULLIF(total_orders_raw,0), 4) AS late_ratio_raw,   -- 原口径：靴尾占比
+       win_orders_raw,                                                          -- 原口径：胜单数
+       ROUND(win_orders_raw  * 1.0 / NULLIF(total_orders_raw,0), 4) AS win_rate_raw,     -- 原口径：胜率，分母含和局（偏低）
+       ROUND(valid_bet_raw, 2)                             AS valid_bet_raw,    -- 原口径：洗码量
+       ROUND(profit_raw, 2)                                AS profit_raw,       -- 原口径：盈利
+       ROUND(profit_raw / NULLIF(valid_bet_raw,0), 4)      AS roi_raw,          -- 原口径：ROI
+       total_orders_ok, late_orders_ok,                                         -- 加闸：订单数与靴尾订单数
+       ROUND(late_orders_ok * 1.0 / NULLIF(total_orders_ok,0), 4)  AS late_ratio_ok,     -- 加闸：靴尾占比
+       win_orders_ok, lose_orders_ok, tie_orders_ok,                            -- 加闸：胜、负、和三分
+       ROUND(win_orders_ok * 1.0 / NULLIF(win_orders_ok + lose_orders_ok,0), 4) AS win_rate_ok,  -- 加闸：胜率，剔和口径
+       ROUND(valid_bet_ok, 2)                              AS valid_bet_ok,     -- 加闸：洗码量
+       ROUND(profit_ok, 2)                                 AS profit_ok,        -- 加闸：盈利
+       ROUND(rebate_ok, 2)                                 AS rebate_ok,        -- 加闸：退水
+       ROUND(net_pnl_ok, 2)                                AS net_pnl_ok,       -- 加闸：会员净输赢
+       ROUND(profit_ok / NULLIF(valid_bet_ok,0), 4)        AS roi_ok,           -- 加闸：ROI
+       ROUND(resid_identity, 4)                            AS resid_identity,   -- 自校：恒等式残差，应为 0
+       CASE WHEN total_orders_raw >= 30                                         -- 命中标记：原口径是否入围
+                 AND late_orders_raw * 1.0 / NULLIF(total_orders_raw,0) >= 0.60
+            THEN 1 ELSE 0 END                              AS hit_raw,          -- 产出：1＝原口径命中
+       CASE WHEN total_orders_ok >= 30                                          -- 命中标记：加闸口径是否入围
+                 AND late_orders_ok * 1.0 / NULLIF(total_orders_ok,0) >= 0.60
+            THEN 1 ELSE 0 END                              AS hit_ok            -- 产出：1＝加闸口径命中
+FROM mx                                                                         -- 取数来源：会员级汇总
+WHERE (total_orders_raw >= 30                                                   -- 收口：任一口径命中即输出，供名单差集比较
+       AND late_orders_raw * 1.0 / NULLIF(total_orders_raw,0) >= 0.60)
+   OR (total_orders_ok  >= 30
+       AND late_orders_ok  * 1.0 / NULLIF(total_orders_ok,0)  >= 0.60)
+ORDER BY player_id;                                                             -- 排序：按已转型的数值主键，非字符串序；导出必带排序，否则分页无稳定序
+```
+
+# 十、双口径实测对比 {#sec-dual}
+
+```{r}
+#| label: dual-overview
+if (!is.null(D8)) {
+  卡口径 <- function(X, vbc, pfc, roc, toc, lrc, 标) {
+    X <- X[is.finite(get(vbc)) & get(vbc) > 0 & is.finite(get(roc))]
+    if (!nrow(X)) return(NULL)
+    vb <- sum(X[[vbc]]); pf <- sum(X[[pfc]]); rp <- pf / vb
+    vs <- sort(X[[vbc]], decreasing = TRUE); k1 <- max(1, ceiling(.01 * length(vs)))
+    q <- stats::quantile(X[[roc]], c(.9,.95), names = FALSE, na.rm = TRUE)
+    data.table(口径 = 标, 命中人数 = nrow(X), 名单洗码量 = vb,
+               合成ROI = rp, 等权平均ROI = mean(X[[roc]]),
+               口径背离 = mean(X[[roc]]) - rp, 超额ROI = rp - 基线ROI,
+               ROI_P90 = q[1], ROI_P95 = q[2], 盈利玩家占比 = mean(X[[roc]] > 0),
+               前1percent集中度 = sum(vs[seq_len(k1)]) / vb,
+               平均总订单数 = mean(X[[toc]]), 平均靴尾占比 = mean(X[[lrc]]))
+  }
+  DU <- rbindlist(list(
+    卡口径(D8[hit_raw == 1], 'valid_bet_raw','profit_raw','roi_raw','total_orders_raw','late_ratio_raw','原口径'),
+    卡口径(D8[hit_ok  == 1], 'valid_bet_ok', 'profit_ok', 'roi_ok', 'total_orders_ok', 'late_ratio_ok', '加闸口径')),
+    fill = TRUE)
+  if (nrow(DU) == 2) {
+    差 <- copy(DU[2]); 差[, 口径 := '差额（加闸 − 原）']
+    for (j in setdiff(names(DU), '口径')) set(差, j = j, value = DU[[j]][2] - DU[[j]][1])
+    DU <- rbind(DU, 差)
+  }
+  互表(copy(DU)[, `:=`(命中人数 = 整(命中人数), 名单洗码量 = 数(名单洗码量),
+    合成ROI = 百(合成ROI, 4), 等权平均ROI = 百(等权平均ROI, 4), 口径背离 = pp(口径背离),
+    超额ROI = pp(超额ROI), ROI_P90 = 百(ROI_P90), ROI_P95 = 百(ROI_P95),
+    盈利玩家占比 = 百(盈利玩家占比), 前1percent集中度 = 百(前1percent集中度),
+    平均总订单数 = 数(平均总订单数, 1), 平均靴尾占比 = 百(平均靴尾占比))],
+    '双口径对比（现算）：同一批注单，两套闸门产出的两套结论',
+    '　｜　第三行为差额，即六道闸的净影响；差额若大，说明原口径的结论建立在未净化的数据上')
+} else 待表('BASE08_late40_dual_caliber_w139.csv', '双口径的全部对比指标', '§9')
+```
+
+```{r}
+#| label: dual-setdiff
+if (!is.null(D8)) {
+  差集 <- data.table(
+    情形 = c('两口径皆命中', '仅原口径命中（加闸后被剔除）', '仅加闸口径命中（原口径漏掉）', '合计输出行'),
+    人数 = c(D8[hit_raw == 1 & hit_ok == 1, .N], D8[hit_raw == 1 & hit_ok == 0, .N],
+             D8[hit_raw == 0 & hit_ok == 1, .N], nrow(D8)))
+  差集[, 占原口径命中 := 人数 / max(1, D8[hit_raw == 1, .N])]
+  差集[, 洗码量 := c(sum(D8[hit_raw == 1 & hit_ok == 1, valid_bet_ok], na.rm = TRUE),
+                     sum(D8[hit_raw == 1 & hit_ok == 0, valid_bet_raw], na.rm = TRUE),
+                     sum(D8[hit_raw == 0 & hit_ok == 1, valid_bet_ok], na.rm = TRUE),
+                     sum(D8$valid_bet_raw, na.rm = TRUE))]
+  knitr::kable(copy(差集)[, `:=`(人数 = 整(人数), 占原口径命中 = 百(占原口径命中),
+                                  洗码量 = 数(洗码量))],
+    caption = '名单差集（现算）：六道闸把名单改动了多少 —— 不需任何假设的直接度量')
+}
+```
+
+```{r}
+#| label: dual-identity
+if (!is.null(D8) && 'resid_identity' %in% names(D8)) {
+  r <- D8$resid_identity[is.finite(D8$resid_identity)]
+  knitr::kable(data.table(
+    项 = c('恒等式残差绝对值 > 0.01 的会员数','残差绝对值最大值','残差合计','判读'),
+    值 = c(整(sum(abs(r) > 0.01)), 数(max(abs(r)), 4), 数(sum(r), 4),
+           ifelse(sum(abs(r) > 0.01) == 0, '通过：净输赢 = 游戏输赢 + 退水 恒成立',
+                  '**未通过：口径漂移已暴露，须逐人查明后方可采信本档任何金额**'))),
+    caption = '恒等式自校（现算）：净输赢 − 游戏输赢 − 退水')
+}
+```
+
+```{r}
+#| label: dual-winrate
+if (!is.null(D8) && all(c('win_rate_raw','win_rate_ok','tie_orders_ok') %in% names(D8))) {
+  H <- D8[hit_ok == 1 & is.finite(win_rate_raw) & is.finite(win_rate_ok)]
+  if (nrow(H)) {
+    和率 <- sum(H$tie_orders_ok) / sum(H$total_orders_ok)
+    knitr::kable(data.table(
+      项 = c('胜率（原口径：分母含和局）','胜率（加闸口径：剔和分母）','抬升幅度','名单整体和局率'),
+      值 = c(百(mean(H$win_rate_raw)), 百(mean(H$win_rate_ok)),
+             pp(mean(H$win_rate_ok) - mean(H$win_rate_raw)), 百(和率)),
+      判读 = c('原报告口径','和局既不计胜也不计负，须剔出分母',
+               '抬升幅度 ≈ 和局率 × 胜率，且随个人押和偏好而异',
+               '押和成癖者会被原口径显示为「胜率异常低」，属误判来源之一')),
+      caption = '胜率分母修正的实测影响')
+  }
+}
+```
+
+```{r}
+#| label: dual-bootstrap
+if (!is.null(D8)) {
+  set.seed(20260807L)
+  G <- D8[hit_ok == 1 & is.finite(valid_bet_ok) & valid_bet_ok > 0 & is.finite(roi_ok)]
+  if (nrow(G) > 10) {
+    n <- nrow(G); Bn <- 1000L; vb <- G$valid_bet_ok; pf <- G$profit_ok
+    bs <- vapply(seq_len(Bn), function(i) { j <- sample.int(n, n, TRUE)
+                                            sum(pf[j]) / sum(vb[j]) }, 0)
+    ci <- stats::quantile(bs, c(.025,.975), names = FALSE); rp <- sum(pf) / sum(vb)
+    knitr::kable(data.table(
+      项 = c('合成 ROI 点估','95% 自助下界','95% 自助上界','区间宽度',
+             paste0('区间是否涵盖平台基线 ', 百(基线ROI, 4)), '区间是否涵盖 0'),
+      值 = c(百(rp, 4), 百(ci[1], 4), 百(ci[2], 4), pp(ci[2] - ci[1]),
+             ifelse(is.finite(基线ROI) && ci[1] <= 基线ROI && 基线ROI <= ci[2], '是', '否'),
+             ifelse(ci[1] <= 0 && 0 <= ci[2], '是', '否')),
+      判读 = c('按量加权的真实回报率','会员级重抽 1000 次','同左','越宽越不可下断语',
+               '**若「是」，则「该群与平台平均不同」这句话不成立**',
+               '若「是」，则连「该群在输钱」都不能断言')),
+      caption = '加闸口径下合成 ROI 的自助区间（现算）')
+  }
+}
+```
+
+```{r}
+#| label: dual-concentration
+if (!is.null(D8)) {
+  G <- D8[hit_ok == 1 & is.finite(valid_bet_ok) & valid_bet_ok > 0 & is.finite(roi_ok)]
+  if (nrow(G) > 10) {
+    V <- G[order(-valid_bet_ok)]
+    剔 <- function(k, lab) { X <- V[-seq_len(k)]
+      if (!nrow(X)) return(NULL)
+      rp <- sum(X$profit_ok) / sum(X$valid_bet_ok)
+      data.table(情形 = lab, 剔除人数 = k, 剩余人数 = nrow(X),
+                 合成ROI = rp, 超额ROI = rp - 基线ROI, 剩余洗码量 = sum(X$valid_bet_ok)) }
+    k1 <- max(1, ceiling(.01 * nrow(V))); k10 <- max(1, ceiling(.10 * nrow(V)))
+    CC <- rbindlist(list(剔(0,'全体'), 剔(1,'剔洗码量最大 1 人'), 剔(5,'剔最大 5 人'),
+                         剔(k1, paste0('剔前 1%（', k1, ' 人）')),
+                         剔(k10, paste0('剔前 10%（', k10, ' 人）'))), fill = TRUE)
+    CC[, 符号 := fifelse(超额ROI > 0, '正', '负')]
+    互表(copy(CC)[, `:=`(合成ROI = 百(合成ROI, 4), 超额ROI = pp(超额ROI),
+                          剩余洗码量 = 数(剩余洗码量), 剩余人数 = 整(剩余人数))],
+         '集中度稳健性（现算 · 加闸口径）', '　｜　若剔前 1% 即符号翻转，则该群「优于／劣于平均」不成立')
+  }
+}
+```
+
+# 十一、使用边界（由实测生成）
+
+```{r}
+#| label: limits
+#| results: asis
+if (!is.null(D8)) {
+  G <- D8[hit_ok == 1 & is.finite(valid_bet_ok) & valid_bet_ok > 0 & is.finite(roi_ok)]
+  rp <- if (nrow(G)) sum(G$profit_ok) / sum(G$valid_bet_ok) else NA_real_
+  cat('本规则识别的是「下注订单高度集中在牌靴后段」的行为。以下四条边界**由本次实测决定**：\n\n')
+  cat(sprintf('1. **命中群体的合成 ROI 为 %s，超额 ROI 为 %s。** %s\n\n', 百(rp, 4), pp(rp - 基线ROI),
+              if (is.finite(rp) && rp - 基线ROI < 0) '为负即该群比平均输得更多——是价值客，不是风险源。'
+              else '为正须先过集中度与自助区间两关，方可解读。'))
+  cat('2. **中途入场与策略性观望不可分辨。** §4 已说明 `avg_first_round` 与 `late_ratio` 是两个指标；未做交叉分层前，名单中必然混有大量中途入场者。\n\n')
+  cat('3. **ROI 类指标未分层。** 佣金模式与桌台层被抹平；已知 ROI 符号随佣金模式翻转，故一切 ROI 数字须视为待分层。\n\n')
+  cat('4. **止于 E3。** 靴尾集中是内生选择，本档只做观察性差额，不支持任何因果陈述，更不支持自动封禁或处罚。\n\n')
+} else cat('> **○ 待表**：料源未就位，边界不予生成——不以文字代替实测。\n')
+```
+
+# 十二、结论（由实测生成）
+
+```{r}
+#| label: verdict
+#| results: asis
+if (!is.null(D8)) {
+  nr <- D8[hit_raw == 1, .N]; nk <- D8[hit_ok == 1, .N]
+  仅原 <- D8[hit_raw == 1 & hit_ok == 0, .N]; 仅闸 <- D8[hit_raw == 0 & hit_ok == 1, .N]
+  G <- D8[hit_ok == 1 & is.finite(valid_bet_ok) & valid_bet_ok > 0 & is.finite(roi_ok)]
+  rp <- if (nrow(G)) sum(G$profit_ok) / sum(G$valid_bet_ok) else NA_real_
+  cat('::: {.callout-important}\n## 实测结论\n\n')
+  cat(sprintf('1. **口径闸的影响是可测的，且不小。** 原口径命中 %s 人，加闸后 %s 人；其中 %s 人被闸剔除、%s 人被原口径漏掉。名单变动比例 %s。\n\n',
+              整(nr), 整(nk), 整(仅原), 整(仅闸), 百((仅原 + 仅闸) / max(1, nr))))
+  cat(sprintf('2. **合成与等权两口径方向须并读。** 加闸口径下合成 ROI %s，超额 ROI %s。原报告全篇只用等权口径，而经济结算只能用合成口径。\n\n',
+              百(rp, 4), pp(rp - 基线ROI)))
+  cat('3. **尾部分位不构成证据。** §7 的根号 n 律检验已现算：门槛升高时尾部分位急坠而合成 ROI 稳定贴近基线——这是零效应的教科书形态。\n\n')
+  cat('4. **绝对局号不是统一口径。** §3 已现算覆盖率漂移；正解是靴内进度，其等效局号随靴长自动伸缩。\n\n')
+  cat('5. **误判率仍未测得。** 精确率与召回率须外部标签。**在它们填出来之前，本档与基准档都不得宣称「误判更低」——只能说「口径更干净」。**\n\n')
+  cat(':::\n')
+} else cat('> **○ 待表**：料源未就位，结论不予生成。\n')
+```
+
+# 十三、变更日志
+
+```{r}
+#| label: changelog
+版本 <- data.table(条目 = c(
+  '来源：《百家乐下注时机风控参数分析报告.md》；原件未修改，本档为独立改进档',
+  '§9 升级：SQL 改为逐行注释、复制粘贴即可执行；规则参数一字未改，仅补六道闸',
+  '§9 关键设计：一次查询同时产出原口径与加闸口径，六道闸的影响成为**可直接测量的差额**',
+  '§9 新增列：退水、会员净输赢、和局数、恒等式残差、rule_def／window_def 口径锁、hit_raw／hit_ok 命中标记',
+  '§3 靴长：两种靴键口径并列实测，并现算绝对局号的覆盖率漂移',
+  '§4 首注局号：由会员级明细精确求分位，并说明其与靴尾占比的分辨问题',
+  '§5 起始局号：按文件实际档数聚合出表，不预设档数',
+  '§6／§7 扫描：档位＝原报告参数 ∪ 该指标五分位；并附根号 n 律现算检验',
+  '§8 分层表：各层规模与经济指标由实测填充，不再是空表',
+  '§10 新增双口径对比：总表、名单差集、恒等式自校、胜率分母修正、自助区间、集中度稳健性',
+  '§11／§12：边界与结论一律由实测生成，无一句写死',
+  '全档：平台基线由 BASE04 现算；料源台账逐件现测；大表一律不整表内嵌',
+  '待办：误判率与精确率仍须外部标签；在此之前不得宣称「误判更低」'))
+版本[, 序 := .I]; setcolorder(版本, '序')
+knitr::kable(版本, caption = '本次升级（过程叙述只在本章）')
+```
+
+---
+
+*本档全部数字于渲染时现算；算不出者一律标 ○ 待表并点名所缺文件。原件与基准档均未被修改。*

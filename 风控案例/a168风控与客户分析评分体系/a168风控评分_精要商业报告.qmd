@@ -1,6 +1,7 @@
 ---
 title: "a168 真人百家乐 · 风控与客户分层评分 — 精要商业报告"
 subtitle: "只讲四件事：用什么数据 · 评出什么分 · 采取什么措施 · 值多少钱（含回测与名单质量三尺）"
+author: "Ryo（雷欧）"
 date: today
 lang: zh
 format:
