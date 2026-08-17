@@ -42,19 +42,97 @@ execute:
 ```
 
 
+```{r}
+#| label: hover-setup
+#| echo: false
+#| results: asis
+## ─────────────────────────────────────────────────────────────────────
+## 悬停注解机制（术语库 + 浮层）——移植自主方案 §17 同一惯例
+## 用法：正文写 `r tip("GGR")`，鼠标悬停即显定义
+## 纪律：新增术语只加进 GLOSS，不散落在正文，杜绝同词异释
+## ─────────────────────────────────────────────────────────────────────
+GLOSS <- list(
+  "GGR" = "毛游戏收入（Gross Gaming Revenue）＝ 玩家总输 − 玩家总赢，本包以 −Σgame_pnl 计算；不扣退水、不扣税费，是平台自博彩行为取得的毛收入。",
+  "NGR" = "净游戏收入（Net Gaming Revenue）＝ GGR − 退水成本，本包以 −Σnet_pnl 计算；恒等式 NGR = GGR − Σrebate 可直接对账。",
+  "洗码量" = "有效投注额（Turnover / Rolling），代理返点与佣金的计算基准；本包字段 valid_bet，源自 validbet ÷ 汇率。注意 validbet 双定义未结（F-02，S1）。",
+  "hold%" = "抽水率／盈亏率＝ GGR ÷ 分母。本包并列两种口径：洗码量口径（亚洲代理体系惯用）与下注额口径（西式 handle）。两者孰为公司标准须业务方裁定。",
+  "返点消耗比" = "退水成本 ÷ GGR，衡量每赚一元毛收入需付出多少返水；代理经济学核心成本指标，越高表示利润被返点侵蚀越重。",
+  "退水" = "Rebate／回佣，平台按洗码量比例返还给玩家或代理的现金；属直接成本项，在 GGR 与 NGR 之间。",
+  "尾段" = "本包定义为玩家在该局的最后一注落于局内时间分位 pr_in_round ≥ 0.80。注意与在产候选 shoe_pos ≥ 0.80（靴内位置）口径不同，禁止互相代称。",
+  "玩家-局" = "分析粒度单位：一个玩家在一局中的全部注单折叠成的一行。既非一张注单，亦非一个物理局（同局多人参与则产生多个玩家-局行）。",
+  "自选择" = "Self-selection，分组依据本身与结果相关，导致组间差异混入非处置因素；本包 ≥30 局的门槛即属自选择，故组间均值差不可解读为提升空间。",
+  "PSM" = "倾向得分匹配（Propensity Score Matching），准实验方法，用于在观察性数据中构造可比对照组。",
+  "DID" = "双重差分（Difference-in-Differences），配合事件研究设计估计处置效应，需平行趋势假设成立。",
+  "CLV" = "客户终身价值（Customer Lifetime Value），本项目以 Σ 活跃概率 × 预期洗码量 × 预期毛利率 建模，含 Scale／Margin／Retention／Risk 四引擎。",
+  "KYC" = "Know Your Customer，客户身份识别与尽职调查流程。",
+  "AML" = "Anti-Money Laundering，反洗钱合规体系。",
+  "S1" = "严重度分级最高档 FATAL：口径或数据层面的致命缺陷，未结前相关结论不得进入生产判定链。",
+  "OBSERVED" = "证据分级：本文件内可直接复算验证。",
+  "INFERRED" = "证据分级：由已锁定事实推得，未经独立外部验证，不得径自升级为 OBSERVED。",
+  "UNKNOWN" = "证据分级：须另行取数核验，禁止以推测填补。"
+)
+esc <- function(x) gsub('"','&quot;', gsub("<","&lt;", gsub(">","&gt;", x)))
+tip <- function(k, show = NULL) {
+  d <- GLOSS[[k]]; lbl <- if (is.null(show)) k else show
+  if (is.null(d)) return(lbl)
+  sprintf('<span class="gl-tip" data-gl="%s">%s</span>', esc(d), lbl)
+}
+cat('
+<style>
+.gl-tip{border-bottom:1px dotted currentColor;cursor:help;}
+#gl-pop{position:fixed;z-index:9999;max-width:34em;padding:.6em .8em;
+  background:rgba(12,18,30,.97);color:#e8eef7;border:1px solid #3a5a80;
+  border-radius:6px;font-size:.88em;line-height:1.55;display:none;
+  box-shadow:0 4px 18px rgba(0,0,0,.45);}
+</style>
+<div id="gl-pop"></div>
+<script>
+(function(){var p=document.getElementById("gl-pop");
+document.addEventListener("mouseover",function(e){
+ var t=e.target.closest(".gl-tip"); if(!t)return;
+ p.textContent=t.getAttribute("data-gl"); p.style.display="block";
+ var r=t.getBoundingClientRect();
+ p.style.left=Math.min(r.left,window.innerWidth-p.offsetWidth-16)+"px";
+ p.style.top=(r.bottom+8)+"px";});
+document.addEventListener("mouseout",function(e){
+ if(e.target.closest(".gl-tip"))p.style.display="none";});})();
+</script>
+')
+```
+
+::: {.callout-important}
+## 本文件定位与血统声明
+
+本文件**非独立报告**，而是 **`a168风控与客户分层评分体系_商业方案.qmd`** 家族旗下、
+针对单一交付件 **`S_player_tail.csv`**（由 `a168_取数与核验_SQL总包_v3.sql` §D-06 产出）
+的专项技术与商业详解。
+
+**血统关系**：
+
+| 层级 | 文件 | 本文件与之关系 |
+|:--|:--|:--|
+| 权威主件 | `a168风控与客户分层评分体系_商业方案.qmd` | 口径与方法论的**上位来源**；本文件不得与之冲突 |
+| 权威主件 | `a168风控评分_精要商业报告.qmd` | 平行交付件 |
+| 权威主件 | `a168_取数与核验_SQL总包_v3.sql` | 本文件所解读的 **§D-06 代码原文所在** |
+| 本文件 | `a168风控_尾段投注_1_01.qmd` | 上述三者旗下的**单交付件专项详解**（附属，非第四份权威文件） |
+
+**审计基准**：凡本文件所述口径、阈值、结论，一律以三份权威主件为准；
+若发现冲突，以权威主件为正、本文件为误，并须回改本文件而非反向修改主件。
+
+**证据分级沿用**：`r tip("OBSERVED")` ／ `r tip("INFERRED")` ／ `r tip("UNKNOWN")`，
+严重度沿用 `r tip("S1")` 至 S4 四档。
+:::
+
 # 引言
+
+## 简介
 
 本文档对生产级 SQL 代码 **“D-06 玩家尾段十一项指标”** 进行完整的技术解读。该管道用于从原始注单明细表中，计算每个玩家在“局内尾段（Late Bet）”与“常规时段”的差异化表现指标。
 
 解读基于 **R3 铁律**（证据分级、阈值溯源、变更控制）与 **EAV-QMS 治理框架**（证据保障与验证质量管理体系），从 **“标准的来源”** 与 **“执行的严密性”** 两个维度展开。
 
----
+## 尾段投注汇总
 
-# 第一部分：核心定义与业务标准
-
-## 核心对象（Object）
-
-在百家乐游戏中，单局（`round_key`）内按时间排序，**下注时间位于该局后 20% 分位（`pr_in_round >= 0.80`）** 的注单。
 
 ```{sql, eval = FALSE}
 -- eval = FALSE
@@ -121,7 +199,7 @@ bs AS (                                                               -- 口径�
 ),
 ord AS (                                                              -- 局内时序定标，与 D-06 完全一致
   SELECT b.*, PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round,
-              COUNT(*)      OVER (PARTITION BY round_key)                 AS n_in_round
+              COUNT(*)      OVER (PARTITION BY round_key)                 AS n_in_round -- 每局注单数（整局所有玩家的注单行数）
   FROM bs b
 ),
 prd AS (                                                              -- 玩家-局聚合（L6 闸），与 D-06 完全一致
@@ -177,6 +255,14 @@ FROM labeled
 GROUP BY population
 ORDER BY population;
 ```
+
+---
+
+# 第一部分：核心定义与业务标准
+
+## 核心对象（Object）
+
+在百家乐游戏中，单局（`round_key`）内按时间排序，**下注时间位于该局后 20% 分位（`pr_in_round >= 0.80`）** 的注单。
 
 ## 业务假设（Business Assumption）
 
@@ -347,11 +433,11 @@ ord AS (    -- 局内排序层：为每一笔注单计算其在本局内的时�
 ),
 ```
 
-- **代码自述**：以 `bs`（将之取个别名为 `b`）为唯一来源，作纯窗口标号运算（不筛行、不连接、不聚合，输出行数与 `bs` 严格相等）。以 `SELECT b.*` 整体承接 `bs` 的九列，另增两列：以 `round_key` 分区、按 `t_bet` 升序开窗，用 `PERCENT_RANK()` 算出每笔注单在该局内的时间相对分位 `pr_in_round`；同一分区上用 `COUNT(*)` 算出局内注单总数 `n_in_round`（分区内每行取值相同）。命名为 `ord`。
+- **代码自述**：以 `bs`（将之取个别名为 `b`）为唯一来源，作纯窗口标号运算（不筛行、不连接、不聚合，输出行数与 `bs` 严格相等）。以 `SELECT b.*` 整体承接 `bs` 的九列，另增两列：以 `round_key` 分区、按 `t_bet` 升序开窗，用 `PERCENT_RANK()` 算出每笔注单在该局内的时间相对分位 `pr_in_round`；同一分区上用 `COUNT(*)` 算出局内注单总数 （每局注单数（整局所有玩家的注单行数））`n_in_round`（分区内每行取值相同）。命名为 `ord`。
 
 本层只标号、不筛选——`WHERE n_in_round >= 5 `位于下游 `prd`，`ord` 输出仍含全部注单。
 
-- **代码用意**：把「何时下注」从绝对时间改写为局内相对位次，为尾段判定提供可跨桌比较的标尺。已锁定事实：存在两种下注窗口制式（`7` 桌约 `14` 秒、`23` 桌约 `26` 秒）。绝对秒阈（如「倒数第 `5` 秒」）会在两制式间产生系统性偏置——`26` 秒桌的「倒数第 `5` 秒」相当于 `14` 秒桌的「倒数第 `2.7` 秒」，二者信息含量截然不同。相对分位消除该差异。同时 `n_in_round` 为下游 `L6` 密度闸备料。
+- **代码用意**：把「何时下注」从绝对时间改写为局内相对位次，为尾段判定提供可跨桌比较的标尺。已锁定事实：存在两种下注窗口制式（`7` 桌约 `14` 秒、`23` 桌约 `26` 秒）。绝对秒阈（如「倒数第 `5` 秒」）会在两制式间产生系统性偏置——`26` 秒桌的「倒数第 `5` 秒」相当于 `14` 秒桌的「倒数第 `2.7` 秒」，二者信息含量截然不同。相对分位消除该差异。同时每局注单数（整局所有玩家的注单行数） `n_in_round` 为下游 `L6` 密度闸备料。
 
 - **此代码价值**：尾段假说的全部证据基础。`is_tail` 的判定、`tail_*` 与 `norm_*` 两组指标的划分、乃至 `winrate_diff` 这一核心量，皆源于本层两列。本层的分区键若错、排序键若失真，下游无一指标幸存——而净额恒等式在错误分区下同样成立，任何金额级校验都捕获不到。
 
@@ -364,7 +450,7 @@ prd AS (    -- 玩家-局级聚合层：将注单级数据按（会员+局）折
          round_key,                     -- 局键（靴号|局号|桌号，继承自 ord）
          table_id,                      -- 桌号（实体赌桌编号，继承自 ord）
          MAX(pr_in_round) AS max_pr,    -- 该玩家在该局的最大时间百分位（即该玩家在该局的最后一注的 pr 值）
-         MAX(n_in_round)  AS n_in_round,  -- 该局总注单数（取最大值即该局的总人数，因 n_in_round 在本局内每行相同）
+         MAX(n_in_round)  AS n_in_round,  -- 该局总注单数（非人数、亦非本会员注数）；组内恒定，MAX() 仅为满足 GROUP BY 语法
          SUM(stake) AS stake,           -- 该玩家在该局的总下注额（多笔注单求和）
          SUM(valid_bet) AS valid_bet,   -- 该玩家在该局的总有效投注额（洗码量汇总）
          SUM(game_pnl) AS game_pnl,     -- 该玩家在该局的游戏净输赢（总派彩 - 总下注，不含退水）
@@ -447,31 +533,6 @@ ORDER BY member_id;                                                           --
 
 - **此代码价值**：这是交付件 `S_player_tail.csv` 的最终形态生产者。前六层（`ta`→`rk`→`vd`→`bs`→`ord`→`prd`→`fl`）所有的清洗、归一、定标、判定，最终都要通过这十七个求和表达式收窄成十七个数字——任何上游偏置若未在此前被拦截，都会在这里被"算术正确、结论有偏"地固化下来。
 
-## 3.输出维度
-
-### 3.1 D-06 输出字段血统总表（18 列）
-
-| 序号 | 输出维度 | 业务释义 | 口径（计算公式/业务定义） | 来源与血统追溯（原始字段 → CTE 路径） | 判级／风险 |
-|:----:|:--------|:---------|:--------------------------|:--------------------------------------|:-----------|
-| 1 | `member_id` | 会员号 | 玩家唯一标识；全表分组主键 | `bet05` → `vd` 施 `CAST(...AS BIGINT)>0` 闸 → `bs` 更名 → 经 `ord`／`prd`／`fl` 原样传递 → `fl.member_id`（末段分组键） | `OBSERVED`；不可转 `BIGINT` 者静默剔除（V-16 待核） |
-| 2 | `n_rounds_all` | 总有效局数 | 经 L6 密度闸（`n_in_round>=5`）后的合格玩家-局总数。`HAVING COUNT(*)>=30` 是对本值的事后行过滤，不改变计算方式——出现在输出中者其值必 ≥30 | `COUNT(*)` over `fl`（按 `member_id`）← `fl` 行数继承自 `prd` 分组 ← `ord` 过 `WHERE n_in_round>=5` | `INFERRED`；`round_key` 若塌缩（F-01，S1 候选）则本值系统性虚高 |
-| 3 | `n_rounds_tail` | 尾段局数 | `is_tail=1` 的玩家-局计数，即 `max_pr>=0.80` 之局 | `SUM(is_tail)`；`bet08`→`t_bet`→`ord.pr_in_round`→`prd.max_pr`→`fl.is_tail` | 受 F-04（离散化）、F-05（并列少标）、F-12（独占局必判尾段）三重系统性偏置 |
-| 4 | `tail_share` | 尾段局占比 | `n_rounds_tail / n_rounds_all`；值域 [0,1]；`*1.0` 避整数除法截断 | `SUM(is_tail)*1.0/COUNT(*)` | 同 2、3；F-12 致独占局玩家该值被推向 1，>0.6 判读阈已撤回为 `UNKNOWN` |
-| 5 | `tail_win` | 尾段盈利局数 | 尾段局中该玩家-局净额 `SUM(game_pnl)>0` 的局数——判据在玩家-局粒度，非注单粒度：同局多注只要净额为正即计 1 | `SUM(is_tail*is_win)`；`(bet14−bet13)/bet11`→`prd.SUM(game_pnl)`→`is_win` | `bet14` 在本表为派彩额（`ods_a168_bet01` 中 `bet14` 为退水%，禁跨表复用） |
-| 6 | `tail_lose` | 尾段亏损局数 | 尾段局中净额 `SUM(game_pnl)<0` 的局数，判据同上 | `SUM(is_tail*is_lose)` | 与 `is_win` 互斥但不穷尽（净额为零者两者皆 0） |
-| 7 | `tail_winrate` | 尾段胜率 | `tail_win/(tail_win+tail_lose)`；分母排除净额为零之局（和局／同局对冲净零／`CAST`失败致 `NULL` 三类混同不可区分，见 F-07）；分母为 0 返回 `NULL` | `NULLIF(tail_win+tail_lose,0)` 除法 | 分母 ≠ `n_rounds_tail`，差额未作为字段输出 |
-| 8 | `norm_winrate` | 常规时段胜率 | `norm_win/(norm_win+norm_lose)`，排除规则同上；`norm_win`／`norm_lose` 本身未输出 | `SUM((1−is_tail)*is_win)/NULLIF(...)` | 分子分母两项均未输出 → 不可独立复算（F-09，S2） |
-| 9 | `winrate_diff` | 尾段-常规胜率差（假说核心量） | `tail_winrate − norm_winrate` | 两项相减 | `NULL` 传播：任一侧无决胜局则整体 `NULL`（非 0）；因 8 不可复算，本项同样不可独立复算 |
-| 10 | `tail_stake` | 尾段下注总额 | 尾段局下注额合计（基准币）。技术注记：SQL 为两层 `SUM`（`bs`→`prd`→末段），因结合律，结果等价于「尾段局内全部注单 `stake` 之和」 | `SUM(is_tail*stake)`；`bet13/bet11`→`bs.stake`→`prd.SUM(stake)` | 非 ROI 分母口径（分母见 11） |
-| 11 | `tail_valid_bet` | 尾段有效投注额 | 尾段局洗码量合计；`tail_roi` 分母 | `SUM(is_tail*valid_bet)`；`validbet/bet11` | `validbet` 存在 `bet41`／`bet13` 两种互斥定义，S1 FATAL 未结（F-02）；已锁定 `valid/stake≈0.9004` 可对表（V-23） |
-| 12 | `tail_game_pnl` | 尾段游戏净输赢 | 尾段局游戏净输赢合计；不含退水 | `SUM(is_tail*game_pnl)`；`(bet14−bet13)/bet11`，先减后除（截断更少，写法正确） | `OBSERVED`（算术） |
-| 13 | `tail_rebate` | 尾段退水 | 尾段局退水合计 | `SUM(is_tail*rebate)`；`bet16/bet11` | `OBSERVED` |
-| 14 | `tail_net_pnl` | 尾段会员净输赢 | 尾段局会员净输赢合计；含退水 | `SUM(is_tail*net_pnl)`；`bet17/bet11` | 与 12、13 线性相关：14 = 12 + 13（ID-08 硬校验，穿透两层聚合仍成立，可作常设回归项） |
-| 15 | `tail_roi` | 尾段投资回报率 | `tail_game_pnl/tail_valid_bet`；分母为 0 返回 `NULL` | 分子第 12 项、分母第 11 项 | 分母定义未锁 → 判级 `UNKNOWN`（同 F-02） |
-| 16 | `norm_game_pnl` | 常规时段游戏净输赢 | 常规段（`is_tail=0`）游戏净输赢合计 | `SUM((1−is_tail)*game_pnl)`，`is_tail` 取补集 | `OBSERVED`（算术） |
-| 17 | `norm_roi` | 常规时段投资回报率 | `norm_game_pnl / SUM((1−is_tail)*valid_bet)` | `NULLIF(...,0)` 除法 | 分母 `norm_valid_bet` 未输出 → 不可独立复算（F-09） |
-| 18 | `tail_profit_share` | 尾段盈利贡献占比 | 分子 = 尾段局中正值局 `game_pnl` 之和；分母 = 全部玩家-局中正值局之和（非「总盈利」，负值局与零值局皆不计入分母）；值域 [0,1] | `SUM(CASE WHEN is_tail=1 AND game_pnl>0 THEN game_pnl ELSE 0 END) / NULLIF(SUM(CASE WHEN game_pnl>0 THEN game_pnl ELSE 0 END), 0)` | 分母未单独输出为字段 → 不可独立复算 |
-
 # 第三部分：核心计算逻辑的严密推导（CTE 流水线）
 
 ## 1. 局内时间百分位定标（CTE `ord`）
@@ -494,19 +555,222 @@ PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round
 - **判定尾段**：`CASE WHEN max_pr >= 0.80 THEN 1 ELSE 0 END`。**只要该玩家在该局打过一次尾段注，该局即被标记为“尾段局”**。
 - **盈亏打标**：`SUM(game_pnl) > 0` 为该局赢（`is_win`），反之为输。
 
-## 3. 玩家级十一项指标输出（最终 SELECT）
+## 3. 玩家级指标输出
 
-代码最终输出 **11 个关键指标**，构成风控画像的“北斗七星”：
+原「玩家级十一项指标输出」表所载的**风控用途（业务意义）**，已于本轮**整体并入
+**第三部分 §3 的血统总表**，成为其中的「口径（业务定义）」一列，并由 7 项**补齐至 18 项全覆盖**。
 
-| 指标名称 | 计算逻辑（E2 算术级） | 风控用途（业务意义） |
-| :--- | :--- | :--- |
-| `n_rounds_all` | 总局数 | 样本量基础（低于 30 局被 `HAVING` 强杀） |
-| `tail_share` | 尾段局数 / 总局数 | **打水嫌疑**：正常人随机分布，若该值 > 0.6 说明极度偏好压哨 |
-| `tail_winrate` | 尾段盈利局 / 尾段总局数 | **核心收益**：尾段是否真的能赢 |
-| `norm_winrate` | 常规时段盈利局 / 常规总局数 | **基准对比** |
-| `winrate_diff` | `tail_winrate - norm_winrate` | **信息优势量化**：若 > 0，说明存在尾段套利空间 |
-| `tail_roi` | 尾段净盈利 / 尾段有效投注额 | **资金效率**：剔除下注额影响后的真实回报 |
-| `tail_profit_share` | 尾段盈利 / 总盈利 | **风险集中度**：若该值接近 1，证明所有钱都是压哨赚的 |
+**并入时同步斧正三处与本文件既有审计结论冲突的表述**，不得将已撤回的结论搬入权威表：
+
+| 序号 | 输出维度 | 业务释义 | 口径（计算公式） | 口径（业务定义） | 来源与血统追溯（原始字段 → CTE 路径） | 判级／风险 |
+|:----:|:--------|:---------|:-----------------|:-----------------|:--------------------------------------|:-----------|
+| 1 | `member_id` | 会员号 | 玩家唯一标识；全表分组主键 | 风控画像的挂载主键——一切处置（限红、封盘、跟单标记）最终落到此 ID；亦是跨表关联代理线、IP、荷官维度的唯一锚点 | `bet05` → `vd` 施 `CAST(...AS BIGINT)>0` 闸 → `bs` 更名 → 经 `ord`／`prd`／`fl` 原样传递 → `fl.member_id`（末段分组键） | `OBSERVED`；不可转 `BIGINT` 者静默剔除（V-16 待核） |
+| 2 | `n_rounds_all` | 总有效局数 | 经 L6 密度闸（`n_in_round>=5`）后的合格玩家-局总数。`HAVING COUNT(*)>=30` 是对本值的事后行过滤，不改变计算方式——出现在输出中者其值必 ≥30 | **样本量基础**：判定该玩家任何比率型指标是否值得采信的前提；低于 30 局者被 `HAVING` 强杀，不入分析池 | `COUNT(*)` over `fl`（按 `member_id`）← `fl` 行数继承自 `prd` 分组 ← `ord` 过 `WHERE n_in_round>=5` | `INFERRED`；`round_key` 若塌缩（F-01，S1 候选）则本值系统性虚高 |
+| 3 | `n_rounds_tail` | 尾段局数 | `is_tail=1` 的玩家-局计数，即 `max_pr>=0.80` 之局 | **尾段行为总量**：衡量该玩家压哨行为的绝对规模；与 `n_rounds_all` 并看方能区分「偶尔压哨」与「惯性压哨」 | `SUM(is_tail)`；`bet08`→`t_bet`→`ord.pr_in_round`→`prd.max_pr`→`fl.is_tail` | 受 F-04（离散化）、F-05（并列少标）、F-12（独占局必判尾段）三重系统性偏置 |
+| 4 | `tail_share` | 尾段局占比 | `n_rounds_tail / n_rounds_all`；值域 [0,1]；`*1.0` 避整数除法截断 | **压哨偏好度**：该玩家将下注推迟至局内后段的倾向。⚠ 判读阈已撤回——曝光率随局内注单数在 20.0%~33.3% 振荡（F-04），独占局必判尾段（F-12），故不存在单一常数基线，须以实测经验分布重估 | `SUM(is_tail)*1.0/COUNT(*)` | 同 2、3；F-12 致独占局玩家该值被推向 1，>0.6 判读阈已撤回为 `UNKNOWN` |
+| 5 | `tail_win` | 尾段盈利局数 | 尾段局中该玩家-局净额 `SUM(game_pnl)>0` 的局数——判据在玩家-局粒度，非注单粒度：同局多注只要净额为正即计 1 | **尾段胜局绝对量**：与 `tail_lose` 成对使用，是 `tail_winrate` 的分子；单独看无意义，须与分母同列方可判读 | `SUM(is_tail*is_win)`；`(bet14−bet13)/bet11`→`prd.SUM(game_pnl)`→`is_win` | `bet14` 在本表为派彩额（`ods_a168_bet01` 中 `bet14` 为退水%，禁跨表复用） |
+| 6 | `tail_lose` | 尾段亏损局数 | 尾段局中净额 `SUM(game_pnl)<0` 的局数，判据同上 | **尾段负局绝对量**：与 `tail_win` 成对构成胜率分母。⚠ 二者之和 ≠ `n_rounds_tail`，差额为净额为零之局（和局／对冲／NULL 三类混同），该差额未输出 | `SUM(is_tail*is_lose)` | 与 `is_win` 互斥但不穷尽（净额为零者两者皆 0） |
+| 7 | `tail_winrate` | 尾段胜率 | `tail_win/(tail_win+tail_lose)`；分母排除净额为零之局（和局／同局对冲净零／`CAST`失败致 `NULL` 三类混同不可区分，见 F-07）；分母为 0 返回 `NULL` | **尾段收益表现**：尾段下注是否真能赢。须与 `norm_winrate` 对照方有意义，单独高低受该玩家整体水平混淆 | `NULLIF(tail_win+tail_lose,0)` 除法 | 分母 ≠ `n_rounds_tail`，差额未作为字段输出 |
+| 8 | `norm_winrate` | 常规时段胜率 | `norm_win/(norm_win+norm_lose)`，排除规则同上；`norm_win`／`norm_lose` 本身未输出 | **基准对比**：同一玩家常规时段的表现基线，用于剔除个体水平差异 | `SUM((1−is_tail)*is_win)/NULLIF(...)` | 分子分母两项均未输出 → 不可独立复算（F-09，S2） |
+| 9 | `winrate_diff` | 尾段-常规胜率差（假说核心量） | `tail_winrate − norm_winrate` | **信息优势量化（核心量）**。⚠ 尾段假说已证伪——符号检验 p=0.5847、个体层 >0 者仅 49.7%，与白噪音不可区分；本项现为**对照留档**，不得据此重开「尾段套利」结论 | 两项相减 | `NULL` 传播：任一侧无决胜局则整体 `NULL`（非 0）；因 8 不可复算，本项同样不可独立复算 |
+| 10 | `tail_stake` | 尾段下注总额 | 尾段局下注额合计（基准币）。技术注记：SQL 为两层 `SUM`（`bs`→`prd`→末段），因结合律，结果等价于「尾段局内全部注单 `stake` 之和」 | **尾段资金投入规模**：衡量压哨行为的金额量级，用于判断该行为是否具经济实质（小额试探 vs 实质投注） | `SUM(is_tail*stake)`；`bet13/bet11`→`bs.stake`→`prd.SUM(stake)` | 非 ROI 分母口径（分母见 11） |
+| 11 | `tail_valid_bet` | 尾段有效投注额 | 尾段局洗码量合计；`tail_roi` 分母 | **尾段洗码贡献**：代理返点与洗码经济学的计算基准，亦是 `tail_roi` 的分母。⚠ `validbet` 双定义未结（F-02，S1），本项判级 UNKNOWN | `SUM(is_tail*valid_bet)`；`validbet/bet11` | `validbet` 存在 `bet41`／`bet13` 两种互斥定义，S1 FATAL 未结（F-02）；已锁定 `valid/stake≈0.9004` 可对表（V-23） |
+| 12 | `tail_game_pnl` | 尾段游戏净输赢 | 尾段局游戏净输赢合计；不含退水 | **尾段毛输赢**：不含退水的纯游戏结果，取负即平台自尾段行为获得的毛收入（GGR 口径） | `SUM(is_tail*game_pnl)`；`(bet14−bet13)/bet11`，先减后除（截断更少，写法正确） | `OBSERVED`（算术） |
+| 13 | `tail_rebate` | 尾段退水 | 尾段局退水合计 | **尾段退水成本**：平台为该玩家尾段行为支付的返水，属直接成本项，用于 NGR 换算 | `SUM(is_tail*rebate)`；`bet16/bet11` | `OBSERVED` |
+| 14 | `tail_net_pnl` | 尾段会员净输赢 | 尾段局会员净输赢合计；含退水 | **尾段净输赢**：含退水后的玩家最终盈亏，取负即平台净收入（NGR 口径）；与 12、13 满足恒等式，可作对账校验 | `SUM(is_tail*net_pnl)`；`bet17/bet11` | 与 12、13 线性相关：14 = 12 + 13（ID-08 硬校验，穿透两层聚合仍成立，可作常设回归项） |
+| 15 | `tail_roi` | 尾段投资回报率 | `tail_game_pnl/tail_valid_bet`；分母为 0 返回 `NULL` | **尾段资金效率**：剔除下注规模影响后的真实回报率，可跨玩家横向比较。⚠ 分母定义未锁（F-02） | 分子第 12 项、分母第 11 项 | 分母定义未锁 → 判级 `UNKNOWN`（同 F-02） |
+| 16 | `norm_game_pnl` | 常规时段游戏净输赢 | 常规段（`is_tail=0`）游戏净输赢合计 | **常规段毛输赢**：与 `tail_game_pnl` 对照，用于判断该玩家的盈亏究竟集中在哪一段 | `SUM((1−is_tail)*game_pnl)`，`is_tail` 取补集 | `OBSERVED`（算术） |
+| 17 | `norm_roi` | 常规时段投资回报率 | `norm_game_pnl / SUM((1−is_tail)*valid_bet)` | **常规段资金效率基准**：与 `tail_roi` 成对判读。⚠ 分母 `norm_valid_bet` 未输出，下游不可独立复算（F-09） | `NULLIF(...,0)` 除法 | 分母 `norm_valid_bet` 未输出 → 不可独立复算（F-09） |
+| 18 | `tail_profit_share` | 尾段盈利贡献占比 | 分子 = 尾段局中正值局 `game_pnl` 之和；分母 = 全部玩家-局中正值局之和（非「总盈利」，负值局与零值局皆不计入分母）；值域 [0,1] | **盈利集中度**：该玩家的赢钱金额有多大比例来自尾段局。⚠ 分母为**全部正值局的毛盈利之和**（负值局与零值局皆不计入），非「总盈利」——玩家整体净额为负时「总盈利」无定义 | `SUM(CASE WHEN is_tail=1 AND game_pnl>0 THEN game_pnl ELSE 0 END) / NULLIF(SUM(CASE WHEN game_pnl>0 THEN game_pnl ELSE 0 END), 0)` | 分母未单独输出为字段 → 不可独立复算 |
+
+# 第三部分之二：交付件 `S_player_tail.csv` 的商业解读
+
+## 1. 取得方式：一次 SQL Lab 运行即可
+
+本交付件**不依赖 R、Python、Spark 或任何调度作业**，全部计算已在 SQL 内闭合。
+
+| 步 | 操作 | 说明 |
+|:--:|:--|:--|
+| 1 | Superset SQL Lab 打开 §D-06 整段直接执行 | 七层 CTE 一次跑完，无中间落表、无写权限需求 |
+| 2 | 结果另存为 `S_player_tail.csv` | 置于报告同级 `数据库/` 目录 |
+| 3 | 报告渲染时自动装载 | 以 `fetch("S_player_tail")` 读取，缺表即点名占位，不以静态文字冒充结果 |
+
+**对经营的实际意义**：口径变更、窗口调整、阈值重估，只需改 SQL 再跑一次，
+**不存在「模型重训」的等待期**。SQL 右侧中文注释即口径说明书，业务方可直接读懂
+分母取的是 `r tip("洗码量")` 还是本金，无须转问技术。
+
+**运行前三项须知**（皆为已锁定事实）：库为**只读**，不得 DDL/DML；
+Superset **不绑定 `:param`**，取值须为字面量；导出**必带 `ORDER BY`**，
+否则分页无稳定序（曾致 36.49% 重复行）。
+
+## 2. 一行代表一名会员
+
+| 项 | 值 |
+|:--|:--|
+| 粒度 | **一行 = 一名会员**（非一注、非一局） |
+| 覆盖 | 139 营业日、百家乐（`bet02='101'`）、已剔测试线代理与测试标识 |
+| 准入 | 局内注单 ≥5 的局才计入；会员合格局数 ≥30 才入表 |
+| 结构 | 18 列（1 主键 + 17 项指标） |
+
+**须向业务侧讲明**：本表**不是全体会员名册**，沉默会员、试玩客、单日尝鲜者
+**结构性不在表内**。任何以本表推算全盘的动作，须先补覆盖率口径。
+
+## 3. 十八列的业务分组
+
+| 组 | 字段 | 商业用途 |
+|:--|:--|:--|
+| **规模** | `n_rounds_all`、`n_rounds_tail`、`tail_share` | 活跃度分层、巡检排队 |
+| **胜负** | `tail_win`／`tail_lose`／`tail_winrate`／`norm_winrate`／`winrate_diff` | 原假说检验量——**已证伪** |
+| **金额** | `tail_stake`、`tail_valid_bet`、`tail_game_pnl`、`tail_rebate`、`tail_net_pnl` | `r tip("洗码量")` 经济学、`r tip("GGR")`／`r tip("NGR")` 拆解、返点成本核算 |
+| **效率** | `tail_roi`、`norm_roi`、`tail_profit_share` | 单客经济学、盈利集中度 |
+
+**金额组是当前最具商业实质的部分**——与假说成立与否无关，是纯经营口径拆解：
+`-Σtail_game_pnl` 即 `r tip("GGR")`，`tail_rebate` 为 `r tip("退水")` 成本，
+`-Σtail_net_pnl` 即 `r tip("NGR")`，三者满足 **NGR = GGR − 退水**，可直接对账。
+
+## 4. 结论定调：假说已证伪
+
+::: {.callout-important}
+## 须对业务与上级如实交代
+
+「压哨（`r tip("尾段")`）下注者拥有信息优势」这一假说，**已被本项目自身数据证伪**——
+符号检验 p = 0.5847，个体层 `winrate_diff > 0` 者仅 49.7%（与掷硬币无异），
+ROI 符号随佣金模式翻转，信噪比 0.077。相关规则已下架，产品端「提前封盘」建议已撤回。
+:::
+
+在行家面前，**证伪一条假规则的价值不低于新增一条真规则**——若当初照「压哨即可疑」上线，
+代价是长期误伤高价值客户、投诉率上升，且因规则「看起来合理」而极难自查。
+
+## 5. 真正的商业价值落点
+
+### 5.1 已验证可用：客群集中度（同源口径实测）
+
+局数 ≥30 的活跃段会员占全体 **22.12%**，却贡献 **87.46%** 的 `r tip("GGR")` 与
+**97.82%** 的 `r tip("洗码量")`。
+
+这是本条管道最扎实的产出。它回答的不是「谁在压哨」，而是
+**「风控与服务资源该往哪投」**——87% 的利润敞口集中在两成会员身上，
+巡检优先级、VIP 投入、`r tip("KYC")`／`r tip("AML")` 资源都应据此重排。
+
+### 5.2 可直接落地三项
+
+| 用途 | 依据字段 | 落地方式 |
+|:--|:--|:--|
+| **洗码成本核算** | `tail_valid_bet`、`tail_rebate` | 按会员核算返点消耗比，识别「高洗码低毛利」代理线 |
+| **盈利集中度筛查** | `tail_profit_share`、`tail_roi` | 该值近 1 者赢钱高度集中，值得人工复核（**线索，非判定**） |
+| **活跃段分层** | `n_rounds_all`、`tail_stake` | 对接 `r tip("CLV")` 引擎，作规模轴输入 |
+
+### 5.3 明确不可用于三件事
+
+- **不可**据 `tail_share > 0.6` 判「机器人／脚本」——阈值已撤回为 `r tip("UNKNOWN")`
+  （曝光率随局内注单数在 20.0%~33.3% 振荡；独占局必然被判尾段）
+- **不可**据 `winrate_diff > 0` 判套利——假说已证伪
+- **不可**据两组均值之差推「提升空间」——分组依据是局数门槛，属 `r tip("自选择")`
+
+## 6. 盈亏与盈亏率为何未纳入 §5.1：自审与补正
+
+::: {.callout-warning}
+## 本节为对本文件自身的红队自审，非事后补充
+
+§5.1 原仅引 `r tip("GGR")` 与 `r tip("洗码量")` 两项，经核对 `D-06X` 实测读数，
+**至少遗漏三项同等重要的经营指标**。以下逐项补正并说明遗漏是否正当。
+:::
+
+### 6.1 遗漏项一：NGR 占比（不正当遗漏，应补）
+
+| 指标 | S 组 | 非 S 组 | 原状态 |
+|:--|--:|--:|:--|
+| 会员数占比 | 22.12% | 77.88% | 已引 |
+| 洗码量占比 | 97.82% | 2.18% | 已引 |
+| `r tip("GGR")` 占比 | 87.46% | 12.54% | 已引 |
+| **`r tip("NGR")` 占比** | **87.04%** | **12.96%** | **遗漏** |
+
+`r tip("NGR")` 是**扣除返点后的真实到手利润**，对博彩经营而言比 `r tip("GGR")` 更贴近损益表。
+遗漏无正当理由——该读数与 GGR 同源同质、同等可靠，**本轮补入**。
+
+**业务价值**：GGR 占比 87.46% 与 NGR 占比 87.04% 几乎持平，说明
+**活跃段的返点成本并未显著侵蚀其利润贡献**——这否定了「大客洗码返点高、实际不赚钱」的常见揣测。
+
+### 6.2 遗漏项二：盈亏率（hold%）——遗漏部分正当，但须列出并加警示
+
+| 口径 | S 组 | 非 S 组 | 合计 |
+|:--|--:|--:|--:|
+| `r tip("hold%")`（洗码量口径） | 1.729% | **11.130%** | 1.934% |
+
+组间落差 **6.44 倍**。行业参照：百家乐单注别理论优势约为庄注 1.06%（含 5% 佣金）、
+闲注 1.24%、免佣庄 1.46%、和局 14.36%；亚洲现场荷官厅实际综合 hold 常见区间约 2.5%~3.5%。
+
+- **S 组 1.73%** — 落在合理偏低区间，符合大样本趋近理论值、且大客议价拿到较高返点的常态。
+- **非 S 组 11.13%** — **超出常规区间上限约 3.2~4.5 倍**。
+
+::: {.callout-caution}
+## 此项遗漏部分正当：不可直接解读为「散户更好赚」
+
+非 S 组人均仅 6.4 局，样本量极小；更要紧的是**反向因果**——
+很可能不是「散户天生更容易输」，而是**「输了的人更容易变成散户」**：
+开局连输者大概率流失、局数永远停在个位数；开局连赢者更可能续玩、
+局数攀升进而跨过 30 局门槛「晋级」为 S 组。这种筛选效应足以在
+**不涉及任何游戏机制差异**的情况下，单独制造出这个悬殊落差。
+
+故本项**列出但不作因果解读**，判级 `r tip("UNKNOWN")`，待分布核验（V-38）与准实验识别后再定。
+:::
+
+### 6.3 遗漏项三：返点消耗比（本轮新发现，此前从未提出）
+
+退水成本 ÷ `r tip("GGR")`，即 `r tip("返点消耗比")`：
+
+| 组 | GGR | NGR | 退水成本 | 返点消耗比 |
+|:--|--:|--:|--:|--:|
+| S 组 | ¥200,117,813 | ¥192,145,300 | ¥7,972,513 | **3.984%** |
+| 非 S 组 | ¥28,687,329 | ¥28,603,663 | ¥83,666 | **0.292%** |
+
+**相差 13.7 倍。**
+
+**业务价值**：这是代理经济学的直接成本指标。活跃段每赚 100 元毛收入需付出约 4 元返点，
+长尾段仅 0.3 元——差距合理（大客议价能力强、洗码返点档位高），但**13.7 倍的量级值得复核**：
+究竟是返点档位的正常差异，还是某几条代理线的返点设置异常？
+`tail_valid_bet` 与 `tail_rebate` 两列**已在表内，可直接按会员下钻**，无须新增取数。
+
+### 6.4 为何盈亏「绝对额」不宜作为占比指标单列
+
+`tail_game_pnl`／`tail_net_pnl` 是**玩家视角**的净输赢（负值＝玩家输、平台赢）。
+若直接以「盈亏占比」呈现，会出现**分母可正可负**的问题：玩家整体净额为负时，
+「盈亏占比」在数学上无定义。故本包一律**先取负转为平台视角**（GGR／NGR）再计占比——
+这不是遗漏，是**刻意的口径选择**，与国际博彩财务惯例一致。
+
+## 7. 落实前后的差别
+
+| 维度 | 落实前（现状） | 落实后（依本表重排资源） |
+|:--|:--|:--|
+| 巡检排队 | 按告警时间或人工经验排序 | 按会员利润敞口排序，87% 敞口优先覆盖 |
+| 返点成本 | 全局汇总，无会员级归因 | 可下钻至会员与代理线，识别消耗比异常者 |
+| 客群分层 | 依充值额或人工 VIP 等级 | 增加洗码量与局数双轴，与 `r tip("CLV")` 引擎对接 |
+| 压哨规则 | 曾拟以「压哨即可疑」上线 | **已撤回**，避免长期误伤高价值客户 |
+
+**须诚实标注**：上表右栏是**资源配置的改变**，不是**收入的因果性提升预测**。
+
+## 8. 局限（四项，均须随结论一并披露）
+
+1. **口径未锁**：`validbet` 双定义未结（`r tip("S1")`，F-02），`r tip("洗码量")`、
+   `tail_roi`、`r tip("hold%")` 三项判级 `r tip("UNKNOWN")`，待 V-03 核验。
+2. **局键待验**：`round_key` 缺日期成分（S1 候选，F-01），虽有旧证据显示「局键健全、
+   塌缩未发生」，但未与当前窗口逐字对齐，建议重跑 V-01 后再将局数系列升为 `r tip("OBSERVED")`。
+3. **覆盖有限**：本表仅含 ≥30 局的活跃段，**不代表全体会员**。
+4. **无因果识别**：一切组间差异均属描述性，须走 `r tip("PSM")` + `r tip("DID")` 方可言因果，
+   目前三道硬闸未全通过。
+
+## 9. 结论
+
+::: {.callout-note}
+## 三句话结论
+
+1. **假说侧**：压哨信息优势假说已证伪，相关规则下架——这是本表最重要的产出，
+   避免了一条「看似合理实则无效」的规则上线。
+2. **经营侧**：22.12% 的会员承载 87.46% 的 `r tip("GGR")` 与 87.04% 的 `r tip("NGR")`，
+   资源配置应据此重排；返点消耗比 13.7 倍落差为本轮新发现，值得专项复核。
+3. **纪律侧**：在 F-01／F-02 两项 `r tip("S1")` 结案前，金额与 ROI 类结论
+   一律标注「口径待锁」再对外，不得以内部自洽冒充已验证。
+:::
 
 ---
 
@@ -550,11 +814,128 @@ PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round
 
 # 附录：阈值溯源补充（应原提问者要求）
 
-## A.0 
+## A.0 完整源代码
 
-```
+```{sql, eval = FALSE}
+-- eval = FALSE
 
+-- ═══════════════════════════════════════════════════════════════════════
+-- S_player_tail 与 非S_player_tail 整体聚合对比
+-- 用途：查覆盖率——HAVING COUNT(*)>=30 这道闸，筛掉了多少人、多少局、多少钱
+-- 与 D-06 的关系：ta / rk / vd / bs / ord / prd / fl 七层与原包逐字一致，
+--   仅在 vd 层新增一道防御性局键哨兵闸（见下方标注），非本次臆造，
+--   对应过去会话已知的局键哨兵残量（约 102 行，量极小，零成本可挡）
+-- 本查询不产出交付件，仅供 Superset SQL Lab 内直接阅读
+-- ═══════════════════════════════════════════════════════════════════════
 
+WITH ta AS (                                                          -- 测试线代理名册，与 D-06 完全一致
+  SELECT DISTINCT age001 AS aid
+  FROM ods_mariadb_2b.ods_a168_agent
+  WHERE age022 = '1'
+),
+rk AS (                                                               -- 版本去重 + 窗口/游戏类别切分，与 D-06 完全一致
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet08, b.bet11,
+         b.bet13, b.bet14, b.bet16, b.bet17, b.bet18,
+         b.bet19, b.bet20, b.bet21, b.bet22, b.bet38,
+         b.bet39, b.category, b.validbet,
+         ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+),
+vd AS (                                                               -- 主体准入：与 D-06 六项条件完全一致，末两行为本次新增防御闸
+  SELECT r.*
+  FROM rk r
+  LEFT JOIN ta t1 ON t1.aid = r.bet18
+  LEFT JOIN ta t2 ON t2.aid = r.bet19
+  LEFT JOIN ta t3 ON t3.aid = r.bet20
+  LEFT JOIN ta t4 ON t4.aid = r.bet21
+  LEFT JOIN ta t5 ON t5.aid = r.bet22
+  WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(r.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+    AND NULLIF(TRIM(r.bet03), '0') IS NOT NULL                        -- 新增：局键哨兵闸——bet03='0' 者剔除（对照既知的 102 行局键哨兵残量）
+    AND NULLIF(TRIM(r.bet39), '0') IS NOT NULL                        -- 新增：同上，桌号哨兵一并剔除
+),
+bs AS (                                                               -- 口径归一层，与 D-06 完全一致
+  SELECT v.bet05 AS member_id,
+         CONCAT_WS('|', v.bet03, v.bet04, v.bet39) AS round_key,
+         v.bet39 AS table_id,
+         CAST(NULLIF(TRIM(v.bet08),'') AS DATETIME) AS t_bet,
+         CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS stake,
+         CAST(NULLIF(TRIM(v.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS valid_bet,
+         (CAST(NULLIF(TRIM(v.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(v.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS game_pnl,
+         CAST(NULLIF(TRIM(v.bet16),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS rebate,
+         CAST(NULLIF(TRIM(v.bet17),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(v.bet11),'') AS DECIMAL(20,8)) AS net_pnl
+  FROM vd v
+),
+ord AS (                                                              -- 局内时序定标，与 D-06 完全一致
+  SELECT b.*, PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round,
+              COUNT(*)      OVER (PARTITION BY round_key)                 AS n_in_round -- 每局注单数（整局所有玩家的注单行数）
+  FROM bs b
+),
+prd AS (                                                              -- 玩家-局聚合（L6 闸），与 D-06 完全一致
+  SELECT member_id, round_key, table_id,
+         MAX(pr_in_round) AS max_pr,
+         MAX(n_in_round)  AS n_in_round,
+         SUM(stake) AS stake, SUM(valid_bet) AS valid_bet,
+         SUM(game_pnl) AS game_pnl, SUM(rebate) AS rebate, SUM(net_pnl) AS net_pnl,
+         CASE WHEN SUM(game_pnl) > 0 THEN 1 ELSE 0 END AS is_win,
+         CASE WHEN SUM(game_pnl) < 0 THEN 1 ELSE 0 END AS is_lose
+  FROM ord WHERE n_in_round >= 5
+  GROUP BY member_id, round_key, table_id
+),
+fl AS (                                                               -- 尾段判定，与 D-06 完全一致
+  SELECT p.*, CASE WHEN p.max_pr >= 0.80 THEN 1 ELSE 0 END AS is_tail
+  FROM prd p
+),
+member_agg AS (                                                       -- 玩家级预聚合（新增，非 D-06 原有）
+  SELECT member_id,
+         COUNT(*)      AS n_rounds_all,
+         SUM(is_tail)  AS n_rounds_tail,
+         SUM(stake)    AS stake,
+         SUM(valid_bet)AS valid_bet,
+         SUM(game_pnl) AS game_pnl,
+         SUM(rebate)   AS rebate,
+         SUM(net_pnl)  AS net_pnl
+  FROM fl
+  GROUP BY member_id
+),
+labeled AS (                                                          -- 按 HAVING>=30 这道闸，把玩家分成两群
+  SELECT *,
+    CASE WHEN n_rounds_all >= 30 THEN 'S_player_tail'
+         ELSE '非S_player_tail' END AS population
+  FROM member_agg
+)
+SELECT
+  population,
+  COUNT(*)                                          AS n_members,
+  SUM(n_rounds_all)                                 AS total_rounds,
+  SUM(n_rounds_tail)                                AS total_tail_rounds,
+  SUM(n_rounds_tail) * 1.0 / NULLIF(SUM(n_rounds_all), 0) AS overall_tail_share,
+  AVG(n_rounds_all * 1.0)                           AS avg_rounds_per_member,
+  MIN(n_rounds_all)                                 AS min_rounds,
+  MAX(n_rounds_all)                                 AS max_rounds,
+  SUM(stake)                                        AS total_stake,
+  SUM(valid_bet)                                     AS total_valid_bet,
+  SUM(game_pnl)                                     AS total_game_pnl,
+  SUM(rebate)                                       AS total_rebate,
+  SUM(net_pnl)                                      AS total_net_pnl,
+  SUM(valid_bet) * 1.0
+    / NULLIF(SUM(SUM(valid_bet)) OVER (), 0)        AS share_of_total_valid_bet
+FROM labeled
+GROUP BY population
+ORDER BY population;
 ```
 
 ## A.1 为什么 `pr >= 0.8`？

@@ -92,7 +92,7 @@ PERCENT_RANK() OVER (PARTITION BY round_key ORDER BY t_bet) AS pr_in_round
 
 | 指标名称 | 计算逻辑（E2 算术级） | 风控用途（业务意义） |
 | :--- | :--- | :--- |
-| `n_rounds_all` | 总局数 | 样本量基础（低于 30 局被 `HAVING` 强杀） |
+| `n_rounds_all` | 该玩家参与的有效局数 | 样本量基础（低于 30 局被 `HAVING` 强杀） |
 | `tail_share` | 尾段局数 / 总局数 | **打水嫌疑**：正常人随机分布，若该值 > 0.6 说明极度偏好压哨 |
 | `tail_winrate` | 尾段盈利局 / 尾段总局数 | **核心收益**：尾段是否真的能赢 |
 | `norm_winrate` | 常规时段盈利局 / 常规总局数 | **基准对比** |
