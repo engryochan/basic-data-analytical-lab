@@ -58,7 +58,7 @@ GLOSS <- list(
   "洗码量" = "有效投注额（Turnover / Rolling），代理返点与佣金的计算基准。R01_late_shoe.csv 以 stake（下注额，已按 bet11 汇率归一）近似替代，非严格意义之 validbet；两者关系判 UNKNOWN，见局限章。",
   "hold%" = "抽水率／盈亏率＝ GGR ÷ 分母。本报告统一取 stake（下注额，汇率归一后）为分母，与洗码量口径可能有别，行文中一律称「本报告 hold%」以示区隔。",
   "靴尾" = "本报告专属定义：shoe_pos ≥ 0.80，即该笔注单的局号（round_no）除以其所属靴之最大局号（max_round）≥ 0.80，是**靴内相对位置**，与靴长无关。**严禁**与 D-06 之「尾段」（pr_in_round ≥ 0.80，局内注单时序分位）或 X-01 之「压哨」（progress ≥ 0.90，局内物理时间进度）互代，三者判据、粒度、交付件完全独立。",
-  "靴内相对位置" = "shoe_pos = round_no / max_round，取值区间 [首局/靴长, 1]；因靴长实测不定（均值49.86、P50=50、P75=52、P90=54、P99=58），固定绝对局号（如 round_no≥40 或 ≥50）会随靴长系统性失真，2026-08-12 已斧正为本相对口径（B-01）。",
+  "靴内相对位置" = "shoe_pos = round_no / max_round，其中 max_round = MAX(round_no) 按 (shoe_id, table_id) 分组、算于清洗后注单集——是最大局号，不是总局数（COUNT），二者仅在局号连续无缺口时相等。取值区间 [首局号/max_round, 1]。因靴长实测不定（均值49.86、P50=50、P75=52、P90=54、P99=58），固定绝对局号（如 round_no≥40 或 ≥50）会随靴长系统性失真，2026-08-12 已斧正为本相对口径（B-01）。",
   "注额斜率" = "stake_ramp = 靴尾人均单注额 ÷ 靴尾以外人均单注额；>1 表示该会员在靴尾段下注更大，<1 反之，=1 表示两段注额无差异。",
   "符号检验" = "Sign Test，非参数配对检验，只用差值的正负号（不用差值大小），检验中位数差异是否为零；对厚尾分布比配对t检验更稳健，本报告的主检验方法。",
   "Wilcoxon符号秩检验" = "Wilcoxon Signed-Rank Test，配对非参数检验，同时利用差值的正负号与相对大小（秩），检定力通常高于符号检验；本报告作为符号检验之交叉验证。",
@@ -74,7 +74,11 @@ GLOSS <- list(
   "S1" = "严重度分级最高档 FATAL：口径或数据层面的致命缺陷，未结前相关结论不得进入生产判定链。",
   "OBSERVED" = "证据分级：本文件内可直接复算验证。",
   "INFERRED" = "证据分级：由已锁定事实推得，未经独立外部验证，不得径自升级为 OBSERVED。",
-  "UNKNOWN" = "证据分级：须另行取数核验，禁止以推测填补。"
+  "UNKNOWN" = "证据分级：须另行取数核验，禁止以推测填补。",
+  "登记册" = "《风险类型 × 交付件 × 判据维度 × 证据裁定》登记册：数据资产（配置件），YAML 为单一真相源、CSV 为派生字典，由 函数/registry_loader.R 载入并施行门闸。它分类的是证据，不是用户。",
+  "门闸" = "评分管道引用未获准入之特征时，渲染直接失败并报出该特征所属类型、门禁等级与裁定理由。",
+  "门禁五档" = "FATAL 停止分析／BLOCK 禁入正式结论／CONDITIONAL 条件可用／ADVISORY 建议可用／NA 不适用。",
+  "准入评分" = "该类判据获准进入风险评分管道；未准入者至多进入画像，不得据以处置。"
 )
 esc <- function(x) gsub('"','&quot;', gsub("<","&lt;", gsub(">","&gt;", x)))
 tip <- function(k, show = NULL) {
@@ -376,9 +380,52 @@ D-06 已证伪"局内下注顺序无信息优势"，**不能**据此推断"靴�
 
 **第二层·靴内位置定标**（在 `shoe_len`→`enriched` 两层完成，**不删行、只算值**）：
 
-- `shoe_len`：按 `(shoe_id, table_id)` 分组取 `MAX(round_no)` 为该靴实际长度 `max_round`
-  ——此为 B-01 斧正的核心：**靴长逐靴现算，不假设固定 50**。
+- `shoe_len`：按 `(shoe_id, table_id)` 分组取 `MAX(round_no)` 为 `max_round`
+  ——此为 B-01 斧正的核心：**定标基准逐靴现算，不假设固定 50**。
+  ⚠ CTE 名为 `shoe_len`（靴长）系 SQL 总包沿用之历史命名，其所算实为**最大局号**而非靴长；
+  详见 @sec-shoe-pos-caveat。
 - `shoe_pos = round_no / max_round`；`is_late = 1[shoe_pos >= 0.80]`。
+
+::: {.callout-important}
+## 口径警示：`max_round` 是**最大局号**，不是**总局数**——兼一处已知偏置的披露 {#sec-shoe-pos-caveat}
+
+**其一，函数语义。** `shoe_pos` 之分母出自 SQL 总包 §R01：
+
+```
+shoe_len AS (
+  SELECT shoe_id, table_id, MAX(round_no) AS max_round
+  FROM base GROUP BY shoe_id, table_id
+)
+```
+
+`MAX(round_no)` 取的是**该靴该桌观测到的最大局号**（一个序号），
+`COUNT(round_no)`／`COUNT(DISTINCT round_no)` 才是**局数**（一个计数）。
+二者**仅在局号自 1 起、连续、无缺口时相等**。本报告全篇凡言「靴长」「总局数」处，
+若指本分母，一律应读作**最大局号**。
+
+**其二，选 `MAX` 是对的，不必改。** 若中间某局的全部注单被六项清洗剔除
+（测试线、旧版本、非一般注单、重对注单、空串／不可转型、`bet04<=0`），
+`COUNT` 会随之减少而使分母缩水、位置坐标整体膨胀；`MAX` 对**中间缺口免疫**，
+故为更稳健的定标基准。**代码正确，错的是历来把它叫作「靴长」的命名与注释。**
+
+**其三，一处方向已知的偏置（`r tip("INFERRED")`，此前未披露）。**
+`max_round` 算于 `base`（清洗后注单集）而非物理牌靴。若某靴**末尾数局**无人下注、
+或其注单被清洗剔除，则 `max_round` 低于该靴物理实发局数，分母偏小，
+`shoe_pos` 被**系统性放大**，更多注单被判入靴尾段。
+
+- **影响方向**：使 `late_share` 偏高、靴尾段样本偏多；
+- **对本报告结论的影响**：**不改变结论方向**。本报告的裁定是「靴尾维度无判别力」
+  （符号检验 p = `r sprintf("%.4f", sign_p30)`、AUC = `r sprintf("%.4f", auc_late_share)`、
+  九档阈值中命中组 hold% 低于对照组者 `r scan_tbl[命中hold < 对照hold, .N]` 档）——
+  偏置使靴尾组**更大**，而更大的组只会让其表现**更趋近全体均值**，
+  即偏置方向与「找不到差异」这一结论**同向**，不构成对结论的威胁；
+- **若日后要主张靴尾组存在正向效应**，则此偏置成为直接威胁，须先以
+  `ods_a168_game_info` 之开局／开牌记录还原物理靴长后重算。
+
+**其四，本项目同类缺陷已全面普查**，SQL 总包与两份 D-06 姊妹档均涉，
+详见变更日志所附工单 W-01。
+:::
+
 
 **第三层·会员级门槛**（对聚合后的会员级结果做事后过滤）：
 
@@ -399,6 +446,118 @@ D-06 已证伪"局内下注顺序无信息优势"，**不能**据此推断"靴�
 会员级过滤），本报告第三部分即完成该处代码注释所要求的命中组／对照组经济裁定，对应
 `{#sec-r01}` 与 `{#r01-decision}` 两处锚点。
 :::
+# 数据口径 {#sec-data-caliber}
+
+::: {.callout-note}
+## 本章定位
+
+按「**源数据 → 指标输出**」两级、每级再按「**关键字段 → 核心指标**」两目，逐项交代
+**业务含义**与**商业用途**。字段业务含义一律逐字取自 `a168_取数与核验_SQL总包_v3.sql`
+的行级注释（`r tip("OBSERVED")`）；商业用途栏为本报告对该字段实际用法的归位陈述，
+凡属推导性延伸均标注 `r tip("INFERRED")`。
+
+本档为 **标记前** 版本，分析对象仅 `R01_late_shoe.csv` 一件；不涉外部风险标签，
+故本章不列 `risk_label` 相关口径。
+:::
+
+## 一、源数据（ODS 库表层）
+
+### 1. 关键字段：业务含义与商业用途
+
+以下字段均以 `varchar(65533)` 存储于 StarRocks ODS，凡比较、运算一律先
+`NULLIF(TRIM(...),'')` 再显式 `CAST`（工程铁律，§R01 已逐处执行）：
+
+| 库表 | 字段 | 业务含义（SQL 注释原文口径） | 商业用途（本报告归位） |
+|:--|:--|:--|:--|
+| `ods_a168_bet02` | `bet01` | 注单号 | 同注单号取最新版本之去重主键（`ROW_NUMBER` 按 `updatetime`／`sync_time`／`dt` 三级降序） |
+| `ods_a168_bet02` | `bet02` | 游戏类别 | 恒限 `'101'`（百家乐），产品口径锁 |
+| `ods_a168_bet02` | `bet03`／`bet04`／`bet39` | 靴号／局内序号／桌号 | 三段拼合为 `round_key`（局键）；**`bet04` 是靴内相对位置 `shoe_pos` 之分子**——本报告主判据之根 |
+| `ods_a168_bet02` | `bet05` | 会员号 | 交付件实体主键（R01 之 `uid`），会员级聚合与跨档接线键 |
+| `ods_a168_bet02` | `bet08` | 下注时间 | 有效单准入（非空）；X-01「进度」口径另用（本报告不涉） |
+| `ods_a168_bet02` | `bet09` | 玩法（庄／闲／和／对子等） | 本报告未拆玩法——边注 P&L 与主注混同，构成已知缺口 |
+| `ods_a168_bet02` | `bet11` | 汇率（= `ods_a168_currency.rate`，非 `origin_rate`） | 一切金额字段之除数：原币 → 统一口径，含 K／VNDK／IDRK 千位换算前提 |
+| `ods_a168_bet02` | `bet13` | 下注金额（原币） | ÷汇率 → `stake`（本金）；`stake_all`／`stake_late` 与 `r tip("hold%")` 之分母 |
+| `ods_a168_bet02` | `bet14` | 派彩金额（原币） | `(bet14−bet13)`÷汇率 → `game_pnl`（会员游戏输赢），取负即 `r tip("GGR")` |
+| `ods_a168_bet02` | `bet16` | 退水金额（原币） | ÷汇率 → `rebate`；`r tip("NGR")` 方向核算件（本档未纳入计算） |
+| `ods_a168_bet02` | `validbet` | 有效投注（`r tip("洗码量")`，原币） | ÷汇率 → `valid_bet`；退水计提基数（本档未纳入计算） |
+| `ods_a168_bet02` | `bet18`–`bet22` | 一至五级代理线 | 测试线剔除须**五级全查**（单级孤儿率 78.17%，五级完全孤儿率仅 1.371%） |
+| `ods_a168_bet02` | `bet38` | 测试标识 | `UPPER(TRIM(...))='N'` 方为真实注单 |
+| `ods_a168_bet02` | `category` | 注单类别 | `'1'`（一般注单）准入 |
+| `ods_a168_bet02` | `dt` | 营业日分区（= `bet07` 账户日期） | 窗口切日唯一合法字段（严禁 `DATE(bet08)` 切日，差异 38.6%） |
+| `ods_a168_bet02` | `eid`／`ip` | 荷官工号／下注 IP | 本报告不涉；`ip` 之唯一合法来源（`game_log.ip` 为网关，禁用） |
+| `ods_a168_agent` | `age001`／`age022` | 代理编号／测试线二值标志（'1'=测试线） | 214 条测试线代理白名单（跨五级），§R01 准入 CTE 共用 |
+| `ods_a168_game_info` | `gi004`／`gi006` | 开局／开牌时间 | 靴长与局时长核验；本报告仅作口径参照 |
+
+### 2. 核心指标：业务含义与商业用途
+
+| 核心指标 | 定义（源数据层） | 业务含义 | 商业用途 |
+|:--|:--|:--|:--|
+| `stake`（本金） | `bet13 ÷ bet11` | 会员实际押注本金 | 全部注额指标与 `r tip("hold%")` 分母；高价值分层排名键 |
+| `valid_bet`（`r tip("洗码量")`） | `validbet ÷ bet11` | 计入流水的有效投注（和局退注等不计） | 退水计提基数；本档未入算，列此以固化口径 |
+| `game_pnl`（游戏输赢） | `(bet14 − bet13) ÷ bet11` | 会员视角单注输赢 | 取负聚合即 `r tip("GGR")`；分段盈亏与 ROI 之根 |
+| `rebate`（退水） | `bet16 ÷ bet11` | 按洗码量返还会员的让利 | `r tip("NGR")` 方向核算件；本档未入算 |
+| `shoe_pos`（靴内相对位置） | `bet04 ÷ max_round`，其中 `max_round = MAX(round_no)` 按 `(shoe_id, table_id)` 分组、算于**清洗后**注单集 | 该注单的局号占其所在靴该桌**最大局号**之比 （**最大局号 ≠ 总局数**，详见下方口径警示） | **本报告唯一判据坐标**；`>= 0.80` 即定义为靴尾段 |
+| `r tip("GGR")` | `-SUM(game_pnl)` | 平台毛利（会员净输即平台净赢） | 集中度分析与命中／对照经济裁定之核心 |
+| `r tip("hold%")` | `GGR ÷ SUM(stake)` | 单位投注的平台留存率 | 经济裁定唯一裁判指标 |
+
+## 二、指标输出（交付件层）
+
+### 1. 关键字段：业务含义与商业用途
+
+**交付件：`R01_late_shoe.csv`（会员粒度，`r ncol_r01` 列，`HAVING COUNT(*)>=100`）**
+
+| 字段 | 业务含义 | 商业用途 |
+|:--|:--|:--|
+| `late_def` | 判据版本锁，恒 `shoe_pos>=0.80` | 版本身份口径锁；载入即断言 |
+| `uid` | 会员号 | 实体主键 |
+| `n_orders_all`／`n_orders_late` | 全部／靴尾段订单数 | 稳定性门槛（`n_orders_late ≥ 30`，实证依据见附录 B）与准入（`n_orders_all ≥ 100`，SQL 侧 `HAVING`）依据 |
+| `late_share` | 靴尾段订单占比 | 本报告主角行为维度；假说检验与阈值扫描主变量 |
+| `shoe_pos_p50` | 会员靴内位置中位数 | 行为时序维度之二 |
+| `stake_late_avg`／`stake_early_avg`／`stake_ramp` | 段均注额与其比值（`r tip("注额斜率")`） | 行为时序维度之三；双重信号交叉验证件 |
+| `roi_late`／`roi_early` | 分段 ROI | 配对检验核心对（`r tip("符号检验")`、`r tip("Wilcoxon符号秩检验")`） |
+| `stake_late`／`game_pnl_late` | 靴尾段注额与盈亏合计 | 段级经济核算 |
+| `stake_all`／`game_pnl_all` | 全段注额与盈亏合计 | `r tip("hold%")`、`r tip("GGR集中度")`、高价值分层之基 |
+
+**首末数行实览**（呈表纪律：实际行号，首段 `1:`–`3:`，分隔行 `---`，末段真实索引）：
+
+```{r}
+#| label: r01-head-tail
+#| echo: false
+.ht_show <- function(dt, k = 3L) {
+  n <- nrow(dt)
+  .f <- function(x) if (is.numeric(x)) format(x, scientific = FALSE, trim = TRUE, digits = 15)
+                    else as.character(x)
+  chr  <- dt[, lapply(.SD, .f)]
+  sepr <- as.data.table(setNames(as.list(rep("---", ncol(chr))), names(chr)))
+  out  <- rbindlist(list(chr[1:k], sepr, chr[(n - k + 1L):n]))
+  out[, 行号 := c(paste0(1:k, ":"), "---",
+                  paste0(format((n - k + 1L):n, big.mark = ",", trim = TRUE), ":"))]
+  setcolorder(out, "行号"); out[]
+}
+.cols0 <- setdiff(names(r01), c("n_orders_early", "is_net_winner", "bucket",
+                                "flag_freq", "flag_ramp"))
+r01_ht <- .ht_show(r01[, .cols0, with = FALSE])
+.omit  <- nrow_r01 - 6L
+knitr::kable(
+  r01_ht, align = "r",
+  caption = sprintf("R01_late_shoe.csv 首末 3 行（总行数 %s，总列数 %d；中间省略 %s 行，占 %.4f%%）",
+                    format(nrow_r01, big.mark = ","), ncol_r01,
+                    format(.omit, big.mark = ","), .omit / nrow_r01 * 100)
+)
+```
+
+### 2. 核心指标：业务含义与商业用途
+
+本报告在交付件字段之上现算的分析级核心指标：
+
+| 核心指标 | 定义（交付件层） | 业务含义 | 商业用途 |
+|:--|:--|:--|:--|
+| 配对差值 `diff` | `roi_late − roi_early`（同会员） | 靴尾相对表现 | 假说主检验统计量（第二部分） |
+| 命中组 `r tip("hold%")` 差 | 分组 `GGR ÷ 注额` 之差 | 被标记群体是否侵蚀庄家优势 | 经济裁定（第三部分）唯一裁判 |
+| `r tip("AUC")` | `auc_manual(维度, is_net_winner)` | 维度对内生标签之排序力 | 特征去留裁定；本档标签为内生，自证倾向已在正文声明 |
+| `r tip("GGR集中度")` | 按 `stake_all` 排名的帕累托累计 | 价值集中结构 | 高价值分层（第四部分）；复核队列排序基础 |
+| 稳定性分桶宽度 | 各 `n_orders_late` 桶之 `p90 − p10` | 小样本 ROI 之离散度 | 样本量门槛之实证依据（附录 B） |
+
 # 第一部分：`R01_late_shoe.csv` 结构与描述统计实测 {#sec-r01}
 
 ## 一、交付件身份核验
@@ -850,7 +1009,200 @@ knitr::kable(
 等规模维度筛选，与 D-06 系列既有结论（"携带风险信息的是金额，不是压哨"）方向完全一致，
 构成第三重独立佐证。
 :::
-# 第五部分：宗旨、价值与可落实的商业方案（2026-08-17 专项）
+# 第五部分：十五类风险会员判据——灵活搭配与证据裁定 {#sec-typology}
+
+::: {.callout-important}
+## 本章定位：本报告只是十五类之一，且是被判 FATAL 的那一类
+
+前四部分证明「靴尾」这一条路走不通。但风控不能因此停摆——本章把 a168 现有交付件所能
+支撑的**全部**风险类型一次列清，并对每类出具证据裁定，使读者看得见：**哪几类现在就能用、
+哪几类被什么卡住、哪几类已被证伪**。
+
+本章内容不写死于正文，而是**渲染时自 `r tip("登记册")` 现算**（YAML 为单一真相源、
+CSV 为派生字典，载入时交叉比对，不一致即停止渲染）。故本章与登记册**永不分家**：
+登记册改了，本章下次渲染自动跟着改。
+:::
+
+```{r}
+#| label: registry-load
+#| echo: true
+source("函数/registry_loader.R")
+REG <- registry_load()          # 默认路径：数据库/registry_risk_typology_v1.1.0.{yaml,csv}
+n_type    <- uniqueN(REG$dict[axis == "R", type_id])
+n_crit    <- nrow(REG$dict)
+n_admit   <- uniqueN(REG$dict[admit_to_scoring == TRUE & axis == "R", type_id])
+n_blocker <- length(REG$meta$blockers)
+reg_ver   <- REG$meta$registry$version
+
+## 交付件总数：自 SQL 总包现算，禁止写死（铁律第九条）
+dlv        <- registry_count_deliverables()
+n_dlv      <- dlv$实际交付件
+n_dlv_line <- dlv$声明行数
+n_dlv_ascii<- dlv$ASCII口径唯一名
+n_dlv_cn   <- length(dlv$中文命名者)
+```
+
+::: {.callout-warning}
+## 交付件总数：勘误存证（`r tip("OBSERVED")`）
+
+本报告所依托之 `a168_取数与核验_SQL总包_v3.sql`，实际产出交付件
+**`r n_dlv` 个**（导出声明行 `r n_dlv_line` 行，剔占位符后一行一件）。
+
+SQL 总包自述及两份 D-06 姊妹档变更日志此前所记之「69 份」为**旧数**，
+根因是一次**纯 ASCII 文件名正则**扫描：ASCII 口径仅得 `r n_dlv_ascii` 个唯一名，
+**静默漏掉 `r n_dlv_cn` 个中文命名交付件**（`P0C02`–`P0C09` 族），
+同时未剔占位符，两处误差部分相抵而成 69。
+
+本处数字**渲染时自 SQL 总包现算**，不写死于正文——凡此类计数一律如此，
+以杜绝「文档间各说各话」之漂移（本项目已三次实证：75／154 互斥、189% 上限、
+以及本次 69／74）。
+:::
+
+## 一、登记册身份核验（渲染时现算）
+
+```{r}
+#| label: registry-identity
+#| echo: false
+knitr::kable(
+  REG$identity, align = c("l","r","r","l","l","l"),
+  caption = sprintf("登记册六元组身份锚定（v%s；模式=%s；数据行数 = 按LF计总行数 − 表头/结构行）",
+                    reg_ver, REG$mode)
+)
+```
+
+## 二、灵活搭配：十五类风险会员判据
+
+每类均标注**证据裁定**——这是本节最重要的部分。原「九类」与「另补六类」已于登记册
+v1.1.0 合并为统一体例：补录六类不再是附注，而是与前九类同格登记、同受
+`r tip("门闸")` 管辖的正式条目。
+
+```{r}
+#| label: registry-typology-table
+#| echo: false
+.gate_icon <- c(FATAL = "🔴 FATAL", BLOCK = "🟠 BLOCK",
+                CONDITIONAL = "🟡 CONDITIONAL", ADVISORY = "🟢 ADVISORY", `NA` = "⚪ NA")
+tp <- REG$dict[axis == "R", .(
+        判据维度组合 = paste(criterion_column, collapse = " ＋ "),
+        搭配表 = {s <- unique(supporting_deliverables)
+                  s <- unlist(strsplit(s, "；")); s <- s[nzchar(s)]
+                  if (length(s)) paste(sub("\\.csv$", "", s), collapse = "·") else "—"}),
+      by = .(序 = type_id, 风险类型 = name_zh, 类别 = category,
+             主表 = sub("\\.csv$", "", primary_deliverable),
+             证据 = evidence_tier, 门禁 = gate, 严重度 = severity,
+             准入评分 = fifelse(admit_to_scoring, "✅", "—"),
+             准入画像 = fifelse(admit_to_profile, "✅", "—"),
+             阻断 = fifelse(nzchar(blockers), blockers, "—"))]
+tp[, 门禁 := .gate_icon[门禁]]
+setcolorder(tp, c("序","风险类型","类别","主表","搭配表","判据维度组合",
+                  "证据","门禁","严重度","准入评分","准入画像","阻断"))
+setorder(tp, 序)
+knitr::kable(
+  tp, align = "l",
+  caption = sprintf("十五类风险会员判据登记（登记册 v%s：%d 类 × %d 条判据维度；准入评分 %d 类；未闭阻断项 %d 项）",
+                    reg_ver, n_type, n_crit, n_admit, n_blocker)
+)
+```
+
+### 逐类证据裁定（自登记册 `verdict` 栏现算）
+
+```{r}
+#| label: registry-verdicts
+#| echo: false
+vd <- unique(REG$dict[axis == "R", .(序 = type_id, 风险类型 = name_zh,
+                                     门禁 = gate, 裁定 = verdict)], by = "序")
+setorder(vd, 序)
+knitr::kable(vd, align = c("l","l","l","l"),
+             caption = sprintf("逐类证据裁定全文（%d 类；文字取自登记册，非正文转录）", nrow(vd)))
+```
+
+## 三、准入与拒入：门闸的实际效力
+
+```{r}
+#| label: registry-gate-demo
+#| echo: true
+adm <- registry_admitted_columns(REG)                      # 当前合法取材范围
+registry_gate(REG, used = adm, purpose = "scoring")        # 全数通过，静默继续
+n_adm_col <- length(adm)
+```
+
+当前获 `r tip("准入评分")` 者共 **`r n_admit` 类 / `r n_adm_col` 条特征**。其余各类至多进入
+画像，**不得据以处置**。本报告主角 `late_share` 即在拒入之列——若有人误写入评分管道，
+`r tip("门闸")` 会令渲染直接失败并报出「T-03 尾投·门禁=FATAL·严重度=S1」及其裁定理由。
+这不是提醒，是拦截。
+
+::: {.callout-caution}
+## 为何本报告的主角被自己判了死刑
+
+`late_share` 属 T-03，`r tip("门禁五档")` 判 **FATAL**。理由是本报告第二、三部分逐层现算所得：
+配对 `r tip("符号检验")` p = `r sprintf("%.4f", sign_p30)`、`r tip("Wilcoxon符号秩检验")`
+p = `r sprintf("%.4f", wilcox_p30)`、`r tip("AUC")` = `r sprintf("%.4f", auc_late_share)`
+（`r tip("净赢玩家")` 标签）、九档阈值扫描中命中组 `r tip("hold%")` 低于对照组者
+**`r scan_tbl[命中hold < 对照hold, .N]` 档**。
+
+登记册另载 D-06 独立管道之符号检验读数与外部标签读数（本档未接入外部标签，故不在此复述）。
+四路证据同向，故裁定为「降格为画像字段，禁作独立触发器」。
+:::
+
+## 四、阻断项台账——「暂不可用」不等于「不可用」
+
+```{r}
+#| label: registry-blockers
+#| echo: false
+knitr::kable(
+  registry_blockers(REG), align = "l",
+  caption = sprintf("阻断项台账（%d 项，全部 OPEN；每项均附解锁条件，见登记册 unblock_conditions 栏）",
+                    n_blocker)
+)
+```
+
+十五类中被判 CONDITIONAL 或 BLOCK 者，**卡住它们的多是数据缺口与口径未定，而非方法错误**。
+这与 T-03 有本质区别：T-03 是**结论已定的证伪**，其余是**尚未开工的待办**。二者不可混为一谈——
+前者投再多资源也无用，后者补齐条件即可启用。
+
+```{r}
+#| label: registry-pending
+#| echo: false
+pf <- registry_pending_features(REG)
+knitr::kable(
+  pf, align = "l",
+  caption = sprintf("待建特征清单（%d 条：登记册已登记判据维度，但该列尚不存在于任何交付件，须现建）",
+                    nrow(pf))
+)
+```
+
+## 五、价值轴 × 风险轴：处置矩阵
+
+不做单一分数。行为维度对标签之判别力近乎为零，规模维度虽强却受复核强度混杂污染；
+压成一个分数，等于让「注额大」冒充「风险高」——业务读不懂，也不服。故取双轴：
+
+```{r}
+#| label: registry-matrix
+#| echo: false
+knitr::kable(
+  registry_matrix(REG), align = "l",
+  caption = sprintf("处置矩阵（价值轴 V＝按 %s 分位；风险轴 R 仅由准入评分之 %d 类构成）",
+                    REG$meta$value_axis$criterion_column, n_admit)
+)
+```
+
+价值轴取 `stake_all` 分位，正是第四部分 `r tip("GGR集中度")` 所证之同一坐标：
+前 1% 会员贡献全体 GGR 的 **`r sprintf("%.1f%%", pa1$ggr_pct)`**、前 10% 贡献
+**`r sprintf("%.1f%%", pa10$ggr_pct)`**。**同一张分层表，营销侧用于 VIP 经营、
+风控侧用于复核排程——一次建设，两处复用**，这是本报告四部分实测之外最可直接落地的一条。
+
+## 六、治理悬案
+
+```{r}
+#| label: registry-open-questions
+#| echo: false
+knitr::kable(
+  registry_open_questions(REG), align = "l",
+  caption = sprintf("治理悬案（%d 项；一律 UNKNOWN，禁止以推测填补）",
+                    length(REG$meta$open_questions))
+)
+```
+
+# 第六部分：宗旨、价值与可落实的商业方案
 
 ::: {.callout-important}
 ## 本章为对本报告自身的价值审计——沿用 D-06 系列既有体例，独立作答
@@ -1191,7 +1543,7 @@ boot_width <- function(n_target, B = 500) {
 ## [R-1] 《顶级量化风控与百家乐（Baccarat）商业变现实战指南》——已纳入核心参考，附本报告专属审计结论
 
 **性质裁定**：行业方法论参考文档，**非 a168 本项目实测结果**；凡引用其具体数字须另行取数
-方可写入正式商业结论，本报告仅引用其**分析框架与措施方向**。完整审计已见于第五部分
+方可写入正式商业结论，本报告仅引用其**分析框架与措施方向**。完整审计已见于第六部分
 "可落实的商业方案·方案四／方案五"，此处仅汇总三档判定，不重复展开：
 
 - ✅ **外部有据可查**：连续洗牌机（CSM）、行为生物识别反机器人、跨账户时间戳协方差侦测
@@ -1223,6 +1575,93 @@ boot_width <- function(n_target, B = 500) {
 | [E-10] | 连续洗牌机（CSM）技术文献与专利 |
 
 # 变更日志 {#sec-changelog}
+
+**R01-标记前-1.0.4（2026-08-18 工单闭环与审计增补）**
+
+- 工单 W-01 闭环：SQL 总包注释已斧正、`标记后` 已同步至 v1.2.1、D-06 两档经查无涉。
+- 新增审计增补 A-01：`shoe_len` 上下文四项差异登记（含 §B01-D 窗口截断之真实不一致）。
+
+**R01-标记前-1.0.3（2026-08-18 口径斧正：MAX ≠ COUNT）**
+
+- **§数据口径·核心指标表**：`shoe_pos` 之分母由「该靴总局数」斧正为
+  「`max_round = MAX(round_no)`，按 `(shoe_id, table_id)` 分组、算于清洗后注单集」，
+  并注明**最大局号 ≠ 总局数**。原表述系把极值误作计数，属 S2 实质性口径错误。
+- **§数据口径·关键字段表**：补回稳定性门槛数值（`n_orders_late ≥ 30`，指向附录 B 实证依据），
+  并统一为全角 `≥`；此前该格漏抄该数值，与本档正文、附录 B 及姊妹档 `标记后` 不一致。
+- **§管道自述**：`shoe_len` 之说明由「为该靴实际长度」改为「为 `max_round`」，
+  并注明该 CTE 名系 SQL 总包沿用之历史命名，其所算实为最大局号。
+- **GLOSS「靴内相对位置」**：补入 `max_round` 之完整函数语义与「≠ COUNT」之明示。
+- **新增 @sec-shoe-pos-caveat 口径警示框**：四层交代——函数语义、为何选 `MAX` 是对的、
+  一处此前未披露的偏置（`max_round` 算于清洗后注单集，致 `shoe_pos` 系统性放大）
+  及其对本报告结论的影响评估（同向，不构成威胁）、以及全项目同类缺陷普查结论。
+
+**工单 W-01（2026-08-18 已闭环 ✅）**
+
+`a168_取数与核验_SQL总包_v3.sql` 已完成注释斧正：三处 `shoe_len` 定义行统一加挂命名警示
+横幅（言明所算为 `MAX(round_no)` 最大局号、非 `COUNT` 局数、且选 `MAX` 系对中间缺口免疫之
+刻意设计），靴号取列注释与 `ordx` 注释一并改正，头部另立修订记录。
+**剥离注释后代码逐字未动**（已核验：222,146 字符完全相同，行数 8,003 → 8,010 皆为注释增行）。
+`R01_标记后` 档同步至 v1.2.1。两份 D-06 姊妹档经查**实无相关表述**（其口径为 `pr_in_round`，
+与 `shoe_len` 无涉），故未作无谓改动。原工单清单存录如下：
+
+同类缺陷普查（2026-08-18 全包逐行扫描）结果如下，**代码均正确，错在命名与注释**：
+
+| 文件 | 位置 | 现文 | 应为 |
+|:--|:--|:--|:--|
+| `SQL总包v3` | L3125 | CTE 名 `shoe_len`（靴长） | 所算为 `MAX(round_no)`，宜更名 `shoe_maxround` 或注明 |
+| `SQL总包v3` | L4271、L4363 | `供 shoe_len 求靴长` | 求最大局号 |
+| `SQL总包v3` | L4292、L4384 | `shoe_len AS (…靴长不定…)` | 同上（概念无误，命名误导） |
+| `SQL总包v3` | L4296、L4388 | `把该靴长度带回逐注单行` | 把该靴最大局号带回 |
+| `R01_标记后` | L694 | `取 MAX(round_no) 为该靴实际长度` | 为最大局号 |
+| `R01_标记后` | L61 | GLOSS 未明示 ≠ COUNT | 比照本档 v1.0.3 |
+| 两份 D-06 档 | GLOSS 同段 | 同上 | 同上 |
+
+另附：`SQL总包v3` L1314／L2408／L2779 三处「MAX 与计数语义同现」经逐处判读，
+系 `MAX` 用作组内常量取值（`n_orders_all` 于 `GROUP BY bet_ip, member_id` 内恒定），
+语义成立，**非本类缺陷，不列入工单**。
+
+**审计增补 A-01（2026-08-18 全包深查，四项上下文差异，仅登记不斧正）**
+
+`shoe_len` **代码口径三处完全一致**（皆 `MAX(round_no)` / `GROUP BY shoe_id, table_id`），
+无 MAX 与 COUNT 混用之情形。但其**上下文**存在四项差异，影响 `shoe_pos` 之跨章可比性：
+
+| 编号 | 差异 | 实测 | 影响评估 |
+|:--|:--|:--|:--|
+| A-01a | 上游集合不同 | §R01 取自 `base`（含 `bet04>0` 过滤）；§B01／§B01-D 取自 `ord`（**无**该过滤） | 对 `max_round` 实际无影响（非正局号不会成为最大值），但 §B01 侧可能出现 `round_no<=0` 之局，其 `shoe_pos<=0` |
+| A-01b | 计算粒度不同 | §R01 在注单级算 `round_no/max_round`；§B01 在 `rk`（会员×日×局键）级算 `MAX(round_no)/NULLIF(MAX(max_round),0)` | **实质等价**（`round_key` 已含 `bet04`，组内 `round_no` 恒定），仅表达不同 |
+| A-01c | **窗口不同** | §R01／§B01 为 `2026-03-21 ~ 2026-08-07`（139 天）；**§B01-D 为 `2026-08-04 ~ 2026-08-07`（3 日增量）** | ⚠ **真实不一致**：跨窗牌靴之 `max_round` 在 §B01-D 侧被窗口截断，分母偏小，`shoe_pos` 被系统性放大。日增量档与全量档之靴位坐标**不可直接比较** |
+| A-01d | 分组键无日期 | 分组键为 `(shoe_id, table_id)`，不含 `dt` | 实证（S05 面板 63,662 个靴号样本）：跨桌者 **0 个（0.0000%）**、跨月者 **7 个（0.0110%）**。故跨日合并**存在但极罕见**，不构成系统性威胁；惟 `shoe_id` 取值跨越 1,211 ~ 114,735,806 五个数量级，疑存多套编号体系，另立 `r tip("UNKNOWN")` 待查 |
+
+
+**R01-标记前-1.0.2（2026-08-18 勘误同步）**
+
+- **交付件总数改为渲染时现算**：第五部分新增勘误存证框，经
+  `registry_count_deliverables()` 自 SQL 总包实算——实际交付件 74 个
+  （声明行 75 行、含占位符 1 个）。总包自述之「69」系纯 ASCII 正则扫描
+  静默漏计 6 个中文命名交付件（`P0C02`–`P0C09` 族）＋未剔占位符所致，
+  两处误差部分相抵。此数自此不再写死于任何 qmd。
+- 载入器升至 1.2.0，补齐四函数：`registry_typology()`（单类完整配方）、
+  `registry_combo()`（跨类搭配）、`registry_which()`（列反查类型）、
+  `registry_count_deliverables()`（交付件数现算，Unicode 安全）。
+
+**R01-标记前-1.0.1（2026-08-18）**
+
+- **新设「数据口径」章**（@sec-data-caliber）：按「源数据 → 指标输出」两级、每级
+  「关键字段 → 核心指标」两目立表，逐项给出业务含义与商业用途；关键字段表之
+  「库表」与「字段」分列两栏；并按呈表纪律新增交付件首末数行实览（实际行号、
+  分隔行、省略行数与占比于副题现算）。本档不涉外部风险标签，故不列 `risk_label` 口径。
+- **新设第五部分「十五类风险会员判据」**（@sec-typology）：原「九类判据」与
+  「另补六类」合并为统一体例十五类，**全部内容渲染时自登记册现算**——
+  经 `函数/registry_loader.R` 载入 `数据库/registry_risk_typology_v1.1.0.yaml`
+  与同名 `.csv`，载入即做六元组核验、YAML↔CSV 交叉比对、全局禁令自检与
+  阻断项引用完整性断言。含：登记册身份表、十五类判据总表、逐类证据裁定全文、
+  门闸实效演示、阻断项台账、待建特征清单、价值×风险处置矩阵、治理悬案。
+- **原第五部分改列第六部分**；正文中对其之活文本引用同步改指（变更日志历史条目
+  按纪律保持原文，不追改）。
+- GLOSS 新增 4 条：登记册、门闸、门禁五档、准入评分。
+- 本档署名沿用上游文件原值，未作改动。
+- 渲染前置：`函数/` 与 `数据库/` 两目录须按项目布局就位；缺档时载入器报错将回显
+  完整布局树与当前工作目录。
 
 **R01-1.0.0（2026-08-17 建档）**
 

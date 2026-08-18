@@ -57,6 +57,13 @@
        REBET_NO        'N'                 81         bet38：非重对
        TESTLINE        age022 = '1'        —          公司测试线代理（214 条）
        LATE_DEF        shoe_pos >= 0.80    —          靴末段判据（2026-08-12 斧正）
+       ⚠ 2026-08-18 注释斧正（代码零改动）：shoe_len 三处定义之代码口径本已一致
+         （皆 MAX(round_no) GROUP BY shoe_id, table_id），但注释与 CTE 名历来称其为
+         「靴长／该靴长度」，与所算之『最大局号』语义不符，易致下游以 COUNT 重实现。
+         本轮统一三处定义行为同一命名警示横幅，并改正靴号取列与 ordx 之注释。
+         另存差异登记：§R01 之 shoe_len 取自 base（含 bet04>0 过滤），
+         §B01／§B01-D 取自 ord（无该过滤）；§B01-D 窗口为 3 日增量，
+         其 max_round 会被窗口截断——跨窗靴之 shoe_pos 将被系统性放大，详见文末登记。
 
      改窗／改口径之作业纪律：
        一、先以全文检索点数，实得处数须与上表相符；不符即先查本登记表；
@@ -3122,8 +3129,8 @@ base AS (                                                                       
     AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0                                                   -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet04),'') AS INT)大于 0，涉 bet04（局内序号）
     AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL               -- 并列条件：限定该值为空——本包以左连接加空值判定替代 EXISTS，因 StarRocks 不支持 EXISTS 配多列 IN
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R01）
-shoe_len AS (          -- 缺陷一修正：靴长不定，固定 50 不是固定位置
-  SELECT shoe_id, table_id, MAX(round_no) AS max_round                                              -- 取列：取最大值，产出「max_round」
+shoe_len AS (          /* ★ 命名警示：本 CTE 名为 shoe_len（靴长）系历史沿用，其所算 max_round = MAX(round_no) 为『该靴该桌观测到的最大局号』，非 COUNT(round_no) 之局数；二者仅在局号自1起连续无缺口时相等。选 MAX 为刻意设计：对中间缺口免疫，COUNT 会因清洗剔单而使分母缩水。★ B-01 斧正（2026-08-12）：定标基准逐靴现算，绝对局号不是固定靴位 */   -- 缺陷一修正：定标基准不定，固定 50 不是固定位置
+  SELECT shoe_id, table_id, MAX(round_no) AS max_round                                              -- 取列：取最大局号（≠COUNT 局数），产出「max_round」
   FROM base GROUP BY shoe_id, table_id                                                              -- 取数来源：取自本条自建的中间结果集 base
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R01）
 enriched AS (                                                                                       -- 公共表表达式：开启中间结果集 enriched，其后各行为其定义体（§R01）
@@ -4268,7 +4275,7 @@ ranked AS (                                                                     
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§B01）
 ord AS (                                                                                            -- 公共表表达式：开启中间结果集 ord，其后各行为其定义体（§B01）
   SELECT r.bet05 AS member_id, r.dt AS bet_date, r.bet39 AS table_id, r.ip AS bet_ip,               -- 取列：起始取列子句，本行先取「bet_ip」，涉 bet05（会员号）、bet39（桌号）、dt（营业日）
-         r.bet03 AS shoe_id,                                                                        -- 靴号（B-01 斧正新增，供 shoe_len 求靴长）
+         r.bet03 AS shoe_id,                                                                        -- 靴号（B-01 斧正新增，供 shoe_len 求 max_round＝最大局号，非局数）
          r.bet09 AS bet_side,                                                                       -- 取值表达式：取用 bet09（玩法），产出「bet_side」
          CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,                                    -- 取值表达式：取用 bet03（靴号）、bet04（局内序号）、bet39（桌号），产出「round_key」
          CAST(NULLIF(TRIM(r.bet04),'') AS INT)           AS round_no,                               -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「round_no」
@@ -4289,11 +4296,11 @@ ord AS (                                                                        
     AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))大于 0，涉 bet11（汇率）
     AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL               -- 并列条件：限定该值为空——本包以左连接加空值判定替代 EXISTS，因 StarRocks 不支持 EXISTS 配多列 IN
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号（§B01）
-shoe_len AS (   /* ★ B-01 斧正（2026-08-12）：靴长不定，绝对局号不是固定靴位 */
+shoe_len AS (   /* ★ 命名警示：本 CTE 名为 shoe_len（靴长）系历史沿用，其所算 max_round = MAX(round_no) 为『该靴该桌观测到的最大局号』，非 COUNT(round_no) 之局数；二者仅在局号自1起连续无缺口时相等。选 MAX 为刻意设计：对中间缺口免疫，COUNT 会因清洗剔单而使分母缩水。★ B-01 斧正（2026-08-12）：定标基准逐靴现算，绝对局号不是固定靴位 */
   SELECT shoe_id, table_id, MAX(round_no) AS max_round
   FROM ord GROUP BY shoe_id, table_id
 ),
-ordx AS (       /* 把该靴长度带回逐注单行，供相对靴位判定 */
+ordx AS (       /* 把该靴之 max_round（最大局号）带回逐注单行，供相对靴位判定 */
   SELECT o.*, s.max_round
   FROM ord o
   JOIN shoe_len s ON s.shoe_id = o.shoe_id AND s.table_id = o.table_id
@@ -4360,7 +4367,7 @@ ranked AS (                                                                     
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号
 ord AS (                                                                                            -- 公共表表达式：开启中间结果集 ord，其后各行为其定义体
   SELECT r.bet05 AS member_id, r.dt AS bet_date, r.bet39 AS table_id, r.ip AS bet_ip,               -- 取列：起始取列子句，本行先取「bet_ip」，涉 bet05（会员号）、bet39（桌号）、dt（营业日）
-         r.bet03 AS shoe_id,                                                                        -- 靴号（B-01 斧正新增，供 shoe_len 求靴长）
+         r.bet03 AS shoe_id,                                                                        -- 靴号（B-01 斧正新增，供 shoe_len 求 max_round＝最大局号，非局数）
          r.bet09 AS bet_side,                                                                       -- 取值表达式：取用 bet09（玩法），产出「bet_side」
          CONCAT_WS('|', r.bet03, r.bet04, r.bet39) AS round_key,                                    -- 取值表达式：取用 bet03（靴号）、bet04（局内序号）、bet39（桌号），产出「round_key」
          CAST(NULLIF(TRIM(r.bet04),'') AS INT)           AS round_no,                               -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「round_no」
@@ -4381,11 +4388,11 @@ ord AS (                                                                        
     AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))大于 0，涉 bet11（汇率）
     AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL               -- 并列条件：限定该值为空——本包以左连接加空值判定替代 EXISTS，因 StarRocks 不支持 EXISTS 配多列 IN
 ),                                                                                                  -- 续行：收束上方的子查询或函数括号
-shoe_len AS (   /* ★ B-01 斧正（2026-08-12）：靴长不定，绝对局号不是固定靴位 */
+shoe_len AS (   /* ★ 命名警示：本 CTE 名为 shoe_len（靴长）系历史沿用，其所算 max_round = MAX(round_no) 为『该靴该桌观测到的最大局号』，非 COUNT(round_no) 之局数；二者仅在局号自1起连续无缺口时相等。选 MAX 为刻意设计：对中间缺口免疫，COUNT 会因清洗剔单而使分母缩水。★ B-01 斧正（2026-08-12）：定标基准逐靴现算，绝对局号不是固定靴位 */
   SELECT shoe_id, table_id, MAX(round_no) AS max_round
   FROM ord GROUP BY shoe_id, table_id
 ),
-ordx AS (       /* 把该靴长度带回逐注单行，供相对靴位判定 */
+ordx AS (       /* 把该靴之 max_round（最大局号）带回逐注单行，供相对靴位判定 */
   SELECT o.*, s.max_round
   FROM ord o
   JOIN shoe_len s ON s.shoe_id = o.shoe_id AND s.table_id = o.table_id

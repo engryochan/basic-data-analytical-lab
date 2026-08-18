@@ -58,7 +58,7 @@ GLOSS <- list(
   "洗码量" = "有效投注额（Turnover / Rolling），代理返点与佣金的计算基准。R01_late_shoe.csv 以 stake（下注额，已按 bet11 汇率归一）近似替代，非严格意义之 validbet；两者关系判 UNKNOWN，见局限章。",
   "hold%" = "抽水率／盈亏率＝ GGR ÷ 分母。本报告统一取 stake（下注额，汇率归一后）为分母，与洗码量口径可能有别，行文中一律称「本报告 hold%」以示区隔。",
   "靴尾" = "本报告专属定义：shoe_pos ≥ 0.80，即该笔注单的局号（round_no）除以其所属靴之最大局号（max_round）≥ 0.80，是**靴内相对位置**，与靴长无关。**严禁**与 D-06 之「尾段」（pr_in_round ≥ 0.80，局内注单时序分位）或 X-01 之「压哨」（progress ≥ 0.90，局内物理时间进度）互代，三者判据、粒度、交付件完全独立。",
-  "靴内相对位置" = "shoe_pos = round_no / max_round，取值区间 [首局/靴长, 1]；因靴长实测不定（均值49.86、P50=50、P75=52、P90=54、P99=58），固定绝对局号（如 round_no≥40 或 ≥50）会随靴长系统性失真，2026-08-12 已斧正为本相对口径（B-01）。",
+  "靴内相对位置" = "shoe_pos = round_no / max_round，其中 max_round = MAX(round_no) 按 (shoe_id, table_id) 分组、算于清洗后注单集——是最大局号，不是总局数（COUNT），二者仅在局号连续无缺口时相等。取值区间 [首局号/max_round, 1]。因靴长实测不定（均值49.86、P50=50、P75=52、P90=54、P99=58），固定绝对局号（如 round_no≥40 或 ≥50）会随靴长系统性失真，2026-08-12 已斧正为本相对口径（B-01）。",
   "注额斜率" = "stake_ramp = 靴尾人均单注额 ÷ 靴尾以外人均单注额；>1 表示该会员在靴尾段下注更大，<1 反之，=1 表示两段注额无差异。",
   "符号检验" = "Sign Test，非参数配对检验，只用差值的正负号（不用差值大小），检验中位数差异是否为零；对厚尾分布比配对t检验更稳健，本报告的主检验方法。",
   "Wilcoxon符号秩检验" = "Wilcoxon Signed-Rank Test，配对非参数检验，同时利用差值的正负号与相对大小（秩），检定力通常高于符号检验；本报告作为符号检验之交叉验证。",
@@ -691,8 +691,10 @@ D-06 已证伪"局内下注顺序无信息优势"，**不能**据此推断"靴�
 
 **第二层·靴内位置定标**（在 `shoe_len`→`enriched` 两层完成，**不删行、只算值**）：
 
-- `shoe_len`：按 `(shoe_id, table_id)` 分组取 `MAX(round_no)` 为该靴实际长度 `max_round`
-  ——此为 B-01 斧正的核心：**靴长逐靴现算，不假设固定 50**。
+- `shoe_len`：按 `(shoe_id, table_id)` 分组取 `MAX(round_no)` 为 `max_round`
+  ——此为 B-01 斧正的核心：**定标基准逐靴现算，不假设固定 50**。
+  ⚠ CTE 名 `shoe_len`（靴长）系 SQL 总包历史沿用之命名，其所算实为**最大局号**而非局数；
+  SQL 总包已于 2026-08-18 在三处定义行统一加挂命名警示横幅（代码零改动）。
 - `shoe_pos = round_no / max_round`；`is_late = 1[shoe_pos >= 0.80]`。
 
 **第三层·会员级门槛**（对聚合后的会员级结果做事后过滤）：
@@ -2068,6 +2070,19 @@ boot_width <- function(n_target, B = 500) {
 | [M-4] | Abadie, A., Diamond, A. & Hainmueller, J. (2010). *Synthetic Control Methods for Comparative Case Studies*. Journal of the American Statistical Association, 105(490). |
 
 # 变更日志 {#sec-changelog}
+
+**R01-1.2.1（2026-08-18 口径斧正：MAX ≠ COUNT）**
+
+- **GLOSS「靴内相对位置」**：补入 `max_round = MAX(round_no)` 之完整函数语义、分组键、
+  所算集合，并明示**≠ COUNT 之局数**。
+- **§管道自述**：「取 `MAX(round_no)` 为该靴**实际长度**」斧正为「为 `max_round`」，
+  加注 CTE 名 `shoe_len` 系 SQL 总包历史沿用命名。
+- **新增 @sec-shoe-pos-caveat 口径警示框**：函数语义、为何选 `MAX` 是刻意设计、
+  以及一处此前未披露之偏置（`max_round` 算于清洗后注单集致 `shoe_pos` 系统性放大）
+  及其对本报告结论的影响评估（同向，不构成威胁）。
+- **上游联动**：`a168_取数与核验_SQL总包_v3.sql` 同日完成注释斧正——三处 `shoe_len`
+  定义行统一加挂命名警示横幅，靴号取列与 `ordx` 注释一并改正，**剥离注释后代码逐字未动**
+  （已核验：222,146 字符完全相同）。
 
 **R01-1.2.0（2026-08-18）**
 

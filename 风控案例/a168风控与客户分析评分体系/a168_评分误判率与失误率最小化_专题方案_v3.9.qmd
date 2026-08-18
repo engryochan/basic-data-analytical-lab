@@ -1,7 +1,7 @@
 ---
 title: "a168 评分误判率与失误率最小化 · 专题方案 v3.9"
 subtitle: "以庄家的账本说话：Theo 对 Actual · 十二道减误闸 · 全篇读表现算 · 阈值—幅度—后果三段式"
-author: "Ryo Eng"
+author: "Ryo（雷欧）"
 date: today
 lang: zh
 format:

@@ -229,7 +229,7 @@ if(file.exists(here(路径, 'R02_same_table.csv'))) {
 
 -   **核心对象（Object）**：在百家乐游戏中，单局（`round_key`）内按时间排序，**下注时间位于该局后 20% 分位（`pr_in_round >= 0.80`）** 的注单。
 -   **业务假设（Business Assumption）**：尾段下注者可能拥有信息优势（如看牌延迟、信号快人一步），其胜率（`winrate`）或投资回报率（`ROI`）理论上应显著高于常规时段。
--   **输出目的**：生成 `S_player_tail.csv`，供后续分析“尾段玩家是否真的具备显著的正向预期”，以优化风控延迟策略（Dynamic Live Time Delay）。
+-   **输出目的**：生成 `shoe_tail.csv`，供后续分析“尾段玩家是否真的具备显著的正向预期”，以优化风控延迟策略（Dynamic Live Time Delay）。
 
 ---
 
