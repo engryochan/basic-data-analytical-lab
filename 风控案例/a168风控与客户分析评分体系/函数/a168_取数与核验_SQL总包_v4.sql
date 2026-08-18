@@ -984,7 +984,11 @@ ORDER BY verdict_hint, m.member_id, m.bet_month;
      §Z-04  数据库/Z04_name_collision.csv     §Z-11  数据库/Z11_sentinel_impact.csv
      §Z-05  数据库/Z05_missing_typehint.csv   §Z-12  不需要
      §Z-06  数据库/Z06_generated_probe_sql.csv   §Z-13  不需要
-     §Z-14  数据库/Z14_zero_month_diagnosis.csv
+     §Z-14  数据库/Z14_zero_month_diagnosis.csv   §Z-17  不需要（纪律陈述）
+     §Z-18  数据库/P01B_diff_ratio.csv · P01C_split_by_dim.csv
+            · P01D_vs_validbet.csv · P01E_identity_test.csv
+     §Z-19  数据库/P02A_lmc_samples.csv · P02B_changestatus_patterns.csv
+            · P02C_key_check.csv · P02D_events_in_window.csv
    ⚠ 2026-08-18 v4 实测斧正：原文「八个导出名／既有 66 个」系旧版计数。
      v4 实测——Z 族导出名 9 个（Z-01…Z-09 之 8 个 ＋ 新增 §Z-14）；
      全包唯一交付件 75 个（v3 为 74，本轮 §Z-14 新增 1）。
@@ -6778,8 +6782,27 @@ GROUP BY CASE WHEN a.age001 IS NOT NULL THEN 'in_agent_master'                  
      业务日：`dailyreport_member.time`（source_type=date），与 dt 是否同日见 §P0C-01
    ⚠ **`bet41` 两表异义，跨表取洗码量必复核**：
        `dailyreport_member.bet41` = 有效投注（即洗码量）；
-       `bet02.bet41`              = 下注退水金額。
-       故 `bet02` 侧洗码量一律取 **`validbet`**，误用 bet41 会把退水当流水。
+       `bet02.bet41`              = 下注退水金額。   ← ⛔ 原文，2026-08-18 实测证伪，见下
+       故 `bet02` 侧洗码量一律取 **`validbet`**，误用 bet41 会把退水当流水。 ← ⛔ 原文，同上
+
+   ═══ 2026-08-18 斧正（原文一字不删，仅加挂裁定）═══════════════════════
+     ⛔ 上述两行**已被实测证伪**，标记 `ODS_DICTIONARY_DEFECT`：
+        缺陷不在本包，在 ODS 层字典本身——`ods_a168_bet02.bet41` 之原始中文注释
+        写作「下注退水金額」，与数据实况不符；ODS 字典本身即审计对象，故原文保留。
+     ✅ 实测正名（Probe-01，两条独立证据）：
+        · P01D：`bet41 / validbet` 之 p01＝p50＝p90＝p99 ＝ **1.000000**
+                （n＝116,103,500，窗口内百家乐）→ **`bet02.bet41` ≡ `validbet`**
+        · P01E：恒等式 `bet17 = bet14 − bet13 + bet16` 于 **125,654,711 / 125,654,711**
+                行**精确成立（100.00000%，误差 max ＝ 0）**；
+                同式换 `bet41` 仅 7.602% 匹配、误差 P99 ＝ 20,000、max ＝ 1e8。
+     🔒 由是锁定（今后不得再互换）：
+        `bet02.bet41` = 有效投注／洗码量（≡ validbet）
+        `bet02.bet16` = 退水金额
+        `rebate_rate` = bet16 ÷ bet41
+        ⚠ `bet41 ≠ 退水金额`；`bet16 ≠ 洗码量`
+     📌 `bet16` 非零率实测 4–5%（逐月 3.85%→5.38%），**非数据错误、非字段错配**，
+        系享退水注单本就少数；此前据 `bet16` 所得之 T-08／NGR／契约档位诸结论
+        **不受影响，无须重算**。
 
    ─── 本节两条执行纪律（皆由实测报错反推所立）─────────────────────────
      ⑨ **末分号之后不得再写任何注释**——Superset 会将其判为第二条空语句，
@@ -6885,7 +6908,7 @@ ORDER BY 标记次数;
 --   须先分三层（可比较 / 标记日零投注 / 前 30 日无活跃），
 --   再对可比较层的**对数比**作 Wilcoxon 符号秩，并配自助区间；
 --   分母偏误另由 §P0C-09 的安慰剂对照排除。
---       洗码量取 `validbet`；`bet02.bet41` 为退水金额，误用即把退水当流水。
+--       洗码量取 `validbet`；`bet02.bet41` 实测 ≡ validbet（2026-08-18 P01D 正名，原注释「退水金额」已证伪）。
 WITH d0 AS (
     SELECT  CAST(bet05 AS STRING)                     AS mem,
             MIN(dt)                                   AS mark_day
@@ -8152,6 +8175,333 @@ ORDER BY lvl;                                                                   
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   §Z-17 · 字段语义锁定与数据质量门（2026-08-18 立，承 Probe-01／Probe-02）
+   本条为纪律陈述，非查询。
+   ▸ 导出：不需要 —— 纪律陈述，无结果集
+
+   ─── 一、退水／洗码字段语义锁定（PROVEN · LOCKED）─────────────────────────
+     证据一 P01E 恒等式双假设并列检验（窗口内百家乐 n = 125,654,711）：
+       H16  bet17 = bet14 − bet13 + bet16 → 精确匹配 125,654,711／125,654,711
+                                            ＝ 100.00000%，误差 P50/P95/P99/max 皆 0
+       H41  bet17 = bet14 − bet13 + bet41 → 精确匹配   9,552,205／125,654,711
+                                            ＝ 7.602%，误差 P50 50、P99 20,000、max 1e8
+     证据二 P01D（n = 116,103,500）：bet41 ÷ validbet 之 p01＝p50＝p90＝p99 ＝ 1.000000
+     证据三 P01B（n = 5,844,799，限 bet16≠0）：bet41 ÷ bet16 之
+            min＝p01＝100、p50＝125、p99＝max＝333.33
+            倒数即 1.00%／0.80%／0.30% —— 与既有登记之退水配置三档吻合
+
+     🔒 LOCK（今后一切退水率／NGR／返水覆盖率／会员退水资格计算一律遵此）：
+        有效投注／洗码量 = ods_a168_bet02.bet41 ≡ validbet
+        退水金额         = ods_a168_bet02.bet16
+        退水率           = bet16 ÷ bet41
+        ⚠ bet41 ≠ 退水金额 ； bet16 ≠ 洗码量 —— 二者今后不得互换。
+     🟢 RESTORE：§E02c 以 bet02.bet41 作有效投注之用法**成立**，无须斧正。
+     🟥 CORRECT：§P0C 原注释「bet02.bet41 = 下注退水金額」已证伪，
+                 标 ODS_DICTIONARY_DEFECT，原文保留不删（ODS 字典本身即审计对象）。
+
+   ─── 二、bet16 覆盖率之月度变化（OBSERVED · 禁作因果解释）───────────────
+     P01C 实测逐月 bet16 非零率：
+       2026-03 3.85% ｜ 04 4.03% ｜ 05 4.41% ｜ 06 5.38% ｜ 07 5.10% ｜ 08 4.73%
+     同期 bet41 非零率恒定 92.34%～92.46%，相等率恒定 7.54%～7.66%。
+     ✅ 可写：bet16 非零率存在明显月度变化，而同期 bet41 非零率基本稳定，
+              故目前更支持「退水覆盖率／享退水会员结构发生变化」。
+     ⛔ 不可写：「享退水会员占比增长」——除非另有会员资格字段或合同配置之直接证据。
+              此属 OBSERVED → CAUSAL STORY 之偷渡，本包明令禁止。
+     🟡 另观察（OBSERVED，暂不升格）：退水覆盖率于边注玩法显著较高——
+        BankerNatural 9.17%、BankerDragonBonus 8.99%、Small 8.86%、
+        Super6 6.54%、Lucky7 6.39%；主注庄闲较低。成因未验。
+
+   ─── 三、DQ-COMMISSION 数据质量门（REGISTER · 强制）─────────────────────
+     字典载 commission ∈ {0 一般, 1 免佣}。P01C 实测另见六个域外取值：
+       −999(1 行) ｜ −100(8) ｜ −1(8) ｜ 2(8) ｜ 100(3) ｜ 999(3) —— 合计 31 行。
+     🔒 定义：commission ∈ {0,1} → VALID ； commission ∉ {0,1} → ANOMALY
+     🔒 纪律：**不得删除该 31 行**（清洗即抹去异常证据）。
+              凡按 commission 分层之分析，一律须报告四数：
+                n_total ｜ n_valid ｜ n_anomaly ｜ anomaly_rate
+              未报此四数者，不得宣称结果覆盖完整数据。
+
+   ─── 四、TREATMENT DEFINITION STATUS（承 Probe-02，四级分立）───────────
+     ⚠ 本表为**防偷渡设施**：下游任何文档不得因某一级 CLOSED 而推断上级已解。
+       S1 · ENTITY JOIN      lmc02 → member_id ； lmc03 = 7 为会员    STATUS = CLOSED
+       S2 · EVENT SEMANTICS  lmc05 文本 → 字段级变更                  STATUS = PARTIALLY CLOSED
+       S3 · TREATMENT MAPPING 风控字段 → treatment 类别               STATUS = OPEN
+       S4 · OUTCOME LINKAGE  treatment → 后续投注行为                 STATUS = OPEN
+     ⛔ **「lmc02 接线键已解」≠「treatment 已解」。**
+        S3／S4 未闭前，禁入 HMM、禁入处置效应估计、禁入任何因果分析。
+
+   ─── 五、Probe-02 已证事实（PROVEN）与未决项 ───────────────────────────
+     PROVEN：
+       · lmc04 仅三类：edit 499,494 ｜ add 107,796 ｜ changestatus 79,493（合 686,783）
+       · lmc02 为实体 ID 而非日志主键（去重 168,227 ≪ 686,783）；lmc03=7 为会员
+       · **mem016／mem017 存于 lmc05 之变更内容文本，非本表之列**
+         （本表列为 lmc01～lmc11）。此前记载「台账覆盖 mem016／mem017」
+         语义成立，惟未说明其为文本而非列，属**表述不精确**，此处补正。
+       · mem015 为三态限額值（2=>0 18,865 ｜ 0=>1 12,877 ｜ 1=>0 9,893），非布尔开关
+       · changestatus 49 种前缀可全归并为九组字段组合：
+         mem015+mem017 41,601 ｜ mem016 12,797 ｜ age016 10,773 ｜ age015 7,506 ｜
+         mem020 6,592 ｜ mem017 单发 179 ｜ cash+mem015+mem017 34 ｜ chkLock 9 ｜ mem015 1
+     OBSERVED：
+       · 窗口内（2026-03-21～08-07）会员级 changestatus 1,490 行／294 会员；
+         edit 3,398 行／1,084 会员；add 0 行
+       · lmc02 脏值：层级5 有 14,679 行 lmc02=0（15.0%）；层级7 有 7,935 行（1.5%）
+       · 日志会员 118,265 名中，窗口内有百家乐注单者仅 990 名
+     STRONGLY SUPPORTED：
+       · **edit 类别亦含风控处置**（样本见 mem012:999999 最大可贏金額、
+         mem014:999999 最大可輸金額、101-mem015:21=>4 分桌限額调整）。
+       🔒 由是立 Step-02 第一原则：
+          **lmc04 是日志操作类型，不是 treatment taxonomy。**
+          treatment 须按**字段**定义（mem012／mem014／mem015／mem016／mem017…），
+          不得按 lmc04 类别定义。
+
+   ─── 六、两项挂账（不得因数量小而当噪音）──────────────────────────────
+     【LEGACY-532】旧记载「532 次风控处置事件、188 名百家乐成员」
+        LEGACY CLAIM      532 events ／ 188 members
+        CURRENT PROBE     1,490 changestatus rows ／ 294 members（窗口内层级7）
+        STATUS            CONFLICTING COUNTS
+        legacy definition = UNKNOWN ； current extraction definition = OBSERVED
+        reconciliation    = OPEN
+        ⛔ 厘清之前，正文引用「532 ／ 188」一律不得继续作为事实使用。
+        ⚠ 此属典型**分母／筛选口径漂移**，不得凭数字大小判断孰对。
+     【ANOM-mem020】mem020 之 6,592 次变更
+        事实：100% Y=>N ｜ 0% N=>Y ｜ **仅涉 1 个实体**
+        裁定：ANOMALY / INVESTIGATION REQUIRED
+        ⛔ 目前不得写作「系统 Bug」「脚本产物」「某真实风控策略」——三者皆属 HYPOTHESIS。
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   §Z-18 · bet16 ↔ bet41 关系实证（原 Probe-01；2026-08-18 已跑毕，🔒 CLOSED）
+   ▸ 裁定结论已固化于 §Z-17 之一；本条存档以备复算，结论不得再由本条重新开启。
+   ▸ 导出：需要 —— B/C/D/E 四段各存一档（P01B／P01C／P01D／P01E）
+   ▸ 修正缘由：v1 三段报「Unable to parse SQL」，根因为 quantileExact(p)(x)
+     系 ClickHouse 双调用语法，StarRocks 无此函数。改用 PERCENTILE_APPROX(x, p)。
+     另 v1 段 A 未加窗口与产品过滤，扫全表 205,874,217 行（含非百家乐、含窗口外），
+     本版一律补齐 dt 窗口与 bet02='101'，与全项目口径对齐。
+   ▸ 判读纪律：只观察、不修复；不预设 bet41 = validbet × 退水率；
+     恒等式采双假设并列检验，禁止先写死其一。
+   ═══════════════════════════════════════════════════════════════════════ */
+
+-- ── B · 差额与比例分布（限本项目窗口与产品）──────────────────────────────
+-- ▸ 导出：需要 —— 存为「数据库/P01B_diff_ratio.csv」
+SELECT COUNT(*)                                                        AS n,
+       MIN(b16 - b41)                                                  AS diff_min,
+       PERCENTILE_APPROX(b16 - b41, 0.50)                              AS diff_p50,
+       PERCENTILE_APPROX(b16 - b41, 0.90)                              AS diff_p90,
+       PERCENTILE_APPROX(b16 - b41, 0.99)                              AS diff_p99,
+       MAX(b16 - b41)                                                  AS diff_max,
+       MIN(b41 / NULLIF(b16, 0))                                       AS ratio_min,
+       PERCENTILE_APPROX(b41 / NULLIF(b16, 0), 0.01)                   AS ratio_p01,
+       PERCENTILE_APPROX(b41 / NULLIF(b16, 0), 0.50)                   AS ratio_p50,
+       PERCENTILE_APPROX(b41 / NULLIF(b16, 0), 0.99)                   AS ratio_p99,
+       MAX(b41 / NULLIF(b16, 0))                                       AS ratio_max
+FROM (
+  SELECT CAST(NULLIF(TRIM(bet16),'') AS DECIMAL(20,4)) AS b16,
+         CAST(NULLIF(TRIM(bet41),'') AS DECIMAL(20,4)) AS b41
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+) t
+WHERE b16 IS NOT NULL AND b41 IS NOT NULL AND b16 <> 0;
+
+
+-- ── C · 分叉点定位：月份 × 玩法 × 免佣 × 币别 ────────────────────────────
+-- ▸ 导出：需要 —— 存为「数据库/P01C_split_by_dim.csv」
+-- ▸ 月份必留：本条查的不只是字段语义，更是【语义是否发生过版本切换】。
+SELECT DATE_TRUNC('month', dt)                                          AS ym,
+       TRIM(bet09)                                                      AS bet09,
+       TRIM(commission)                                                 AS commission,
+       TRIM(bet10)                                                      AS bet10,
+       COUNT(*)                                                         AS n,
+       SUM(CASE WHEN b16 =  b41 THEN 1 ELSE 0 END)                      AS equal_n,
+       SUM(CASE WHEN b16 <> b41 THEN 1 ELSE 0 END)                      AS unequal_n,
+       SUM(CASE WHEN b16 <> 0 THEN 1 ELSE 0 END)                        AS b16_nonzero_n,
+       SUM(CASE WHEN b41 <> 0 THEN 1 ELSE 0 END)                        AS b41_nonzero_n,
+       AVG(b16)                                                         AS avg_b16,
+       AVG(b41)                                                         AS avg_b41,
+       AVG(b16 - b41)                                                   AS avg_diff,
+       PERCENTILE_APPROX(b16, 0.50)                                     AS p50_b16,
+       PERCENTILE_APPROX(b41, 0.50)                                     AS p50_b41
+FROM (
+  SELECT dt, bet09, commission, bet10,
+         CAST(NULLIF(TRIM(bet16),'') AS DECIMAL(20,4)) AS b16,
+         CAST(NULLIF(TRIM(bet41),'') AS DECIMAL(20,4)) AS b41
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+) t
+WHERE b16 IS NOT NULL AND b41 IS NOT NULL
+GROUP BY DATE_TRUNC('month', dt), TRIM(bet09), TRIM(commission), TRIM(bet10)
+ORDER BY ym, bet09, commission, bet10;
+
+
+-- ── D · 与 validbet 之关系（不预设公式，只看分布）────────────────────────
+-- ▸ 导出：需要 —— 存为「数据库/P01D_vs_validbet.csv」
+SELECT COUNT(*)                                                         AS n,
+       SUM(CASE WHEN vb IS NOT NULL AND b41 IS NOT NULL THEN 1 ELSE 0 END)      AS comparable_n,
+       SUM(CASE WHEN vb <> 0 AND b41 / vb BETWEEN 0 AND 1 THEN 1 ELSE 0 END)    AS plausible_n,
+       PERCENTILE_APPROX(b41 / NULLIF(vb, 0), 0.01)                     AS r41_p01,
+       PERCENTILE_APPROX(b41 / NULLIF(vb, 0), 0.50)                     AS r41_p50,
+       PERCENTILE_APPROX(b41 / NULLIF(vb, 0), 0.90)                     AS r41_p90,
+       PERCENTILE_APPROX(b41 / NULLIF(vb, 0), 0.99)                     AS r41_p99,
+       PERCENTILE_APPROX(b16 / NULLIF(vb, 0), 0.50)                     AS r16_p50,
+       PERCENTILE_APPROX(b16 / NULLIF(vb, 0), 0.99)                     AS r16_p99
+FROM (
+  SELECT CAST(NULLIF(TRIM(validbet),'') AS DECIMAL(20,4)) AS vb,
+         CAST(NULLIF(TRIM(bet16),'')    AS DECIMAL(20,4)) AS b16,
+         CAST(NULLIF(TRIM(bet41),'')    AS DECIMAL(20,4)) AS b41
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+) t
+WHERE vb IS NOT NULL AND b41 IS NOT NULL AND vb <> 0;
+
+
+-- ── E · 恒等式双假设并列检验（H16 vs H41，谁能闭合由数据裁定）────────────
+-- ▸ 导出：需要 —— 存为「数据库/P01E_identity_test.csv」
+SELECT 'H16: bet17 = bet14 - bet13 + bet16'                             AS hypothesis,
+       COUNT(*)                                                         AS n,
+       SUM(CASE WHEN e16 = 0 THEN 1 ELSE 0 END)                         AS exact_match_n,
+       SUM(CASE WHEN e16 = 0 THEN 1 ELSE 0 END) * 1.0 / COUNT(*)        AS exact_match_rate,
+       PERCENTILE_APPROX(ABS(e16), 0.50)                                AS abs_err_p50,
+       PERCENTILE_APPROX(ABS(e16), 0.95)                                AS abs_err_p95,
+       PERCENTILE_APPROX(ABS(e16), 0.99)                                AS abs_err_p99,
+       MAX(ABS(e16))                                                    AS abs_err_max
+FROM (
+  SELECT (CAST(NULLIF(TRIM(bet17),'') AS DECIMAL(20,4)))
+       - (CAST(NULLIF(TRIM(bet14),'') AS DECIMAL(20,4))
+        - CAST(NULLIF(TRIM(bet13),'') AS DECIMAL(20,4))
+        + CAST(NULLIF(TRIM(bet16),'') AS DECIMAL(20,4)))                AS e16
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+) t
+WHERE e16 IS NOT NULL
+UNION ALL
+SELECT 'H41: bet17 = bet14 - bet13 + bet41'                             AS hypothesis,
+       COUNT(*)                                                         AS n,
+       SUM(CASE WHEN e41 = 0 THEN 1 ELSE 0 END)                         AS exact_match_n,
+       SUM(CASE WHEN e41 = 0 THEN 1 ELSE 0 END) * 1.0 / COUNT(*)        AS exact_match_rate,
+       PERCENTILE_APPROX(ABS(e41), 0.50)                                AS abs_err_p50,
+       PERCENTILE_APPROX(ABS(e41), 0.95)                                AS abs_err_p95,
+       PERCENTILE_APPROX(ABS(e41), 0.99)                                AS abs_err_p99,
+       MAX(ABS(e41))                                                    AS abs_err_max
+FROM (
+  SELECT (CAST(NULLIF(TRIM(bet17),'') AS DECIMAL(20,4)))
+       - (CAST(NULLIF(TRIM(bet14),'') AS DECIMAL(20,4))
+        - CAST(NULLIF(TRIM(bet13),'') AS DECIMAL(20,4))
+        + CAST(NULLIF(TRIM(bet41),'') AS DECIMAL(20,4)))                AS e41
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+) t
+WHERE e41 IS NOT NULL
+ORDER BY hypothesis;
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   §Z-19 · 处置事件来源 · Step-01（原 Probe-02；2026-08-18 已跑毕）
+   ▸ 状态：S1 接线键 🔒 CLOSED ； **Probe-02 总命题 ⏳ OPEN**
+   ▸ ⛔ 防偷渡：下游任何文档不得因 S1 已闭而书作「Probe-02 已验证」或
+        「treatment 已定义」。四级状态以 §Z-17 之四为准，本条不得单独引用。
+   ▸ 首跑已得：lmc04 仅三类 —— edit 499,494 / add 107,796 / changestatus 79,493
+              合计 686,783，与 COUNT(*) 相符；
+              lmc02 去重 168,227 ≪ 686,783 → lmc02 非日志主键，系实体 ID；
+              lmc03 去重 7 → 层级码（样本中 7=会员、1~5=代理级）。
+   ▸ 首跑缺口：LIMIT 1000 配 ORDER BY lmc04 只取到字典序最前之 'add'，
+              **风控处置最可能所在之 changestatus 一条样本都没看到**。
+              本版改为逐类别定额取样，杜绝此偏。
+   ▸ 纪律：只观察、不翻译、不分类、不命名 treatment。
+           OBSERVED 原文 ≠ 业务解释 ≠ treatment，三层不得跨级。
+   ═══════════════════════════════════════════════════════════════════════ */
+
+-- ── A · 逐类别定额取样（每类各取最早 200 与最新 200，可复现，非随机）──────
+-- ▸ 导出：需要 —— 存为「数据库/P02A_lmc_samples.csv」
+WITH r AS (
+  SELECT lmc04, lmc05, lmc02, lmc03, lmc06, lmc07, lmc08, lmc10,
+         ROW_NUMBER() OVER (PARTITION BY lmc04 ORDER BY lmc08 ASC,  lmc02 ASC) AS rn_old,
+         ROW_NUMBER() OVER (PARTITION BY lmc04 ORDER BY lmc08 DESC, lmc02 DESC) AS rn_new
+  FROM ods_mariadb_2b.ods_a168_log_mem_change
+)
+SELECT lmc04 AS 类别, '最早' AS 取样端, lmc08 AS 異動時間, lmc02 AS 实体ID, lmc03 AS 层级,
+       lmc06 AS 操作者, lmc07 AS 操作者LV, lmc10 AS 操作IP, lmc05 AS 内容原文
+FROM r WHERE rn_old <= 200
+UNION ALL
+SELECT lmc04, '最新', lmc08, lmc02, lmc03, lmc06, lmc07, lmc10, lmc05
+FROM r WHERE rn_new <= 200
+ORDER BY 类别, 取样端, 異動時間;
+
+
+-- ── B · changestatus 专项：内容原文枚举（处置最可能所在）────────────────
+-- ▸ 导出：需要 —— 存为「数据库/P02B_changestatus_patterns.csv」
+-- ▸ 只做「原文前缀归并」以见其形，不做语义分类。
+SELECT SUBSTRING(TRIM(lmc05), 1, 40)                                    AS 内容前40字,
+       COUNT(*)                                                         AS n,
+       COUNT(DISTINCT lmc02)                                            AS 涉实体数,
+       MIN(lmc08)                                                       AS 最早,
+       MAX(lmc08)                                                       AS 最晚,
+       SUM(CASE WHEN lmc03 = '7' THEN 1 ELSE 0 END)                     AS 其中层级7数
+FROM ods_mariadb_2b.ods_a168_log_mem_change
+WHERE lmc04 = 'changestatus'
+GROUP BY SUBSTRING(TRIM(lmc05), 1, 40)
+ORDER BY n DESC;
+
+
+-- ── C · lmc02 接线键验证（S1 前置：接错键则 treatment 全错）──────────────
+-- ▸ 导出：需要 —— 存为「数据库/P02C_key_check.csv」
+-- ▸ 三问：① lmc03 与 lmc02 是否一一对应实体类型？
+--         ② lmc02=0 之脏值有多少？③ 层级7 之 lmc02 能否命中注单表会员号？
+SELECT l.lmc03                                                          AS 层级,
+       COUNT(*)                                                         AS 日志行数,
+       COUNT(DISTINCT l.lmc02)                                          AS 去重实体数,
+       SUM(CASE WHEN TRIM(l.lmc02) = '0' THEN 1 ELSE 0 END)             AS 实体ID为0之脏行,
+       SUM(CASE WHEN m.member_id IS NOT NULL THEN 1 ELSE 0 END)         AS 命中注单会员数,
+       COUNT(DISTINCT CASE WHEN m.member_id IS NOT NULL
+                           THEN l.lmc02 END)                            AS 命中去重实体数,
+       MIN(l.lmc08)                                                     AS 最早,
+       MAX(l.lmc08)                                                     AS 最晚
+FROM ods_mariadb_2b.ods_a168_log_mem_change l
+LEFT JOIN (
+  SELECT DISTINCT CAST(NULLIF(TRIM(bet05),'') AS BIGINT) AS member_id
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+) m ON m.member_id = CAST(NULLIF(TRIM(l.lmc02),'') AS BIGINT)
+GROUP BY l.lmc03
+ORDER BY l.lmc03;
+
+
+-- ── D · 窗口内事件量（决定 treatment 是否有足够样本）────────────────────
+-- ▸ 导出：需要 —— 存为「数据库/P02D_events_in_window.csv」
+SELECT lmc04                                                            AS 类别,
+       lmc03                                                            AS 层级,
+       COUNT(*)                                                         AS 窗口内行数,
+       COUNT(DISTINCT lmc02)                                            AS 涉实体数
+FROM ods_mariadb_2b.ods_a168_log_mem_change
+WHERE CAST(NULLIF(TRIM(lmc08),'') AS DATETIME) >= '2026-03-21 00:00:00'
+  AND CAST(NULLIF(TRIM(lmc08),'') AS DATETIME) <  '2026-08-07 00:00:00'
+GROUP BY lmc04, lmc03
+ORDER BY 类别, 层级;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   §Z-16 · 变更记录
+   ---------------------------------------------------------------------------
+   ═══ v4 修订身份登记（DOCUMENT_FAMILY = v4；文件名不变，以 MD5 为物证身份）═══
+     v4-original   MD5 = 2aac44a2c738559d317042b0023f2b16
+                   行(LF) 8,210 · 字节 1,066,790 · LF · UTF-8(无BOM)
+     v4-revised    MD5 = 见随附「v4_revision_identity.txt」
+                   ⚠ 自指规避：文件内不得写入自身 MD5——写入即改变内容、
+                     使该值当场失效。故本档只载 REVISION 内容界定，
+                     六元组另存于随附清单，二者以「文件名＋REVISION」对应。
+     REVISION：
+       · Probe-01 并入（存为 §Z-18，🔒 CLOSED）
+       · Probe-02 并入（存为 §Z-19，S1 CLOSED／总命题 ⏳ OPEN）
+       · §P0C bet41 语义斧正（原文保留，标 ODS_DICTIONARY_DEFECT）
+       · commission 异常值门 DQ-COMMISSION 立册（31 行，禁删）
+       · bet16／bet41 语义锁定（§Z-17 之一）
+       · bet16 月度覆盖率登记为 OBSERVED（禁作因果解释）
+       · S1 实体接线闭合（lmc02 → member_id，lmc03=7）
+       · LEGACY-532 计数冲突登记（旧 532／188 vs 实测 1,490／294）
+       · ANOM-mem020 异常登记（6,592 次单向变更，仅涉 1 实体）
+       · treatment mapping 维持 OPEN（S3／S4 未闭）
+     supersedes            ： v4-original
+     does_not_supersede    ： 原始证据、探针输出、既往审计结果（一律保留）
+     ⚠ 「v4」自此为**方案版本族**，具体物证身份以 MD5 为准；
+        日后若有 v4-revised-2，须在此续登，不得覆盖上列任一条。
+
+   ─── 原 v3 → v4 记录（原文保留）───────────────────────────────────────
    §Z-16 · 变更记录（v3 → v4）
    ---------------------------------------------------------------------------
    2026-08-18  v4  §Z-14 零值诊断入包（SQL 主体首次改动）。

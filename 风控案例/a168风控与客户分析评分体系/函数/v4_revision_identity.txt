@@ -1,0 +1,38 @@
+a168_取数与核验_SQL总包 · v4 修订身份清单
+生成于 2026-08-18 · 本清单为 v4-revised 之六元组载体（文件自身不载自身 MD5，避免自指失效）
+
+DOCUMENT_FAMILY = v4   （文件名恒为 a168_取数与核验_SQL总包_v4.sql，不改 v5）
+
+── v4-original ──────────────────────────────────────────────
+  行数(LF)  8,210
+  字节      1,066,790
+  MD5       2aac44a2c738559d317042b0023f2b16
+  换行/编码 LF · UTF-8(无BOM)
+
+── v4-revised ───────────────────────────────────────────────
+  行数(LF)  8,560
+  字节      1,092,190
+  MD5       6231e8502295594799841880577dd548
+  换行/编码 LF · UTF-8(无BOM)
+
+REVISION
+  · Probe-01 并入（存为 §Z-18，CLOSED）
+  · Probe-02 并入（存为 §Z-19，S1 CLOSED／总命题 OPEN）
+  · §P0C bet41 语义斧正（原文保留，标 ODS_DICTIONARY_DEFECT）
+  · commission 异常值门 DQ-COMMISSION 立册（31 行，禁删）
+  · bet16／bet41 语义锁定（§Z-17 之一）
+  · bet16 月度覆盖率登记为 OBSERVED（禁作因果解释）
+  · S1 实体接线闭合（lmc02 → member_id，lmc03 = 7）
+  · LEGACY-532 计数冲突登记（旧 532／188 vs 实测 1,490／294）
+  · ANOM-mem020 异常登记（6,592 次单向变更，仅涉 1 实体）
+  · treatment mapping 维持 OPEN（S3／S4 未闭）
+
+supersedes          ： v4-original
+does_not_supersede  ： 原始证据 · 探针输出 · 既往审计结果（一律保留）
+
+核验读数（本轮实测）
+  代码行级 diff（剥注释）： 4,851 → 4,995 行，新增 144，删改既有 0
+  括号净失衡              ： v4-original +2 ／ v4-revised +2，本轮零引入
+                            （+2 系 v3 既存缺陷，另立工单 W-02）
+  §Z-18 语句体括号        ： 142/142 PASS
+  §Z-19 语句体括号        ： 37/37 PASS
