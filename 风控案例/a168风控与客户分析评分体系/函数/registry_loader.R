@@ -1,9 +1,9 @@
 # =====================================================================
 # registry_loader.R · a168 风险类型登记册载入器与门闸
 # ---------------------------------------------------------------------
-# 载入器版本 : 1.2.0        适配登记册 : 1.1.0        日期 : 2026-08-18
-# 配套     : 数据库/registry_risk_typology.yaml（单一真相源）
-#            数据库/registry_risk_typology.csv （派生字典，UTF-8-BOM/CRLF）
+# 载入器版本 : 1.3.0        适配登记册 : 1.2.0        日期 : 2026-08-18
+# 配套     : 数据库/registry_risk_typology_v1.2.0.yaml（单一真相源）
+#            数据库/registry_risk_typology_v1.2.0.csv （派生字典，UTF-8-BOM/CRLF）
 # 变更     : 1.2.0 补齐四个缺失函数——registry_typology()（单类完整配方）、
 #            registry_combo()（跨类搭配，交集／并集）、registry_which()（列反查类型）、
 #            registry_count_deliverables()（自 SQL 总包现算唯一交付件数，
@@ -24,8 +24,8 @@
 #   │  ├─ registry_loader.R                     ← 本档
 #   │  └─ a168_取数与核验_SQL总包_v3.sql          ← 权威主件之三
 #   └─ 数据库/
-#      ├─ registry_risk_typology_vaml
-#      ├─ registry_risk_typology.csv
+#      ├─ registry_risk_typology_v1.1.0.yaml
+#      ├─ registry_risk_typology_v1.1.0.csv
 #      ├─ R01_late_shoe.csv
 #      └─ S05_member_month_panel.csv
 # 身份     : 数据资产（配置件），从属于 SQL 总包与商业方案；
@@ -68,8 +68,8 @@ suppressPackageStartupMessages({
 REGISTRY_PATHS <- list(
   fn_dir   = "函数",
   db_dir   = "数据库",
-  yaml     = file.path("数据库", "registry_risk_typology.yaml"),
-  csv      = file.path("数据库", "registry_risk_typology.csv"),
+  yaml     = file.path("数据库", "registry_risk_typology_v1.1.0.yaml"),
+  csv      = file.path("数据库", "registry_risk_typology_v1.1.0.csv"),
   sql_main = file.path("函数",   "a168_取数与核验_SQL总包_v3.sql")
 )
 
@@ -80,8 +80,8 @@ REGISTRY_PATHS <- list(
   "  │  ├─ registry_loader.R",
   "  │  └─ a168_取数与核验_SQL总包_v3.sql",
   "  └─ 数据库/",
-  "     ├─ registry_risk_typology_vaml",
-  "     ├─ registry_risk_typology_vsv",
+  "     ├─ registry_risk_typology_v1.1.0.yaml",
+  "     ├─ registry_risk_typology_v1.1.0.csv",
   "     ├─ R01_late_shoe.csv",
   "     └─ S05_member_month_panel.csv",
   sep = "\n")
@@ -166,7 +166,7 @@ registry_load <- function(yaml_path = REGISTRY_PATHS$yaml,
         stop(sprintf("%s 之判据列集合不一致", t$type_id))
     }
     ## 版本号亦须同源（登记册与载入器同进同退，杜绝版本身份碰撞）
-    .expect <- "1.1.0"
+    .expect <- "1.2.0"
     if (!identical(as.character(ymeta$registry$version), .expect))
       stop(sprintf("YAML registry.version=%s，载入器预期 %s —— 请同步递增版本号后重跑",
                    ymeta$registry$version, .expect))
@@ -206,7 +206,7 @@ registry_load <- function(yaml_path = REGISTRY_PATHS$yaml,
 # ---------------------------------------------------------------------
 registry_admitted_columns <- function(REG, which_axis = c("both","R","V")) {
   ## 注：参数名刻意不叫 axis——data.table 在 i 表达式中列名优先，
-  ##     若参数与列同名则 d[axis == axis] 恒为真，筛选形同虚设（此版v1.1.0 已修正之前）
+  ##     若参数与列同名则 d[axis == axis] 恒为真，筛选形同虚设（v1.1.0 已修正）
   which_axis <- match.arg(which_axis)
   d <- REG$dict[admit_to_scoring == TRUE]
   if (which_axis != "both") d <- d[axis == which_axis]
