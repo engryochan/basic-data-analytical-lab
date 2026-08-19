@@ -1,0 +1,1577 @@
+---
+title: "策略性靴尾下注风控与商业变现实测报告 · R01 版（shoe_pos ≥ 0.80）"
+subtitle: "首次针对 `R01_late_shoe.csv` 的独立实测——靴内相对位置口径，与 D-06「压哨」口径（`pr_in_round`）及 X-01「进度」口径（`progress`）分属三套独立管道，字面近似、判据不同，不可互代"
+author: "Ryo（雷欧）"
+date: "2026-08-17"
+lang: zh-CN
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-expand: 3
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看代码"
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+---
+
+```{r}
+#| label: knitr-bootstrap
+#| eval: false
+#| include: false
+## ─────────────────────────────────────────────────────────────────────
+## knitr 引擎唤醒块（不执行、不输出、不显示）
+##
+## 缘由：Quarto 的 knitr 引擎须文档内至少存在一个 {r} chunk 方被唤醒；
+##       若全篇仅有 {sql}／{python} 等非-R chunk，knitr 不介入，
+##       围栏标记会原样漏入 HTML，代码块随之塌成普通段落（换行被吞）。
+##       实测佐证：修复前 HTML 内残留 11 处未被 knitr 处理的 sql 围栏标记。
+## 出处：quarto-cli #2137（Open, milestone Future）、
+##       #6483（closed as not planned, 标签 engines-knitr）——
+##       官方判定属 knitr 引擎绑定机制限制，空 {r} chunk 为既定 workaround。
+## 纪律：本块为结构性必需，不得因"看起来没用"而删除。
+## ─────────────────────────────────────────────────────────────────────
+```
+
+```{r}
+#| label: hover-setup
+#| echo: true
+#| results: asis
+## ─────────────────────────────────────────────────────────────────────
+## 悬停注解机制（术语库 + 浮层）——移植自主方案 §17 同一惯例，
+## 并与 a168会员活跃度分层 两档（基准档/高精度候选档）共用同一体例
+## 用法：正文写 `r tip("GGR")`，鼠标悬停即显定义
+## 纪律：新增术语只加进 GLOSS，不散落在正文，杜绝同词异释
+## ─────────────────────────────────────────────────────────────────────
+GLOSS <- list(
+  "GGR" = "毛游戏收入（Gross Gaming Revenue）＝ 玩家总输 − 玩家总赢，本包以 −Σgame_pnl 计算；不扣退水、不扣税费，是平台自博彩行为取得的毛收入。",
+  "NGR" = "净游戏收入（Net Gaming Revenue）＝ GGR − 退水成本；本文件 R01_late_shoe.csv 未输出退水列，NGR 判级 UNKNOWN，不在本报告计算范围内。",
+  "洗码量" = "有效投注额（Turnover / Rolling），代理返点与佣金的计算基准。R01_late_shoe.csv 以 stake（下注额，已按 bet11 汇率归一）近似替代，非严格意义之 validbet；两者关系判 UNKNOWN，见局限章。",
+  "hold%" = "抽水率／盈亏率＝ GGR ÷ 分母。本报告统一取 stake（下注额，汇率归一后）为分母，与洗码量口径可能有别，行文中一律称「本报告 hold%」以示区隔。",
+  "靴尾" = "本报告专属定义：shoe_pos ≥ 0.80，即该笔注单的局号（round_no）除以其所属靴之最大局号（max_round）≥ 0.80，是**靴内相对位置**，与靴长无关。**严禁**与 D-06 之「尾段」（pr_in_round ≥ 0.80，局内注单时序分位）或 X-01 之「压哨」（progress ≥ 0.90，局内物理时间进度）互代，三者判据、粒度、交付件完全独立。",
+  "靴内相对位置" = "shoe_pos = round_no / max_round，其中 max_round = MAX(round_no) 按 (shoe_id, table_id) 分组、算于清洗后注单集——是最大局号，不是总局数（COUNT），二者仅在局号连续无缺口时相等。取值区间 [首局号/max_round, 1]。因靴长实测不定（均值49.86、P50=50、P75=52、P90=54、P99=58），固定绝对局号（如 round_no≥40 或 ≥50）会随靴长系统性失真，2026-08-12 已斧正为本相对口径（B-01）。",
+  "注额斜率" = "stake_ramp = 靴尾人均单注额 ÷ 靴尾以外人均单注额；>1 表示该会员在靴尾段下注更大，<1 反之，=1 表示两段注额无差异。",
+  "符号检验" = "Sign Test，非参数配对检验，只用差值的正负号（不用差值大小），检验中位数差异是否为零；对厚尾分布比配对t检验更稳健，本报告的主检验方法。",
+  "Wilcoxon符号秩检验" = "Wilcoxon Signed-Rank Test，配对非参数检验，同时利用差值的正负号与相对大小（秩），检定力通常高于符号检验；本报告作为符号检验之交叉验证。",
+  "AUC" = "曲线下面积（Area Under ROC Curve），0.5＝该维度与标签毫无关系（等同随机猜测），1.0＝完美分辨，0＝完全反向。本报告以秩相关手算法实现（等价 Mann-Whitney U），不引入外部依赖包。",
+  "净赢玩家" = "本报告内生标签：game_pnl_all > 0 的会员，即该会员在整个分析窗口相对平台为净赢家。属会员自身结果性指标，非外部风控人工标注之 risk_label，二者不可等同——本报告已在正文明确区分。",
+  "GGR集中度" = "少数高价值会员贡献大部分GGR的帕累托（Pareto）分布现象；本报告独立于「靴尾假说」验证，是可持续复用的经营价值发现，与活跃度分层两档报告的既有结论方向一致。",
+  "自选择" = "Self-selection，分组依据本身与结果相关，导致组间差异混入非处置因素，不可解读为处置效应。",
+  "PSM" = "倾向得分匹配（Propensity Score Matching），准实验方法，用于在观察性数据中构造可比对照组。",
+  "DID" = "双重差分（Difference-in-Differences），配合事件研究设计估计处置效应，需平行趋势假设成立。",
+  "影子模式" = "Shadow Mode，触发风控报警后不立刻处置，进入静默观察期，若后续行为回归常态则自动撤销报警，用于降低对真实VIP的误伤。",
+  "KYC" = "Know Your Customer，客户身份识别与尽职调查流程。",
+  "AML" = "Anti-Money Laundering，反洗钱合规体系。",
+  "S1" = "严重度分级最高档 FATAL：口径或数据层面的致命缺陷，未结前相关结论不得进入生产判定链。",
+  "OBSERVED" = "证据分级：本文件内可直接复算验证。",
+  "INFERRED" = "证据分级：由已锁定事实推得，未经独立外部验证，不得径自升级为 OBSERVED。",
+  "UNKNOWN" = "证据分级：须另行取数核验，禁止以推测填补。",
+  "登记册" = "《风险类型 × 交付件 × 判据维度 × 证据裁定》登记册：数据资产（配置件），YAML 为单一真相源、CSV 为派生字典，由标记后档载入并施行门闸——**本档不读取该件**。它分类的是证据，不是用户。",
+  "门闸" = "评分管道引用未获准入之特征时，渲染直接失败并报出该特征所属类型、门禁等级与裁定理由。",
+  "门禁五档" = "FATAL 停止分析／BLOCK 禁入正式结论／CONDITIONAL 条件可用／ADVISORY 建议可用／NA 不适用。",
+  "准入评分" = "该类判据获准进入风险评分管道；未准入者至多进入画像，不得据以处置。"
+)
+esc <- function(x) gsub('"','&quot;', gsub("<","&lt;", gsub(">","&gt;", x)))
+tip <- function(k, show = NULL) {
+  d <- GLOSS[[k]]; lbl <- if (is.null(show)) k else show
+  if (is.null(d)) return(lbl)
+  sprintf('<span class="gl-tip" data-gl="%s">%s</span>', esc(d), lbl)
+}
+cat('
+<style>
+.gl-tip{border-bottom:1px dotted currentColor;cursor:help;}
+#gl-pop{position:fixed;z-index:9999;max-width:34em;padding:.6em .8em;
+  background:rgba(12,18,30,.97);color:#e8eef7;border:1px solid #3a5a80;
+  border-radius:6px;font-size:.88em;line-height:1.55;display:none;
+  box-shadow:0 4px 18px rgba(0,0,0,.45);}
+</style>
+<div id="gl-pop"></div>
+<script>
+(function(){var p=document.getElementById("gl-pop");
+document.addEventListener("mouseover",function(e){
+ var t=e.target.closest(".gl-tip"); if(!t)return;
+ p.textContent=t.getAttribute("data-gl"); p.style.display="block";
+ var r=t.getBoundingClientRect();
+ p.style.left=Math.min(r.left,window.innerWidth-p.offsetWidth-16)+"px";
+ p.style.top=(r.bottom+8)+"px";});
+document.addEventListener("mouseout",function(e){
+ if(e.target.closest(".gl-tip"))p.style.display="none";});})();
+</script>
+')
+```
+
+```{r}
+#| label: load-r01
+#| echo: true
+## ─────────────────────────────────────────────────────────────────────
+## 全篇唯一数据入口：本报告所有数字均出自本块现算，正文行内一律只引用
+## 本块产出的"干净变量名"（不含反引号／特殊字符），避免 knitr 行内代码
+## 抓取截断（教训见 a168会员活跃度分层_高精度候选档_171局起.qmd
+## v171-2.0.1 变更日志：正则式单反引号扫描机制不支持嵌套反引号）。
+## 铁律第九条：文件缺失即 stop()，不以静态文字冒充结果。
+## ─────────────────────────────────────────────────────────────────────
+suppressPackageStartupMessages(library(data.table))
+
+.p_r01 <- "数据库/R01_late_shoe.csv"
+if (!file.exists(.p_r01)) {
+  stop("○ 待表：本文件依赖 R01_late_shoe.csv 存在于 数据库/ 目录——不以静态文字冒充结果（铁律第九条）。")
+}
+r01 <- fread(.p_r01, encoding = "UTF-8")
+
+stopifnot(
+  "late_def 口径锁异常，应恒为 shoe_pos>=0.80"       = all(r01$late_def == "shoe_pos>=0.80"),
+  "uid 非唯一，会员级聚合应一行一会员"                = uniqueN(r01$uid) == nrow(r01),
+  "n_orders_all 未达 HAVING>=100 门槛，交付件版本可能有误" = min(r01$n_orders_all) >= 100
+)
+
+r01[, n_orders_early := n_orders_all - n_orders_late]
+r01[, is_net_winner  := as.integer(game_pnl_all > 0)]
+
+## ---- 核心计数 ----
+nrow_r01 <- nrow(r01)
+ncol_r01 <- 15L                      # 原始交付件列数（不含本报告衍生列）
+sum_orders_all  <- sum(r01$n_orders_all)
+sum_orders_late <- sum(r01$n_orders_late)
+pct_late_orders <- sum_orders_late / sum_orders_all * 100
+n_late_share_zero   <- sum(r01$late_share == 0)
+pct_late_share_zero <- n_late_share_zero / nrow_r01 * 100
+
+## ---- late_share 分布 ----
+ls_mean <- mean(r01$late_share)
+ls_qs   <- quantile(r01$late_share, c(.5, .75, .9, .95, .99))
+ls_p50  <- unname(ls_qs["50%"]); ls_p75 <- unname(ls_qs["75%"])
+ls_p90  <- unname(ls_qs["90%"]); ls_p95 <- unname(ls_qs["95%"]); ls_p99 <- unname(ls_qs["99%"])
+
+## ---- GGR / 本报告 hold%（stake 加权，公司口径）----
+ggr_total   <- -sum(r01$game_pnl_all)
+ggr_late    <- -sum(r01$game_pnl_late, na.rm = TRUE)
+pct_ggr_late<- ggr_late / ggr_total * 100
+stake_total     <- sum(r01$stake_all)
+stake_late_sum  <- sum(r01$stake_late, na.rm = TRUE)
+hold_all_pct    <- ggr_total / stake_total * 100
+hold_late_pct   <- ggr_late  / stake_late_sum * 100
+ggr_early_sum   <- ggr_total - ggr_late
+stake_early_sum <- stake_total - stake_late_sum
+hold_early_pct  <- ggr_early_sum / stake_early_sum * 100
+
+## ---- 段内 ROI（人均口径）----
+roi_late_mean    <- mean(r01$roi_late, na.rm = TRUE)
+roi_late_median  <- median(r01$roi_late, na.rm = TRUE)
+roi_early_mean   <- mean(r01$roi_early)
+roi_early_median <- median(r01$roi_early)
+
+## ---- 注额斜率 ----
+ramp_mean    <- mean(r01$stake_ramp, na.rm = TRUE)
+ramp_median  <- median(r01$stake_ramp, na.rm = TRUE)
+n_ramp_gt2   <- sum(r01$stake_ramp > 2, na.rm = TRUE)
+pct_ramp_gt2 <- n_ramp_gt2 / nrow_r01 * 100
+
+## ---- 净赢玩家（本报告内生标签，非外部 risk_label）----
+pct_net_winner <- mean(r01$is_net_winner) * 100
+
+## ---- 配对符号检验／Wilcoxon（三档双侧样本量阈值，供稳健性对照）----
+mk_paired <- function(th) {
+  p <- r01[n_orders_late >= th & n_orders_early >= th & !is.na(roi_late)]
+  p[, diff := roi_late - roi_early]
+  p
+}
+paired10 <- mk_paired(10); paired30 <- mk_paired(30); paired50 <- mk_paired(50)
+
+sign_test <- function(p) {
+  npos <- sum(p$diff > 0); nneg <- sum(p$diff < 0)
+  binom.test(npos, npos + nneg, p = 0.5)
+}
+st10 <- sign_test(paired10); st30 <- sign_test(paired30); st50 <- sign_test(paired50)
+wc30 <- wilcox.test(paired30$diff)
+
+n_paired10 <- nrow(paired10); pct_pos10 <- mean(paired10$diff > 0) * 100; sign_p10 <- st10$p.value
+n_paired30 <- nrow(paired30); pct_pos30 <- mean(paired30$diff > 0) * 100; sign_p30 <- st30$p.value
+n_paired50 <- nrow(paired50); pct_pos50 <- mean(paired50$diff > 0) * 100; sign_p50 <- st50$p.value
+pct_neg30  <- mean(paired30$diff < 0) * 100
+wilcox_p30 <- wc30$p.value
+diff_mean30   <- mean(paired30$diff)
+diff_median30 <- median(paired30$diff)
+
+## ---- AUC（秩相关手算法，等价 Mann-Whitney U，零外部依赖，与 D-06 v171 §六之二 同法同源）----
+auc_manual <- function(score, label) {
+  ok <- is.finite(score) & !is.na(label)
+  score <- score[ok]; label <- label[ok]
+  n1 <- sum(label == 1); n0 <- sum(label == 0)
+  ranks <- rank(score)
+  (sum(ranks[label == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
+}
+auc_late_share   <- auc_manual(r01$late_share,   r01$is_net_winner)
+auc_stake_ramp   <- auc_manual(r01$stake_ramp,   r01$is_net_winner)
+auc_shoe_pos_p50 <- auc_manual(r01$shoe_pos_p50, r01$is_net_winner)
+auc_roi_late     <- auc_manual(r01$roi_late,     r01$is_net_winner)
+auc_roi_early    <- auc_manual(r01$roi_early,    r01$is_net_winner)
+auc_n_orders_all <- auc_manual(r01$n_orders_all, r01$is_net_winner)
+auc_stake_all    <- auc_manual(r01$stake_all,    r01$is_net_winner)
+
+## ---- Spearman 秩相关（late_share vs 活跃度）----
+sp_test <- cor.test(r01$late_share, r01$n_orders_all, method = "spearman", exact = FALSE)
+rho_ls_norders <- unname(sp_test$estimate)
+p_ls_norders   <- sp_test$p.value
+
+## ---- 双重信号：高靴尾占比 × 高注额斜率 ----
+r01[, flag_freq := late_share >= 0.30]
+r01[, flag_ramp := !is.na(stake_ramp) & stake_ramp >= 1.5]
+double_hit  <- r01[flag_freq == TRUE & flag_ramp == TRUE]
+double_rest <- r01[!(flag_freq == TRUE & flag_ramp == TRUE)]
+n_double         <- nrow(double_hit)
+pct_double       <- n_double / nrow_r01 * 100
+ggr_pct_double   <- -sum(double_hit$game_pnl_all) / ggr_total * 100
+hold_double      <- -sum(double_hit$game_pnl_all) / sum(double_hit$stake_all) * 100
+pct_profit_double<- mean(double_hit$game_pnl_all > 0) * 100
+hold_rest        <- -sum(double_rest$game_pnl_all) / sum(double_rest$stake_all) * 100
+pct_profit_rest  <- mean(double_rest$game_pnl_all > 0) * 100
+
+## ---- GGR 集中度（帕累托，按 stake_all 排名，不改动 r01 原排序）----
+r01_by_stake <- copy(r01)[order(-stake_all)]
+r01_by_stake[, cum_ggr := cumsum(-game_pnl_all)]
+pareto_row <- function(pct) {
+  k <- floor(nrow_r01 * pct)
+  list(n = k, ggr_pct = r01_by_stake$cum_ggr[k] / ggr_total * 100)
+}
+pa1 <- pareto_row(0.01); pa5 <- pareto_row(0.05); pa10 <- pareto_row(0.10); pa20 <- pareto_row(0.20)
+
+## ---- 阈值扫描表：命中组 vs 对照组（回应 SQL 原注 r01-decision 要求）----
+scan_thresholds <- c(0.20, 0.25, 0.30, 0.35, 0.40, 0.4269, 0.50, 0.60, 0.70)
+scan_tbl <- rbindlist(lapply(scan_thresholds, function(th) {
+  hit  <- r01[late_share >= th]
+  ctrl <- r01[late_share <  th]
+  data.table(
+    阈值 = th,
+    命中人数 = nrow(hit),
+    命中人数占比 = nrow(hit) / nrow_r01 * 100,
+    `GGR占比` = -sum(hit$game_pnl_all) / ggr_total * 100,
+    `命中hold` = -sum(hit$game_pnl_all) / sum(hit$stake_all) * 100,
+    `对照hold` = -sum(ctrl$game_pnl_all) / sum(ctrl$stake_all) * 100,
+    命中盈利占比 = mean(hit$game_pnl_all > 0) * 100,
+    对照盈利占比 = mean(ctrl$game_pnl_all > 0) * 100
+  )
+}))
+
+## ---- 样本量稳定性分桶（roi_late 方差随 n_orders_late 收敛，供附录佐证）----
+r01[, bucket := cut(n_orders_late,
+      breaks = c(0, 10, 20, 30, 50, 100, 300, Inf),
+      labels = c("<10","10-19","20-29","30-49","50-99","100-299",">=300"),
+      right = FALSE)]
+bucket_tbl <- r01[!is.na(roi_late), .(
+  count = .N, mean = mean(roi_late), sd = sd(roi_late),
+  p10 = quantile(roi_late, .10), p90 = quantile(roi_late, .90)
+), by = bucket]
+bucket_tbl[, width := p90 - p10]
+setorder(bucket_tbl, bucket)
+```
+
+::: {.callout-important}
+## 本文件定位与血统声明
+
+本文件**非独立报告**，而是 **`a168风控与客户分层评分体系_商业方案.qmd`** 家族旗下、
+针对单一交付件 **`R01_late_shoe.csv`**（由 `a168_取数与核验_SQL总包_v3.sql` §R01 产出）
+的专项技术与商业详解，与既有 `a168会员活跃度分层_基准档_30局起.qmd`（D-06／`S_player_tail.csv`）、
+`a168会员活跃度分层_高精度候选档_171局起.qmd`（D-06 v171）为**平行姊妹文件**，共享同一 YAML、
+knitr 唤醒块、悬停术语库与血统声明体例，但**分析对象完全独立**——不共用、不复用彼二档已算数字。
+
+**血统关系**：
+
+| 层级 | 文件 | 本文件与之关系 |
+|:--|:--|:--|
+| 权威主件 | `a168风控与客户分层评分体系_商业方案.qmd` | 口径与方法论的**上位来源**；本文件不得与之冲突 |
+| 权威主件 | `a168风控评分_精要商业报告.qmd` | 平行交付件 |
+| 权威主件 | `a168_取数与核验_SQL总包_v3.sql` | 本文件所解读的 **§R01 代码原文所在**；本文件对应该处代码注释所指之 `@sec-r01`／`r01-decision` |
+| 姊妹文件 | `a168会员活跃度分层_基准档_30局起.qmd` | 同宗旁支，解读对象为 D-06／`S_player_tail.csv`（局内时序口径，非本文件之靴内位置口径） |
+| 姊妹文件 | `a168会员活跃度分层_高精度候选档_171局起.qmd` | 同上，D-06 v171 候选臂 |
+| 本文件 | `a168策略性靴尾下注风控与商业变现实测_R01.qmd` | 上述五者旗下的**单交付件专项详解**（附属，非第六份权威文件） |
+
+**审计基准**：凡本文件所述口径、阈值、结论，一律以三份权威主件为准；
+若发现冲突，以权威主件为正、本文件为误，并须回改本文件而非反向修改主件。
+
+**证据分级沿用**：`r tip("OBSERVED")` ／ `r tip("INFERRED")` ／ `r tip("UNKNOWN")`，
+严重度沿用 `r tip("S1")` 至 S4 四档。
+
+**本轮性质**：`a168会员活跃度分层_高精度候选档_171局起.qmd` v171-1.5.0 版变更日志明确记载
+"本轮未开始 `R01_late_shoe.csv`／`C06_hedge_pairs.csv`／`risk_label` 相关分析"——
+**本文件是该缺口的首次填补**，一切结论均为本轮基于实际数据文件的**新鲜实测**，
+非既有结论的转载或外推。
+:::
+
+# 引言
+
+## 简介
+
+本文档对 `a168_取数与核验_SQL总包_v3.sql` §R01 产出的交付件 `R01_late_shoe.csv` 进行完整的
+技术解读与商业价值实测。该查询用于计算每个玩家在"靴内后段（相对靴位 ≥ 0.80，约当每靴最后
+20% 的局位）"与"靴内前段"的差异化下注与盈亏表现，**建档时的原始业务假设**（详见 SQL 原文
+注释）是验证"靴尾下注者是否具备可利用的信息优势"，以此评估是否值得投入风控资源建立"靴尾
+下注"侦测规则。
+
+::: {.callout-warning}
+## 与 `百家乐下注时机风控参数分析报告.md`（旧报告）的关系——判据已升级，非同一交付件的重跑
+
+用户既往提供的 `百家乐下注时机风控参数分析报告.md`，以 **`bet04`（局内绝对局号）≥ 40**
+作为"靴尾"判据，建议阈值组合为"占比 ≥ 60%、总订单 ≥ 30"。该报告本身在方法论上是严谨的
+（有牌靴长度实测、有玩家首次下注局号分布、有参数扫描表格），但其判据自 2026-08-12 已被
+`a168_取数与核验_SQL总包_v3.sql` 的 **B-01 斧正**明确取代：
+
+> 依据：外指实测靴长分布（均值 49.86 局、P50=50、P75=52、P90=54、P99=58）。第 50 把的相对
+> 靴位为 100.3%（以均值计），故 `round_no>=50`（旧报告用 `round_no>=40`，原理相同）实为
+> "靴的最后一局及长于中位数的那半数靴"——约半数牌靴无末段可言，`late_share` 被系统性压低。
+
+`R01_late_shoe.csv` 是该判据斧正后的**唯一在产交付件**，本报告即以此为分析对象，**不再沿用**
+旧报告的 `bet04≥40` 绝对局号判据、`late_orders≥30` 靴尾订单下限、`late_ratio≥60%` 占比阈值
+——三项旧参数均建立在已被推翻的绝对局号口径上，直接套用会重蹈"半数靴无靴尾可言"之系统性
+偏差。本报告**沿用旧报告的分析骨架**（分析目的→数据口径→分布验证→参数扫描→推荐规则→SQL→
+使用边界→结论）与**呈表纪律**，但**全部参数须以 `R01_late_shoe.csv` 实测重新导出**，不得
+搬运旧报告数字。
+:::
+
+## 三套"靠后下注"判据辨析——本项目历史上最易致混的术语，须逐一切割
+
+本项目历史上先后出现三套字面近似、实质独立的"靠后下注"判据，分属三条独立 SQL 管道、三份
+互不相通的交付件。本报告只处理 R01；D-06、X-01 的既有结论**不构成、也不能佐证**本报告
+的任何结论，反之亦然：
+
+| | **R01（本文件解读对象）** | D-06（`_1_01.qmd`／`_171局起.qmd` 解读对象） | X-01 |
+|:--|:--|:--|:--|
+| 判据字段 | `shoe_pos = round_no / max_round` | `max_pr`（`PERCENT_RANK`，局内注单序位百分位） | `progress`（局内物理时间进度） |
+| 判据性质 | **靴内相对位置**——该注单在其所属靴的第几成局位 | **局内下注顺序**——该玩家在该局是否是相对晚下注者，与靴长完全无关 | **局内物理时间**——下注时刻占开局到开牌总时长的比例 |
+| 阈值 | `≥ 0.80` | `≥ 0.80` | `≥ 0.90` |
+| 交付件 | `R01_late_shoe.csv`（会员级，`r nrow_r01` 行） | `S_player_tail.csv` / `S_player_tail_v171.csv` | `X_combo.csv`（数行，两规则组合矩阵） |
+| 既有实测结论 | **本报告首次实测**（见第二部分） | 已证伪：符号检验 p=0.5847，五维 AUC 0.46~0.53 | 未见独立实测报告，`tail_share≥0.47` 已知偏离真 P90 达 −11.6% |
+| 业务隐喻 | 更贴近国际公开判例（如 Ivey v Genting）所指"利用靴内牌堆成分变化"的经典算牌／edge-sorting 情境 | 更贴近"是否偷看其他玩家下注/牌路后跟注"的局内信息滞后情境 | 介于两者之间，物理计时口径 |
+
+::: {.callout-caution}
+## 三者不可互相佐证，也不可互相反证
+
+D-06 已证伪"局内下注顺序无信息优势"，**不能**据此推断"靴内相对位置同样无信息优势"——
+后者是本报告要独立回答的问题，答案见第二部分，**不预设**、**不援引**D-06 的结论方向。
+反之，若本报告发现 R01 有信号，也**不能**反证 D-06 的证伪结论有误——二者是完全独立的假设检定。
+:::
+
+## 数据准入范围（逐层核验，全部据 SQL 原文逐字核实，`r tip("OBSERVED")`）
+
+`R01_late_shoe.csv` **不是**对 139 天窗口内全体会员、全部注单的直接汇总，而是依次经过
+**注单级过滤 → 靴内位置定标 → 会员级门槛**三层处理后的结果：
+
+**第一层·注单级准入过滤**（在 `ranked`→`base` 两层完成）：
+
+| 过滤条件 | 字段正名 | 业务含义 |
+|:--|:--|:--|
+| `dt >= '2026-03-21' AND dt < '2026-08-07'` | 营业日窗口 | 139 个完整营业日，右端点为开区间 |
+| `bet02 = '101'` | 游戏类别 | 限定百家乐 |
+| `rn = 1`（`ROW_NUMBER() OVER (PARTITION BY bet01 ...)`） | 版本去重 | 同一注单多次更新时只取最新版本 |
+| `category = '1'` | 注单类别 | 限定一般注单 |
+| `UPPER(TRIM(bet38)) = 'N'` | 非重对标记 | 剔除重复配对注单 |
+| `bet05` 非空且为正整数 | 会员号有效性 | 剔除会员号缺失或异常者 |
+| `bet11` 非空且为正数 | 汇率有效性 | 剔除汇率缺失或异常者 |
+| `bet04` 非空且为正整数 | 局内序号有效性 | 靴内相对位置计算的分子必需 |
+| `COALESCE(五级代理线关联测试线代理) IS NULL` | 测试线代理排除 | 依 `age022='1'` 排除公司测试线代理（214 条，跨五级代理线）名下注单 |
+
+**第二层·靴内位置定标**（在 `shoe_len`→`enriched` 两层完成，**不删行、只算值**）：
+
+- `shoe_len`：按 `(shoe_id, table_id)` 分组取 `MAX(round_no)` 为 `max_round`
+  ——此为 B-01 斧正的核心：**定标基准逐靴现算，不假设固定 50**。
+  ⚠ CTE 名为 `shoe_len`（靴长）系 SQL 总包沿用之历史命名，其所算实为**最大局号**而非靴长；
+  详见 @sec-shoe-pos-caveat。
+- `shoe_pos = round_no / max_round`；`is_late = 1[shoe_pos >= 0.80]`。
+
+::: {.callout-important}
+## 口径警示：`max_round` 是**最大局号**，不是**总局数**——兼一处已知偏置的披露 {#sec-shoe-pos-caveat}
+
+**其一，函数语义。** `shoe_pos` 之分母出自 SQL 总包 §R01：
+
+```
+shoe_len AS (
+  SELECT shoe_id, table_id, MAX(round_no) AS max_round
+  FROM base GROUP BY shoe_id, table_id
+)
+```
+
+`MAX(round_no)` 取的是**该靴该桌观测到的最大局号**（一个序号），
+`COUNT(round_no)`／`COUNT(DISTINCT round_no)` 才是**局数**（一个计数）。
+二者**仅在局号自 1 起、连续、无缺口时相等**。本报告全篇凡言「靴长」「总局数」处，
+若指本分母，一律应读作**最大局号**。
+
+**其二，选 `MAX` 是对的，不必改。** 若中间某局的全部注单被六项清洗剔除
+（测试线、旧版本、非一般注单、重对注单、空串／不可转型、`bet04<=0`），
+`COUNT` 会随之减少而使分母缩水、位置坐标整体膨胀；`MAX` 对**中间缺口免疫**，
+故为更稳健的定标基准。**代码正确，错的是历来把它叫作「靴长」的命名与注释。**
+
+**其三，一处方向已知的偏置（`r tip("INFERRED")`，此前未披露）。**
+`max_round` 算于 `base`（清洗后注单集）而非物理牌靴。若某靴**末尾数局**无人下注、
+或其注单被清洗剔除，则 `max_round` 低于该靴物理实发局数，分母偏小，
+`shoe_pos` 被**系统性放大**，更多注单被判入靴尾段。
+
+- **影响方向**：使 `late_share` 偏高、靴尾段样本偏多；
+- **对本报告结论的影响**：**不改变结论方向**。本报告的裁定是「靴尾维度无判别力」
+  （符号检验 p = `r sprintf("%.4f", sign_p30)`、AUC = `r sprintf("%.4f", auc_late_share)`、
+  九档阈值中命中组 hold% 低于对照组者 `r scan_tbl[命中hold < 对照hold, .N]` 档）——
+  偏置使靴尾组**更大**，而更大的组只会让其表现**更趋近全体均值**，
+  即偏置方向与「找不到差异」这一结论**同向**，不构成对结论的威胁；
+- **若日后要主张靴尾组存在正向效应**，则此偏置成为直接威胁，须先以
+  `ods_a168_game_info` 之开局／开牌记录还原物理靴长后重算。
+
+**其四，本项目同类缺陷已全面普查**，SQL 总包与两份 D-06 姊妹档均涉，
+详见变更日志所附工单 W-01。
+:::
+
+
+**第三层·会员级门槛**（对聚合后的会员级结果做事后过滤）：
+
+| 过滤条件 | 字段正名 | 业务含义 |
+|:--|:--|:--|
+| `HAVING COUNT(*) >= 100` | 会员合格订单数下限 | 会员须至少 100 笔合格注单方入选本表 |
+
+::: {.callout-note}
+## SQL 原文明确要求：本表故意不设 `late_share` 筛选，须由 R 侧做命中／对照经济裁定
+
+`a168_取数与核验_SQL总包_v3.sql` §R01 原注：
+
+> ⚠️ 注意：此处**故意不加** `late_share >= 0.70` 的 `HAVING`。报告需要「命中组 vs 对照组」的
+> hold% 对照才能做经济裁定（`@sec-r01` 的 `r01-decision`），只导命中组就没有对照组。
+> 阈值筛选一律放在 R 侧做，SQL 只负责给全量底料。
+
+`R01_late_shoe.csv` 因此是**全量底料**（`r nrow_r01` 名会员，`HAVING COUNT(*)>=100` 为唯一
+会员级过滤），本报告第三部分即完成该处代码注释所要求的命中组／对照组经济裁定，对应
+`{#sec-r01}` 与 `{#r01-decision}` 两处锚点。
+:::
+# 数据口径 {#sec-data-caliber}
+
+::: {.callout-note}
+## 本章定位
+
+按「**源数据 → 指标输出**」两级、每级再按「**关键字段 → 核心指标**」两目，逐项交代
+**业务含义**与**商业用途**。字段业务含义一律逐字取自 `a168_取数与核验_SQL总包_v3.sql`
+的行级注释（`r tip("OBSERVED")`）；商业用途栏为本报告对该字段实际用法的归位陈述，
+凡属推导性延伸均标注 `r tip("INFERRED")`。
+
+本档为 **标记前** 版本，分析对象仅 `R01_late_shoe.csv` 一件；不涉外部风险标签，
+故本章不列 `risk_label` 相关口径。
+:::
+
+## 一、源数据（ODS 库表层）
+
+### 1. 关键字段：业务含义与商业用途
+
+以下字段均以 `varchar(65533)` 存储于 StarRocks ODS，凡比较、运算一律先
+`NULLIF(TRIM(...),'')` 再显式 `CAST`（工程铁律，§R01 已逐处执行）：
+
+| 库表 | 字段 | 业务含义（SQL 注释原文口径） | 商业用途（本报告归位） |
+|:--|:--|:--|:--|
+| `ods_a168_bet02` | `bet01` | 注单号 | 同注单号取最新版本之去重主键（`ROW_NUMBER` 按 `updatetime`／`sync_time`／`dt` 三级降序） |
+| `ods_a168_bet02` | `bet02` | 游戏类别 | 恒限 `'101'`（百家乐），产品口径锁 |
+| `ods_a168_bet02` | `bet03`／`bet04`／`bet39` | 靴号／局内序号／桌号 | 三段拼合为 `round_key`（局键）；**`bet04` 是靴内相对位置 `shoe_pos` 之分子**——本报告主判据之根 |
+| `ods_a168_bet02` | `bet05` | 会员号 | 交付件实体主键（R01 之 `uid`），会员级聚合与跨档接线键 |
+| `ods_a168_bet02` | `bet08` | 下注时间 | 有效单准入（非空）；X-01「进度」口径另用（本报告不涉） |
+| `ods_a168_bet02` | `bet09` | 玩法（庄／闲／和／对子等） | 本报告未拆玩法——边注 P&L 与主注混同，构成已知缺口 |
+| `ods_a168_bet02` | `bet11` | 汇率（= `ods_a168_currency.rate`，非 `origin_rate`） | 一切金额字段之除数：原币 → 统一口径，含 K／VNDK／IDRK 千位换算前提 |
+| `ods_a168_bet02` | `bet13` | 下注金额（原币） | ÷汇率 → `stake`（本金）；`stake_all`／`stake_late` 与 `r tip("hold%")` 之分母 |
+| `ods_a168_bet02` | `bet14` | 派彩金额（原币） | `(bet14−bet13)`÷汇率 → `game_pnl`（会员游戏输赢），取负即 `r tip("GGR")` |
+| `ods_a168_bet02` | `bet16` | 退水金额（原币） | ÷汇率 → `rebate`；`r tip("NGR")` 方向核算件（本档未纳入计算） |
+| `ods_a168_bet02` | `validbet` | 有效投注（`r tip("洗码量")`，原币） | ÷汇率 → `valid_bet`；退水计提基数（本档未纳入计算） |
+| `ods_a168_bet02` | `bet18`–`bet22` | 一至五级代理线 | 测试线剔除须**五级全查**（单级孤儿率 78.17%，五级完全孤儿率仅 1.371%） |
+| `ods_a168_bet02` | `bet38` | 测试标识 | `UPPER(TRIM(...))='N'` 方为真实注单 |
+| `ods_a168_bet02` | `category` | 注单类别 | `'1'`（一般注单）准入 |
+| `ods_a168_bet02` | `dt` | 营业日分区（= `bet07` 账户日期） | 窗口切日唯一合法字段（严禁 `DATE(bet08)` 切日，差异 38.6%） |
+| `ods_a168_bet02` | `eid`／`ip` | 荷官工号／下注 IP | 本报告不涉；`ip` 之唯一合法来源（`game_log.ip` 为网关，禁用） |
+| `ods_a168_agent` | `age001`／`age022` | 代理编号／测试线二值标志（'1'=测试线） | 214 条测试线代理白名单（跨五级），§R01 准入 CTE 共用 |
+| `ods_a168_game_info` | `gi004`／`gi006` | 开局／开牌时间 | 靴长与局时长核验；本报告仅作口径参照 |
+
+### 2. 核心指标：业务含义与商业用途
+
+| 核心指标 | 定义（源数据层） | 业务含义 | 商业用途 |
+|:--|:--|:--|:--|
+| `stake`（本金） | `bet13 ÷ bet11` | 会员实际押注本金 | 全部注额指标与 `r tip("hold%")` 分母；高价值分层排名键 |
+| `valid_bet`（`r tip("洗码量")`） | `validbet ÷ bet11` | 计入流水的有效投注（和局退注等不计） | 退水计提基数；本档未入算，列此以固化口径 |
+| `game_pnl`（游戏输赢） | `(bet14 − bet13) ÷ bet11` | 会员视角单注输赢 | 取负聚合即 `r tip("GGR")`；分段盈亏与 ROI 之根 |
+| `rebate`（退水） | `bet16 ÷ bet11` | 按洗码量返还会员的让利 | `r tip("NGR")` 方向核算件；本档未入算 |
+| `shoe_pos`（靴内相对位置） | `bet04 ÷ max_round`，其中 `max_round = MAX(round_no)` 按 `(shoe_id, table_id)` 分组、算于**清洗后**注单集 | 该注单的局号占其所在靴该桌**最大局号**之比 （**最大局号 ≠ 总局数**，详见下方口径警示） | **本报告唯一判据坐标**；`>= 0.80` 即定义为靴尾段 |
+| `r tip("GGR")` | `-SUM(game_pnl)` | 平台毛利（会员净输即平台净赢） | 集中度分析与命中／对照经济裁定之核心 |
+| `r tip("hold%")` | `GGR ÷ SUM(stake)` | 单位投注的平台留存率 | 经济裁定唯一裁判指标 |
+
+## 二、指标输出（交付件层）
+
+### 1. 关键字段：业务含义与商业用途
+
+**交付件：`R01_late_shoe.csv`（会员粒度，`r ncol_r01` 列，`HAVING COUNT(*)>=100`）**
+
+| 字段 | 业务含义 | 商业用途 |
+|:--|:--|:--|
+| `late_def` | 判据版本锁，恒 `shoe_pos>=0.80` | 版本身份口径锁；载入即断言 |
+| `uid` | 会员号 | 实体主键 |
+| `n_orders_all`／`n_orders_late` | 全部／靴尾段订单数 | 稳定性门槛（`n_orders_late ≥ 30`，实证依据见附录 B）与准入（`n_orders_all ≥ 100`，SQL 侧 `HAVING`）依据 |
+| `late_share` | 靴尾段订单占比 | 本报告主角行为维度；假说检验与阈值扫描主变量 |
+| `shoe_pos_p50` | 会员靴内位置中位数 | 行为时序维度之二 |
+| `stake_late_avg`／`stake_early_avg`／`stake_ramp` | 段均注额与其比值（`r tip("注额斜率")`） | 行为时序维度之三；双重信号交叉验证件 |
+| `roi_late`／`roi_early` | 分段 ROI | 配对检验核心对（`r tip("符号检验")`、`r tip("Wilcoxon符号秩检验")`） |
+| `stake_late`／`game_pnl_late` | 靴尾段注额与盈亏合计 | 段级经济核算 |
+| `stake_all`／`game_pnl_all` | 全段注额与盈亏合计 | `r tip("hold%")`、`r tip("GGR集中度")`、高价值分层之基 |
+
+**首末数行实览**（呈表纪律：实际行号，首段 `1:`–`3:`，分隔行 `---`，末段真实索引）：
+
+```{r}
+#| label: r01-head-tail
+#| echo: true
+.ht_show <- function(dt, k = 3L) {
+  n <- nrow(dt)
+  .f <- function(x) if (is.numeric(x)) format(x, scientific = FALSE, trim = TRUE, digits = 15)
+                    else as.character(x)
+  chr  <- dt[, lapply(.SD, .f)]
+  sepr <- as.data.table(setNames(as.list(rep("---", ncol(chr))), names(chr)))
+  out  <- rbindlist(list(chr[1:k], sepr, chr[(n - k + 1L):n]))
+  out[, 行号 := c(paste0(1:k, ":"), "---",
+                  paste0(format((n - k + 1L):n, big.mark = ",", trim = TRUE), ":"))]
+  setcolorder(out, "行号"); out[]
+}
+.cols0 <- setdiff(names(r01), c("n_orders_early", "is_net_winner", "bucket",
+                                "flag_freq", "flag_ramp"))
+r01_ht <- .ht_show(r01[, .cols0, with = FALSE])
+.omit  <- nrow_r01 - 6L
+knitr::kable(
+  r01_ht, align = "r",
+  caption = sprintf("R01_late_shoe.csv 首末 3 行（总行数 %s，总列数 %d；中间省略 %s 行，占 %.4f%%）",
+                    format(nrow_r01, big.mark = ","), ncol_r01,
+                    format(.omit, big.mark = ","), .omit / nrow_r01 * 100)
+)
+```
+
+### 2. 核心指标：业务含义与商业用途
+
+本报告在交付件字段之上现算的分析级核心指标：
+
+| 核心指标 | 定义（交付件层） | 业务含义 | 商业用途 |
+|:--|:--|:--|:--|
+| 配对差值 `diff` | `roi_late − roi_early`（同会员） | 靴尾相对表现 | 假说主检验统计量（第二部分） |
+| 命中组 `r tip("hold%")` 差 | 分组 `GGR ÷ 注额` 之差 | 被标记群体是否侵蚀庄家优势 | 经济裁定（第三部分）唯一裁判 |
+| `r tip("AUC")` | `auc_manual(维度, is_net_winner)` | 维度对内生标签之排序力 | 特征去留裁定；本档标签为内生，自证倾向已在正文声明 |
+| `r tip("GGR集中度")` | 按 `stake_all` 排名的帕累托累计 | 价值集中结构 | 高价值分层（第四部分）；复核队列排序基础 |
+| 稳定性分桶宽度 | 各 `n_orders_late` 桶之 `p90 − p10` | 小样本 ROI 之离散度 | 样本量门槛之实证依据（附录 B） |
+
+# 第一部分：`R01_late_shoe.csv` 结构与描述统计实测 {#sec-r01}
+
+## 一、交付件身份核验
+
+```{r}
+#| label: r01-identity
+#| echo: true
+knitr::kable(
+  data.table(
+    项 = c("行数（会员数）", "列数（原始交付件）", "口径锁 late_def",
+          "uid 唯一性", "会员合格订单下限"),
+    实测值 = c(
+      format(nrow_r01, big.mark = ","),
+      as.character(ncol_r01),
+      "恒为 \"shoe_pos>=0.80\"（核验通过，见 stopifnot 门闸）",
+      "通过（行数=uid唯一数）",
+      "HAVING COUNT(*) >= 100"
+    )
+  ),
+  align = c("l","l"),
+  caption = "R01_late_shoe.csv 六元组式身份核验（渲染时现算，2026-08-17）"
+)
+```
+
+`R01_late_shoe.csv` 输出列共 15 列：`late_def`（口径锁）、`uid`、`n_orders_all`、`n_orders_late`、
+`late_share`、`shoe_pos_p50`、`stake_late_avg`、`stake_early_avg`、`stake_ramp`、`roi_late`、
+`roi_early`、`stake_late`、`game_pnl_late`、`stake_all`、`game_pnl_all`，与 SQL 原文注释所列
+"预期输出列"逐一对齐，`r tip("OBSERVED")`。
+
+## 二、核心量（渲染时可复算）
+
+```{r}
+#| label: r01-core-table
+#| echo: true
+knitr::kable(
+  data.table(
+    项 = c("会员数", "总合格订单数（全体）", "靴尾订单数（shoe_pos≥0.80）",
+          "靴尾订单占比（全体口径，订单加权）", "late_share = 0 的会员数（无一笔靴尾订单）",
+          "GGR（总计）", "靴尾 GGR", "靴尾 GGR 占全体比"),
+    实测值 = c(
+      format(nrow_r01, big.mark=","),
+      format(sum_orders_all, big.mark=","),
+      format(sum_orders_late, big.mark=","),
+      sprintf("%.2f%%", pct_late_orders),
+      sprintf("%s（%.2f%%）", format(n_late_share_zero, big.mark=","), pct_late_share_zero),
+      sprintf("%s（本报告 hold%% 单位货币）", format(round(ggr_total), big.mark=",")),
+      format(round(ggr_late), big.mark=","),
+      sprintf("%.2f%%", pct_ggr_late)
+    )
+  ),
+  align = c("l","r"),
+  caption = sprintf("R01_late_shoe.csv 核心量（%s 名会员逐行现算，渲染时读取原始CSV，非硬编码，2026-08-17）",
+                     format(nrow_r01, big.mark=","))
+)
+```
+
+::: {.callout-note}
+## 与"零偏好基准"20% 的对照——本报告实测的第一重线索
+
+`shoe_pos≥0.80` 覆盖每靴最后 20% 的局位。若下注行为与靴内位置**完全无关**（零偏好基准），
+`late_share` 理论期望值约为 20%。本报告实测**全体会员 `late_share` 均值为 `r sprintf("%.2f%%", ls_mean*100)`，
+中位数 `r sprintf("%.2f%%", ls_p50*100)`**——与 20% 零偏好基准非常接近，仅温和偏高。
+
+**该发现本身即是一条有意义的负向证据**：若"靴尾算牌"是本会员群体中普遍存在、被大量玩家
+自发采用的策略，`late_share` 分布应明显右偏、显著高于 20%——实测并非如此，绝大多数会员的
+下注节奏在靴内近乎均匀分布。
+:::
+
+## 三、`late_share` 分布实测
+
+```{r}
+#| label: r01-ls-dist
+#| echo: true
+knitr::kable(
+  data.table(
+    分位数 = c("P50","P75","P90","P95","P99"),
+    late_share = sprintf("%.2f%%", c(ls_p50,ls_p75,ls_p90,ls_p95,ls_p99)*100)
+  ),
+  align = c("l","r"),
+  caption = "late_share 全体分位数（渲染时现算）"
+)
+```
+
+::: {.callout-warning}
+## 与 D-06 之 `tail_share` P90（0.4269）表面相近，但两套判据不可互相佐证或替代
+
+D-06 v171 版实测 `tail_share` P90 = 0.4269；本报告 R01 实测 `late_share` P90 = `r sprintf("%.4f", ls_p90)`
+——两个数字**接近但判据完全独立**（详见引言之三套判据辨析表）。此处并列纯为提示读者两套
+交付件的分布形状类似（均呈单峰、中度右偏），**不代表**两者衡量的是同一件事，行文中一律
+分开注明来源交付件，杜绝互引。
+:::
+
+## 四、注额斜率（`r tip("注额斜率")`）实测——靠后下注是否伴随加注
+
+```{r}
+#| label: r01-ramp
+#| echo: true
+knitr::kable(
+  data.table(
+    项 = c("stake_ramp 均值", "stake_ramp 中位数", "stake_ramp > 2 的人数（靴尾均注达靴外2倍以上）"),
+    实测值 = c(
+      sprintf("%.4f", ramp_mean),
+      sprintf("%.4f", ramp_median),
+      sprintf("%s（%.3f%%）", format(n_ramp_gt2, big.mark=","), pct_ramp_gt2)
+    )
+  ),
+  align = c("l","r"),
+  caption = "注额斜率 stake_ramp 实测（渲染时现算）"
+)
+```
+
+`stake_ramp` 中位数 `r sprintf("%.4f", ramp_median)` 极贴近 1——**全体会员层面不存在系统性的
+"靴尾加大注码"行为**；仅 `r sprintf("%.3f%%", pct_ramp_gt2)` 的会员靴尾均注达靴外两倍以上，
+且下一部分实测证实该极端子群体亦不构成经济显著群体。
+
+# 第二部分：靴尾信息优势假说——首次实测 {#sec-r01-hypothesis}
+
+::: {.callout-important}
+## 建档时的原始业务假设（忠实还原 SQL 注释，为审计追溯完整性保留原始表述）
+
+`a168_取数与核验_SQL总包_v3.sql` §R01 原文标题即为"策略性风控：靴内相对靴位 ≥ 0.80
+……的下注占比 + 相对靴位 + 注额斜率 + 分段 ROI"，其潜在业务假设与旧报告
+（`百家乐下注时机风控参数分析报告.md`）一脉相承：**若靴尾下注者能借由观察靴内已开出牌面、
+估算剩余牌堆成分（近似国际公开判例所指之 edge-sorting／算牌情境），其靴尾段 ROI 应系统性
+优于靴外段**。以下各节以此为待检假设，**全部使用真实数据现算**，结论不预设方向。
+:::
+
+## 一、配对检验：`roi_late` 是否系统性优于 `roi_early`
+
+**方法**：仅取该会员**同时**在靴尾段与靴外段均有足够订单量的子集，逐会员计算
+`diff = roi_late - roi_early`，以`r tip("符号检验")`为主检验（对厚尾分布稳健），
+`r tip("Wilcoxon符号秩检验")`为交叉验证。样本量门槛比照本项目已确立的 `n≥30` 惯例
+（见 D-06 系列 `HAVING COUNT(*)>=30` 之 L0 基线臂），另列 `n≥10`／`n≥50` 两档供稳健性对照。
+
+```{r}
+#| label: r01-sign-test
+#| echo: true
+knitr::kable(
+  data.table(
+    双侧样本量门槛 = c(">= 10", ">= 30（主检验，比照本项目 n≥30 惯例）", ">= 50"),
+    符合条件会员数 = format(c(n_paired10, n_paired30, n_paired50), big.mark=","),
+    `roi_late优于占比` = sprintf("%.1f%%", c(pct_pos10, pct_pos30, pct_pos50)),
+    符号检验p值 = sprintf("%.4f", c(sign_p10, sign_p30, sign_p50)),
+    结论 = c(
+      ifelse(sign_p10 < 0.05, "显著（见下方方向提示）", "不显著"),
+      ifelse(sign_p30 < 0.05, "显著", "不显著"),
+      ifelse(sign_p50 < 0.05, "显著", "不显著")
+    )
+  ),
+  align = c("l","r","r","r","l"),
+  caption = "roi_late 与 roi_early 配对符号检验：三档样本量门槛对照（渲染时现算）"
+)
+```
+
+```{r}
+#| label: r01-wilcoxon-detail
+#| echo: true
+knitr::kable(
+  data.table(
+    检验方法 = c("符号检验（主检验）", "Wilcoxon 符号秩检验（交叉验证）", "配对差值均值", "配对差值中位数"),
+    结果 = c(
+      sprintf("p = %.4f（n=%s）", sign_p30, format(n_paired30, big.mark=",")),
+      sprintf("p = %.4f", wilcox_p30),
+      sprintf("%.4f 个百分点", diff_mean30*100),
+      sprintf("%.4f 个百分点", diff_median30*100)
+    )
+  ),
+  align = c("l","r"),
+  caption = sprintf("n≥30 双侧门槛下之完整配对检验结果（n=%s，渲染时现算）", format(n_paired30, big.mark=","))
+)
+```
+
+::: {.callout-caution}
+## 结论：n≥30 主检验下，假说**不成立**——与 D-06 既有结论方向一致，但为独立证据、非同一检验的重复
+
+在与本项目既有 `n≥30` 惯例对齐的样本量门槛下（`r format(n_paired30, big.mark=",")` 名会员），
+`roi_late` 优于 `roi_early` 的会员占比为 **`r sprintf("%.1f%%", pct_pos30)`**，符号检验
+**p = `r sprintf("%.4f", sign_p30)`**，Wilcoxon 符号秩检验 **p = `r sprintf("%.4f", wilcox_p30)`**，
+**均远未达统计显著**——与掷硬币（50%）在统计上不可分辨。
+
+**须明确交代 n≥10 档的方向性提示，不得选择性隐去**：在样本量门槛更宽松的 n≥10 档
+（`r format(n_paired10, big.mark=",")` 名会员），符号检验 p = `r sprintf("%.4f", sign_p10)`
+**已达统计显著**，但方向为 `roi_late` 优于占比仅 `r sprintf("%.1f%%", pct_pos10)`（**低于**50%）
+——即**靴尾段表现略差、而非略优**，与"信息优势"假说所预期的方向**相反**。下一节的样本量
+稳定性实测显示，`n_orders_late<10` 时个体 `roi_late` 估计噪声极大（P10–P90 宽度可达
+`r sprintf("%.0f", bucket_tbl[bucket=="<10", width]*100)` 个百分点），
+该档"显著"更可能是小样本噪声混入系统性偏误（如提前离场者、单次进出者的构成差异）而非真实
+效应，此处如实列出、不作方向性解读，判 `r tip("UNKNOWN")`。
+:::
+
+## 二、稳健性核验：样本量对 `roi_late` 估计稳定性的影响
+
+```{r}
+#| label: r01-bucket-table
+#| echo: true
+knitr::kable(
+  bucket_tbl[, .(
+    `n_orders_late 分桶` = bucket,
+    会员数 = format(count, big.mark=","),
+    均值 = sprintf("%.2f%%", mean*100),
+    标准差 = sprintf("%.2f%%", sd*100),
+    P10 = sprintf("%.2f%%", p10*100),
+    P90 = sprintf("%.2f%%", p90*100),
+    `P10–P90宽度` = sprintf("%.1f个百分点", width*100)
+  )],
+  align = c("l","r","r","r","r","r","r"),
+  caption = "roi_late 估计稳定性随 n_orders_late 收敛实测（渲染时现算，样本越少估计越不稳）"
+)
+```
+
+**该表是本报告确立"分析须设 `n_orders_late≥30` 稳定性门槛"的直接实证依据**：`n_orders_late<10`
+时 P10–P90 宽度达 `r sprintf("%.0f", bucket_tbl[bucket=="<10", width]*100)` 个百分点、
+均值 `r sprintf("%.2f%%", bucket_tbl[bucket=="<10", mean]*100)`（明显偏离全体，为小样本极端值
+主导）；随 `n_orders_late` 增至 `≥300`，宽度收窄至
+`r sprintf("%.1f", bucket_tbl[bucket==">=300", width]*100)` 个百分点、
+均值稳定于 `r sprintf("%.2f%%", bucket_tbl[bucket==">=300", mean]*100)` 附近，趋近全体
+基线。**上一节 n≥10 档出现的"显著"效应发生在此表最不稳定的两个分桶区间，须以此表为背景
+审慎解读，不宜作为独立结论**。
+
+## 三、判别力核验：`AUC`——靴尾维度能否分辨最终盈亏
+
+**方法**：以本报告内生标签 `r tip("净赢玩家")`（`game_pnl_all > 0`，全窗口对平台净赢的会员，
+`r sprintf("%.2f%%", pct_net_winner)`）为参照，用秩相关手算法（等价 Mann-Whitney U，与
+D-06 v171 §六之二 同源同法）逐维度计算 `r tip("AUC")`。**须提醒**：本标签为会员自身结果性
+指标，非风控团队人工标注之 `risk_label`（该外部标签本轮仍未上传，此处不能、也不冒充替代）。
+
+```{r}
+#| label: r01-auc-table
+#| echo: true
+knitr::kable(
+  data.table(
+    维度 = c("late_share（行为性：靴尾下注占比）",
+            "stake_ramp（行为性：靴尾注额斜率）",
+            "shoe_pos_p50（行为性：靴尾中位靴内位置）",
+            "n_orders_all（对照：总活跃度）",
+            "roi_late（结果性，仅供对照，非行为证据）",
+            "roi_early（结果性，仅供对照，非行为证据）"),
+    AUC = sprintf("%.4f", c(auc_late_share, auc_stake_ramp, auc_shoe_pos_p50,
+                             auc_n_orders_all, auc_roi_late, auc_roi_early)),
+    判定 = c(
+      ifelse(abs(auc_late_share-0.5)<0.05, "✗ 随机", "△ 待议"),
+      ifelse(abs(auc_stake_ramp-0.5)<0.05, "✗ 随机", "△ 待议"),
+      ifelse(abs(auc_shoe_pos_p50-0.5)<0.05,"✗ 随机", "△ 待议"),
+      "（活跃度天然与结果相关，仅供背景对照）",
+      "（结果性指标，见下方说明，不可作行为证据）",
+      "（结果性指标，见下方说明，不可作行为证据）"
+    )
+  ),
+  align = c("l","r","l"),
+  caption = "各维度对「净赢玩家」标签的判别力 AUC 实测（渲染时现算）"
+)
+```
+
+::: {.callout-note}
+## 本报告最重要的一张表——与 D-06 独立复现同一模式
+
+三项**行为性**维度（`late_share`／`stake_ramp`／`shoe_pos_p50`）AUC 全部落在
+**`r sprintf("%.3f", min(auc_late_share,auc_stake_ramp,auc_shoe_pos_p50))` ~
+`r sprintf("%.3f", max(auc_late_share,auc_stake_ramp,auc_shoe_pos_p50))`** 区间，与掷硬币
+（0.5）几乎无法分辨——**这是继符号检验之后的第二重独立证据，且是与 D-06「尾段」假说
+（AUC 0.46~0.53）完全独立复现出的同一模式**：不是本报告"抄用"了 D-06 的结论，而是**两套
+互不相通的判据（局内时序 vs 靴内位置）各自独立实测，殊途同归**。
+
+**须特别提醒 `roi_late`／`roi_early` 两栏不可误读**：其 AUC 明显更高（`r sprintf("%.2f",auc_roi_late)`／
+`r sprintf("%.2f",auc_roi_early)`），但这是**结果对结果的重言式相关**（该会员靴尾段/靴外段
+盈亏本就是其全局盈亏的组成部分，二者相关是算术必然，非行为信号）——且 `roi_early`
+的 AUC（`r sprintf("%.4f", auc_roi_early)`）**高于** `roi_late`（`r sprintf("%.4f", auc_roi_late)`），
+证明"靴尾段结果"并无特殊之处，只是任一段结果性 ROI 皆与总体结果性相关，**不可作为
+"靴尾具备信息优势"的证据**，特此以对照形式呈现、防止误用。
+:::
+
+## 四、活跃度与靴尾占比的关系——无实质关联
+
+```{r}
+#| label: r01-spearman
+#| echo: true
+knitr::kable(
+  data.table(
+    项 = c("Spearman ρ（late_share vs n_orders_all）", "p 值"),
+    结果 = c(sprintf("%.4f", rho_ls_norders), sprintf("%.2e", p_ls_norders))
+  ),
+  align = c("l","r"),
+  caption = "靴尾占比与总活跃度之秩相关实测（渲染时现算）"
+)
+```
+
+`r sprintf("%.2e", p_ls_norders)` 因样本量达 `r format(nrow_r01, big.mark=",")` 而技术上
+"统计显著"，但相关系数 `r sprintf("%.4f", rho_ls_norders)` **接近零，无实质关联**——典型的
+"统计显著 ≠ 实质显著"案例，本项目既有铁律要求逐案区分二者，此处照办：**不得**据 p 值
+显著就宣称"活跃度与靴尾行为有关"。
+
+## 五、本部分结论
+
+::: {.callout-note}
+## 三句话
+
+1. **假说检定**：与本项目已确立的 `n≥30` 惯例对齐后，`roi_late` 并不系统性优于 `roi_early`
+   （符号检验 p=`r sprintf("%.4f", sign_p30)`，Wilcoxon p=`r sprintf("%.4f", wilcox_p30)`）——
+   靴尾信息优势假说**在本判据（`shoe_pos≥0.80`）下不成立**。
+2. **判别力**：靴尾行为三维（`late_share`／`stake_ramp`／`shoe_pos_p50`）AUC 均落于
+   0.5 附近，无判别力——与 D-06 判据（局内时序）各自独立复现出同一模式，二者互为**独立**
+   （非重复、非因果）佐证。
+3. **边界**：本结论针对的是**总体游戏盈亏（`game_pnl_all`，含主注与一切已结算注单）**，
+   **不能**推广至对子／龙宝等边注的靴内成分敏感性——该命题需要边注专属 P&L 拆分数据，
+   本交付件不含此粒度，判 `r tip("UNKNOWN")`，详见第六部分局限与商业方案章。
+:::
+# 第三部分：命中组 vs 对照组——经济裁定 {#r01-decision}
+
+::: {.callout-important}
+## 本部分回应 SQL 原注的明确要求
+
+`a168_取数与核验_SQL总包_v3.sql` §R01 原注要求"报告需要「命中组 vs 对照组」的 hold% 对照才能
+做经济裁定"。以下逐一给出，**方法为对每一候选阈值，将全体会员一分为二（命中组 `late_share≥阈值`／
+对照组 `late_share<阈值`），比较两组之本报告 hold%、GGR 占比、盈利玩家占比**——不预设应该
+选中哪一档阈值，先看数据说话。
+:::
+
+## 一、阈值扫描：命中组 hold% 是否低于对照组（即玩家是否占优）
+
+```{r}
+#| label: r01-scan-table
+#| echo: true
+knitr::kable(
+  scan_tbl[, .(
+    `late_share阈值` = sprintf("≥ %.2f%%", 阈值*100),
+    `命中人数` = format(命中人数, big.mark=","),
+    `命中人数占比` = sprintf("%.2f%%", 命中人数占比),
+    `命中组GGR占全体比` = sprintf("%.2f%%", GGR占比),
+    `命中组hold%` = sprintf("%.3f%%", 命中hold),
+    `对照组hold%` = sprintf("%.3f%%", 对照hold),
+    `命中组盈利玩家占比` = sprintf("%.2f%%", 命中盈利占比),
+    `对照组盈利玩家占比` = sprintf("%.2f%%", 对照盈利占比)
+  )],
+  align = c("l","r","r","r","r","r","r","r"),
+  caption = "late_share 阈值扫描：命中组 vs 对照组全指标对照（渲染时现算，9档阈值，2026-08-17）"
+)
+```
+
+::: {.callout-caution}
+## 经济裁定结论：命中组 hold% **未曾**低于对照组——无任何一档阈值支持"玩家占优"
+
+扫描全部 9 档阈值（20%~70%，详细读数见上表），**命中组本报告 hold% 与对照组多数档位处于
+同一量级，且在样本量较充足的中高段阈值（0.30~0.60）总体呈现命中组 hold% 略高于对照组的
+态势**，即公司在这些被行为标记为"靴尾集中"的会员身上，边际优势不降反有轻微上升
+——与"信息优势"假说所预期的方向（命中组应更低 hold%、玩家更占优）**相反**。
+
+`late_share≥0.30`（覆盖 `r sprintf("%.1f%%", scan_tbl[阈值==0.30, 命中人数占比])` 会员，
+即 `r format(scan_tbl[阈值==0.30,命中人数], big.mark=",")` 人）一档具体读数：
+命中组 hold% `r sprintf("%.3f%%", scan_tbl[阈值==0.30,命中hold])`，
+对照组 hold% `r sprintf("%.3f%%", scan_tbl[阈值==0.30,对照hold])`；
+该组仅贡献全体 GGR 的 `r sprintf("%.2f%%", scan_tbl[阈值==0.30,GGR占比])`
+（对比其 `r sprintf("%.1f%%", scan_tbl[阈值==0.30,命中人数占比])` 的会员数占比，**价值占比反低于人数占比**，
+未见"高价值集中"现象）。
+
+**低阈值档（0.20）出现命中组 hold% 反低于对照组的现象须如实交代、不得选择性隐去**：因 0.20
+已低于全体 `late_share` 均值（`r sprintf("%.2f%%", ls_mean*100)`），此档"命中组"实为覆盖多数
+普通会员的宽松切法，不具备"筛出特殊行为"的操作意义，此处波动应判为噪声而非信号，不构成
+对上述结论的反驳。
+:::
+
+## 二、双重信号交叉验证：高频靴尾 × 高注额斜率
+
+**动机**：单一维度（仅占比高，或仅注额斜率高）信号微弱，若"靴尾算牌"真实存在，理应表现为
+**复合信号**——既偏好在靴尾下注，又特意在靴尾放大注码。以下取 `late_share≥30%` 且
+`stake_ramp≥1.5` 的交集验证。
+
+```{r}
+#| label: r01-double-signal
+#| echo: true
+knitr::kable(
+  data.table(
+    分组 = c("双重命中（late_share≥30% 且 stake_ramp≥1.5）", "其余全体会员（对照）"),
+    会员数 = format(c(n_double, nrow_r01-n_double), big.mark=","),
+    占全体比 = sprintf("%.3f%%", c(pct_double, 100-pct_double)),
+    `GGR占全体比` = sprintf("%.3f%%", c(ggr_pct_double, 100-ggr_pct_double)),
+    `本报告hold%` = sprintf("%.3f%%", c(hold_double, hold_rest)),
+    盈利玩家占比 = sprintf("%.2f%%", c(pct_profit_double, pct_profit_rest))
+  ),
+  align = c("l","r","r","r","r","r"),
+  caption = "双重信号（高频靴尾 × 高注额斜率）交叉验证（渲染时现算）"
+)
+```
+
+::: {.callout-warning}
+## 复合信号越极端，公司 hold% 越高——与"更精密的算牌者应更占优"的直觉相反
+
+双重命中组仅 `r format(n_double, big.mark=",")` 人（`r sprintf("%.3f%%", pct_double)`），
+贡献全体 GGR 的 `r sprintf("%.3f%%", ggr_pct_double)`（经济体量可忽略），其本报告
+hold% 达 `r sprintf("%.3f%%", hold_double)`，**是全部切法中最高的一档**，明显高于对照组的
+`r sprintf("%.3f%%", hold_rest)`。该组盈利玩家占比 `r sprintf("%.2f%%", pct_profit_double)`
+确实略高于对照组 `r sprintf("%.2f%%", pct_profit_rest)`，**但这是人数口径而非金额口径**——
+小群体、高方差下少数人赢钱、多数人仍贡献净损失，属于典型的"人数占比与金额占比不同向"现象
+（本项目 D-06 系列附录已就此类现象多次警示，须并读、不可单看人数占比），**不构成"该复合
+行为群体系统性占优"的证据**。
+:::
+
+## 三、极端个案定性核验（`late_share` 前 8 名）
+
+```{r}
+#| label: r01-extreme-cases
+#| echo: true
+extreme_tbl <- r01[order(-late_share)][1:8,
+  .(uid, n_orders_all, n_orders_late,
+    late_share = sprintf("%.2f%%", late_share*100),
+    stake_ramp = sprintf("%.3f", stake_ramp),
+    roi_late = sprintf("%.2f%%", roi_late*100),
+    roi_early = sprintf("%.2f%%", roi_early*100),
+    game_pnl_all = format(round(game_pnl_all), big.mark=","))]
+knitr::kable(extreme_tbl, align = c("r","r","r","r","r","r","r","r"),
+  caption = "late_share 全体最高 8 名会员逐行核验（渲染时现算，脱敏后仅示 uid 与业务指标）")
+```
+
+该 8 名 `late_share` 全体最高的会员中，`game_pnl_all` 呈**正负混杂**——若靴尾行为真具备
+系统性信息优势，理应看到该组一致为正值（净赢家）；实测并非如此，与前述统计检验结论一致。
+
+# 第四部分：GGR 集中度——独立于靴尾假说、可持续复用的经营价值
+
+::: {.callout-important}
+## 本部分性质：与第二、三部分假说检定完全独立的正向发现
+
+不问"靴尾行为是否异常"，改问"`R01_late_shoe.csv` 既有的会员级金额字段（`stake_all`／
+`game_pnl_all`）能否直接支撑经营决策"。此为本报告与 D-06 系列"已验证可用：经营价值集中度"
+一节同性质、但**独立计算、独立数据源**的正向商业结论。
+:::
+
+```{r}
+#| label: r01-pareto-table
+#| echo: true
+knitr::kable(
+  data.table(
+    `按投注额排名` = c("前 1%", "前 5%", "前 10%", "前 20%"),
+    会员数 = format(c(pa1$n, pa5$n, pa10$n, pa20$n), big.mark=","),
+    贡献GGR比例 = sprintf("%.2f%%", c(pa1$ggr_pct, pa5$ggr_pct, pa10$ggr_pct, pa20$ggr_pct))
+  ),
+  align = c("l","r","r"),
+  caption = sprintf("GGR 集中度（帕累托分布，按 stake_all 排名，%s 名会员全量现算，2026-08-17）",
+                     format(nrow_r01, big.mark=","))
+)
+```
+
+::: {.callout-note}
+## 商业含义：价值高度集中于极少数高投注会员，与"靴尾行为"无关
+
+按投注额排名前 1% 的会员（`r format(pa1$n, big.mark=",")` 人）贡献了全体 GGR 的
+**`r sprintf("%.1f%%", pa1$ggr_pct)`**；前 10%（`r format(pa10$n, big.mark=",")` 人）贡献
+**`r sprintf("%.1f%%", pa10$ggr_pct)`**。这是经典博彩业"鲸鱼"集中度模式，**与靴尾下注行为
+是否异常完全正交**——第二、三部分已证实靴尾维度对盈亏几乎无判别力（AUC≈0.5），故此处
+的高价值会员筛选**不应**、也**不能**用靴尾维度代理，须直接用 `stake_all`／`n_orders_all`
+等规模维度筛选，与 D-06 系列既有结论（"携带风险信息的是金额，不是压哨"）方向完全一致，
+构成第三重独立佐证。
+:::
+# 第五部分：十五类风险会员判据——本档不接入，移交标记后档 {#sec-typology}
+
+::: {.callout-important}
+## 本章定位与移交声明（本版处置）
+
+前四部分证明「靴尾」这一条路走不通。风控不因此停摆——**十五类风险会员判据之登记、
+搭配与逐类证据裁定，改由 `a168策略性靴尾下注风控与商业变现实测_R01_标记后.qmd`
+承载**，本档不再复述、亦**不读取任何登记册相关档案**。
+
+**本档之外部读取仅一件**：`数据库/R01_late_shoe.csv`。以下四件**一律不读**——
+`函数/registry_loader.R`、`数据库/registry_risk_typology_v1.1.0.yaml`、
+同名 `.csv`、`数据库/S05_member_month_panel.csv`。故本档渲染**只需一份 CSV 在位**，
+不依赖任何 R 工具件与登记册。
+
+**理由**：其一·**单一承载**——同一内容两处现算易生漂移，登记册章由标记后档独占；
+其二·**依赖最小化**——前四部分之实测与商业方案不应因工具件缺位而无法产出；
+其三·**判级不移**——本档正文凡引登记册或 S05 之数，一律标**引用级**，
+不因写入本档而升为 OBSERVED。
+:::
+
+::: {.callout-caution}
+## 本报告主角之裁定（结论保留，出处移交）
+
+`late_share` 于登记册中属 T-03，门禁判 **FATAL**，理由即本报告第二、三部分逐层
+现算所得：配对 `r tip("符号检验")` p = `r sprintf("%.4f", sign_p30)`、
+`r tip("Wilcoxon符号秩检验")` p = `r sprintf("%.4f", wilcox_p30)`、
+`r tip("AUC")` = `r sprintf("%.4f", auc_late_share)`（`r tip("净赢玩家")` 标签）、
+九档阈值扫描中命中组 `r tip("hold%")` 低于对照组者
+**`r scan_tbl[命中hold < 对照hold, .N]` 档**——**四项皆本档现算，非取自登记册**。
+
+裁定「降格为画像字段，禁作独立触发器」之**正式登记条目与门闸实现**见标记后档；
+本档只留结论与其现算依据。
+:::
+
+::: {.callout-note}
+## 价值轴之复用（本档已有，不依赖登记册）
+
+处置矩阵之价值轴取 `stake_all` 分位，与第四部分 `r tip("GGR集中度")` 同一坐标：
+前 1% 会员贡献全体 GGR 的 **`r sprintf("%.1f%%", pa1$ggr_pct)`**、前 10% 贡献
+**`r sprintf("%.1f%%", pa10$ggr_pct)`**。**同一张分层表，营销侧用于 VIP 经营、
+风控侧用于复核排程——一次建设，两处复用**，此为本报告四部分实测之外最可直接落地者。
+风险轴之构成、阻断项台账、待建特征清单与治理悬案，皆见标记后档。
+:::
+
+
+# 第六部分：宗旨、价值与可落实的商业方案
+
+::: {.callout-important}
+## 本章为对本报告自身的价值审计——沿用 D-06 系列既有体例，独立作答
+
+不问"管道跑得对不对"（前四部分已逐层现算验证），而问：**这份交付件能不能作为风控判据、
+能不能更准地标记风险会员、落实后能不能提升市场份额与盈利、以及在假说不成立的前提下，
+本报告与 `R01_late_shoe.csv` 是否仍有可持续复用的商业价值**。全部以实测作答，
+不成立者如实写不成立，这也是本章"价值"之所在。
+:::
+
+## 一、本报告的宗旨
+
+**建档时的原始宗旨**（据 SQL 注释）：验证"靴尾（`shoe_pos≥0.80`）下注者拥有信息优势"，
+以此评估是否值得投入风控资源建立靴尾侦测规则、优化封盘或路由策略。
+
+**本报告实测后，宗旨相应调整为四项**：
+
+| # | 现行宗旨 | 性质 |
+|:--|:--|:--|
+| 1 | **假说检定留档**：以可复算证据回答"该判据是否值得投入"这一问题——本报告是该问题**首次**被正面回答的文件 | 防止未来重复投入验证同一条已被证明无效的路径 |
+| 2 | **口径基础设施**：会员级 `stake_all`／`game_pnl_all`／`stake_ramp` 归一计算，与假说成立与否无关，是可持续复用的纯经营口径拆解 | 见第三项 |
+| 3 | **经营杠杆载体**：GGR 集中度（第四部分）是独立于假说的正向发现，可直接支撑高价值会员分层 | 见下方"可落实的商业方案" |
+| 4 | **窄化未来研究方向**：本报告的边界（无法拆分边注 P&L）为下一步该做什么给出明确指向，而非泛泛"仍需更多数据" | 见"局限"与"未来可优化" |
+
+## 二、误判率与经济价值：能否作为风控判据——**实测不能**
+
+`R01_late_shoe.csv` 本身不含外部风控人工标注（`risk_label`），本报告改用**双重独立证据**
+回答"能否作为判据"这一问题（详见第二、三部分）：
+
+1. **假说检定**（第二部分）：n≥30 主检验下符号检验 p=`r sprintf("%.4f", sign_p30)`，
+   Wilcoxon p=`r sprintf("%.4f", wilcox_p30)`，不显著；三项行为维度 AUC 均落于 0.5 附近，
+   对"净赢玩家"内生标签无判别力。
+2. **经济裁定**（第三部分）：9 档阈值扫描中，命中组本报告 hold% 从未低于对照组；双重信号
+   （高频×高注额斜率）极端组的 hold% 反而是全部切法中最高的一档。
+
+::: {.callout-caution}
+## 结论：以靴尾维度筛人，无证据支持其能提升风控精确率，反有部分证据指向相反方向
+
+与 D-06 系列"以 `tail_share` 筛人精确率全部低于基准率"的既有结论**方向一致**，但本报告
+的证据链完全独立（无外部 `risk_label` 时改用假说检定 + 经济裁定双轨，而非精确率/召回率），
+两套判据各自补强了"靠后下注 ≠ 风险信号"这一更大范围结论的稳健性。
+:::
+
+## 三、能否更精准辨别与标记风险会员
+
+**用靴尾维度（`late_share`／`stake_ramp`／`shoe_pos_p50`）：不能**（见上）。
+
+**用本表已有的金额维度（`stake_all`／`n_orders_all`）：能，但须讲清两件事**：
+
+1. 第四部分 GGR 集中度证实金额维度高度集中（前 1% 会员贡献 `r sprintf("%.1f%%", pa1$ggr_pct)`
+   GGR），可直接支撑高价值会员分层，**但"高价值"不等于"高风险"**——集中度是资源配置依据，
+   不是风控依据，二者须分开使用，不得混为一谈（此提醒与 D-06 系列既有告诫同源）。
+2. 本报告未接入外部 `risk_label`，对"能否更精准标记**风险**会员"这一问句，严格意义上仍
+   判 `r tip("UNKNOWN")`——本报告能确证的是"用哪些维度**不能**分辨"（靴尾三维），而非
+   "用哪些维度**能**分辨风险"（金额维度目前只证实与净赢与否相关，非与合规风险相关，
+   两者须待 `risk_label` 到位后另行验证，不可提前下定论）。
+
+## 四、可落实的商业方案
+
+::: {.callout-note}
+## 方案来源须如实标注（沿用 D-06 系列既有纪律）
+
+以下方案分三类：**甲类**（本报告直接实测支撑，`r tip("OBSERVED")`／`r tip("INFERRED")`）；
+**乙类**（参照《顶级量化风控与百家乐（Baccarat）商业变现实战指南》，该文件性质为**行业方法论
+参考，非 a168 本项目实测结果**，具体数字须另行取数验证方可写入正式结论，本报告仅引用其
+分析框架与措施方向，并逐项标注审计等级）；**丙类**（本报告新提出、尚待取数验证的具体方向）。
+:::
+
+### 方案一（甲类）：终止 `R01` 靴尾专项风控规则投入，转为存档参考
+
+**依据**：第二、三部分双重独立证据均不支持"靴尾行为具备信息优势"。任何计划中的"靴尾下注
+触发限红／延迟确认／人工复核"规则若基于本判据，**不建议上线**——上线只会误伤正常下注节奏
+本就偏后的普通玩家（例如中途入座、习惯先观察路纸再下注者），增加客诉与审核人力消耗，
+而抓不到真正的风险会员（第三部分经济裁定已证实命中组不比对照组更"划算"）。
+
+**价值所在**：证伪一条假规则的价值，正在于避免了上述这笔"误伤成本 + 审核成本"的隐性损失，
+且本报告用**真实数据**完成了此前从未被验证过的这一步（changelog 明确记载此前"未开始"），
+补齐了 D-06 系列证伪范围之外的一块空白。
+
+### 方案二（甲类）：复用同一交付件的金额字段，直接落地高价值会员分层
+
+`R01_late_shoe.csv` 已含 `stake_all`／`game_pnl_all`／`n_orders_all` 三列会员级金额与活跃度
+汇总，**无需额外取数**即可支撑：
+
+| 分层 | 定位 | 建议动作 |
+|:--|:--|:--|
+| 按投注额前 1%（`r format(pa1$n, big.mark=",")` 人） | 核心高价值圈，贡献 `r sprintf("%.1f%%", pa1$ggr_pct)` GGR | KYC/AML 深度尽调优先覆盖；VIP 专属服务路由；异常波动个案纳入`r tip("影子模式")`观察，不立即处置 |
+| 按投注额前 5%~10% | 次核心圈 | 常规化服务分级，定期复核是否晋升至前 1% 圈 |
+| 其余约 80%~99% 会员 | 长尾 | 纳入留存与新客体验分析框架，而非风控分析框架 |
+
+**边界提醒**：此分层依据是"投注规模"，**不是**"靴尾行为"——第二部分已证实二者近乎不相关
+（Spearman ρ=`r sprintf("%.4f", rho_ls_norders)`），执行时须避免把两套维度混用于同一张名单。
+
+### 方案三（甲类＋丙类）：将靴尾三维降格为多源融合中的"弱正交特征"，而非独立触发器
+
+D-06 v171 版已实测证实 `C06_hedge_pairs.csv`（对打对信号）与既有金额维度"正交"（结构独立，
+AUC 0.14~0.49），本报告新增的靴尾三维（`late_share`／`stake_ramp`／`shoe_pos_p50`，AUC 均
+落于 0.5 附近）虽**判别力更弱**（近乎零，弱于 C06 的正交信号），但仍可作为**极低权重**的
+辅助特征并入未来的多信号复合评分模型——**前提是**：
+
+- 权重须远低于金额维度与已证实正交的 C06 信号，避免"合成谬误"（多个弱信号简单相加会
+  重新制造出一个看似有效实则仍是噪声的复合分数，须经交叉验证方可采用，本报告不代为背书）；
+- 不得作为**独立**触发条件，只能作为已有强信号命中后的**辅助画像字段**（如"该会员靴尾占比
+  是否偏高"可作为人工复核时的背景信息，不作为触发依据本身）。
+
+**丙类待办**：本报告未做复合评分的联合建模（超出 `R01_late_shoe.csv` 单表现有信息），列为
+下一步待验证方向，判 `r tip("UNKNOWN")`。
+
+### 方案四（丙类，直接回应指南 [R-1] 之靴尾算牌一节）：边注专属 P&L 拆分——唯一具体的后续取数建议
+
+::: {.callout-warning}
+## 与《顶级量化风控与百家乐商业变现实战指南》的关系须明确切割，不可混淆
+
+该指南"靴尾 `shoe_pos≥0.80` 算牌"一节所指，字面上与本报告判据相邻却**非同一命题**：
+本报告证伪的是"靴尾下注对**总体游戏盈亏（含主注）**有信息优势"；该指南所指更贴近
+"靴尾牌堆成分变化对**对子／龙宝等边注**期望值的敏感性"，后者是国际公开判例
+（*Ivey v Genting Casinos*，英国最高法院 2017；Borgata v. Ivey，美国新泽西州）实证存在的
+独立现象，属边注定价机制的数学性质，与本报告"总体盈亏有无信息优势"是**不同命题、不同粒度**
+——本报告的空结论**不能**反证边注敏感性不存在，二者须并存、不可互相代入。
+:::
+
+**具体建议**：若公司提供对子（Pair）、龙宝（Dragon Bonus）等边注，且系统能拆分记录逐笔
+边注的独立 P&L（区别于本报告 `game_pnl_all` 之主注+边注混合口径），**新增一份专属边注版
+`R01b_late_shoe_sidebet.csv`**，判据沿用本报告已验证的 `shoe_pos≥0.80` 相对靴位口径，
+仅将 P&L 分子换成边注专属结算金额，即可直接检验该指南所指的具体命题。**在此数据到位前，
+"靴尾对边注 EV 有无系统性影响"判 `r tip("UNKNOWN")`，不得援引本报告的空结论代为回答**。
+
+### 方案五（乙类，附三档审计）：指南其余措施方向——外部有据可查者可纳入通用风控设施候选池
+
+| 措施 | 审计等级 | 说明 |
+|:--|:--:|:--|
+| 连续洗牌机（CSM）用于高风险桌台 | ✅ 外部有据可查 | 防算牌／防切牌追踪之工业标准设备，多国专利与厂商技术资料公开可查，与本报告"靴尾主注无信息优势"结论**不矛盾**（CSM 本质防御的是牌堆构成利用，无论主注是否已实测受影响，作为纵深防御仍合理） |
+| 行为生物识别（下注轨迹/触屏加速度）反机器人 | ✅ 外部有据可查 | 侦测对象是"是否为脚本自动下注"，与本报告"人类玩家靴尾行为有无经济优势"是不同问题，二者互补而非替代 |
+| 跨账户下注时间戳协方差侦测对敲 | ✅ 外部有据可查，且本项目已有对应正交信号 `C06_hedge_pairs.csv` | 与本报告发现方向一致：真正有判别力的是"对敲"这类跨账户关联行为，不是单账户"靠后下注" |
+| `r tip("影子模式")`：任何新触发规则先静默观察 14 天 | ✅ 方法论合理 | 若公司仍决定对靴尾维度做低权重监测（方案三），上线前必须走影子模式，防止本报告尚未察觉的极端个案被误伤 |
+| 动态微调边注赔率/限额以针对性抵消特定账户正 EV | 🚩 合规风险须提示 | 在多数受监管司法辖区可能构成对特定玩家的非公平差别待遇，须先经法务与合规复核，本报告**不代其背书**，且与本报告结论（主注无信息优势）无关，不构成本报告方案的一部分 |
+
+## 五、落实后能否提升市场份额与盈利
+
+::: {.callout-warning}
+## 须分三层，不可混为一谈（沿用 D-06 系列既有分析框架）
+
+**第一层 · `R01` 阈值本身的调整：提升 = 0**
+
+`late_share` 阈值是分析过滤器，不是业务动作，改变阈值不改变任何会员的下注行为，公司实际
+`r tip("GGR")` 变化为零。
+
+**第二层 · 若上线靴尾专项规则（方案一所反对者）：提升 = 0，且有负价值**
+
+第三部分已证实命中组不比对照组更"划算"，上线只会误伤正常客户、增加客诉与审核人力，
+**证伪的价值正在于避免这笔损失**。
+
+**第三层 · 高价值会员分层（方案二）：有规模、方向合理，但提升幅度未经因果验证**
+
+第四部分已量化"问题的规模"（前 1% 会员贡献 `r sprintf("%.1f%%", pa1$ggr_pct)` GGR），
+但"分层运营能带来多少增量留存/GGR"**尚未验证因果**——须走 `r tip("PSM")` + `r tip("DID")`
+或 A/B Test 方可言"提升多少"，本报告只负责确立"该往哪个方向投入资源"这一步。
+:::
+
+## 六、局限（须随结论一并披露）
+
+1. **无边注拆分**：`game_pnl_all` 为主注+边注混合口径（若边注存在），无法单独检验国际判例
+   所指的"边注 EV 敏感性"命题，见方案四。
+2. **无外部风险标签**：一切"能否标记风险会员"的判断均基于本报告内生的"净赢玩家"标签，
+   非风控团队人工标注的 `risk_label`，二者性质不同，不可等同视之。
+3. **无因果识别**：全部组间差异属描述性比较；`late_share` 高低本身可能与会员个人下注习惯
+   （如是否偏好中途观察牌路再下注）系统性相关，构成 `r tip("自选择")`，不构成处置效应。
+4. **`stake` 与洗码量（`validbet`）口径未核**：本报告 `stake_all`／`stake_late` 源自
+   `bet13`（下注额）经汇率归一，与代理返点结算所用之 `validbet`（有效投注）是否等价，本项目
+   既有文档已记载"双定义未结（F-02，S1）"，本报告沿用该未决状态，`r tip("洗码量")`口径判 `r tip("UNKNOWN")`。
+5. **窗口局限**：139 天窗口的截面实测，未观察季节性或长期趋势；若公司牌局规则、洗牌机制
+   有变动，本报告结论的适用期须相应重估。
+
+## 七、未来可优化与升级（按性价比排序）
+
+| 优先 | 事项 | 理由 |
+|:--:|:--|:--|
+| **高** | 边注专属 P&L 拆分（方案四） | 唯一能直接检验指南 [R-1] 具体命题的路径，零假设成本，直接决定"是否值得建边注专属规则" |
+| **高** | 结 `validbet` 口径（沿用本项目既有 V-03 待办） | S1 未结则一切金额类结论全部悬空，非本报告独有问题，但影响本报告"经济裁定"的严谨度 |
+| 中 | 接入 `risk_label`（`S05_member_month_panel.csv`；**本档不读取，属后续管线**） | 使"能否标记风险会员"从内生代理标签升级为真实精确率/召回率实测 |
+| 中 | 多源证据融合联合建模（方案三丙类） | 需与 C06、金额维度联合训练并交叉验证，非本报告单表现有信息可完成 |
+| **低** | 靴尾阈值调优（0.30 之外的更多切法） | **建议停止投入**——第三部分已扫描 9 档，无一档支持玩家占优，边际信息量低 |
+
+## 八、结论
+
+::: {.callout-note}
+## 四句话
+
+1. **假说检定**：`shoe_pos≥0.80` 靴尾判据下，`roi_late` 不系统性优于 `roi_early`
+   （n≥30 主检验：符号检验 p=`r sprintf("%.4f", sign_p30)`，Wilcoxon p=`r sprintf("%.4f", wilcox_p30)`），
+   三项行为维度 AUC 均落于 0.5 附近——**本报告首次实测，独立复现 D-06 系列已确立的"靠后
+   下注无判别力"这一更大范围结论，二者判据不同、互为独立佐证，非重复计算**。
+2. **经济裁定**：9 档阈值扫描中命中组 hold% 从未低于对照组；双重信号极端组 hold% 反而
+   最高——**无任何切法支持"靴尾行为者对公司占优"**。
+3. **商业价值**：不在于提供了一条能抓风险的规则，而在于（a）用可复算证据关闭了这条
+   投入路径，避免误伤真客户的隐性损失；（b）复用同一交付件的金额字段，为高价值会员
+   分层提供了零额外取数成本的现成底表；（c）为国际判例所指的"边注敏感性"命题指明了
+   唯一需要新取数才能回答的具体方向（方案四），不再泛泛留白。
+4. **边界**：一切结论限定于本报告实测窗口（2026-03-21～2026-08-07）与本报告口径
+   （`shoe_pos≥0.80`、`game_pnl_all` 总体口径），不外推至边注专属命题、不外推至未来
+   规则变动后的牌局，亦不与 D-06／X-01 两套独立判据互相代入。
+:::
+# 附录 A：`§R01` 完整源代码（据 `a168_取数与核验_SQL总包_v3.sql` 逐字核实，`r tip("OBSERVED")`）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+/* ───────────────────────────────────────────────────────────────────────────
+   §R01 · R01_late_shoe.csv
+   策略性风控：靴内相对靴位 ≥ 0.80（≈ 靴末 20% 之局位，等价外部报告「第 40 局」）的下注占比
+              + 相对靴位 + 注额斜率 + 分段 ROI
+   ★★ 2026-08-12 B-01 斧正：判据由绝对局号 round_no>=50 改为相对靴位 shoe_pos>=0.80 ★★
+     依据：外部实测靴长分布（均值 49.86 局、P50=50、P75=52、P90=54、P99=58）。
+     第 50 把的相对靴位为 100.3%（以均值计），故 round_no>=50 实为「靴的最后一局
+     及长于中位数的那半数靴」——约半数牌靴无末段可言，late_share 被系统性压低。
+     新判据固定的是**局位区间**（每靴末 20% 的局），不是下注占比；late_share 仍由
+     实际下注行为决定，均匀下注之零偏好基准下期望约 20%，实际可为 0%~100%。
+   ★ 新增 late_def 口径锁列：旧版 CSV 因缺此列而在报告侧读入时当场报错，
+     使「新文字配旧数字」的静默语义漂移变成显式失败。
+   对应报告：@sec-r01
+   输出列：late_def(口径锁), uid, n_orders_all, n_orders_late, late_share, shoe_pos_p50,
+           stake_late_avg, stake_early_avg, stake_ramp, roi_late, roi_early,
+           stake_late, game_pnl_late, stake_all, game_pnl_all
+   预期行数：数千 ~ 数万（HAVING 已收敛）
+   ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/R01_late_shoe.csv」（§R01 靴末段下注）。
+WITH test_agents AS (
+  SELECT age001 AS agent_id
+  FROM ods_mariadb_2b.ods_a168_agent
+  WHERE age022 = '1'                                  -- 铁律④b：公司测试线
+),
+ranked AS (                                            -- 需求 §3.2：同单号保留最新版本
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,
+         b.bet03, b.bet04, b.bet05, b.bet11, b.bet13,
+         b.bet14, b.bet18, b.bet19, b.bet20, b.bet21,
+         b.bet22, b.bet38, b.bet39, b.category,
+         ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+),
+base AS (
+  SELECT r.bet01 AS bet_id, r.bet05 AS member_id,
+         r.bet03 AS shoe_id, r.bet39 AS table_id,
+         CAST(NULLIF(TRIM(r.bet04),'') AS INT)           AS round_no,
+         CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS fx,
+         CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)) AS stake_raw,
+         CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4)) AS payout_raw
+  FROM ranked r
+  /* StarRocks 不支持 EXISTS + 多列 IN，测试线剔除改五路 LEFT JOIN */
+  LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18
+  LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19
+  LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20
+  LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21
+  LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22
+  WHERE r.rn = 1
+    AND r.category = '1'
+    AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0
+    AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL
+),
+shoe_len AS (          -- 缺陷一修正：靴长不定，固定 50 不是固定位置
+  SELECT shoe_id, table_id, MAX(round_no) AS max_round
+  FROM base GROUP BY shoe_id, table_id
+),
+enriched AS (
+  SELECT b.member_id, b.shoe_id, b.table_id, b.round_no, s.max_round,
+         b.round_no * 1.0 / NULLIF(s.max_round,0)     AS shoe_pos,
+         b.stake_raw / b.fx                           AS stake,
+         (b.payout_raw - b.stake_raw) / b.fx          AS game_pnl,
+         CASE WHEN b.round_no * 1.0 / NULLIF(s.max_round,0) >= 0.80
+              THEN 1 ELSE 0 END                        AS is_late   -- B-01 斧正：相对靴位
+  FROM base b
+  JOIN shoe_len s ON s.shoe_id = b.shoe_id AND s.table_id = b.table_id
+)
+SELECT
+  member_id                                                     AS uid,
+  COUNT(*)                                                      AS n_orders_all,
+  SUM(is_late)                                                  AS n_orders_late,
+  'shoe_pos>=0.80'                                              AS late_def,        -- 口径锁：definition_version = v2
+  SUM(is_late) * 1.0 / COUNT(*)                                 AS late_share,
+  PERCENTILE_APPROX(CASE WHEN is_late=1 THEN shoe_pos END, 0.5) AS shoe_pos_p50,
+  SUM(CASE WHEN is_late=1 THEN stake END) / NULLIF(SUM(is_late),0)              AS stake_late_avg,
+  SUM(CASE WHEN is_late=0 THEN stake END) / NULLIF(COUNT(*)-SUM(is_late),0)     AS stake_early_avg,
+  (SUM(CASE WHEN is_late=1 THEN stake END) / NULLIF(SUM(is_late),0))
+    / NULLIF(SUM(CASE WHEN is_late=0 THEN stake END)
+             / NULLIF(COUNT(*)-SUM(is_late),0), 0)                              AS stake_ramp,
+  SUM(CASE WHEN is_late=1 THEN game_pnl END)
+    / NULLIF(SUM(CASE WHEN is_late=1 THEN stake END),0)                         AS roi_late,
+  SUM(CASE WHEN is_late=0 THEN game_pnl END)
+    / NULLIF(SUM(CASE WHEN is_late=0 THEN stake END),0)                         AS roi_early,
+  SUM(CASE WHEN is_late=1 THEN stake END)                                       AS stake_late,
+  SUM(CASE WHEN is_late=1 THEN game_pnl END)                                    AS game_pnl_late,
+  SUM(stake)                                                                    AS stake_all,
+  SUM(game_pnl)                                                                 AS game_pnl_all
+FROM enriched
+GROUP BY member_id
+HAVING COUNT(*) >= 100                                    -- 需求：订单数据 > 100 笔
+ORDER BY late_share DESC, n_orders_late DESC;
+/* ⚠️ 注意：此处**故意不加** late_share >= 0.70 的 HAVING。
+   报告需要「命中组 vs 对照组」的 hold% 对照才能做经济裁定（@sec-r01 的 r01-decision），
+   只导命中组就没有对照组。阈值筛选一律放在 R 侧做，SQL 只负责给全量底料。
+   若行数过大，改为 HAVING COUNT(*) >= 300 提高活跃度门槛，而不是加 late_share 条件。 */
+```
+
+# 附录 B：`n_orders_late≥30` 稳定性门槛之实证依据补充
+
+## B.1 为什么用 `≥30` 而非重新推导 Wilson CI
+
+D-06 系列（`a168会员活跃度分层` 两档）之 `HAVING COUNT(*)>=30`／`>=171` 阈值，是针对**二项式
+比例**（如胜率）用 Wilson 置信区间宽度反推所得。`roi_late` 是**连续型**汇总量（非胜率类比例），
+Wilson CI 公式不直接适用；本报告改用**经验分桶实证**（正文第二部分表）直接展示不同
+`n_orders_late` 分桶下 `roi_late` 的 P10–P90 宽度收敛过程，属更贴合本变量性质的稳健性论证
+方式，与 D-06 系列 Wilson CI 方法论**同一纪律（样本量须有据可依），不同工具（连续量 vs 比例量）**。
+
+`≥30` 门槛的选取沿用本项目已确立的惯例值（D-06 L0 基线臂同一数值），而非另行独立推导——
+好处是与既有文档体系口径一致，便于跨报告横向对照；代价是未针对 `roi_late` 的实际方差结构
+做最优门槛推导，此为已知简化，特此声明，判 `r tip("INFERRED")`（沿用惯例值，非本表独立最优解）。
+
+```r
+# 若需针对 roi_late 独立推导最优稳定性门槛，可用 bootstrap 法直接在本表数据上实测：
+# （示意代码，非本报告已执行内容）
+boot_width <- function(n_target, B = 500) {
+  sub <- r01[n_orders_late >= n_target & !is.na(roi_late)]
+  qs <- replicate(B, {
+    s <- sample(sub$roi_late, size = min(200, nrow(sub)), replace = TRUE)
+    diff(quantile(s, c(.1, .9)))
+  })
+  mean(qs)
+}
+```
+
+# 参考文献 {#sec-refs}
+
+::: {.callout-note}
+## [R-1] 《顶级量化风控与百家乐（Baccarat）商业变现实战指南》——已纳入核心参考，附本报告专属审计结论
+
+**性质裁定**：行业方法论参考文档，**非 a168 本项目实测结果**；凡引用其具体数字须另行取数
+方可写入正式商业结论，本报告仅引用其**分析框架与措施方向**。完整审计已见于第六部分
+"可落实的商业方案·方案四／方案五"，此处仅汇总三档判定，不重复展开：
+
+- ✅ **外部有据可查**：连续洗牌机（CSM）、行为生物识别反机器人、跨账户时间戳协方差侦测
+  对敲（与本项目 `C06_hedge_pairs.csv` 方向一致）、`r tip("影子模式")` ——四项均有真实判例
+  或已发表技术文献支撑，与本报告"靴尾主注无信息优势"结论不矛盾，可作纵深防御措施候选。
+- ⚠️ **须与本报告自身证据协调，不可混淆**：该文件"靴尾 `shoe_pos≥0.80` 算牌"一节，字面上
+  与本报告已实测的"靴尾主注信息优势假说"相邻却**非同一命题**——本报告证伪的是"靴尾下注对
+  **总体游戏盈亏**有信息优势"；该指南所指更贴近"靴尾牌堆成分变化对**边注**期望值的敏感性"
+  （国际判例实证存在的独立现象），二者判据粒度不同、不可互相代称、更不可用该指南反证
+  本报告结论无效，亦不可用本报告反证该指南所述现象不存在。两份文件并存，各自成立。
+- 🚩 **合规风险须提示**：该文件"动态微调边注赔率/限额以针对性抵消特定账户正 EV"一节，
+  在多数受监管司法辖区可能构成对特定玩家的非公平差别待遇，须先经法务与合规复核，
+  本报告不代其背书，且与本报告结论无关联，不构成本报告方案的一部分。
+:::
+
+外部权威标准与学术文献清单（[E-1]~[E-10]，涵盖认证标准、反洗钱、诚信监控联盟、极端类别
+不平衡统计方法、真实判例、防作弊设备）**同见 `a168会员活跃度分层_高精度候选档_171局起.qmd`
+版 §参考文献**——两份文件血统一致（同属三份权威主件旗下的专项子文档），为免重复维护多份
+可能失步的清单，正式清单以该版为准，本档仅作索引指向：
+
+| 编号 | 一句话定位 |
+|:--:|:--|
+| [E-1] | GLI（Gaming Laboratories International）——全球最广泛采用的博彩系统认证机构 |
+| [E-2] | 英国博彩委员会 RTS 技术标准（RTS 11 限制对打与作弊，与本报告"对打对"讨论直接对口） |
+| [E-3] | 极端类别不平衡欺诈侦测学术文献——PR-AUC 优于 ROC-AUC 之方法论依据 |
+| [E-5] | FATF 博彩业风险为本反洗钱指引 |
+| [E-6] | IBIA（International Betting Integrity Association） |
+| [E-9] | *Ivey v Genting Casinos*（英国最高法院，2017）／Borgata v. Ivey——百家乐 edge-sorting 真实判例，本报告"方案四"之直接现实参照 |
+| [E-10] | 连续洗牌机（CSM）技术文献与专利 |
+
+# 变更日志 {#sec-changelog}
+
+**R01-标记前-1.0.4（2026-08-18 工单闭环与审计增补）**
+
+- 工单 W-01 闭环：SQL 总包注释已斧正、`标记后` 已同步至 v1.2.1、D-06 两档经查无涉。
+- 新增审计增补 A-01：`shoe_len` 上下文四项差异登记（含 §B01-D 窗口截断之真实不一致）。
+
+**R01-标记前-1.0.3（2026-08-18 口径斧正：MAX ≠ COUNT）**
+
+- **§数据口径·核心指标表**：`shoe_pos` 之分母由「该靴总局数」斧正为
+  「`max_round = MAX(round_no)`，按 `(shoe_id, table_id)` 分组、算于清洗后注单集」，
+  并注明**最大局号 ≠ 总局数**。原表述系把极值误作计数，属 S2 实质性口径错误。
+- **§数据口径·关键字段表**：补回稳定性门槛数值（`n_orders_late ≥ 30`，指向附录 B 实证依据），
+  并统一为全角 `≥`；此前该格漏抄该数值，与本档正文、附录 B 及姊妹档 `标记后` 不一致。
+- **§管道自述**：`shoe_len` 之说明由「为该靴实际长度」改为「为 `max_round`」，
+  并注明该 CTE 名系 SQL 总包沿用之历史命名，其所算实为最大局号。
+- **GLOSS「靴内相对位置」**：补入 `max_round` 之完整函数语义与「≠ COUNT」之明示。
+- **新增 @sec-shoe-pos-caveat 口径警示框**：四层交代——函数语义、为何选 `MAX` 是对的、
+  一处此前未披露的偏置（`max_round` 算于清洗后注单集，致 `shoe_pos` 系统性放大）
+  及其对本报告结论的影响评估（同向，不构成威胁）、以及全项目同类缺陷普查结论。
+
+**工单 W-01（2026-08-18 已闭环 ✅）**
+
+`a168_取数与核验_SQL总包_v3.sql` 已完成注释斧正：三处 `shoe_len` 定义行统一加挂命名警示
+横幅（言明所算为 `MAX(round_no)` 最大局号、非 `COUNT` 局数、且选 `MAX` 系对中间缺口免疫之
+刻意设计），靴号取列注释与 `ordx` 注释一并改正，头部另立修订记录。
+**剥离注释后代码逐字未动**（已核验：222,146 字符完全相同，行数 8,003 → 8,010 皆为注释增行）。
+`R01_标记后` 档同步至 v1.2.1。两份 D-06 姊妹档经查**实无相关表述**（其口径为 `pr_in_round`，
+与 `shoe_len` 无涉），故未作无谓改动。原工单清单存录如下：
+
+同类缺陷普查（2026-08-18 全包逐行扫描）结果如下，**代码均正确，错在命名与注释**：
+
+| 文件 | 位置 | 现文 | 应为 |
+|:--|:--|:--|:--|
+| `SQL总包v3` | L3125 | CTE 名 `shoe_len`（靴长） | 所算为 `MAX(round_no)`，宜更名 `shoe_maxround` 或注明 |
+| `SQL总包v3` | L4271、L4363 | `供 shoe_len 求靴长` | 求最大局号 |
+| `SQL总包v3` | L4292、L4384 | `shoe_len AS (…靴长不定…)` | 同上（概念无误，命名误导） |
+| `SQL总包v3` | L4296、L4388 | `把该靴长度带回逐注单行` | 把该靴最大局号带回 |
+| `R01_标记后` | L694 | `取 MAX(round_no) 为该靴实际长度` | 为最大局号 |
+| `R01_标记后` | L61 | GLOSS 未明示 ≠ COUNT | 比照本档 v1.0.3 |
+| 两份 D-06 档 | GLOSS 同段 | 同上 | 同上 |
+
+另附：`SQL总包v3` L1314／L2408／L2779 三处「MAX 与计数语义同现」经逐处判读，
+系 `MAX` 用作组内常量取值（`n_orders_all` 于 `GROUP BY bet_ip, member_id` 内恒定），
+语义成立，**非本类缺陷，不列入工单**。
+
+**审计增补 A-01（2026-08-18 全包深查，四项上下文差异，仅登记不斧正）**
+
+`shoe_len` **代码口径三处完全一致**（皆 `MAX(round_no)` / `GROUP BY shoe_id, table_id`），
+无 MAX 与 COUNT 混用之情形。但其**上下文**存在四项差异，影响 `shoe_pos` 之跨章可比性：
+
+| 编号 | 差异 | 实测 | 影响评估 |
+|:--|:--|:--|:--|
+| A-01a | 上游集合不同 | §R01 取自 `base`（含 `bet04>0` 过滤）；§B01／§B01-D 取自 `ord`（**无**该过滤） | 对 `max_round` 实际无影响（非正局号不会成为最大值），但 §B01 侧可能出现 `round_no<=0` 之局，其 `shoe_pos<=0` |
+| A-01b | 计算粒度不同 | §R01 在注单级算 `round_no/max_round`；§B01 在 `rk`（会员×日×局键）级算 `MAX(round_no)/NULLIF(MAX(max_round),0)` | **实质等价**（`round_key` 已含 `bet04`，组内 `round_no` 恒定），仅表达不同 |
+| A-01c | **窗口不同** | §R01／§B01 为 `2026-03-21 ~ 2026-08-07`（139 天）；**§B01-D 为 `2026-08-04 ~ 2026-08-07`（3 日增量）** | ⚠ **真实不一致**：跨窗牌靴之 `max_round` 在 §B01-D 侧被窗口截断，分母偏小，`shoe_pos` 被系统性放大。日增量档与全量档之靴位坐标**不可直接比较** |
+| A-01d | 分组键无日期 | 分组键为 `(shoe_id, table_id)`，不含 `dt` | 实证（**引用级**：S05 面板 63,662 个靴号样本，本档不读取该档）：跨桌者 **0 个（0.0000%）**、跨月者 **7 个（0.0110%）**。故跨日合并**存在但极罕见**，不构成系统性威胁；惟 `shoe_id` 取值跨越 1,211 ~ 114,735,806 五个数量级，疑存多套编号体系，另立 `r tip("UNKNOWN")` 待查 |
+
+
+**R01-标记前-1.0.2（2026-08-18 勘误同步）**
+
+- **交付件总数改为渲染时现算**：第五部分新增勘误存证框，经
+  `registry_count_deliverables()` 自 SQL 总包实算——实际交付件 74 个
+  （声明行 75 行、含占位符 1 个）。总包自述之「69」系纯 ASCII 正则扫描
+  静默漏计 6 个中文命名交付件（`P0C02`–`P0C09` 族）＋未剔占位符所致，
+  两处误差部分相抵。此数自此不再写死于任何 qmd。
+- 载入器升至 1.2.0，补齐四函数：`registry_typology()`（单类完整配方）、
+  `registry_combo()`（跨类搭配）、`registry_which()`（列反查类型）、
+  `registry_count_deliverables()`（交付件数现算，Unicode 安全）。
+
+**R01-标记前-1.0.1（2026-08-18）**
+
+- **新设「数据口径」章**（@sec-data-caliber）：按「源数据 → 指标输出」两级、每级
+  「关键字段 → 核心指标」两目立表，逐项给出业务含义与商业用途；关键字段表之
+  「库表」与「字段」分列两栏；并按呈表纪律新增交付件首末数行实览（实际行号、
+  分隔行、省略行数与占比于副题现算）。本档不涉外部风险标签，故不列 `risk_label` 口径。
+- **新设第五部分「十五类风险会员判据」**（@sec-typology）：原「九类判据」与
+  「另补六类」合并为统一体例十五类，**全部内容渲染时自登记册现算**——
+  经 `函数/registry_loader.R` 载入 `数据库/registry_risk_typology_v1.1.0.yaml`
+  与同名 `.csv`，载入即做六元组核验、YAML↔CSV 交叉比对、全局禁令自检与
+  阻断项引用完整性断言。含：登记册身份表、十五类判据总表、逐类证据裁定全文、
+  门闸实效演示、阻断项台账、待建特征清单、价值×风险处置矩阵、治理悬案。
+- **原第五部分改列第六部分**；正文中对其之活文本引用同步改指（变更日志历史条目
+  按纪律保持原文，不追改）。
+- GLOSS 新增 4 条：登记册、门闸、门禁五档、准入评分。
+- 本档署名沿用上游文件原值，未作改动。
+- 渲染前置：`函数/` 与 `数据库/` 两目录须按项目布局就位；缺档时载入器报错将回显
+  完整布局树与当前工作目录。
+
+**R01-1.0.0（2026-08-17 建档）**
+
+- 依 `a168会员活跃度分层_基准档_30局起.qmd`／`_高精度候选档_171局起.qmd` 规范建立同宗
+  姊妹文件，沿用其 YAML、knitr 唤醒块、悬停术语库体例、`OBSERVED`／`INFERRED`／`UNKNOWN`
+  证据分级与血统声明格式；数据源改为 `R01_late_shoe.csv`（§R01，`r format(nrow_r01, big.mark=",")` 行 ×
+  `r ncol_r01` 列），填补 `_高精度候选档_171局起.qmd` v171-1.5.0 版变更日志明确记载的
+  "本轮未开始 `R01_late_shoe.csv` 相关分析"这一缺口。
+- 全篇新增术语：靴尾、靴内相对位置、注额斜率、符号检验、Wilcoxon符号秩检验、AUC、
+  净赢玩家、GGR集中度，并入 GLOSS 术语库（新增 8 条，与既有 18 条术语库并存不冲突）。
+- **首次对 `shoe_pos≥0.80` 判据完整实测**：配对符号检验（三档样本量门槛）、Wilcoxon
+  交叉验证、AUC 判别力（对内生"净赢玩家"标签）、Spearman 相关、9 档阈值扫描之命中组／
+  对照组经济裁定、双重信号交叉验证、极端个案定性核验、GGR 集中度帕累托分析——全部为
+  本报告基于真实数据文件的新鲜计算，非既有结论的转载或外推。
+- 新增 §引言"三套靠后下注判据辨析表"，明确切割 R01（`shoe_pos`）／D-06（`max_pr`）／
+  X-01（`progress`）三条独立管道，防止历史上已多次出现的术语混同重演。
+- 新增 §第五部分"可落实的商业方案"共五案（终止专项投入／高价值分层复用／多源融合降格／
+  边注专属拆分建议／指南通用措施三档审计），对应用户明确要求的"宗旨、价值、可落实的商业
+  方案"三项交付内容。
+- 对应 SQL 原注所指之 `{#sec-r01}` 与 `{#r01-decision}` 两处交叉引用锚点，已在本文件
+  第一部分与第三部分标题中正式落地，供日后其余文档 `@sec-r01` 引用可解析。
+- 📌 **主方案未改动**：本轮未触碰三文件铁律锁定的 `a168风控与客户分层评分体系_商业方案.qmd`
+  ／`a168风控评分_精要商业报告.qmd`／`a168_取数与核验_SQL总包_v3.sql`，全部新增内容限于
+  本子文档，为第四份此类专项子文档（前三份为 `_1_01.qmd`、`_1_01_v171.qmd` 及主方案本身）。
+
+::: {.callout-warning}
+## 渲染环境提示（如实告知，非结论性声明）
+
+本文件由 Claude 在无 R／Quarto 运行环境的沙箱中撰写，**全部数字已用 Python（pandas／numpy／
+scipy）对 `R01_late_shoe.csv` 原始文件完整现算并交叉核对**（详见对话内分析过程），文中所有
+R 代码块的计算逻辑与 Python 验证逻辑逐项对应（`fread`↔`pd.read_csv`、`data.table`聚合↔`pandas`
+`groupby`、手写秩相关 AUC 函数两侧算法一致、`binom.test`↔`scipy.stats.binomtest`等），
+但本文件**本身尚未在真实 Quarto／R 环境中渲染验证**。请在 Positron／RStudio 环境中渲染一次，
+核对 HTML 输出与本变更日志所列数字一致后再正式发布；若渲染报错，大概率是环境本地 R 包版本
+差异（如 `data.table`／`knitr` 版本），代码结构本身已尽量贴合 `a168会员活跃度分层` 两档
+已验证可渲染的既有写法。
+:::
+
+::: {.callout-note}
+## 变更（2026-08-19）· 第五部分改为移交，外部依赖收敛为**单一 CSV**
+
+**处置**：原第五部分于块首 `source("函数/registry_loader.R")` 并调用八个
+`registry_*` 函数；本版**整段移除该等代码**，改为**移交声明**——十五类判据之登记、
+搭配、逐类裁定、阻断台账、待建特征与治理悬案，一律由
+`a168策略性靴尾下注风控与商业变现实测_R01_标记后.qmd` 承载。
+
+**依赖收敛（本版之要点）**：本档外部读取**仅 `数据库/R01_late_shoe.csv` 一件**。
+以下四件一律不读——`函数/registry_loader.R`、
+`数据库/registry_risk_typology_v1.1.0.yaml`、同名 `.csv`、
+`数据库/S05_member_month_panel.csv`；正文凡引其数者，一律标**引用级**并注明
+「本档不读取该档」。
+
+**保留者**：`late_share` 之 FATAL 裁定与其四项现算依据（符号检验 p、Wilcoxon p、
+AUC、九档扫描）**皆本档自算**，故结论原样保留；价值轴前 1%／前 10% GGR 集中度亦
+本档自算，一并保留。**未动者**：前四部分之实测、SQL、悬停术语库、参考文献与既有
+变更日志一字未改。
+
+**渲染前提**：`数据库/R01_late_shoe.csv` 在位即可，不需 `函数/` 目录、
+不需任何 R 工具件与登记册档案。
+:::
