@@ -985,7 +985,7 @@ ORDER BY verdict_hint, m.member_id, m.bet_month;
      §Z-05  数据库/Z05_missing_typehint.csv   §Z-12  不需要
      §Z-06  数据库/Z06_generated_probe_sql.csv   §Z-13  不需要
      §Z-14  数据库/Z14_zero_month_diagnosis.csv   §Z-17  不需要（纪律陈述）
-     §Z-18  数据库/P01B_diff_ratio.csv · P01C_split_by_dim.csv
+     §Z-18  数据库/P01A_crosstab.csv · P01B_diff_ratio.csv · P01C_split_by_dim.csv
             · P01D_vs_validbet.csv · P01E_identity_test.csv
      §Z-19  数据库/P02A_lmc_samples.csv · P02B_changestatus_patterns.csv
             · P02C_key_check.csv · P02D_events_in_window.csv
@@ -8190,6 +8190,28 @@ ORDER BY lvl;                                                                   
             min＝p01＝100、p50＝125、p99＝max＝333.33
             倒数即 1.00%／0.80%／0.30% —— 与既有登记之退水配置三档吻合
 
+     ─ 窗口口径四格表（2026-08-18 补录，由 P01C 逐月合计反推；A 段实测另出 P01A）─
+       ⚠ 口径警示：以下为**窗口内百家乐**（dt ∈ [2026-03-21, 2026-08-07)、bet02='101'）
+         之读数，n = 125,654,711。首跑 A 段曾扫全表 205,874,217 行（含非百家乐、
+         含窗口外），两者**不可混用**；本包一律以窗口口径为准。
+         对照：bet16 非零率 窗口 4.65% vs 全表 4.32%；
+               bet41 非零率 窗口 92.40% vs 全表 93.99%；
+               相等率       窗口 7.60% vs 全表 6.01%。
+       窗口读数： n_rows 125,654,711 ｜ bet16 非零 5,844,799（4.65%）
+                  bet41 非零 116,102,506（92.40%）｜ bet41 零值 9,552,205
+                  equal_n 9,552,205 ｜ unequal_n 116,102,506 ｜ 二者之和 = n_rows ✅
+       契约判读一（equal_n ≡ bet41 零值数）：9,552,205 ≡ 9,552,205 ✅ 成立
+         → 「相等 ⟺ 两者皆零」于窗口内亦成立，与全表口径同向。
+       契约判读二（b16>0 且 b41=0 应为 0）：**须俟 P01A 实测方可判**，此处不可由合计反推。
+
+     ─ 跨段一致性四问（四段独立算出，互为交叉验证）───────────────────────
+       ① P01C 合计 n 125,654,711 ≡ P01E 之 n 125,654,711 ✅
+       ② P01C 之 equal_n 9,552,205 ≡ P01E-H41 精确匹配数 9,552,205 ✅
+          机理：bet41 = 0 时 H41 退化为 H16，故 H41 恰于该子集成立——
+          两段各自独立计算而得同一数，属强互证，非巧合。
+       ③ P01C 之 bet16 非零 5,844,799 ≡ P01B 之 n 5,844,799 ✅（P01B 限 bet16≠0）
+       ④ P01E-H16 精确匹配 125,654,711 ≡ n 125,654,711 ✅（100.00000%）
+
      🔒 LOCK（今后一切退水率／NGR／返水覆盖率／会员退水资格计算一律遵此）：
         有效投注／洗码量 = ods_a168_bet02.bet41 ≡ validbet
         退水金额         = ods_a168_bet02.bet16
@@ -8271,7 +8293,7 @@ ORDER BY lvl;                                                                   
 /* ═══════════════════════════════════════════════════════════════════════
    §Z-18 · bet16 ↔ bet41 关系实证（原 Probe-01；2026-08-18 已跑毕，🔒 CLOSED）
    ▸ 裁定结论已固化于 §Z-17 之一；本条存档以备复算，结论不得再由本条重新开启。
-   ▸ 导出：需要 —— B/C/D/E 四段各存一档（P01B／P01C／P01D／P01E）
+   ▸ 导出：需要 —— A/B/C/D/E 五段各存一档（P01A／P01B／P01C／P01D／P01E）
    ▸ 修正缘由：v1 三段报「Unable to parse SQL」，根因为 quantileExact(p)(x)
      系 ClickHouse 双调用语法，StarRocks 无此函数。改用 PERCENTILE_APPROX(x, p)。
      另 v1 段 A 未加窗口与产品过滤，扫全表 205,874,217 行（含非百家乐、含窗口外），
@@ -8279,6 +8301,41 @@ ORDER BY lvl;                                                                   
    ▸ 判读纪律：只观察、不修复；不预设 bet41 = validbet × 退水率；
      恒等式采双假设并列检验，禁止先写死其一。
    ═══════════════════════════════════════════════════════════════════════ */
+
+-- ── A · 基础交叉计数（四格表）★ 2026-08-18 补录 ─────────────────────────
+-- ▸ 导出：需要 —— 存为「数据库/P01A_crosstab.csv」
+-- ▸ 补录缘由：首跑之 A 段**未加窗口与产品过滤**，扫全表 205,874,217 行
+--   （含非百家乐、含 2026-08-07 之后），其读数与本包窗口口径不可比，
+--   故 §Z-17 未引用之，亦不得事后塞回冒充窗口结果。本段补齐过滤重取。
+-- ▸ 首跑（全表口径）读数存录以备对照，**不得作为窗口结论使用**：
+--     n_rows 205,874,217 ｜ bet16 非零 8,883,777（4.32%）｜ bet41 非零 193,493,997（93.99%）
+--     equal 12,380,220 ｜ unequal 193,493,997
+--     四格：两者皆零 12,380,220 ｜ b16=0&b41>0 184,610,220 ｜ 皆非零 8,883,777 ｜ b16>0&b41=0 0
+-- ▸ 判读契约（先写死）：
+--     · equal_n 应恒等于 both_zero_n → 若成立，则「相等 ⟺ 两者皆零」于窗口内亦成立；
+--     · b16pos_b41zero_n 应为 0 → 若非 0，则「bet16 为 bet41 之派生」之说立即动摇；
+--     · 四格之和须等于 n_rows，且与 §Z-18 之 C 段逐月合计一致。
+SELECT COUNT(*)                                                          AS n_rows,
+       SUM(CASE WHEN b16 IS NULL THEN 1 ELSE 0 END)                      AS bet16_null,
+       SUM(CASE WHEN b16 =  0    THEN 1 ELSE 0 END)                      AS bet16_zero,
+       SUM(CASE WHEN b16 <> 0    THEN 1 ELSE 0 END)                      AS bet16_nonzero,
+       SUM(CASE WHEN b41 IS NULL THEN 1 ELSE 0 END)                      AS bet41_null,
+       SUM(CASE WHEN b41 =  0    THEN 1 ELSE 0 END)                      AS bet41_zero,
+       SUM(CASE WHEN b41 <> 0    THEN 1 ELSE 0 END)                      AS bet41_nonzero,
+       SUM(CASE WHEN b16 IS NOT NULL AND b41 IS NOT NULL AND b16 =  b41
+                THEN 1 ELSE 0 END)                                       AS equal_n,
+       SUM(CASE WHEN b16 IS NOT NULL AND b41 IS NOT NULL AND b16 <> b41
+                THEN 1 ELSE 0 END)                                       AS unequal_n,
+       SUM(CASE WHEN b16 = 0 AND b41 = 0 THEN 1 ELSE 0 END)              AS both_zero_n,
+       SUM(CASE WHEN b16 = 0 AND b41 <> 0 THEN 1 ELSE 0 END)             AS b16zero_b41pos_n,
+       SUM(CASE WHEN b16 <> 0 AND b41 <> 0 THEN 1 ELSE 0 END)            AS both_pos_n,
+       SUM(CASE WHEN b16 <> 0 AND b41 = 0 THEN 1 ELSE 0 END)             AS b16pos_b41zero_n
+FROM (
+  SELECT CAST(NULLIF(TRIM(bet16),'') AS DECIMAL(20,4)) AS b16,
+         CAST(NULLIF(TRIM(bet41),'') AS DECIMAL(20,4)) AS b41
+  FROM ods_mariadb_2b.ods_a168_bet02
+  WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+) t;
 
 -- ── B · 差额与比例分布（限本项目窗口与产品）──────────────────────────────
 -- ▸ 导出：需要 —— 存为「数据库/P01B_diff_ratio.csv」
@@ -8496,6 +8553,8 @@ ORDER BY 类别, 层级;
        · LEGACY-532 计数冲突登记（旧 532／188 vs 实测 1,490／294）
        · ANOM-mem020 异常登记（6,592 次单向变更，仅涉 1 实体）
        · treatment mapping 维持 OPEN（S3／S4 未闭）
+       · §Z-18 A 段补录（P01A_crosstab.csv）＋ 窗口口径四格表与跨段一致性四问
+         写入 §Z-17（v4-revised-2）
      supersedes            ： v4-original
      does_not_supersede    ： 原始证据、探针输出、既往审计结果（一律保留）
      ⚠ 「v4」自此为**方案版本族**，具体物证身份以 MD5 为准；

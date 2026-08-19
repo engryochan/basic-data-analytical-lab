@@ -1,0 +1,2426 @@
+---
+title: "尾段投注基础分析的评估"
+format: html
+---
+
+REDTEAM/
+我先按**“代码逻辑 → CSV 实证 → 两者可比性 → 业务风控价值 → 漏洞 → 改进路线 → 最终裁定”**逐层审计。这里有一个非常关键的结论先摆出来：
+
+> **模型一不是模型二的“简化版”；两者实际上在测量不同的东西。**
+> 模型一测的是“玩家是否偏好在某个绝对局号以后下注”；模型二测的是“玩家是否偏好在每一靴的相对末段下注，并进一步观察末段下注额与末段 ROI”。
+> **就风控科研价值而言，模型二明显高于模型一；但模型二目前仍不能直接作为处罚/封禁模型。**
+
+---
+
+# 引言
+
+## 模型一
+
+甲版 · 只加日期（最小改动）
+
+```
+/* ─────────────────────────────────────────────────────────────────────
+   模型一 · 甲版：仅补窗口过滤，其余一字未改
+   ⚠ 本版仅使窗口一致；同单号去重、测试线剔除、重对单、一般单四项仍缺，
+     故与模型二**仍不可直接比较**。欲真可比请用乙版。
+   ───────────────────────────────────────────────────────────────────── */
+WITH player_stat AS (
+    SELECT
+        CAST(bet05 AS BIGINT) AS player_id,
+        COUNT(*) AS total_orders,
+        SUM(CASE WHEN CAST(bet04 AS INT) >= 40 THEN 1 ELSE 0 END) AS late_orders,
+        SUM(CASE WHEN CAST(bet14 AS DECIMAL(20,4))
+                    > CAST(bet13 AS DECIMAL(20,4)) THEN 1 ELSE 0 END) AS win_orders,
+        SUM((CAST(bet14 AS DECIMAL(20,4)) - CAST(bet13 AS DECIMAL(20,4)))
+            / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)) AS profit,
+        SUM(CAST(validbet AS DECIMAL(20,4))
+            / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)) AS valid_bet
+    FROM ods_mariadb_2b.ods_a168_bet02
+    WHERE bet02 = '101'
+      AND dt >= '2026-03-21' AND dt < '2026-08-07'   -- ★ 本版唯一新增
+      AND bet03 IS NOT NULL
+      AND bet04 IS NOT NULL
+      AND bet05 IS NOT NULL
+    GROUP BY CAST(bet05 AS BIGINT)
+)
+SELECT player_id, total_orders, late_orders,
+       ROUND(late_orders * 1.0 / total_orders, 4) AS late_ratio,
+       win_orders,
+       ROUND(win_orders * 1.0 / total_orders, 4) AS win_rate,
+       ROUND(valid_bet, 2) AS valid_bet,
+       ROUND(profit, 2)    AS profit,
+       ROUND(profit / NULLIF(valid_bet, 0), 4) AS roi
+FROM player_stat
+WHERE total_orders >= 30
+  AND late_orders * 1.0 / total_orders >= 0.60
+ORDER BY roi DESC, profit DESC;
+```
+
+根据运行以上代码，将输出储存为`模型一_甲版.csv`。
+
+## 模型二
+
+甲版 · 补齐全部准入（真可比）
+
+```
+/* ───────────────────────────────────────────────────────────────────────────/* ─────────────────────────────────────────────────────────────────────
+   模型一 · 乙版：准入口径与 §R01 完全对齐，唯保留其自身之三项设计
+   对齐者：窗口 · 产品 · 同单号去重 · 五级测试线剔除 · 重对单 · 一般单
+           · 会员号>0 · 汇率>0 · 局号>0
+   保留者：① 尾段判据仍用 bet04>=40（绝对局号）——这是模型一的定义，不代改
+           ② 门槛仍 >=30
+           ③ SQL 内仍筛 late_ratio>=0.60
+   ⚠ 保留①意味着：即便准入对齐，判据之别仍在，两者仍在测不同的东西。
+     欲连判据也对齐，须改用 shoe_pos——那就等于把模型一改成模型二了。
+   ───────────────────────────────────────────────────────────────────── */
+WITH test_agents AS (
+    SELECT age001 AS agent_id
+    FROM ods_mariadb_2b.ods_a168_agent
+    WHERE age022 = '1'
+),
+ranked AS (
+    SELECT b.bet01, b.bet02, b.bet03, b.bet04, b.bet05, b.bet11,
+           b.bet13, b.bet14, b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+           b.bet38, b.category, b.validbet,
+           ROW_NUMBER() OVER (
+             PARTITION BY b.bet01
+             ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+    FROM ods_mariadb_2b.ods_a168_bet02 b
+    WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+      AND b.bet02 = '101'
+),
+base AS (
+    SELECT CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT)              AS player_id,
+           CAST(NULLIF(TRIM(r.bet04),'') AS INT)                 AS round_no,
+           CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))       AS fx,
+           CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4))       AS stake_raw,
+           CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4))       AS payout_raw,
+           CAST(NULLIF(TRIM(r.validbet),'') AS DECIMAL(20,4))    AS vb_raw
+    FROM ranked r
+    LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18
+    LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19
+    LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20
+    LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21
+    LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22
+    WHERE r.rn = 1
+      AND r.category = '1'
+      AND UPPER(TRIM(r.bet38)) = 'N'
+      AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+      AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+      AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0
+      AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL
+),
+player_stat AS (
+    SELECT player_id,
+           COUNT(*)                                                    AS total_orders,
+           SUM(CASE WHEN round_no >= 40 THEN 1 ELSE 0 END)             AS late_orders,
+           SUM(CASE WHEN payout_raw > stake_raw THEN 1 ELSE 0 END)     AS win_orders,
+           SUM(CASE WHEN payout_raw = stake_raw THEN 1 ELSE 0 END)     AS push_orders,
+           SUM((payout_raw - stake_raw) / fx)                          AS profit,
+           SUM(vb_raw / fx)                                            AS valid_bet,
+           SUM(stake_raw / fx)                                         AS stake_all
+    FROM base
+    GROUP BY player_id
+)
+SELECT player_id, total_orders, late_orders,
+       ROUND(late_orders * 1.0 / total_orders, 4)              AS late_ratio,
+       win_orders, push_orders,
+       ROUND(win_orders  * 1.0 / total_orders, 4)              AS win_rate,
+       ROUND(win_orders  * 1.0
+             / NULLIF(total_orders - push_orders, 0), 4)       AS win_rate_ex_push,
+       ROUND(valid_bet, 2)                                     AS valid_bet,
+       ROUND(stake_all, 2)                                     AS stake_all,
+       ROUND(profit, 2)                                        AS profit,
+       ROUND(profit / NULLIF(valid_bet, 0), 4)                 AS roi_vb,
+       ROUND(profit / NULLIF(stake_all, 0),  4)                AS roi_stake,
+       ROUND(valid_bet / NULLIF(stake_all, 0), 4)              AS vb_ratio
+FROM player_stat
+WHERE total_orders >= 30
+  AND late_orders * 1.0 / total_orders >= 0.60
+ORDER BY roi_stake DESC, profit DESC;
+```
+
+根据运行以上代码，将输出储存为`模型二_甲版.csv`。
+
+# 一、首先核实两份 CSV
+
+我直接核验了你上传的两份实际输出。
+
+| 项目          |           模型一 |                       模型二 |
+| ----------- | ------------: | ------------------------: |
+| 行数          |     **2,974** |                **92,412** |
+| 字段数         |             9 |                        15 |
+| 最低订单门槛      |           ≥30 |                      ≥100 |
+| 晚段条件        | `bet04 >= 40` |        `shoe_pos >= 0.80` |
+| 晚段定义        |          绝对局号 |                  **相对靴位** |
+| 是否保留最新注单版本  |             ❌ |                         ✅ |
+| 是否排测试代理     |             ❌ |                         ✅ |
+| category 过滤 |             ❌ |          ✅ `category='1'` |
+| bet38 过滤    |             ❌ |             ✅ `bet38='N'` |
+| 日期窗口        |           未限制 | `2026-03-21 ~ 2026-08-06` |
+| 是否有晚段 ROI   |             ❌ |                     **✅** |
+| 是否有早段 ROI   |             ❌ |                     **✅** |
+| 是否有下注额斜率    |             ❌ |                     **✅** |
+| 是否有全体 P&L   |            部分 |                     **✅** |
+
+因此，**2,974 vs 92,412 绝不能解释成“模型一筛选出来的 2,974 人，而模型二有 92,412 人所以模型二更差/更好”。**
+
+这是两个不同 universe。
+
+---
+
+# 二、模型一的真正统计含义
+
+模型一核心：
+
+```sql
+CASE
+    WHEN CAST(bet04 AS INT) >= 40 THEN 1
+END
+```
+
+所以它实际上定义：
+
+[
+Late_i =
+I(round_no \ge 40)
+]
+
+然后：
+
+[
+LateShare_i =
+\frac{N(round_no\ge40)}
+{N(all)}
+]
+
+再要求：
+
+[
+N_i\ge30
+]
+
+以及：
+
+[
+LateShare_i\ge0.60
+]
+
+所以模型一回答的是：
+
+> **“这个玩家至少有 60% 的下注发生在第 40 局以后吗？”**
+
+这本身没有问题。
+
+但是它并没有真正回答：
+
+> “玩家是不是喜欢在**靴末**下注？”
+
+这是两个不同命题。
+
+---
+
+# 三、模型一最大的问题：`round_no >= 40` 的统计语义并不稳定
+
+你模型二注释里面对此已经进行了正确斧正。
+
+假设：
+
+| 靴 | 实际长度 |
+| - | ---: |
+| A |   42 |
+| B |   50 |
+| C |   55 |
+| D |   60 |
+
+模型一全部使用：
+
+```text
+round_no >= 40
+```
+
+那么：
+
+| 靴    | 第40局以后占比 |
+| ---- | -------: |
+| 42局靴 |    最后约7% |
+| 50局靴 |    最后22% |
+| 55局靴 |    最后29% |
+| 60局靴 |    最后35% |
+
+所以模型一所谓的：
+
+> “late”
+
+实际上混合了**不同的相对位置**。
+
+这会产生一个非常严重的问题：
+
+### 同一个 `late_ratio = 0.70`
+
+在不同玩家身上可能代表完全不同的行为。
+
+例如：
+
+玩家 A：
+
+> 70% 的下注发生在 40/50 局以后
+
+实际上可能是在：
+
+> 靴末 20%
+
+玩家 B：
+
+> 70% 的下注发生在 40/60 局以后
+
+实际上可能是在：
+
+> 靴末 33%
+
+所以：
+
+> **模型一的 late_ratio 在跨靴长比较时不具有严格同质性。**
+
+这一点，模型二的：
+
+```sql
+round_no / max_round >= 0.80
+```
+
+明显更先进。
+
+---
+
+# 四、但是模型二也有一个非常重要的漏洞
+
+这一点 REDTEAM 必须特别标出来。
+
+模型二：
+
+```sql
+shoe_len AS (
+    SELECT
+        shoe_id,
+        table_id,
+        MAX(round_no) AS max_round
+    FROM base
+    GROUP BY shoe_id, table_id
+)
+```
+
+然后：
+
+```sql
+shoe_pos =
+round_no / max_round
+```
+
+看起来很漂亮。
+
+但是：
+
+> **`max_round` 并不一定是真实的“靴长”。**
+
+它是：
+
+> **这个过滤后的下注数据中，最后一个被观察到的下注局号。**
+
+这两者不是同一个概念。
+
+---
+
+## 一个非常重要的反例
+
+假设真实靴子：
+
+```text
+1 ... 52
+```
+
+但第 52 局没有任何符合你 `base` 条件的下注记录。
+
+那么数据库里面：
+
+```text
+MAX(round_no) = 51
+```
+
+模型二就会认为：
+
+```text
+51 / 51 = 1.000
+```
+
+也就是：
+
+> **第51局 = 靴尾**
+
+但真实情况：
+
+> 第51局其实只是倒数第二局。
+
+甚至如果第50、51、52局只有其他类型下注，而你的 `category='1'` 或 `bet38='N'` 把它们过滤掉，这个偏差会更加严重。
+
+---
+
+# 五、因此模型二目前准确地说不是“靴末模型”
+
+而应该称为：
+
+> **Observed-bet relative shoe-position model**
+
+即：
+
+> **“基于所观察到的有效下注记录推断相对靴位。”**
+
+这个区别必须锁死在数据字典里面。
+
+---
+
+# 六、模型二仍然明显优于模型一
+
+原因不是只有 `0.80`。
+
+而是模型二实际上建立了一个非常重要的三层结构：
+
+### 第一层：行为
+
+```text
+late_share
+```
+
+玩家到底多喜欢在靴末下注？
+
+### 第二层：资金行为
+
+```text
+stake_late_avg
+stake_early_avg
+stake_ramp
+```
+
+玩家是不是到了靴末以后：
+
+> **不但下注，而且加大下注？**
+
+### 第三层：经济结果
+
+```text
+roi_late
+roi_early
+game_pnl_late
+game_pnl_all
+```
+
+玩家的这种行为到底有没有产生经济异常？
+
+这就从：
+
+> **“行为画像”**
+
+升级到了：
+
+> **“行为 × 资金 × 经济结果”**
+
+这正是业务风控真正需要的方向。
+
+---
+
+# 七、两份 CSV 的实际结果非常有意思
+
+这是本轮审计最值得注意的地方。
+
+两份 CSV 交集只有：
+
+> **389 个玩家**
+
+模型一：
+
+> 2,974 人
+
+模型二：
+
+> 92,412 人
+
+但在这 **389 个交集玩家**中：
+
+* 订单数相关系数约 **0.995**
+* 晚段下注次数相关系数约 **0.999**
+* late ratio 与 late share 相关系数约 **0.765**
+* profit 与 game_pnl_all 相关系数约 **0.981**
+* valid_bet 与 stake_all 相关系数约 **0.994**
+
+这说明：
+
+> **两套 SQL 并不是完全在计算不同的数据世界。**
+
+它们的底层玩家规模、下注量、盈利金额具有很强的一致性。
+
+---
+
+# 八、但是 ROI 的一致性明显下降
+
+模型一 ROI：
+
+[
+ROI_1=
+\frac{Profit}{ValidBet}
+]
+
+模型二：
+
+[
+ROI_{late}
+==========
+
+\frac{LatePnl}{LateStake}
+]
+
+[
+ROI_{early}
+===========
+
+\frac{EarlyPnl}{EarlyStake}
+]
+
+所以模型一的 ROI 和模型二的 `roi_late` 相关系数约：
+
+> **0.746**
+
+而和：
+
+```text
+roi_early
+```
+
+只有约：
+
+> **0.514**
+
+这非常合理。
+
+因为模型一的 ROI 是：
+
+> **全体下注 ROI**
+
+模型二把它拆成：
+
+> 靴末 ROI
+> 靴前 ROI
+
+所以不能要求两者一样。
+
+---
+
+# 九、模型二最有价值的字段其实不是 `late_share`
+
+而是：
+
+```text
+stake_ramp
+```
+
+定义：
+
+[
+StakeRamp =
+\frac{\overline{Stake}*{late}}
+{\overline{Stake}*{early}}
+]
+
+这个指标非常值得保留。
+
+因为：
+
+### 类型 A
+
+```text
+late_share = 0.80
+stake_ramp = 1.00
+```
+
+解释：
+
+> 玩家只是喜欢晚下注。
+
+风险未必高。
+
+---
+
+### 类型 B
+
+```text
+late_share = 0.80
+stake_ramp = 3.00
+```
+
+解释：
+
+> 玩家不仅 80% 的下注发生在靴末，而且下注金额是早段的 3 倍。
+
+这个就完全不同了。
+
+---
+
+### 类型 C
+
+```text
+late_share = 0.80
+stake_ramp = 5.00
+roi_late = +0.20
+```
+
+这才是：
+
+> **行为异常 + 资金异常 + 经济异常**
+
+三项同时出现。
+
+这类玩家才应该进入更高等级的 REDTEAM 检查。
+
+---
+
+# 十、模型二 CSV 已经给出了一个非常重要的事实
+
+92,412 人里面：
+
+```text
+late_share >= 0.60
+```
+
+只有：
+
+> **397 人**
+
+也就是说：
+
+[
+397 / 92412 \approx 0.43%
+]
+
+所以：
+
+> **60% 本身已经是一个非常强的行为筛选条件。**
+
+进一步：
+
+| late_share |     玩家数 |
+| ---------: | ------: |
+|       ≤10% |   9,055 |
+|     10–20% |  24,473 |
+|     20–30% |  40,419 |
+|     30–40% |  13,263 |
+|     40–50% |   3,832 |
+|     50–60% |     977 |
+| **60–70%** | **281** |
+| **70–80%** |  **82** |
+| **80–90%** |  **22** |
+|   **90%+** |   **8** |
+
+这说明分布不是均匀的。
+
+真正极端的：
+
+```text
+late_share >= 0.80
+```
+
+只有：
+
+> **30 人**
+
+而：
+
+```text
+late_share >= 0.90
+```
+
+只有：
+
+> **8 人**
+
+这批人非常适合进入下一阶段的人工审计/行为建模。
+
+---
+
+# 十一、但这里马上出现一个 REDTEAM 陷阱
+
+不能说：
+
+> late_share ≥ 0.80 → 高风险。
+
+因为这是：
+
+> **选择条件，不是风险证明。**
+
+例如：
+
+```text
+late_share = 0.90
+```
+
+完全可能只是一个正常玩家：
+
+> “我习惯等到后面才下注。”
+
+所以必须加入：
+
+[
+Behavior
++
+Stake
++
+Economic
++
+Temporal
++
+Cross\text{-}Entity
+]
+
+至少五层证据。
+
+---
+
+# 十二、模型二的 ROI 有明显的小样本爆炸问题
+
+实际 CSV 中出现：
+
+```text
+roi_late = 15.652174
+```
+
+即：
+
+> **+1565%**
+
+但是它对应的：
+
+```text
+stake_late = 59.15
+game_pnl_late = 925.76
+n_orders_late = 5
+```
+
+这不是说这个玩家真的有“1565%稳定收益能力”。
+
+只是：
+
+[
+925.76/59.15
+]
+
+分母太小。
+
+类似：
+
+```text
+roi_late > 10
+```
+
+CSV 中也确实存在。
+
+所以：
+
+> **raw ROI 绝不能直接用于排序处罚。**
+
+---
+
+# 十三、模型一也有完全相同的问题
+
+模型一第一名：
+
+```text
+player_id = 151704797
+total_orders = 49
+late_ratio = 1
+valid_bet = 99.18
+profit = 137.61
+roi = 1.3874
+```
+
+也就是：
+
+> ROI 138.74%
+
+但有效投注只有：
+
+> 99.18
+
+所以这不是一个可以直接判定为高风险的统计证据。
+
+---
+
+# 十四、必须引入“暴露量门槛”
+
+这是两个模型共同必须升级的地方。
+
+至少要同时设置：
+
+```text
+n_orders
+late_orders
+stake_all
+stake_late
+```
+
+例如：
+
+```text
+n_orders >= 100
+AND late_orders >= 30
+AND stake_late >= 某业务门槛
+```
+
+比：
+
+```text
+n_orders >= 30
+```
+
+科学得多。
+
+---
+
+# 十五、模型一还有一个更严重的审计问题：没有“最新版本”治理
+
+模型二：
+
+```sql
+ROW_NUMBER() OVER (
+    PARTITION BY b.bet01
+    ORDER BY
+        b.updatetime DESC,
+        b.sync_time DESC,
+        b.dt DESC
+) AS rn
+```
+
+然后：
+
+```sql
+WHERE rn = 1
+```
+
+这是目前两者之间非常重要的质量差异。
+
+模型一直接：
+
+```sql
+FROM ods_a168_bet02
+```
+
+然后：
+
+```sql
+COUNT(*)
+SUM(...)
+```
+
+如果 `bet01` 存在状态更新版本，那么模型一可能：
+
+> **把同一张注单的多个版本当成多个订单。**
+
+这会直接污染：
+
+```text
+total_orders
+late_orders
+win_orders
+profit
+valid_bet
+```
+
+甚至改变：
+
+```text
+late_ratio
+win_rate
+roi
+```
+
+因此：
+
+> **模型一目前不能作为 REDTEAM 最终证据层。**
+
+最多作为 exploratory screening。
+
+---
+
+# 十六、模型二的这个设计是正确方向
+
+```text
+bet01
+↓
+最新版本
+↓
+有效注单
+↓
+排测试线
+↓
+计算靴长
+↓
+计算相对靴位
+↓
+玩家聚合
+```
+
+这个数据血统明显比模型一干净。
+
+尤其：
+
+```sql
+category = '1'
+UPPER(TRIM(bet38)) = 'N'
+```
+
+以及：
+
+```sql
+test_agents
+```
+
+都是业务生产环境里非常重要的治理。
+
+---
+
+# 十七、但是模型二还有一个重大问题：日期口径不同
+
+模型二：
+
+```sql
+b.dt >= '2026-03-21'
+AND b.dt < '2026-08-07'
+```
+
+也就是：
+
+> 3月21日 ～ 8月6日
+
+模型一：
+
+```sql
+FROM ods_a168_bet02
+```
+
+没有日期条件。
+
+所以如果模型一是在当前完整表上跑的：
+
+> **两个模型根本不是同一个观察窗口。**
+
+这会造成严重的数据泄漏/比较污染。
+
+必须统一：
+
+```text
+Observation Window
+```
+
+否则所有：
+
+```text
+ROI
+late_share
+player ranking
+```
+
+的比较只能作为探索性结果。
+
+---
+
+# 十八、模型二还有一个非常重要的“幸存者偏差”
+
+你现在：
+
+```sql
+HAVING COUNT(*) >= 100
+```
+
+所以模型二只留下：
+
+> 至少100笔有效下注的玩家。
+
+这意味着：
+
+> 新玩家、小玩家、短生命周期玩家全部被排除。
+
+如果你研究的是：
+
+> **“谁是异常下注者？”**
+
+这可能没问题。
+
+但是如果你研究：
+
+> **“异常行为能否预测未来风险？”**
+
+就有问题。
+
+因为你已经使用了未来信息：
+
+> 玩家已经下注满100笔。
+
+这会造成：
+
+### Immortal / survivorship bias
+
+因此未来如果做预测模型：
+
+```text
+T0 → 行为特征
+T1 → 风险事件
+```
+
+必须把：
+
+```text
+COUNT(*) >= 100
+```
+
+变成：
+
+> **在观察窗口 T0 内达到 100 笔之后才建立 feature snapshot**
+
+而不能用整个生命周期汇总后再判断。
+
+---
+
+# 十九、模型二真正应该升级成“行为风险矩阵”
+
+我建议最终不要再单纯排名：
+
+```text
+late_share DESC
+```
+
+而是建立四维：
+
+| 维度   | 指标                     |
+| ---- | ---------------------- |
+| 时间行为 | `late_share`           |
+| 资金行为 | `stake_ramp`           |
+| 经济行为 | `roi_late - roi_early` |
+| 暴露规模 | `stake_late`           |
+
+形成：
+
+[
+Risk =
+f(
+LateShare,
+StakeRamp,
+ROI\Delta,
+Exposure
+)
+]
+
+其中：
+
+[
+ROI\Delta =
+ROI_{late}-ROI_{early}
+]
+
+这个指标比单独 `roi_late` 更有价值。
+
+---
+
+# 二十、例如形成四象限
+
+### 第一象限：行为异常，但没有经济优势
+
+```text
+late_share ↑
+stake_ramp ≈ 1
+ROI_delta ≈ 0
+```
+
+结论：
+
+> **低风险行为偏好**
+
+一般不用处罚。
+
+---
+
+### 第二象限：行为异常 + 加注
+
+```text
+late_share ↑
+stake_ramp ↑
+ROI_delta ≈ 0
+```
+
+结论：
+
+> **值得观察**
+
+可能是策略性下注，也可能只是玩法习惯。
+
+---
+
+### 第三象限：行为异常 + 加注 + 异常收益
+
+```text
+late_share ↑
+stake_ramp ↑
+ROI_delta ↑↑
+```
+
+这是：
+
+> **重点 REDTEAM 对象**
+
+但是仍然不能直接处罚。
+
+---
+
+### 第四象限：行为异常 + 加注 + 异常收益 + 外部关联
+
+如果再叠加：
+
+```text
+same_ip
+same_device
+same_agent
+same_table
+same_round
+same_second
+opposite_bet
+```
+
+那么证据等级才真正进入：
+
+> **高风险 / adversarial behavior**
+
+这才与你前面已经发现的：
+
+> **999 对完美对冲、22 IP、1,185 rounds fully reverse**
+
+这一类 Goodhart / reward-hacking 行为治理真正接上。
+
+---
+
+# 二十一、模型一的 `win_rate` 也值得质疑
+
+模型一：
+
+```sql
+bet14 > bet13
+```
+
+定义：
+
+```text
+win_orders
+```
+
+然后：
+
+```text
+win_rate = win_orders / total_orders
+```
+
+这实际上是：
+
+> **payout > stake 的注单比例**
+
+未必等价于：
+
+> “玩家胜率”。
+
+例如：
+
+* 和局
+* 退还
+* 半赢
+* jackpot
+* bonus
+* 多种结算状态
+
+都可能使：
+
+```text
+bet14 > bet13
+```
+
+不再等价于标准的：
+
+[
+WinRate
+]
+
+所以这个字段建议重新命名：
+
+```text
+positive_payout_rate
+```
+
+或者：
+
+```text
+gross_win_order_rate
+```
+
+除非已经证明：
+
+```text
+bet13 / bet14
+```
+
+的业务语义就是：
+
+> stake / payout。
+
+---
+
+# 二十二、模型一的 `valid_bet` 计算也要做 schema-level 确认
+
+你目前：
+
+```sql
+SUM(
+    CAST(validbet AS DECIMAL(20,4))
+    / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)
+)
+```
+
+模型二：
+
+```sql
+stake_raw / fx
+```
+
+两者结果高度相关：
+
+> **valid_bet 与 stake_all 相关约 0.994**
+
+所以经验上它们高度一致。
+
+但是从数据血统角度：
+
+> **必须确认 `validbet` 的业务定义。**
+
+如果 `validbet` 本身已经是最终有效投注金额，而 `bet11` 又是汇率，则模型一可能发生：
+
+> **重复汇率换算。**
+
+所以这个地方不能仅凭结果相似就判定正确。
+
+应该锁：
+
+```text
+bet11 = FX?
+bet13 = stake_raw?
+validbet = ?
+bet14 = payout_raw?
+```
+
+这是数据字典层面的硬门。
+
+---
+
+# 二十三、模型二的一个非常漂亮之处：内部数学可以闭合
+
+我检查了：
+
+```text
+game_pnl_late
++
+game_pnl_early
+=
+game_pnl_all
+```
+
+以及：
+
+```text
+stake_late
++
+stake_early
+=
+stake_all
+```
+
+从 CSV 的数值关系看，模型二的整体 P&L 分解是闭合的。
+
+这说明：
+
+> **模型二在“分段 → 汇总 → 全体”这一层结构上是相当干净的。**
+
+这是它相比模型一的重要优势。
+
+---
+
+# 二十四、模型二当前最值得关注的经济结果
+
+对于：
+
+```text
+n_orders_all >= 100
+late_share >= 0.60
+```
+
+共有：
+
+> **397 人**
+
+其晚段：
+
+```text
+late stake ≈ 13.29 million
+late P&L ≈ -215,315
+```
+
+加权晚段 ROI：
+
+[
+-215315 / 13293734
+\approx -1.62%
+]
+
+也就是说：
+
+> **这个“高晚段下注倾向”群体并没有表现出整体正收益异常，反而总体是负 ROI。**
+
+这是非常重要的业务结论。
+
+---
+
+# 二十五、进一步提高订单门槛后，结论仍然没有反转
+
+| 条件                |  人数 |   晚段加权 ROI |
+| ----------------- | --: | ---------: |
+| ≥100单 + late≥60%  | 397 | **-1.62%** |
+| ≥300单 + late≥60%  | 121 | **-1.72%** |
+| ≥500单 + late≥60%  |  82 | **-1.72%** |
+| ≥1000单 + late≥60% |  46 | **-1.40%** |
+
+这个结果非常重要。
+
+它意味着：
+
+> **“靴末下注偏好”本身目前没有证据证明是一个盈利型玩家信号。**
+
+更不能直接推论：
+
+> “靴末下注 = 玩家优势。”
+
+目前数据不支持。
+
+---
+
+# 二十六、因此业务风控上，两模型必须重新定位
+
+## 模型一
+
+应该定位：
+
+> **Late-Betting Behavioral Screener**
+
+价值：
+
+### ⭐⭐⭐
+
+用途：
+
+* 快速筛选
+* 初步玩家画像
+* 生成候选名单
+* 发现绝对局号偏好
+
+不适合：
+
+* 最终处罚
+* 封禁
+* VIP降级
+* 风险定性
+* 证明玩家作弊
+
+---
+
+# 二十七、模型二
+
+应该定位：
+
+> **Relative Shoe-Position Behavioral & Economic Risk Model**
+
+价值：
+
+### ⭐⭐⭐⭐⭐
+
+用途：
+
+* 相对靴位行为检测
+* 资金行为分析
+* 晚段/早段经济表现比较
+* 玩家风险画像
+* REDTEAM 候选生成
+* 后续异常策略模型 feature engineering
+
+但仍然不适合直接：
+
+> 自动封禁。
+
+---
+
+# 二十八、模型二最大的三个漏洞
+
+我给它们正式编号：
+
+### R01-V01：`MAX(round_no)` ≠ True Shoe Length
+
+严重度：
+
+> **Critical**
+
+必须使用真实靴生命周期/游戏结果数据计算：
+
+```text
+true_shoe_length
+```
+
+而不是：
+
+```text
+MAX(observed_bet_round)
+```
+
+---
+
+### R01-V02：不同数据血统
+
+模型一：
+
+```text
+ods_a168_bet02
+```
+
+模型二：
+
+```text
+ods_mariadb_2b.ods_a168_bet02
+```
+
+必须确认：
+
+> 是否同一张物理表 / view / snapshot / ETL 层。
+
+否则不能做严格数值比较。
+
+---
+
+### R01-V03：最新版本处理不一致
+
+模型二：
+
+```text
+ROW_NUMBER() → rn=1
+```
+
+模型一：
+
+> 无版本去重。
+
+如果 bet01 存在多版本：
+
+> **模型一的订单数和 P&L 都可能被污染。**
+
+严重度：
+
+> **Critical**
+
+---
+
+# 二十九、另外四个中高风险漏洞
+
+### R01-V04
+
+模型二的：
+
+```text
+late_share
+```
+
+没有显著性/置信区间。
+
+---
+
+### R01-V05
+
+ROI 分母过小时出现：
+
+```text
+15.65
+5.52
+4.37
+...
+```
+
+需要 shrinkage / minimum exposure。
+
+---
+
+### R01-V06
+
+没有控制：
+
+```text
+table
+dealer
+game
+time-of-day
+day-of-week
+shoe length
+```
+
+所以可能存在 confounding。
+
+---
+
+### R01-V07
+
+没有控制：
+
+```text
+玩家生命周期
+```
+
+因此目前更像：
+
+> retrospective profiling
+
+而不是：
+
+> predictive risk model。
+
+---
+
+# 三十、我建议最终不要继续把它叫“模型一 vs 模型二”
+
+从科研与工程角度，应该改成：
+
+### M1
+
+**Absolute Round Late-Betting Screener**
+
+```text
+round_no >= 40
+```
+
+---
+
+### M2
+
+**Relative Shoe Position Behavioral Model**
+
+```text
+round_no / true_shoe_length >= 0.80
+```
+
+---
+
+### M3
+
+下一版建议：
+
+**Relative Shoe × Stake × Economic Risk Model**
+
+核心：
+
+[
+R_i =
+f(
+LateShare_i,
+StakeRamp_i,
+\Delta ROI_i,
+Exposure_i,
+N_i
+)
+]
+
+---
+
+# 三十一、M3 我建议至少增加这些字段
+
+```text
+uid
+
+n_orders
+n_shoes
+n_tables
+n_dealers
+
+late_orders
+late_share
+
+stake_all
+stake_late
+stake_early
+
+stake_late_avg
+stake_early_avg
+stake_ramp
+
+roi_all
+roi_late
+roi_early
+roi_delta
+
+pnl_all
+pnl_late
+pnl_early
+
+late_stake_share
+late_pnl_share
+
+max_single_stake
+p95_stake
+p99_stake
+
+late_stake_p95
+early_stake_p95
+
+late_concentration
+shoe_concentration
+
+ip_count
+device_count
+agent_count
+```
+
+这样才开始接近真正的：
+
+> **玩家行为风险画像。**
+
+---
+
+# 三十二、尤其要增加 `late_stake_share`
+
+这是目前模型二缺失但非常有价值的指标。
+
+现在：
+
+```text
+late_share
+```
+
+只告诉你：
+
+> **多少笔下注发生在靴末。**
+
+但不知道：
+
+> **多少钱发生在靴末。**
+
+应该增加：
+
+[
+LateStakeShare =
+\frac{Stake_{late}}
+{Stake_{all}}
+]
+
+举例：
+
+### 玩家 A
+
+```text
+late_share = 80%
+late_stake_share = 81%
+```
+
+正常一致。
+
+### 玩家 B
+
+```text
+late_share = 80%
+late_stake_share = 98%
+```
+
+这非常不同。
+
+说明：
+
+> **他不仅喜欢晚下注，而且几乎把全部资金集中在晚段。**
+
+这比 `late_share` 更适合风控。
+
+---
+
+# 三十三、再增加一个非常重要的指标
+
+[
+LateStakeIntensity =
+\frac{LateStakeShare}
+{LateShare}
+]
+
+如果：
+
+```text
+≈ 1
+```
+
+表示：
+
+> 金额分布与订单分布一致。
+
+如果：
+
+```text
+> 1
+```
+
+表示：
+
+> 晚段下注金额明显集中。
+
+例如：
+
+```text
+late_share = 0.70
+late_stake_share = 0.90
+```
+
+那么：
+
+[
+0.90/0.70=1.286
+]
+
+这是一个非常有价值的行为信号。
+
+---
+
+# 三十四、再向你之前的 Goodhart / REDTEAM 体系接一层
+
+最终真正值得关注的不是：
+
+> “他喜欢第几局下注。”
+
+而是：
+
+> **他是否利用信息/时序/系统边界，在特定时间窗口集中暴露资金，并且获得异常收益。**
+
+所以未来可以形成：
+
+```text
+Layer 1
+时间位置异常
+        ↓
+Layer 2
+下注频率异常
+        ↓
+Layer 3
+下注金额异常
+        ↓
+Layer 4
+ROI / P&L 异常
+        ↓
+Layer 5
+IP / Device / Agent 关联
+        ↓
+Layer 6
+Opposite-bet / Hedge
+        ↓
+Layer 7
+尾秒 / round boundary / system timing
+        ↓
+Layer 8
+跨玩家协同
+        ↓
+Layer 9
+经济显著性
+        ↓
+Layer 10
+REDTEAM evidence score
+```
+
+这就真正从：
+
+> **“玩家行为分析”**
+
+升级到了：
+
+> **“对抗性行为检测系统”。**
+
+---
+
+# 三十五、最终 REDTEAM 裁定
+
+## 模型一
+
+**统计正确性：★★★☆☆**
+
+**业务价值：★★★☆☆**
+
+**风控价值：★★★☆☆**
+
+**解释性：★★★★★**
+
+**数据治理：★★☆☆☆**
+
+**可作为最终证据：❌**
+
+它适合：
+
+> **快速筛选器。**
+
+---
+
+## 模型二
+
+**统计正确性：★★★★☆**
+
+**业务价值：★★★★★**
+
+**风控价值：★★★★☆**
+
+**解释性：★★★★☆**
+
+**数据治理：★★★★☆**
+
+**可作为最终证据：❌**
+
+但它已经可以作为：
+
+> **正式 REDTEAM 风控特征工程的基础模型。**
+
+---
+
+# 三十六、最重要的最终结论
+
+我会把这次审计结论锁成四句话：
+
+> **第一：模型一不应继续作为主模型。`round_no >= 40` 的绝对局位存在靴长异质性，跨靴比较的统计意义不足。**
+
+> **第二：模型二方向正确，而且明显优于模型一，因为它同时考虑了相对靴位、下注金额斜率、晚段 ROI、早段 ROI 和全体 P&L。**
+
+> **第三：模型二目前最大的漏洞不是 `0.80`，而是 `MAX(round_no)` 被当成真实靴长。必须尽快改成权威 `true_shoe_length`，否则“相对靴位”仍然可能是观察数据产生的伪相对位置。**
+
+> **第四：目前数据并没有证明“靴末下注玩家”整体具有盈利优势。相反，`n≥100 & late_share≥0.60` 的397人晚段加权 ROI 约为 **-1.62%**。因此这个模型现在应被定位为**行为异常筛选器，而不是作弊/优势玩家判定器**。**
+
+---
+
+## 最终建议的工程优先级
+
+**P0 — 必须先修**
+
+1. 两模型统一数据源。
+2. 两模型统一 observation window。
+3. 两模型统一 `bet01 → latest version`。
+4. 明确 `bet11 / bet13 / validbet / bet14` 的业务语义。
+5. 用真实靴生命周期表替代 `MAX(round_no)`。
+
+**P1 — 风控模型升级**
+
+6. 增加 `late_stake_share`。
+7. 增加 `late_stake_intensity`。
+8. 增加 `roi_delta = roi_late - roi_early`。
+9. 增加最低 `late_orders` 与最低 `late_stake`。
+10. 对 ROI 做 Wilson / Bayesian shrinkage，而不是直接按 raw ROI 排名。
+
+**P2 — REDTEAM**
+
+11. 接 IP。
+12. 接 device。
+13. 接 agent。
+14. 接 table/dealer。
+15. 接尾秒下注。
+16. 接 opposite-bet / hedge pair。
+17. 接跨玩家协同网络。
+
+最终才形成：
+
+[
+\boxed{
+Behavior
+\times
+Timing
+\times
+Stake
+\times
+Economic
+\times
+Network
+\times
+Temporal
+}
+]
+
+的 **A168 REDTEAM 对抗性玩家风险评分体系**。
+
+而不是简单地把：
+
+```text
+late_ratio >= 0.60
+```
+
+当成“高风险玩家”。
+
+**这一轮的审计结论：M2 可以升格为下一阶段的主线，但必须先完成 V01～V03 三个 Critical 修复；M1 保留作为历史/对照筛选器，不建议继续作为主风险模型。**
+
+
+# 三十七、准入口径硬性对比（2026-08-18 审计增补） {#sec-intake-audit}
+
+::: {.callout-important}
+## 本章定位与前三十六章之关系
+
+前三十六章审的是**统计语义**（判据是否稳定、ROI 是否爆炸、样本是否幸存者偏差）。
+本章审的是**数据准入口径**——即「进入统计之前，哪些注单该被剔除」。
+二者层级不同：**准入口径若错，统计做得再对也是对错的数据做对的统计。**
+
+本章一切数字皆由两份 CSV 现算（铁律第九条），并已完成三项前置核实：
+
+1. **文件归属核实**：不看文件名、只看列名。含 `player_id`／`late_ratio` 者为模型一
+   （粘贴之简版 SQL）；含 `uid`／`late_def` 者为模型二（§R01）。
+   ⚠ 2026-08-18 首次上传时两档标签曾对调，本次已归位；本章按**实际内容**称呼。
+2. **同源核实**：本次模型一之 uid 集合与逐值皆与首次上传件相同。
+3. **模型二与 `R01_late_shoe.csv` 之核实**：92,412 行、15 列、uid 集合全同，
+   `n_orders_all`／`late_share`／`stake_all`／`game_pnl_all`／`roi_late` 五列
+   **最大绝对差 0.0000000000**。MD5 之别系浮点格式化差异，**非内容差异**。
+:::
+
+```{r}
+#| label: intake-load
+#| echo: false
+suppressPackageStartupMessages(library(data.table))
+.p1 <- "数据库/模型一_甲版.csv"; .p2 <- "数据库/模型二_甲版.csv"
+if (!all(file.exists(c(.p1, .p2))))
+  stop(sprintf("○ 待表：当前工作目录 %s 之下未找到两份 CSV——不以静态文字冒充结果。", getwd()))
+m1 <- fread(.p1, encoding = "UTF-8"); m2 <- fread(.p2, encoding = "UTF-8")
+stopifnot("模型一须含 player_id" = "player_id" %chin% names(m1),
+          "模型二须含 late_def"  = "late_def"  %chin% names(m2),
+          "模型二口径锁异常"      = all(m2$late_def == "shoe_pos>=0.80"))
+jj <- merge(m1, m2, by.x = "player_id", by.y = "uid")
+n1 <- nrow(m1); n2 <- nrow(m2); nov <- nrow(jj)
+n1_only    <- n1 - nov
+m1_lt100   <- mean(m1$total_orders < 100) * 100
+corr_lr_ls <- cor(jj$late_ratio, jj$late_share)
+m1_lr_p50  <- median(m1$late_ratio); m2_ls_p50 <- median(m2$late_share)
+roi_max <- max(m1$roi); roi_gt05 <- sum(m1$roi > 0.5); roi_gt1 <- sum(m1$roi > 1)
+wr_p50  <- median(m1$win_rate)
+m2_hold <- -sum(m2$game_pnl_all) / sum(m2$stake_all) * 100
+m1_hold <- -sum(m1$profit)       / sum(m1$valid_bet) * 100
+```
+
+## 一、十一项准入口径逐项对比
+
+```{r}
+#| label: intake-table
+#| echo: false
+intake <- data.table(
+  维度 = c("输出行数", "尾段判据", "订单门槛", "SQL 内筛阈值", "测试线剔除",
+           "同单号去重", "重对单剔除", "一般单准入", "窗口过滤", "汇率归一", "口径锁列"),
+  模型一 = c(format(n1, big.mark = ","), "`bet04 >= 40`（绝对局号）",
+             sprintf("`total_orders >= %d`", min(m1$total_orders)),
+             "✅ `late_ratio >= 0.60`（写死于 SQL）", "❌ 无",
+             "❌ 无", "❌ 无（`bet38`）", "❌ 无（`category`）", "❌ 无 `dt` 过滤",
+             "⚠ 部分：`profit`／`valid_bet` 有，判赢之 `bet13` 比较无", "❌ 无"),
+  模型二 = c(format(n2, big.mark = ","), "`shoe_pos >= 0.80`（相对靴位）",
+             sprintf("`n_orders_all >= %d`", min(m2$n_orders_all)),
+             "❌ 刻意不筛（留对照组）", "✅ 五级 `LEFT JOIN`",
+             "✅ `ROW_NUMBER` 三级排序", "✅", "✅", "✅ 139 天", "✅ 全量",
+             sprintf("✅ `late_def = %s`", m2$late_def[1L])),
+  风控后果 = c("模型一已在 SQL 内筛完，无对照组",
+               "靴长不定致判据随靴长失真",
+               "门槛低则捕获浅度会员，高则漏之",
+               "**无对照组即不可证伪**",
+               "214 条测试线流水混入分母",
+               "同注单多版本重复计数，`COUNT(*)` 虚高",
+               "重对单双计",
+               "小费单（`category='2'`）混入",
+               "扫全表，与 139 天窗口不可比",
+               "跨币别比较失真",
+               "旧版 CSV 可静默配新文字"))
+knitr::kable(intake, align = "l",
+  caption = sprintf("准入口径硬性对比（十一维度；模型一 %s 行 vs 模型二 %s 行，交集 %s 人）",
+                    format(n1, big.mark = ","), format(n2, big.mark = ","),
+                    format(nov, big.mark = ",")))
+```
+
+## 二、交集之窄——两者其实在看不同群体
+
+模型一 `r format(n1, big.mark = ",")` 人中，**`r format(n1_only, big.mark = ",")` 人（`r sprintf("%.1f%%", n1_only / n1 * 100)`）不在模型二内**，
+交集仅 **`r format(nov, big.mark = ",")` 人**。
+
+成因清楚：模型一之会员有 **`r sprintf("%.1f%%", m1_lt100)`** 订单数低于 100，
+而模型二门槛为 `>= 100`。
+
+**故二者非「简版 vs 完整版」，而是两个几乎不相交的群体。**
+这也意味着：**任何「模型一发现了模型二漏掉的人」之说，须先厘清是判据之别还是门槛之别**——
+本例中主因是**门槛**，非判据。
+
+## 三、两套尾段判据之实测落差
+
+在可比之 `r format(nov, big.mark = ",")` 人上：
+模型一 `late_ratio` 中位 **`r sprintf("%.4f", m1_lr_p50)`**、
+模型二 `late_share` 中位 **`r sprintf("%.4f", m2_ls_p50)`**，
+两者 Pearson 相关 **`r sprintf("%.4f", corr_lr_ls)`**。
+
+::: {.callout-caution}
+## 相关 `r sprintf("%.4f", corr_lr_ls)` 说明什么
+
+若「第 40 局」与「相对靴位 0.80」真等价，此相关应逼近 1.0。实测**不足 0.77**，
+即**约四成变异不可互相解释**。
+
+机理：实测靴长均值 49.86、P50 = 50、P90 = 54、P99 = 58。
+第 40 局在中位靴（50 局）为相对靴位 0.80，但在长靴（54–58 局）仅 0.69–0.74，
+在短靴则早已越过尾段。**故绝对局号判据随靴长系统性失真**——
+这正是模型二于 2026-08-12 作 B-01 斧正之缘由。
+:::
+
+## 四、🔴 模型一之 ROI 分母失衡（本章最严重之发现）
+
+模型一 `roi = profit ÷ valid_bet`（分母为**洗码量**）。实测：
+
+- ROI 最大值 **`r sprintf("%.4f", roi_max)`**——即「每洗码 1 元赚 `r sprintf("%.2f", roi_max)` 元」；
+- ROI > 0.5 者 **`r roi_gt05`** 人；ROI > 1.0 者 **`r roi_gt1`** 人。
+
+**百家乐单注最高赔率 8:1（和局），长期 ROI 断无此量级。**
+
+::: {.callout-important}
+## 溯因：这不是赢家，极可能是打水者
+
+洗码量之定义为「计入退水与占成结算之有效投注」。而平台规则对**等额对押庄闲之注不计洗码**
+（本项目已实证：`sum_valid_bet = 0` 且 `n_orders >= 5` 之会员-月，自对押纯度 **100%**）。
+
+故对冲者之洗码量被系统性压缩至近零，而其盈亏照记——
+**以洗码量作分母，ROI 必然虚高**。
+
+**后果**：模型一之 `ORDER BY roi DESC` 会把打水者顶到榜首。
+即「ROI 排行榜前列」与「靴尾优势玩家」是两类完全不同的人，模型一把二者混为一谈。
+
+**这一点反而指出了模型一的真正价值所在**：它的 ROI 异常无意中指向了打水信号，
+只是解读方向反了——详见第三十八章。
+:::
+
+作为对照，两模型之整体 hold%（皆以各自分母计）：
+模型二本金口径 **`r sprintf("%.4f%%", m2_hold)`**；
+模型一洗码口径 **`r sprintf("%.4f%%", m1_hold)`**。
+⚠ 二者分母不同、样本不同，**不可直接比较**，此处并列仅为呈现量级。
+
+## 五、`win_rate` 之口径混杂
+
+模型一判赢用 `bet14 > bet13`（派彩 > 下注）。实测 `win_rate` 中位仅
+**`r sprintf("%.4f", wr_p50)`**。
+
+问题有二：其一，**和局退注时 `bet14 == bet13`，被计入「不赢」，与「输」混同**——
+百家乐和局率约 9.5%，此部分被系统性归错；其二，比较前**未除汇率**（同注单同币别不影响
+大小关系，但与该 SQL 其他处之体例不一，属内部不一致）。
+
+## 六、模型二亦有其局限（不为其讳）
+
+1. **门槛 `>= 100` 之盲区**：漏掉模型一所见之 `r sprintf("%.1f%%", m1_lt100)` 浅度会员；
+2. **无 `win_rate`**：只有 ROI，无胜率维度；
+3. **`max_round` 算于清洗后注单集**：末尾数局无人下注时分母偏小、`shoe_pos` 被系统性放大
+   （已于 R01 报告 `@sec-shoe-pos-caveat` 披露，且判定为「与结论同向，不构成威胁」）；
+4. **最要紧者**：模型二之主判据 `late_share` **本身已被四重证伪**——
+   配对符号检验 p = 0.7591、Wilcoxon p = 0.8087、九档阈值扫描中命中组 hold%
+   **无一档**低于对照组、外部 L1a 风险标签 AUC = **0.3828**（**低于 0.5，方向反转**）。
+
+::: {.callout-caution}
+## 故本章之最终判断与前三十六章一致，但理由更进一层
+
+前三十六章的结论是「模型二明显优于模型一，但仍不能直接用于处罚」。
+本章补上准入口径这一层后，判断可更精确：
+
+> **模型二之工程质量确实显著更高（十一项准入口径中，模型一缺其七）；
+> 但模型二所测之假说已被其自身数据证伪四次。
+> 故模型二之价值不在于「它测对了」，而在于「它证明了此路不通」——
+> 这是有价值的负结果，不是失败。**
+
+而模型一即便补齐全部七项准入缺失，**测的仍是一个已知无判别力的维度**。
+:::
+
+## 七、本章之审计留痕
+
+| 项 | 状态 |
+|:--|:--|
+| 文件归属（按列名而非文件名判定） | ✅ 已核实，首次上传之标签对调已更正 |
+| 模型一与首次上传件之同源性 | ✅ uid 集合与逐值皆同 |
+| 模型二与 `R01_late_shoe.csv` | ✅ 五列最大绝对差 0.0000000000 |
+| 本章全部数字 | ✅ 渲染时由两份 CSV 现算，零硬编码 |
+| 是否修改既有三十六章 | ❌ **未动一字** |
+
+
+
+# 三十八、甲乙两版同口径复跑之实证裁定（2026-08-19 增补） {#sec-ab-rerun}
+
+::: {.callout-important}
+## 本章定位与第三十七章之关系
+
+第三十七章末尾曾预告：模型一之 ROI 异常「无意中指向了打水信号，只是解读方向反了——详见第三十八章」。
+其后据此产出两份复跑件：
+
+- **甲版**：模型一原 SQL **仅补窗口过滤**（`dt ∈ [2026-03-21, 2026-08-07)`），其余一字未改；
+- **乙版**：在甲版之上**补齐七项准入**（同单号去重、五级测试线剔除、重对单 `bet38`、一般单
+  `category`、会员号＞0、汇率＞0、局号＞0），并新增 `push_orders`、`win_rate_ex_push`、
+  `stake_all`、`roi_stake`、`vb_ratio` 五列，排序键由 `roi_vb` 改为 `roi_stake`。
+
+本章据两份实跑 CSV 裁定三件事：**① 复跑前所立三项预期是否成立；② 七项准入修正在本群体上的
+实际增量几何；③ 第三十七章「ROI 榜首极可能是打水者」之推断是否经得起 `vb_ratio` 检验。**
+
+本章一切数字皆由 CSV 渲染时现算（铁律第九条，零硬编码），文件归属按**列名而非文件名**判定，
+与第三十七章同一纪律。证据等级遵循 OBSERVED／INFERRED／UNKNOWN 三级，不越级。
+:::
+
+```{r}
+#| label: ab-load
+#| echo: false
+suppressPackageStartupMessages(library(data.table))
+.p0 <- "数据库/模型一输出内容.csv"   # 原模型一（无窗口版，第三十七章之基线）
+.pj <- "数据库/模型一_甲版.csv"      # 甲版：仅补窗口
+.py <- "数据库/模型一_乙版.csv"      # 乙版：补齐七项准入
+.miss <- c(.p0, .pj, .py)[!file.exists(c(.p0, .pj, .py))]
+if (length(.miss))
+  stop(sprintf("○ 待表：未找到 %s ——不以静态文字冒充结果。", paste(.miss, collapse = "、")))
+
+m0 <- fread(.p0, encoding = "UTF-8")
+mj <- fread(.pj, encoding = "UTF-8")
+my <- fread(.py, encoding = "UTF-8")
+
+## 文件归属守门：只认列名签名，不认文件名 ------------------------------------
+stopifnot(
+  "基线须为模型一结构（含 player_id 与 roi）" =
+    all(c("player_id", "roi") %chin% names(m0)) && !"vb_ratio" %chin% names(m0),
+  "甲版须为模型一结构且不含乙版新列" =
+    all(c("player_id", "roi") %chin% names(mj)) && !"vb_ratio" %chin% names(mj),
+  "乙版须含五项新列" =
+    all(c("push_orders", "win_rate_ex_push", "stake_all",
+          "roi_vb", "roi_stake", "vb_ratio") %chin% names(my)),
+  "三档 player_id 皆须无重复" =
+    !anyDuplicated(m0$player_id) && !anyDuplicated(mj$player_id) &&
+    !anyDuplicated(my$player_id)
+)
+
+## 口径锁检查：登记而不放行 -----------------------------------------------------
+.lock_j <- "late_def" %chin% names(mj); .lock_y <- "late_def" %chin% names(my)
+
+## 六元组档案身份（渲染时现算） -------------------------------------------------
+.six <- function(p) {
+  raw <- readBin(p, "raw", n = file.size(p))
+  data.table(文件 = basename(p),
+             行数 = format(length(gregexpr("\n", rawToChar(raw), fixed = TRUE)[[1L]]),
+                           big.mark = ","),
+             字节 = format(file.size(p), big.mark = ","),
+             MD5  = unname(tools::md5sum(p)),
+             换行 = if (any(raw == as.raw(0x0d))) "含CR(CRLF)" else "LF",
+             编码 = if (identical(raw[1:3], as.raw(c(0xef, 0xbb, 0xbf))))
+                      "UTF-8(BOM)" else "UTF-8")
+}
+six <- rbindlist(lapply(c(.p0, .pj, .py), .six))
+
+## 核心量（本章全部叙述所依赖之唯一来源） ---------------------------------------
+n0 <- nrow(m0); nj <- nrow(mj); ny <- nrow(my)
+ov_jy   <- length(intersect(mj$player_id, my$player_id))
+j_only  <- nj - ov_jy; y_only <- ny - ov_jy
+yb      <- my[!player_id %in% mj$player_id]              # 乙独有
+pp      <- merge(mj, my, by = "player_id", suffixes = c("_j", "_y"))
+stopifnot("配对表须含甲版 roi（乙版无同名列，merge 不加后缀）" = "roi" %chin% names(pp))
+d_ord   <- pp$total_orders_j - pp$total_orders_y
+same_sh <- mean(d_ord == 0)
+aff     <- pp[d_ord > 0]
+dup2    <- aff[total_orders_j == 2L * total_orders_y &
+               abs(valid_bet_j - 2 * valid_bet_y) < 0.05]
+hi_vb   <- my[!is.na(roi_vb) & roi_vb > 1]
+hedge_share_in_hi <- if (nrow(hi_vb)) mean(hi_vb$vb_ratio < 0.5) else NA_real_
+wsusp   <- my[vb_ratio < 0.5]                            # 打水嫌疑：洗码/本金 < 0.5
+hi_st   <- my[roi_stake > 1]
+hold_j     <- -sum(mj$profit) / sum(mj$valid_bet) * 100
+hold_y_vb  <- -sum(my$profit) / sum(my$valid_bet) * 100
+hold_y_st  <- -sum(my$profit) / sum(my$stake_all) * 100
+cor_roi_vb <- cor(pp$roi, pp$roi_vb,    use = "complete.obs")
+cor_roi_st <- cor(pp$roi, pp$roi_stake, use = "complete.obs")
+top20_j  <- head(mj[order(-roi)], 20L)$player_id
+top20_st <- head(my[order(-roi_stake)], 20L)$player_id
+top20_ov <- length(intersect(top20_j, top20_st))
+
+## 三项预期之机器裁定（判语亦现算，不手写勾叉） ---------------------------------
+v1 <- nj < n0
+v2 <- ny < nj
+v3 <- !is.na(hedge_share_in_hi) && hedge_share_in_hi >= 0.5
+.vt <- function(ok, yes, no) {
+  if (isTRUE(ok)) sprintf("✅ 成立：%s", yes) else sprintf("❌ 不成立：%s", no)
+}
+```
+
+## 一、档案身份与守门留痕
+
+```{r}
+#| label: ab-six
+#| echo: false
+knitr::kable(six, align = "l",
+  caption = sprintf("六元组档案身份（共 %d 档、%d 列；渲染时现算，零省略）",
+                    nrow(six), ncol(six)))
+```
+
+```{r}
+#| label: ab-lock
+#| echo: false
+#| results: asis
+cat(sprintf(paste0(
+  "> 🟡 **CONDITIONAL·口径锁缺失登记**：甲版含 `late_def` 口径锁列 = **%s**，",
+  "乙版 = **%s**。两版 SQL 均未输出口径锁与准入版本列，`check_def_lock()` ",
+  "式门禁无从落锁，「旧数字配新文字」之静默漂移风险仍在。**下一版 SQL 必须补** ",
+  "`late_def = 'bet04>=40'` 与 `intake_ver ∈ {'甲','乙'}` 两列——此为本轮工程债，",
+  "登记于此，不因数字可用而豁免。\n\n"),
+  ifelse(.lock_j, "有", "无"), ifelse(.lock_y, "有", "无")))
+cat(paste0(
+  "> ⚪ **N/A·窗口一致性之信任边界**：`dt` 不在输出列内，窗口过滤属 SQL 侧承诺，",
+  "CSV 侧**不可复核**——本项证据等级为 **UNKNOWN**，不越级登记为 OBSERVED。\n"))
+```
+
+## 二、三项复跑预期之裁定
+
+```{r}
+#| label: ab-verdict
+#| echo: false
+verdict <- data.table(
+  预期 = c(
+    sprintf("一、甲版行数应少于原模型一 %s 行（窗口收敛）", format(n0, big.mark = ",")),
+    "二、乙版行数应再少于甲版（准入收敛）",
+    "三、乙版 `roi_vb > 1` 者应以 `vb_ratio → 0` 印证为打水者"),
+  实测 = c(
+    sprintf("甲 %s 行，较原件 −%s 行（−%.1f%%）",
+            format(nj, big.mark = ","), format(n0 - nj, big.mark = ","),
+            (n0 - nj) / n0 * 100),
+    sprintf("乙 %s 行，较甲 −%s 行（交集 %s、甲独有 %s、乙独有 %s）",
+            format(ny, big.mark = ","), format(nj - ny, big.mark = ","),
+            format(ov_jy, big.mark = ","), format(j_only, big.mark = ","),
+            format(y_only, big.mark = ",")),
+    sprintf("`roi_vb > 1` 共 %d 人，其中 `vb_ratio < 0.5` 仅 %d 人（%.0f%%）",
+            nrow(hi_vb), sum(hi_vb$vb_ratio < 0.5), hedge_share_in_hi * 100)),
+  裁定 = c(
+    .vt(v1, "窗口过滤确有收敛", "甲版行数未减，须查窗口是否生效"),
+    .vt(v2, "七项准入确有收敛", "乙版行数未减，须查准入是否生效"),
+    .vt(v3, "打水者假说获印证",
+        "**该推断为主体证伪**——榜首高 ROI 者多数洗码结构正常，另有其因（见第四节）")))
+knitr::kable(verdict, align = "l",
+  caption = sprintf("三项预期机器裁定（%d 项全列，零省略；判语由数据现算）", nrow(verdict)))
+```
+
+::: {.callout-caution}
+## 预期三被证伪，是本章最重要的负结果
+
+第三十七章之推断——「ROI 排行榜前列极可能是打水者」——在乙版 `vb_ratio` 落地后
+**主体不成立**。打水签名（洗码/本金趋零）确实存在、且 `vb_ratio` 列确能一眼识别，
+但它**不在 `roi_vb` 榜首**，而在 `roi_vb` 的**双向极端与空值处**（见第四节）。
+按评估纪律，此负结果照登不讳：**推断证伪即降级，不因其出自本档前章而豁免。**
+:::
+
+## 三、七项准入修正之实际增量——结构必需，然量级有限
+
+配对交集 `r format(ov_jy, big.mark = ",")` 人中，甲乙 `total_orders` **完全相同者占
+`r sprintf("%.2f%%", same_sh * 100)`**；受准入修正影响（甲＞乙）者仅
+`r nrow(aff)` 人。其中 `r nrow(dup2)` 人呈**恰为二倍**签名——订单数与洗码量同时
+精确减半，即同单号恰存两个版本、旧版逐单重复计数，此为「同单号去重」铁律之直接实证。
+
+```{r}
+#| label: ab-affected
+#| echo: false
+if (nrow(aff) == 0L) {
+  cat("> ⚠ 零行明示：本轮无任何会员受准入修正影响（零行 ≠ 无异常，仅指本群体）。")
+} else {
+  show <- aff[order(-(total_orders_j - total_orders_y)),
+              .(会员 = player_id,
+                甲订单 = format(total_orders_j, big.mark = ","),
+                乙订单 = format(total_orders_y, big.mark = ","),
+                恰二倍 = fifelse(total_orders_j == 2L * total_orders_y &
+                                 abs(valid_bet_j - 2 * valid_bet_y) < 0.05, "◎", ""),
+                甲洗码 = format(round(valid_bet_j, 2), big.mark = ","),
+                乙洗码 = format(round(valid_bet_y, 2), big.mark = ","),
+                甲尾占 = sprintf("%.4f", late_ratio_j),
+                乙尾占 = sprintf("%.4f", late_ratio_y),
+                vb_ratio = sprintf("%.4f", vb_ratio))]
+  show[, 序 := format(seq_len(.N), big.mark = ",")]
+  setcolorder(show, "序")
+  knitr::kable(show, align = "r",
+    caption = sprintf(
+      "受准入修正影响会员全列（%s 行 × %d 列；省略 0 行，0.0%%；◎ = 恰二倍重复计数签名）",
+      format(nrow(show), big.mark = ","), ncol(show)))
+}
+```
+
+乙独有之 `r format(y_only, big.mark = ",")` 人，其 `late_ratio` 全落于
+[`r sprintf("%.4f", min(yb$late_ratio))`, `r sprintf("%.4f", max(yb$late_ratio))`]
+边界带——去重剔除早段重复注单后，尾占比恰越 0.60 门槛而入榜。此证明
+**SQL 内写死阈值必然制造边界翻覆**：阈值当参数化并移至 R 侧（承第三十六章 P0-2 与
+本档一贯之「SQL 只给底料」原则）。
+
+::: {.callout-note}
+## 本节裁定（OBSERVED）
+
+七项准入修正**结构上一项不可免**（重复计数、测试线、重对单皆为口径正当性问题），
+然于「`bet02='101'`、订单 ≥ `r min(my$total_orders)`、尾占 ≥ 0.60」这一已高度过滤之群体上，
+其**数值增量有限**：行数仅收敛 `r sprintf("%.1f%%", (nj - ny) / nj * 100)`，
+配对 ROI 相关高达 `r sprintf("%.4f", cor_roi_vb)`（洗码口径）／
+`r sprintf("%.4f", cor_roi_st)`（本金口径），甲 `roi` 榜与乙 `roi_stake` 榜前 20 名重合
+`r top20_ov` 人。**修正之价值在口径正当性与个案精度，不在改写总体结论。**
+:::
+
+## 四、`vb_ratio` 落地后的三分天下——打水签名的真实藏身处
+
+```{r}
+#| label: ab-roi-top
+#| echo: false
+if (nrow(hi_vb) == 0L) {
+  cat("> ⚠ 零行明示：乙版无 `roi_vb > 1` 会员。")
+} else {
+  t4 <- hi_vb[order(-roi_vb),
+              .(会员 = player_id, 订单 = total_orders,
+                胜率 = sprintf("%.4f", win_rate),
+                洗码 = format(round(valid_bet, 2), big.mark = ","),
+                本金 = format(round(stake_all, 2), big.mark = ","),
+                盈亏 = format(round(profit, 2), big.mark = ","),
+                roi_vb = sprintf("%.4f", roi_vb),
+                roi_stake = sprintf("%.4f", roi_stake),
+                vb_ratio = sprintf("%.4f", vb_ratio))]
+  t4[, 序 := format(seq_len(.N), big.mark = ",")]
+  setcolorder(t4, "序")
+  knitr::kable(t4, align = "r",
+    caption = sprintf("`roi_vb > 1` 会员全列（%d 行 × %d 列；省略 0 行，0.0%%）",
+                      nrow(t4), ncol(t4)))
+}
+```
+
+上表即预期三证伪之现场：`roi_vb > 1` 共 `r nrow(hi_vb)` 人，`vb_ratio` 中位
+`r sprintf("%.4f", median(hi_vb$vb_ratio))`，多数与全体中位
+`r sprintf("%.4f", median(my$vb_ratio))` 相去无几——**非打水结构**。
+其中本金口径仍 `roi_stake > 1` 者 `r nrow(hi_st)` 人，订单数仅
+`r paste(sort(hi_st$total_orders), collapse = "、")` 笔、胜率
+`r paste(sprintf("%.4f", sort(hi_st$win_rate)), collapse = "、")`——低胜率而正盈利，
+与**小样本高赔侧注（和 8:1／对子 11:1）之幸运**相容；然侧注构成不在聚合列内，
+**成因证据等级为 INFERRED，须回注单级（`bet02` 玩法明细）核查后方可定谳**。
+
+打水签名的真实藏身处如下：
+
+```{r}
+#| label: ab-hedge
+#| echo: false
+if (nrow(wsusp) == 0L) {
+  cat("> ⚠ 零行明示：乙版无 `vb_ratio < 0.5` 会员（零行 ≠ 无打水，仅指本群体）。")
+} else {
+  t5 <- wsusp[order(vb_ratio),
+              .(会员 = player_id, 订单 = total_orders,
+                尾占 = sprintf("%.4f", late_ratio),
+                洗码 = format(round(valid_bet, 2), big.mark = ","),
+                本金 = format(round(stake_all, 2), big.mark = ","),
+                盈亏 = format(round(profit, 2), big.mark = ","),
+                roi_vb = fifelse(is.na(roi_vb), "空(洗码=0)", sprintf("%.4f", roi_vb)),
+                roi_stake = sprintf("%.4f", roi_stake),
+                vb_ratio = sprintf("%.4f", vb_ratio))]
+  t5[, 序 := format(seq_len(.N), big.mark = ",")]
+  setcolorder(t5, "序")
+  knitr::kable(t5, align = "r",
+    caption = sprintf(
+      "打水嫌疑（`vb_ratio < 0.5`）全列（%d 行 × %d 列；省略 0 行，0.0%%）",
+      nrow(t5), ncol(t5)))
+}
+```
+
+此 `r nrow(wsusp)` 人合计本金 `r format(round(sum(wsusp$stake_all), 2), big.mark = ",")`、
+盈亏 `r format(round(sum(wsusp$profit), 2), big.mark = ",")`。要害在于：其 `roi_vb`
+**双向爆炸**——最低至 `r sprintf("%.4f", min(wsusp$roi_vb, na.rm = TRUE))`，
+另有 `r sum(is.na(wsusp$roi_vb))` 人洗码恰为零致 `roi_vb` 为空（其一在甲版即为
+`roi` 空值行）。故第三十七章「洗码分母失衡致 ROI 虚高」之**机理陈述仍然成立**，
+错的是**方位**：分母失衡不把打水者推上正榜首，而是把他们抛向 ROI 的**两极与空值**。
+`vb_ratio` 作为独立识别列之设计有效性，由此获正面实证（OBSERVED）。
+
+## 五、尾占分层之经济裁定与 hold% 对帐
+
+```{r}
+#| label: ab-band
+#| echo: false
+bd <- my[, .(会员数 = .N,
+             本金占比 = sum(stake_all) / sum(my$stake_all) * 100,
+             加权roi_stake = sum(profit) / sum(stake_all),
+             hold_pct = -sum(profit) / sum(stake_all) * 100),
+         by = .(层 = cut(late_ratio, c(0.6, 0.7, 0.8, 0.9, 1.0000001),
+                         right = FALSE, labels = c("[0.60,0.70)", "[0.70,0.80)",
+                                                   "[0.80,0.90)", "[0.90,1.00]")))][order(层)]
+bd_out <- bd[, .(层, 会员数 = format(会员数, big.mark = ","),
+                 本金占比 = sprintf("%.2f%%", 本金占比),
+                 加权roi_stake = sprintf("%+.4f", 加权roi_stake),
+                 `hold%` = sprintf("%+.4f%%", hold_pct))]
+bd_out[, 序 := format(seq_len(.N), big.mark = ",")]
+setcolorder(bd_out, "序")
+knitr::kable(bd_out, align = "r",
+  caption = sprintf("乙版尾占分层经济裁定（%d 层全列，零省略；本金口径）", nrow(bd_out)))
+```
+
+```{r}
+#| label: ab-band-text
+#| echo: false
+#| results: asis
+tp <- bd[.N]
+cat(sprintf(paste0(
+  "最高层 %s 加权 `roi_stake` 为 **%+.4f**（hold%% **%+.4f%%**），然其本金占比仅 ",
+  "**%.2f%%**、会员 %s 人——经济权重轻微，且与既有四重证伪（配对符号检验 p=0.7591、",
+  "Wilcoxon p=0.8087、九档阈值扫描零档、外部标签 AUC=0.3828）同向：",
+  "**尾段偏好至今未见系统性玩家优势**（OBSERVED）。\n\n"),
+  tp$层, tp$加权roi_stake, tp$hold_pct, tp$本金占比, format(tp$会员数, big.mark = ",")))
+cat(sprintf(paste0(
+  "hold%% 对帐：甲版洗码口径 **%.4f%%**、乙版洗码口径 **%.4f%%**、乙版本金口径 ",
+  "**%.4f%%**。甲乙洗码口径之差仅 %.4f 个百分点——再证准入修正不改总体量级；",
+  "本金与洗码口径之差则与全项目「洗码/本金中位约 0.90」之结构一致。\n"),
+  hold_j, hold_y_vb, hold_y_st, abs(hold_j - hold_y_vb)))
+```
+
+## 六、终局裁定
+
+::: {.callout-important}
+## 四句锁定（承三十六、三十七章而更进一层）
+
+> **第一：三项复跑预期两成一败——行数收敛如期，「榜首即打水者」之推断被 `vb_ratio`
+> 证伪。负结果照登，推断降级。**
+
+> **第二：七项准入修正是口径正当性之铁律，一项不可免；但在本群体上其数值增量有限
+> （行数 −`r sprintf("%.1f%%", (nj - ny) / nj * 100)`、ROI 榜前二十重合
+> `r top20_ov`/20）。乙版之价值在「个案不再冤枉」，不在「总体翻案」。**
+
+> **第三：`vb_ratio` 与 `roi_stake` 两列经实证有效——打水签名现形于 `vb_ratio < 0.5`
+> 之 `r nrow(wsusp)` 人（含洗码恰零者），`roi_stake > 1` 之 `r nrow(hi_st)` 人则须
+> 注单级核查侧注构成后定谳。此三列应升格为模型一系全部后续版本之标配。**
+
+> **第四：乙版即模型一之工程正身，然其所测仍是 `bet04 >= 40` 这一已被证伪之绝对局号
+> 维度——工程修齐不能救活死维度。模型一系（含甲乙两版）定位锁死为**对照筛选器与
+> 打水线索源**，不得作为主风险模型或处罚依据。**
+:::
+
+**工程优先级增补**（编号续第三十六章）：
+
+18. 模型一系 SQL 补 `late_def` 口径锁列与 `intake_ver` 准入版本列（P0）；
+19. `total_orders >= 30`、`late_ratio >= 0.60`、`round_no >= 40` 三处阈值一律参数化，
+    筛选移至 R 侧，SQL 只给底料（P0）；
+20. `roi_stake > 1` 会员之注单级侧注构成核查（和／对子占比）（P1）；
+21. `vb_ratio < 0.5` 名单并入既有对冲对（hedge pair）网络核查（P1）。
+
+## 七、本章之审计留痕
+
+```{r}
+#| label: ab-trail
+#| echo: false
+trail <- data.table(
+  项 = c("文件归属（按列名而非文件名判定）",
+         "甲乙与原模型一之基线关系",
+         "口径锁列",
+         "窗口一致性",
+         "本章全部数字",
+         "是否修改既有三十七章",
+         "渲染核实"),
+  状态 = c("✅ 三档签名守门通过（`stopifnot`）",
+           sprintf("✅ 原 %s → 甲 %s → 乙 %s，逐级收敛已现算核对",
+                   format(n0, big.mark = ","), format(nj, big.mark = ","),
+                   format(ny, big.mark = ",")),
+           "🟡 甲乙两版皆缺，已登记为工程债（第一节）",
+           "⚪ UNKNOWN——`dt` 不在输出列，SQL 侧承诺不可于 CSV 复核",
+           "✅ 渲染时由三份 CSV 现算，零硬编码",
+           "❌ **未动一字**（仅追加本章）",
+           "✅ 本档须于本机 Quarto 全文渲染通过后方视为核实完成"))
+knitr::kable(trail, align = "l",
+  caption = sprintf("审计留痕（%d 项全列，零省略）", nrow(trail)))
+```

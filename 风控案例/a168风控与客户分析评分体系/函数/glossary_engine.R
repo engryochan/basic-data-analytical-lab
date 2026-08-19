@@ -25,13 +25,13 @@
 # =====================================================================
 
 suppressPackageStartupMessages(library(data.table))
-
+path <- "C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/风控案例/a168风控与客户分析评分体系/"
 .gstage <- function(tag, expr) tryCatch(expr, error = function(e)
   stop(sprintf("【glossary·%s】%s", tag, conditionMessage(e)), call. = FALSE))
 
 GLOSSARY_PATHS <- list(
-  yaml = file.path("数据库", "glossary_a168_v1.0.0.yaml"),
-  csv  = file.path("数据库", "glossary_a168_v1.0.0.csv")
+  yaml = file.path(paste0(path, "数据库/", "glossary_a168_v1.0.0.yaml")),
+  csv  = file.path(paste0(path, "数据库/", "glossary_a168_v1.0.0.csv"))
 )
 
 glossary_sixtuple <- function(path) {
