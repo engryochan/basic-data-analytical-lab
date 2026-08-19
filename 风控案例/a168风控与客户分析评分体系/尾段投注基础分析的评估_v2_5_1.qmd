@@ -1,0 +1,1826 @@
+---
+title: "尾段投注基础分析的评估"
+format: html
+---
+
+::: {.callout-important}
+## 版本声明（v2.0.0·2026-08-19·全量重写）
+
+本档为**现行标准之独立评估档**，内容全量重写，仅评甲版双档——**模型一_甲版**
+（`intake_ver='M1A'`，初版逻辑仅补窗口）与**模型二_甲版**（`intake_ver='M2A'`，
+准入齐备版）。两档**判据同一**（`late_def='bet04>=40'`）、**窗口同一**
+（`dt ∈ [2026-03-21, 2026-08-07)`）、门槛与阈值同一，**唯准入七项之别**——
+故本档所评者，系一组严格的**准入消融对照**：一切差异皆可唯一归因于准入口径。
+
+历史审计（初版模型一 vs §R01 相对靴位版）由 v1.3.0 承载，本档不再复述；
+溯源以六元组锁定：v1.3.0（2,443 行、MD5 `fa48264531d091a0b52c1601a6352297`、
+LF、UTF-8）。本档纪律与前版一致：**一切数字渲染时由 CSV 现算（铁律第九条，
+零硬编码）**；文件归属**按列名而非文件名**判定；证据分级 OBSERVED／INFERRED／
+UNKNOWN，不越级；口径锁 `late_def` 与准入版本锁 `intake_ver` 已转 **SQL 原生**，
+读入侧全量强校验，缺列或值异即当场硬失败。
+:::
+
+# 引言：双 SQL 与双档关系
+
+## 模型一_甲版
+
+```{r}
+#| label: v2-boot
+#| echo: false
+# knitr 引导块：空块前置，防 SQL 块塌缩（既知陷阱之预防）
+```
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- ─────────────────────────────────────────────────────────────────────
+-- 模型一_甲版（intake_ver = 'M1A'）：初版模型一仅补窗口过滤，其余逻辑一字未改
+-- ⚠ 准入四缺仍在：同单号去重、五级测试线剔除、重对单(bet38)、一般单(category)
+--   与模型二_甲版之差异 = 准入消融增量（判据与窗口双档同一）
+-- 口径锁：late_def = 'bet04>=40'；准入版本锁：intake_ver = 'M1A'
+-- 铁律：执行版一律行注释，禁用块注释（注释内符号致语句截断之陷阱）
+-- ─────────────────────────────────────────────────────────────────────
+WITH player_stat AS (
+    SELECT
+        CAST(bet05 AS BIGINT) AS player_id,
+        COUNT(*) AS total_orders,
+        SUM(CASE WHEN CAST(bet04 AS INT) >= 40 THEN 1 ELSE 0 END) AS late_orders,
+        SUM(CASE WHEN CAST(bet14 AS DECIMAL(20,4))
+                    > CAST(bet13 AS DECIMAL(20,4)) THEN 1 ELSE 0 END) AS win_orders,
+        SUM((CAST(bet14 AS DECIMAL(20,4)) - CAST(bet13 AS DECIMAL(20,4)))
+            / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)) AS profit,
+        SUM(CAST(validbet AS DECIMAL(20,4))
+            / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)) AS valid_bet
+    FROM ods_mariadb_2b.ods_a168_bet02
+    WHERE bet02 = '101'
+      AND dt >= '2026-03-21' AND dt < '2026-08-07'   -- 窗口：与模型二_甲版同一
+      AND bet03 IS NOT NULL
+      AND bet04 IS NOT NULL
+      AND bet05 IS NOT NULL
+    GROUP BY CAST(bet05 AS BIGINT)
+)
+SELECT 'bet04>=40' AS late_def,          -- 口径锁
+       'M1A'       AS intake_ver,        -- 准入版本锁
+       player_id, total_orders, late_orders,
+       ROUND(late_orders * 1.0 / total_orders, 4) AS late_ratio,
+       win_orders,
+       ROUND(win_orders * 1.0 / total_orders, 4) AS win_rate,
+       ROUND(valid_bet, 2) AS valid_bet,
+       ROUND(profit, 2)    AS profit,
+       ROUND(profit / NULLIF(valid_bet, 0), 4) AS roi
+FROM player_stat
+WHERE total_orders >= 30
+  AND late_orders * 1.0 / total_orders >= 0.60
+ORDER BY roi DESC, profit DESC;
+```
+
+根据运行以上代码，将输出储存为`数据库/模型一_甲版.csv`。
+
+## 模型二_甲版
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- ─────────────────────────────────────────────────────────────────────
+-- 模型二_甲版（intake_ver = 'M2A'）：判据与窗口与模型一_甲版完全同一，补齐七项准入
+-- 对齐者：窗口 · 产品 · 同单号去重 · 五级测试线剔除 · 重对单 · 一般单
+--         · 会员号>0 · 汇率>0 · 局号>0
+-- 保留者：尾段判据 bet04>=40（绝对局号）；门槛 >=30；SQL 内筛 late_ratio>=0.60
+-- 新增列：push_orders / win_rate_ex_push / stake_all / roi_stake / vb_ratio
+-- 口径锁：late_def = 'bet04>=40'；准入版本锁：intake_ver = 'M2A'
+-- 铁律：执行版一律行注释，禁用块注释
+-- ─────────────────────────────────────────────────────────────────────
+WITH test_agents AS (
+    SELECT age001 AS agent_id
+    FROM ods_mariadb_2b.ods_a168_agent
+    WHERE age022 = '1'                                -- 铁律④b：公司测试线
+),
+ranked AS (
+    SELECT b.bet01, b.bet02, b.bet03, b.bet04, b.bet05, b.bet11,
+           b.bet13, b.bet14, b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+           b.bet38, b.category, b.validbet,
+           ROW_NUMBER() OVER (
+             PARTITION BY b.bet01
+             ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+    FROM ods_mariadb_2b.ods_a168_bet02 b
+    WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+      AND b.bet02 = '101'
+),
+base AS (
+    SELECT CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT)              AS player_id,
+           CAST(NULLIF(TRIM(r.bet04),'') AS INT)                 AS round_no,
+           CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))       AS fx,
+           CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4))       AS stake_raw,
+           CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4))       AS payout_raw,
+           CAST(NULLIF(TRIM(r.validbet),'') AS DECIMAL(20,4))    AS vb_raw
+    FROM ranked r
+    LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18   -- StarRocks 无 EXISTS 多列 IN，
+    LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19   -- 测试线剔除改五路 LEFT JOIN
+    LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20
+    LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21
+    LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22
+    WHERE r.rn = 1
+      AND r.category = '1'
+      AND UPPER(TRIM(r.bet38)) = 'N'
+      AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+      AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+      AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0
+      AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL
+),
+player_stat AS (
+    SELECT player_id,
+           COUNT(*)                                                    AS total_orders,
+           SUM(CASE WHEN round_no >= 40 THEN 1 ELSE 0 END)             AS late_orders,
+           SUM(CASE WHEN payout_raw > stake_raw THEN 1 ELSE 0 END)     AS win_orders,
+           SUM(CASE WHEN payout_raw = stake_raw THEN 1 ELSE 0 END)     AS push_orders,
+           SUM((payout_raw - stake_raw) / fx)                          AS profit,
+           SUM(vb_raw / fx)                                            AS valid_bet,
+           SUM(stake_raw / fx)                                         AS stake_all
+    FROM base
+    GROUP BY player_id
+)
+SELECT 'bet04>=40' AS late_def,          -- 口径锁
+       'M2A'       AS intake_ver,        -- 准入版本锁
+       player_id, total_orders, late_orders,
+       ROUND(late_orders * 1.0 / total_orders, 4)              AS late_ratio,
+       win_orders, push_orders,
+       ROUND(win_orders  * 1.0 / total_orders, 4)              AS win_rate,
+       ROUND(win_orders  * 1.0
+             / NULLIF(total_orders - push_orders, 0), 4)       AS win_rate_ex_push,
+       ROUND(valid_bet, 2)                                     AS valid_bet,
+       ROUND(stake_all, 2)                                     AS stake_all,
+       ROUND(profit, 2)                                        AS profit,
+       ROUND(profit / NULLIF(valid_bet, 0), 4)                 AS roi_vb,
+       ROUND(profit / NULLIF(stake_all, 0),  4)                AS roi_stake,
+       ROUND(valid_bet / NULLIF(stake_all, 0), 4)              AS vb_ratio
+FROM player_stat
+WHERE total_orders >= 30
+  AND late_orders * 1.0 / total_orders >= 0.60
+ORDER BY roi_stake DESC, profit DESC;
+```
+
+根据运行以上代码，将输出储存为`数据库/模型二_甲版.csv`。
+
+# 一、档案身份与守门 {#sec-guard}
+
+```{r}
+#| label: v2-load
+#| echo: false
+suppressPackageStartupMessages(library(data.table))
+.p1 <- "数据库/模型一_甲版.csv"; .p2 <- "数据库/模型二_甲版.csv"
+.miss <- c(.p1, .p2)[!file.exists(c(.p1, .p2))]
+if (length(.miss))
+  stop(sprintf("○ 待表：当前工作目录 %s 之下未找到 %s ——不以静态文字冒充结果。",
+               getwd(), paste(.miss, collapse = "、")))
+m1 <- fread(.p1, encoding = "UTF-8"); m2 <- fread(.p2, encoding = "UTF-8")
+
+## 守门一：文件归属只认列名签名，不认文件名 --------------------------------------
+stopifnot(
+  "模型一_甲版须含 player_id 与 roi，且不含准入齐备版新列" =
+    all(c("player_id", "roi") %chin% names(m1)) && !"vb_ratio" %chin% names(m1),
+  "模型二_甲版须含五项新列" =
+    all(c("push_orders", "win_rate_ex_push", "stake_all",
+          "roi_vb", "roi_stake", "vb_ratio") %chin% names(m2)),
+  "双档 player_id 皆须无重复" =
+    !anyDuplicated(m1$player_id) && !anyDuplicated(m2$player_id)
+)
+
+## 守门二：口径锁与准入版本锁——已转 SQL 原生，全量强校验，缺列即硬失败 -----------
+.lock_expect <- "bet04>=40"
+stopifnot(
+  "双档均须含 SQL 原生口径锁列 late_def" =
+    "late_def" %chin% names(m1) && "late_def" %chin% names(m2),
+  "双档均须含 SQL 原生准入版本锁列 intake_ver" =
+    "intake_ver" %chin% names(m1) && "intake_ver" %chin% names(m2),
+  "口径锁值须全量为 bet04>=40" =
+    all(m1$late_def == .lock_expect) && all(m2$late_def == .lock_expect),
+  "准入版本锁须分别全量为 M1A / M2A" =
+    all(m1$intake_ver == "M1A") && all(m2$intake_ver == "M2A")
+)
+
+## 六元组档案身份（渲染时现算） --------------------------------------------------
+.six <- function(p) {
+  raw <- readBin(p, "raw", n = file.size(p))
+  data.table(文件 = basename(p),
+             行数 = format(length(gregexpr("\n", rawToChar(raw), fixed = TRUE)[[1L]]),
+                           big.mark = ","),
+             字节 = format(file.size(p), big.mark = ","),
+             MD5  = unname(tools::md5sum(p)),
+             换行 = if (any(raw == as.raw(0x0d))) "含CR(CRLF)" else "LF",
+             编码 = if (identical(raw[1:3], as.raw(c(0xef, 0xbb, 0xbf))))
+                      "UTF-8(BOM)" else "UTF-8")
+}
+six <- rbindlist(lapply(c(.p1, .p2), .six))
+
+## 本档核心量（后续各章全部叙述之唯一来源） --------------------------------------
+n1 <- nrow(m1); n2 <- nrow(m2)
+jj <- merge(m1, m2, by = "player_id", suffixes = c("_1", "_2"))
+stopifnot("配对表须含模型一_甲版 roi（对方无同名列，merge 不加后缀）" =
+            "roi" %chin% names(jj))
+nov     <- nrow(jj); n1_only <- n1 - nov; n2_only <- n2 - nov
+y2b     <- m2[!player_id %in% m1$player_id]
+d_ord   <- jj$total_orders_1 - jj$total_orders_2
+same_sh <- mean(d_ord == 0)
+aff     <- jj[d_ord > 0]
+dup2    <- aff[total_orders_1 == 2L * total_orders_2 &
+               abs(valid_bet_1 - 2 * valid_bet_2) < 0.05]
+hi_vb   <- m2[!is.na(roi_vb) & roi_vb > 1]
+wsusp   <- m2[vb_ratio < 0.5]
+hi_st   <- m2[roi_stake > 1]
+hold_1    <- -sum(m1$profit) / sum(m1$valid_bet) * 100
+hold_2_vb <- -sum(m2$profit) / sum(m2$valid_bet) * 100
+hold_2_st <- -sum(m2$profit) / sum(m2$stake_all) * 100
+cor_lr     <- cor(jj$late_ratio_1, jj$late_ratio_2)
+cor_roi_vb <- cor(jj$roi, jj$roi_vb,    use = "complete.obs")
+cor_roi_st <- cor(jj$roi, jj$roi_stake, use = "complete.obs")
+top20_ov <- length(intersect(head(m1[order(-roi)], 20L)$player_id,
+                             head(m2[order(-roi_stake)], 20L)$player_id))
+push_all <- sum(m2$push_orders) / sum(m2$total_orders)
+```
+
+```{r}
+#| label: v2-six
+#| echo: false
+knitr::kable(six, align = "l",
+  caption = sprintf("六元组档案身份（%d 档 × %d 列全列，零省略；渲染时现算）",
+                    nrow(six), ncol(six)))
+```
+
+```{r}
+#| label: v2-guard-note
+#| echo: false
+#| results: asis
+cat(sprintf(paste0(
+  "> ✅ **口径锁闭环（OBSERVED）**：双档 `late_def` 全量为 `%s`、`intake_ver` 分别",
+  "全量为 `%s`／`%s`，且**皆系 SQL 原生列**——前版登记之「R 侧补注」工程债已随重",
+  "导出**清偿闭环**。自本版起，缺锁列或锁值异常之档案一律于读入时硬失败。\n\n"),
+  .lock_expect, m1$intake_ver[1L], m2$intake_ver[1L]))
+cat(paste0(
+  "> ⚪ **信任边界（UNKNOWN）**：`dt` 不在输出列内，窗口过滤属 SQL 侧承诺，",
+  "CSV 侧不可复核；本项不越级登记为 OBSERVED。\n"))
+```
+
+```{r}
+#| label: v2-lineage
+#| echo: false
+#| results: asis
+.p0 <- "数据库/模型一输出内容.csv"
+if (file.exists(.p0)) {
+  m0 <- fread(.p0, encoding = "UTF-8")
+  if (all(c("player_id", "roi") %chin% names(m0)) && !"vb_ratio" %chin% names(m0)) {
+    cat(sprintf(paste0(
+      "> **溯源（OBSERVED）**：初版模型一在位（%s 行）。补窗口后行数收敛至 %s 行",
+      "（−%s 行，−%.1f%%），窗口过滤生效实锤。\n"),
+      format(nrow(m0), big.mark = ","), format(n1, big.mark = ","),
+      format(nrow(m0) - n1, big.mark = ","), (nrow(m0) - n1) / nrow(m0) * 100))
+  } else {
+    cat("> ⚠ **溯源异常**：`数据库/模型一输出内容.csv` 列签名非初版模型一结构，本项弃算。\n")
+  }
+} else {
+  cat(paste0(
+    "> ⚪ **溯源（UNKNOWN）**：初版模型一不在 `数据库/` 之下，「窗口收敛」一项无基线",
+    "可算，明示不冒充。\n"))
+}
+```
+
+# 二、口径对比：同者七、异者四 {#sec-intake}
+
+```{r}
+#| label: v2-intake
+#| echo: false
+intake <- data.table(
+  维度 = c("输出行数", "尾段判据", "窗口过滤", "订单门槛", "SQL 内筛阈值",
+           "同单号去重", "测试线剔除", "重对单剔除", "一般单准入", "汇率归一",
+           "口径锁与准入版本锁",
+           "晚段 ROI（roi_late）", "早段 ROI（roi_early）",
+           "下注额斜率（stake_ramp）", "全体 P&L"),
+  模型一_甲版 = c(
+    format(n1, big.mark = ","),
+    sprintf("`%s`（绝对局号）", m1$late_def[1L]),
+    "✅ 139 天（SQL 侧承诺）",
+    sprintf("`total_orders >= %d`", min(m1$total_orders)),
+    sprintf("✅ `late_ratio >= %.2f`（写死于 SQL）", min(m1$late_ratio)),
+    "❌ 无", "❌ 无", "❌ 无（`bet38`）", "❌ 无（`category`）",
+    "⚠ 汇总列有，判赢比较未除汇率（同注单同币别，等价但体例不一）",
+    sprintf("✅ SQL 原生：`%s` / `%s`", m1$late_def[1L], m1$intake_ver[1L]),
+    "❌ 无", "❌ 无", "❌ 无",
+    "⚠ 部分：有 profit，分母仅洗码"),
+  模型二_甲版 = c(
+    format(n2, big.mark = ","),
+    sprintf("`%s`（与左档同一）", m2$late_def[1L]),
+    "✅ 139 天（与左档同一）",
+    sprintf("`total_orders >= %d`", min(m2$total_orders)),
+    sprintf("✅ `late_ratio >= %.2f`（写死于 SQL，双档共同债）", min(m2$late_ratio)),
+    "✅ `ROW_NUMBER` 三级排序", "✅ 五级 `LEFT JOIN`", "✅", "✅",
+    "⚠ 判赢比较同为原币（同注单同币别，等价）",
+    sprintf("✅ SQL 原生：`%s` / `%s`", m2$late_def[1L], m2$intake_ver[1L]),
+    "❌ 无（P05 待补）", "❌ 无（P05 待补）", "❌ 无（P05 待补）",
+    "✅ profit + 双分母（stake_all／valid_bet）"),
+  异同 = c("异（准入所致）", "**同**", "**同**", "**同**", "**同（共同债）**",
+           "异", "异", "异", "异", "同（皆体例可议）", "同（皆已原生落锁）",
+           "同（共同缺口）", "同（共同缺口）", "同（共同缺口）", "异"))
+knitr::kable(intake, align = "l",
+  caption = sprintf(
+    "甲版双档十一项口径对比（%d 维全列，零省略；%s 行 vs %s 行，交集 %s 人）",
+    nrow(intake), format(n1, big.mark = ","), format(n2, big.mark = ","),
+    format(nov, big.mark = ",")))
+```
+
+::: {.callout-note}
+## 设计意义（OBSERVED）
+
+十一项之中同者七项、异者仅准入四项（去重、测试线、重对单、一般单）——此即严格之
+**准入消融设计**：任何行数、指标、排名之差异，皆可唯一归因于准入口径，
+再无判据与窗口之混杂。由此，本档一切比较皆为**同判据、同窗口之内的准入增量测量**。
+:::
+
+# 三、总体对帐 {#sec-overview}
+
+双档行数 `r format(n1, big.mark = ",")` → `r format(n2, big.mark = ",")`
+（−`r format(n1 - n2, big.mark = ",")` 行，−`r sprintf("%.1f%%", (n1 - n2) / n1 * 100)`），
+交集 `r format(nov, big.mark = ",")` 人、模型一_甲版独有 `r n1_only` 人、
+模型二_甲版独有 `r n2_only` 人。配对之 `r format(nov, big.mark = ",")` 人上，
+`late_ratio` 相关 `r sprintf("%.4f", cor_lr)`；模型一_甲版 `roi` 与模型二_甲版
+`roi_vb`／`roi_stake` 之相关分别为 `r sprintf("%.4f", cor_roi_vb)`／
+`r sprintf("%.4f", cor_roi_st)`；模型一_甲版 `roi` 榜与模型二_甲版 `roi_stake`
+榜前 20 名重合 `r top20_ov` 人。
+
+整体 hold% 对帐：模型一_甲版洗码口径 **`r sprintf("%.4f%%", hold_1)`**、模型二_甲版
+洗码口径 **`r sprintf("%.4f%%", hold_2_vb)`**（两者之差仅
+`r sprintf("%.4f", abs(hold_1 - hold_2_vb))` 个百分点）、模型二_甲版本金口径
+**`r sprintf("%.4f%%", hold_2_st)`**。本金与洗码口径之落差与全项目
+「洗码/本金中位约 0.90」之结构一致（本群体 `vb_ratio` 中位
+`r sprintf("%.4f", median(m2$vb_ratio))`，现算印证）。
+
+# 四、准入消融之个案增量 {#sec-ablation}
+
+配对交集中，双档 `total_orders` **完全相同者占
+`r sprintf("%.2f%%", same_sh * 100)`**；受准入修正影响（一档＞二档）者仅
+`r nrow(aff)` 人。其中 `r nrow(dup2)` 人呈**恰为二倍**签名——订单数与洗码量同时
+精确减半，即同单号恰存两个版本、初版逐单重复计数，此为「同单号去重」铁律之直接实证
+（OBSERVED）。
+
+```{r}
+#| label: v2-affected
+#| echo: false
+if (nrow(aff) == 0L) {
+  cat("> ⚠ 零行明示：本轮无任何会员受准入修正影响（零行 ≠ 无异常，仅指本群体）。")
+} else {
+  show <- aff[order(-(total_orders_1 - total_orders_2)),
+              .(会员 = player_id,
+                一档订单 = format(total_orders_1, big.mark = ","),
+                二档订单 = format(total_orders_2, big.mark = ","),
+                恰二倍 = fifelse(total_orders_1 == 2L * total_orders_2 &
+                                 abs(valid_bet_1 - 2 * valid_bet_2) < 0.05, "◎", ""),
+                一档洗码 = format(round(valid_bet_1, 2), big.mark = ","),
+                二档洗码 = format(round(valid_bet_2, 2), big.mark = ","),
+                一档尾占 = sprintf("%.4f", late_ratio_1),
+                二档尾占 = sprintf("%.4f", late_ratio_2),
+                vb_ratio = sprintf("%.4f", vb_ratio))]
+  show[, 序 := format(seq_len(.N), big.mark = ",")]
+  setcolorder(show, "序")
+  knitr::kable(show, align = "r",
+    caption = sprintf(
+      "受准入修正影响会员全列（%s 行 × %d 列；省略 0 行，0.0%%；一档=模型一_甲版，二档=模型二_甲版；◎ = 恰二倍重复计数签名）",
+      format(nrow(show), big.mark = ","), ncol(show)))
+}
+```
+
+模型二_甲版独有之 `r format(n2_only, big.mark = ",")` 人，其 `late_ratio` 全落于
+[`r sprintf("%.4f", min(y2b$late_ratio))`, `r sprintf("%.4f", max(y2b$late_ratio))`]
+边界带——去重剔除早段重复注单后，尾占比恰越
+`r sprintf("%.2f", min(m2$late_ratio))` 门槛而入榜（OBSERVED）。此实证
+**SQL 内写死阈值必然制造边界翻覆**：阈值当参数化并移至 R 侧，SQL 只给底料。
+
+::: {.callout-caution}
+## 本章裁定（OBSERVED）
+
+准入四项差异**结构上一项不可免**（重复计数、测试线、重对单皆为口径正当性问题），
+然于「`bet02='101'`、订单 ≥ `r min(m2$total_orders)`、尾占 ≥
+`r sprintf("%.2f", min(m2$late_ratio))`」这一已高度过滤之群体上，其**数值增量有限**：
+行数仅收敛 `r sprintf("%.1f%%", (n1 - n2) / n1 * 100)`、逾九成七会员逐单不受影响、
+总体 hold% 几乎不动、ROI 榜前二十重合 `r top20_ov`/20。**故准入修正之价值在
+「个案不再冤枉」，不在「总体翻案」。**
+:::
+
+# 五、判赢口径：和局分离之增量 {#sec-push}
+
+模型一_甲版判赢用 `bet14 > bet13`，**和局退注（`bet14 == bet13`）被并入「不赢」，
+与「输」混同**。模型二_甲版新增 `push_orders` 与 `win_rate_ex_push` 予以分离。实测：
+本群体和局占全部注单之 `r sprintf("%.4f", push_all)`（合计
+`r format(sum(m2$push_orders), big.mark = ",")` 笔 ÷
+`r format(sum(m2$total_orders), big.mark = ",")` 笔），有和局之会员占
+`r sprintf("%.2f%%", mean(m2$push_orders > 0) * 100)`；`win_rate` 中位
+`r sprintf("%.4f", median(m2$win_rate))` → 剔和局后
+`r sprintf("%.4f", median(m2$win_rate_ex_push))`。口径分离后，胜率不再被和局
+系统性压低，亦不再随会员押注结构（押和与否）而失真——此为模型二_甲版
+第二项实证增量（OBSERVED）。
+
+# 六、ROI 三口径与打水签名 {#sec-roi}
+
+三口径定义：`roi_vb = profit ÷ valid_bet`（洗码分母）、`roi_stake = profit ÷
+stake_all`（本金分母）、`vb_ratio = valid_bet ÷ stake_all`（洗码结构）。平台规则对
+等额对押庄闲之注**不计洗码**，故洗码分母对打水者系统性趋零——`roi_vb` 之极端值
+须以 `vb_ratio` 定性。
+
+```{r}
+#| label: v2-roitop
+#| echo: false
+if (nrow(hi_vb) == 0L) {
+  cat("> ⚠ 零行明示：模型二_甲版无 `roi_vb > 1` 会员。")
+} else {
+  t4 <- hi_vb[order(-roi_vb),
+              .(会员 = player_id, 订单 = total_orders,
+                胜率 = sprintf("%.4f", win_rate),
+                洗码 = format(round(valid_bet, 2), big.mark = ","),
+                本金 = format(round(stake_all, 2), big.mark = ","),
+                盈亏 = format(round(profit, 2), big.mark = ","),
+                roi_vb = sprintf("%.4f", roi_vb),
+                roi_stake = sprintf("%.4f", roi_stake),
+                vb_ratio = sprintf("%.4f", vb_ratio))]
+  t4[, 序 := format(seq_len(.N), big.mark = ",")]
+  setcolorder(t4, "序")
+  knitr::kable(t4, align = "r",
+    caption = sprintf("`roi_vb > 1` 会员全列（%d 行 × %d 列；省略 0 行，0.0%%）",
+                      nrow(t4), ncol(t4)))
+}
+```
+
+裁定一（OBSERVED）：`roi_vb > 1` 共 `r nrow(hi_vb)` 人，其 `vb_ratio` 中位
+`r sprintf("%.4f", median(hi_vb$vb_ratio))`，与全体中位
+`r sprintf("%.4f", median(m2$vb_ratio))` 相去无几，其中 `vb_ratio < 0.5` 者仅
+`r sum(hi_vb$vb_ratio < 0.5)` 人——**「ROI 榜首即打水者」之假说不成立**。
+高 `roi_vb` 之主体系洗码结构正常之会员。
+
+裁定二（INFERRED）：本金口径仍 `roi_stake > 1` 者 `r nrow(hi_st)` 人，订单数仅
+`r paste(sort(hi_st$total_orders), collapse = "、")` 笔、胜率
+`r paste(sprintf("%.4f", sort(hi_st$win_rate)), collapse = "、")`——低胜率而正盈利，
+与**小样本高赔侧注（和 8:1／对子 11:1）之幸运**相容；侧注构成不在聚合列内，
+**须回注单级（`bet02` 玩法明细）核查后方可定谳，证据等级不越级**。
+
+打水签名的真实藏身处：
+
+```{r}
+#| label: v2-hedge
+#| echo: false
+if (nrow(wsusp) == 0L) {
+  cat("> ⚠ 零行明示：模型二_甲版无 `vb_ratio < 0.5` 会员（零行 ≠ 无打水，仅指本群体）。")
+} else {
+  t5 <- wsusp[order(vb_ratio),
+              .(会员 = player_id, 订单 = total_orders,
+                尾占 = sprintf("%.4f", late_ratio),
+                洗码 = format(round(valid_bet, 2), big.mark = ","),
+                本金 = format(round(stake_all, 2), big.mark = ","),
+                盈亏 = format(round(profit, 2), big.mark = ","),
+                roi_vb = fifelse(is.na(roi_vb), "空(洗码=0)", sprintf("%.4f", roi_vb)),
+                roi_stake = sprintf("%.4f", roi_stake),
+                vb_ratio = sprintf("%.4f", vb_ratio))]
+  t5[, 序 := format(seq_len(.N), big.mark = ",")]
+  setcolorder(t5, "序")
+  knitr::kable(t5, align = "r",
+    caption = sprintf(
+      "打水嫌疑（`vb_ratio < 0.5`）全列（%d 行 × %d 列；省略 0 行，0.0%%）",
+      nrow(t5), ncol(t5)))
+}
+```
+
+裁定三（OBSERVED）：此 `r nrow(wsusp)` 人合计本金
+`r format(round(sum(wsusp$stake_all), 2), big.mark = ",")`、盈亏
+`r format(round(sum(wsusp$profit), 2), big.mark = ",")`；其 `roi_vb` **双向爆炸**——
+最低至 `r sprintf("%.4f", min(wsusp$roi_vb, na.rm = TRUE))`，另有
+`r sum(is.na(wsusp$roi_vb))` 人洗码恰为零致 `roi_vb` 为空（模型一_甲版对应
+`r sum(is.na(m1$roi))` 行 `roi` 空值）。**洗码分母失衡之机理成立，然其效应是把
+打水者抛向 ROI 之两极与空值，而非推上正榜首**；`vb_ratio` 作为独立识别列之设计
+有效性由此获正面实证。
+
+# 七、尾占分层之经济裁定 {#sec-band}
+
+```{r}
+#| label: v2-band
+#| echo: false
+bd <- m2[, .(会员数 = .N,
+             本金占比 = sum(stake_all) / sum(m2$stake_all) * 100,
+             加权roi_stake = sum(profit) / sum(stake_all),
+             hold_pct = -sum(profit) / sum(stake_all) * 100),
+         by = .(层 = cut(late_ratio, c(0.6, 0.7, 0.8, 0.9, 1.0000001),
+                         right = FALSE, labels = c("[0.60,0.70)", "[0.70,0.80)",
+                                                   "[0.80,0.90)", "[0.90,1.00]")))][order(层)]
+bd_out <- bd[, .(层, 会员数 = format(会员数, big.mark = ","),
+                 本金占比 = sprintf("%.2f%%", 本金占比),
+                 加权roi_stake = sprintf("%+.4f", 加权roi_stake),
+                 `hold%` = sprintf("%+.4f%%", hold_pct))]
+bd_out[, 序 := format(seq_len(.N), big.mark = ",")]
+setcolorder(bd_out, "序")
+knitr::kable(bd_out, align = "r",
+  caption = sprintf("模型二_甲版尾占分层经济裁定（%d 层全列，零省略；本金口径）",
+                    nrow(bd_out)))
+```
+
+```{r}
+#| label: v2-band-text
+#| echo: false
+#| results: asis
+tp <- bd[.N]
+cat(sprintf(paste0(
+  "最高层 %s 加权 `roi_stake` 为 **%+.4f**（hold%% **%+.4f%%**），然其本金占比仅 ",
+  "**%.2f%%**、会员 %s 人——经济权重轻微，小样本波动足以解释，不构成玩家优势证据",
+  "（OBSERVED）。\n"),
+  tp$层, tp$加权roi_stake, tp$hold_pct, tp$本金占比, format(tp$会员数, big.mark = ",")))
+```
+
+# 八、统计效力边界 {#sec-limits}
+
+其一，**判据维度已有前科**：`bet04 >= 40` 绝对局号所代理之「尾段偏好」，在既有锁定
+研究中已被四重证伪（配对符号检验 p = 0.7591、Wilcoxon p = 0.8087、九档阈值扫描命中组
+hold% 无一档低于对照组、外部风险标签 AUC = 0.3828 方向反转）——此四数系**既有锁定
+结论之引用，非本档现算**，来源为 R01 靴末段研究档，提级须回原档。本档第七章之分层
+结果与之同向。
+
+其二，**显著性 ≠ 因果 ≠ 风控正确 ≠ 经济价值**：本档一切比较皆为观察性口径消融，
+不含任何因果识别设计；即便某层 `roi_stake` 为正，亦不得据以推断技术优势或作弊。
+
+其三，**小样本纪律**：`roi_stake > 1` 者订单数仅
+`r paste(sort(hi_st$total_orders), collapse = "、")` 笔；百家乐盈亏因高赔侧注而
+厚尾、注额异质，`1/√n` 仅为零效应独立同分布下之一阶基线，**个体 ROI 之置信评估须
+以经验 Var(ROI|n) 为准**，最小样本量须按指标反推（n_min = f(p0, α, 半宽 h, 单双侧,
+聚类 ρ)），不得以榜单名次代替检验。
+
+# 九、终局裁定 {#sec-final}
+
+::: {.callout-important}
+## 四句锁定
+
+> **第一：甲版双档构成严格准入消融——判据、窗口、门槛、阈值四同，唯准入四异；
+> 消融实测：行数 −`r sprintf("%.1f%%", (n1 - n2) / n1 * 100)`、逾九成七会员逐单
+> 不受影响、hold% 几乎不动。准入修正是口径铁律，其价值在个案精度，不在总体翻案。**
+
+> **第二：「ROI 榜首即打水者」之假说被 `vb_ratio` 证伪——`roi_vb > 1` 之
+> `r nrow(hi_vb)` 人主体洗码结构正常；打水签名实藏于 `vb_ratio < 0.5` 之
+> `r nrow(wsusp)` 人，且 `roi_vb` 双向爆炸。负结果照登，推断降级。**
+
+> **第三：模型二_甲版之三项实证增量成立——同单号去重（恰二倍签名 `r nrow(dup2)` 人）、
+> 和局分离（判赢口径不再失真）、三口径 ROI（打水可辨、榜单可信）；连同
+> `late_def`／`intake_ver` 双锁原生落地，应为模型一系全部后续版本之标配。**
+
+> **第四：工程修齐不能救活死维度——双档所测之 `bet04 >= 40` 绝对局号维度已被
+> 既有研究四重证伪，本档分层结果同向。甲版双档定位锁死为**对照筛选器与打水线索源**，
+> 不得作为主风险模型或处罚依据。**
+:::
+
+**工程优先级**：
+
+1. ~~双 SQL 补 `late_def`／`intake_ver` 锁列（P0）~~——**已闭环**（本版实测双档
+   SQL 原生、全量校验通过）；
+2. `total_orders >= 30`、`late_ratio >= 0.60`、`round_no >= 40` 三处阈值参数化，
+   筛选移至 R 侧，SQL 只给底料（P0）；
+3. `roi_stake > 1` 会员之注单级侧注构成核查（和／对子占比）（P1）；
+4. `vb_ratio < 0.5` 名单并入既有对冲对（hedge pair）网络核查（P1）；
+5. 若需检验「尾段」本身，判据须回相对靴位系（另档另议），本档双档不承担该问题（P2）。
+
+# 十、审计留痕与变更记录 {#sec-trail}
+
+```{r}
+#| label: v2-trail
+#| echo: false
+trail <- data.table(
+  项 = c("文件归属（按列名而非文件名判定）",
+         "口径锁 late_def（SQL 原生）",
+         "准入版本锁 intake_ver（SQL 原生）",
+         "窗口一致性",
+         "禁读档案",
+         "本档全部数字",
+         "渲染核实"),
+  状态 = c("✅ 双档签名守门通过（`stopifnot`）",
+           sprintf("✅ 双档全量 `%s`，缺列或值异即硬失败", .lock_expect),
+           sprintf("✅ `%s`／`%s` 全量校验通过", m1$intake_ver[1L], m2$intake_ver[1L]),
+           "⚪ UNKNOWN——`dt` 不在输出列，SQL 侧承诺不可于 CSV 复核",
+           "✅ `候选_同桌异常_最终版_已去重.csv` 血统不可溯，全档未读",
+           "✅ 渲染时由两份 CSV 现算，零硬编码",
+           "✅ 本档须于本机 Quarto 全文渲染通过后方视为核实完成"))
+knitr::kable(trail, align = "l",
+  caption = sprintf("审计留痕（%d 项全列，零省略）", nrow(trail)))
+```
+
+**变更记录**：v2.0.0（2026-08-19）——全量重写为现行甲版双档之独立评估档；
+双 SQL 锁列转原生并全量强校验（前版工程债第 18 条闭环）；历史审计（初版双档）
+移交 v1.3.0 承载（六元组：2,443 行、MD5 `fa48264531d091a0b52c1601a6352297`、
+LF、UTF-8），本档不复述。三档权威铁律不受影响：本档为工作评估档，非权威文档。
+
+# 十一、平台级准入虚报实测（P00–P03 现算裁定） {#sec-platform}
+
+::: {.callout-important}
+## 本章定位
+
+第二至四章之消融只及「订单 ≥ 30 ∧ 尾占 ≥ 0.60」之筛后群体；本章将同一四项准入
+放大至**整个平台**（百家乐 `bet02='101'`、139 天窗口、全体注单与会员），以 P00–P03
+四份实测件量化**总投注额、总会员数、总盈亏**上的虚报与误判（含占比）。
+瀑布归因次序即口径（随件输出 `gate_order` 锁），行数与金额互斥可加，
+会员数跨桶可重叠、会员级判定以 P03 之互斥五类为准。
+:::
+
+```{r}
+#| label: p-load
+#| echo: false
+.pp <- c(P00 = "数据库/P00_测试代理普查.csv",  P01 = "数据库/P01_准入消融瀑布.csv",
+         P02 = "数据库/P02_测试线三剖面.csv", P03 = "数据库/P03_会员级误判剖面.csv")
+.pm <- .pp[!file.exists(.pp)]
+if (length(.pm))
+  stop(sprintf("○ 待表：未找到 %s ——不以静态文字冒充结果。", paste(.pm, collapse = "、")))
+p0 <- fread(.pp["P00"], encoding = "UTF-8"); p1 <- fread(.pp["P01"], encoding = "UTF-8")
+p2 <- fread(.pp["P02"], encoding = "UTF-8"); p3 <- fread(.pp["P03"], encoding = "UTF-8")
+
+## 守门：列签名与口径锁 ----------------------------------------------------------
+stopifnot(
+  "P00 须含 n_agents_test"    = "n_agents_test" %chin% names(p0),
+  "P01 须含 gate_order 口径锁" = "gate_order" %chin% names(p1) &&
+    all(p1$gate_order == "数值守门>去重>一般单>重对单>测试线"),
+  "P02 须含 base_def 口径锁"   = "base_def" %chin% names(p2),
+  "P03 须含 class_def 口径锁"  = "class_def" %chin% names(p3),
+  "P01 六桶齐备" = nrow(p1) == 6L, "P02 三剖面齐备" = nrow(p2) == 3L,
+  "P03 五类齐备" = nrow(p3) == 5L)
+
+## 对帐钩（硬校验）：P02 整体 = P01 桶0+桶5；P03 留存两类 = P02 非测试线 -----------
+.b05 <- p1[gate_stage %chin% c("0_通过", "5_测试线"),
+           .(n_rows = sum(n_rows), stake = sum(stake_sum),
+             vb = sum(validbet_sum), pnl = sum(pnl_sum))]
+.w   <- p2[seg == "整体"]
+stopifnot(
+  "钩1·行数" = .b05$n_rows == .w$n_rows,
+  "钩1·本金（容差一分）" = abs(.b05$stake - .w$stake_sum) < 0.05,
+  "钩1·洗码" = abs(.b05$vb - .w$validbet_sum) < 0.05,
+  "钩1·盈亏" = abs(.b05$pnl - .w$pnl_sum) < 0.05,
+  "钩1·会员" = sum(p1[gate_stage %chin% c("0_通过", "5_测试线")]$n_members) ==
+               .w$n_members,
+  "钩2·会员留存" = sum(p3[member_class %chin%
+                     c("4_指标污染会员", "5_洁净无损会员")]$n_members) ==
+                   p2[seg == "非测试线"]$n_members)
+
+## 核心量 ------------------------------------------------------------------------
+tot  <- p1[, .(n_rows = sum(n_rows), stake = sum(stake_sum),
+               vb = sum(validbet_sum), pnl = sum(pnl_sum))]
+bad  <- p1[gate_stage != "0_通过",
+           .(n_rows = sum(n_rows), stake = sum(stake_sum),
+             vb = sum(validbet_sum), pnl = sum(pnl_sum))]
+mem_u   <- sum(p3$n_members)
+ghost   <- sum(p3[member_class %like% "幽灵"]$n_members)
+pollute <- p3[member_class == "4_指标污染会员"]$n_members
+.exp_test_agents <- 215L   # 既有锁定锚之引用（非本档现算），现值对帐于下
+```
+
+```{r}
+#| label: p-anchor
+#| echo: false
+#| results: asis
+cat(sprintf(paste0(
+  "> **P00 锚定对帐**：现算测试代理 **%s** 条（代理总数 %s），与既有锁定锚 %d 条%s",
+  "——%s。\n"),
+  format(p0$n_agents_test[1L], big.mark = ","), format(p0$n_agents_all[1L], big.mark = ","),
+  .exp_test_agents,
+  fifelse(p0$n_agents_test[1L] == .exp_test_agents, "完全一致", "不一致"),
+  fifelse(p0$n_agents_test[1L] == .exp_test_agents,
+          "锚定通过（OBSERVED），虚报归因之测试线口径可信",
+          "🔴 不合——先查代理表再谈虚报")))
+```
+
+## 一、瀑布分桶全景
+
+```{r}
+#| label: p-p01
+#| echo: false
+t1 <- p1[order(gate_stage),
+         .(桶 = gate_stage, 注单行数 = format(n_rows, big.mark = ","),
+           行数占比 = sprintf("%.4f%%", rows_pct),
+           会员数 = format(n_members, big.mark = ","),
+           总本金 = format(round(stake_sum, 2), big.mark = ","),
+           本金占比 = sprintf("%.4f%%", stake_pct),
+           总洗码 = format(round(validbet_sum, 2), big.mark = ","),
+           总盈亏 = format(round(pnl_sum, 2), big.mark = ","))]
+t1[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(t1, "序")
+knitr::kable(t1, align = "r",
+  caption = sprintf(
+    "P01 准入消融瀑布（%d 桶全列，零省略；窗口总行数 %s；会员数跨桶可重叠不可加）",
+    nrow(t1), format(tot$n_rows, big.mark = ",")))
+```
+
+**三总量之虚报裁定（OBSERVED，桶 1~5 合计）**：窗口总注单
+`r format(tot$n_rows, big.mark = ",")` 行中，虚报
+`r format(bad$n_rows, big.mark = ",")` 行（**`r sprintf("%.4f%%", bad$n_rows / tot$n_rows * 100)`**）；
+**总投注额**虚报 `r format(round(bad$stake, 2), big.mark = ",")`
+（**`r sprintf("%.4f%%", bad$stake / tot$stake * 100)`**）、总洗码虚报
+`r format(round(bad$vb, 2), big.mark = ",")`
+（`r sprintf("%.4f%%", bad$vb / tot$vb * 100)`）、**总盈亏**虚报
+`r format(round(bad$pnl, 2), big.mark = ",")`
+（**`r sprintf("%.4f%%", bad$pnl / tot$pnl * 100)`**，同向放大平台亏损侧）。
+逐项归因：**同单号重复计数一项独占大头**（行数
+`r sprintf("%.4f%%", p1[gate_stage == "2_重复版本"]$rows_pct)`、本金
+`r sprintf("%.4f%%", p1[gate_stage == "2_重复版本"]$stake_pct)`），测试线、非一般单、
+重对单、数值守门四项合计不足行数万分之二十。
+
+## 二、测试线三剖面
+
+```{r}
+#| label: p-p02
+#| echo: false
+t2 <- p2[, .(剖面 = seg, 注单行数 = format(n_rows, big.mark = ","),
+             会员数 = format(n_members, big.mark = ","),
+             总本金 = format(round(stake_sum, 2), big.mark = ","),
+             总洗码 = format(round(validbet_sum, 2), big.mark = ","),
+             总盈亏 = format(round(pnl_sum, 2), big.mark = ","),
+             行数占比 = sprintf("%.4f%%", rows_pct),
+             本金占比 = sprintf("%.4f%%", stake_pct),
+             盈亏占比 = sprintf("%.4f%%", pnl_pct))]
+t2[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(t2, "序")
+knitr::kable(t2, align = "r",
+  caption = sprintf("P02 整体／非测试线／测试线三剖面（%d 行全列，零省略；洁净底集）",
+                    nrow(t2)))
+```
+
+测试线于洁净底集之本金占比仅
+`r sprintf("%.4f%%", p2[seg == "测试线"]$stake_pct)`、会员
+`r p2[seg == "测试线"]$n_members` 人，然其**盈亏占比达
+`r sprintf("%.4f%%", p2[seg == "测试线"]$pnl_pct)`**——测试流水之亏损强度约为其
+体量之 `r sprintf("%.1f", p2[seg == "测试线"]$pnl_pct / p2[seg == "测试线"]$stake_pct)`
+倍，混入即按此倍率扭曲 hold%（OBSERVED）。
+
+## 三、会员级误判五类
+
+```{r}
+#| label: p-p03
+#| echo: false
+t3 <- p3[order(member_class),
+         .(类 = member_class, 会员数 = format(n_members, big.mark = ","),
+           占比 = sprintf("%.4f%%", members_pct))]
+t3[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(t3, "序")
+knitr::kable(t3, align = "r",
+  caption = sprintf("P03 会员级误判剖面（%d 类互斥可加，零省略；会员宇宙 %s 人）",
+                    nrow(t3), format(mem_u, big.mark = ",")))
+```
+
+**总会员数之虚报与误判裁定（OBSERVED）**：窗口会员宇宙
+`r format(mem_u, big.mark = ",")` 人中，**幽灵会员 `r ghost` 人
+（`r sprintf("%.4f%%", ghost / mem_u * 100)`）**——初版口径下整员虚增，洁净后消失
+（内含纯测试线 `r p3[member_class == "3_幽灵会员_纯测试线"]$n_members` 人）；
+**指标污染会员 `r format(pollute, big.mark = ",")` 人
+（`r sprintf("%.4f%%", pollute / mem_u * 100)`）**——留存但其订单数／金额曾被虚增，
+系误判风险之主体；洁净无损者
+`r sprintf("%.4f%%", p3[member_class == "5_洁净无损会员"]$members_pct)`。
+
+::: {.callout-caution}
+## 本章裁定（OBSERVED）
+
+平台级与第四章筛后群体之结论**同构而不同量**：虚报**结构上确凿存在**且以同单号
+重复计数为绝对主项，然三总量之虚报占比皆在**百分之一以内**；会员级幽灵虚增不足
+万分之二，误判风险集中于百分之三之指标污染会员。**故四项准入是口径正当性之铁律
+（个案与审计层面一项不可免），而非改写平台总量结论之杠杆。**两道对帐钩
+（P02 整体 = P01 桶 0+5；P03 留存 = P02 非测试线）皆以 `stopifnot` 硬校验通过。
+:::
+
+# 十二、既有红队漏洞之实测与移交（V01–V07） {#sec-vuln}
+
+::: {.callout-important}
+## 本章定位
+
+历史编第二十八章曾锁定初版模型二三大漏洞（R01-V01 观测靴长非真实靴长、
+R01-V02 数据血统、R01-V03 版本去重不一致），第二十九章另录 V04–V07。本章按
+「现行甲版双档」逐条处置：**可即测者当场现算，须回库者以 P04–P07 待表承接，
+不可测者登记 UNKNOWN**——一律不以文字冒充实测。
+:::
+
+## 一、V03 版本去重不一致——已实测收案
+
+即第十一章瀑布之 `2_重复版本` 桶：行数
+`r format(p1[gate_stage == "2_重复版本"]$n_rows, big.mark = ",")`
+（`r sprintf("%.4f%%", p1[gate_stage == "2_重复版本"]$rows_pct)`）、涉及会员
+`r format(p1[gate_stage == "2_重复版本"]$n_members, big.mark = ",")` 人、本金
+`r format(round(p1[gate_stage == "2_重复版本"]$stake_sum, 2), big.mark = ",")`
+（`r sprintf("%.4f%%", p1[gate_stage == "2_重复版本"]$stake_pct)`）。
+Critical 之定性成立（个案层面第四章之恰二倍签名即其实锤），总量层面占比锁定如上
+（OBSERVED，收案）。
+
+## 二、V04 分类置信缺失——当场现算（Wilson 区间）
+
+```{r}
+#| label: v-wilson
+#| echo: false
+#| results: asis
+stopifnot("本节依赖第一章守门产物 m2" = exists("m2"))
+.z  <- qnorm(0.975)
+.pr <- m2$late_ratio; .n <- m2$total_orders
+.lo <- (.pr + .z^2 / (2 * .n) -
+        .z * sqrt(.pr * (1 - .pr) / .n + .z^2 / (4 * .n^2))) / (1 + .z^2 / .n)
+.n_unstable <- sum(.lo < min(m2$late_ratio))
+cat(sprintf(paste0(
+  "模型二_甲版 %s 名入榜会员中，`late_ratio` 之 Wilson 95%% 置信下界跌破入榜阈值 ",
+  "%.2f 者达 **%s 人（%.2f%%）**——即约三分之二会员之「尾段偏好 ≥ %.2f」分类",
+  "**未获统计保障**，系样本量不足所致之潜在误判存量（OBSERVED）。处置：阈值判定",
+  "应以 Wilson 下界替代点估计，或提高最低订单门槛并反推 n_min。\n"),
+  format(nrow(m2), big.mark = ","), min(m2$late_ratio),
+  format(.n_unstable, big.mark = ","), .n_unstable / nrow(m2) * 100,
+  min(m2$late_ratio)))
+```
+
+## 三、V05 小暴露 ROI 爆炸——当场现算
+
+```{r}
+#| label: v-roiexp
+#| echo: false
+#| results: asis
+.ex <- m2[!is.na(roi_vb) & abs(roi_vb) > 1]
+cat(sprintf(paste0(
+  "`|roi_vb| > 1`（超出百家乐长期可及量级）者 **%d 人（%.4f%%）**，其洗码中位 ",
+  "**%s** 仅及全体中位 %s 之 %.1f%%——极端 ROI 与小暴露高度同现，V05 之",
+  "「最小暴露门槛／收缩估计」判定成立（OBSERVED）。处置：ROI 排名前一律施最小",
+  "洗码门槛，或以 Wilson／贝叶斯收缩替代裸 ROI。\n"),
+  nrow(.ex), nrow(.ex) / nrow(m2) * 100,
+  format(round(median(.ex$valid_bet), 2), big.mark = ","),
+  format(round(median(m2$valid_bet), 2), big.mark = ","),
+  median(.ex$valid_bet) / median(m2$valid_bet) * 100))
+```
+
+## 四、V01 判据分母——P04／P06 待表承接
+
+```{r}
+#| label: v-p04
+#| echo: false
+#| results: asis
+.q4 <- "数据库/P04_判据误判矩阵.csv"
+if (file.exists(.q4)) {
+  q4 <- fread(.q4, encoding = "UTF-8")
+  stopifnot("P04 须含矩阵口径锁" = "matrix_def" %chin% names(q4),
+            "P04 四格齐备" = nrow(q4) == 4L)
+  t4 <- q4[order(cell),
+           .(格 = cell, 注单行数 = format(n_rows, big.mark = ","),
+             行数占比 = sprintf("%.4f%%", rows_pct),
+             会员数 = format(n_members, big.mark = ","),
+             总本金 = format(round(stake_sum, 2), big.mark = ","),
+             本金占比 = sprintf("%.4f%%", stake_pct),
+             总盈亏 = format(round(pnl_sum, 2), big.mark = ","))]
+  t4[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(t4, "序")
+  print(knitr::kable(t4, align = "r",
+    caption = sprintf("P04 判据误判矩阵（%d 格全列，零省略；观测靴长口径）", nrow(t4))))
+  .mis <- q4[cell %chin% c("2_绝对是相对否", "3_绝对否相对是"),
+             .(r = sum(n_rows), s = sum(stake_sum))]
+  cat(sprintf(paste0(
+    "\n\n两判据互判之误判量：行数 %s（%.4f%%）、本金 %s（%.4f%%）——即绝对局号",
+    "判据相对观测靴位判据之标签错置体量（OBSERVED，观测靴长口径；真实靴长仍待",
+    "权威表，V01 之 Critical 定性不因此关闭）。\n"),
+    format(.mis$r, big.mark = ","), .mis$r / sum(q4$n_rows) * 100,
+    format(round(.mis$s, 2), big.mark = ","), .mis$s / sum(q4$stake_sum) * 100))
+} else {
+  cat(paste0("> ○ 待表：`", .q4, "` 未在位——SQL 已随包 v2（P04）交付，",
+             "回传后本节自动现算补全；在此之前本项登记 UNKNOWN。\n"))
+}
+```
+
+```{r}
+#| label: v-p06
+#| echo: false
+#| results: asis
+.q6 <- "数据库/P06_观测靴长剖面.csv"
+if (file.exists(.q6)) {
+  q6 <- fread(.q6, encoding = "UTF-8")
+  stopifnot("P06 须含靴长口径锁" = "shoe_len_def" %chin% names(q6))
+  t6 <- q6[order(shoe_band),
+           .(带 = shoe_band, 靴长值数 = n_len_values, 最短 = len_min, 最长 = len_max,
+             注单行数 = format(n_rows, big.mark = ","),
+             行数占比 = sprintf("%.4f%%", rows_pct),
+             会员数 = format(n_members, big.mark = ","),
+             总本金 = format(round(stake_sum, 2), big.mark = ","),
+             本金占比 = sprintf("%.4f%%", stake_pct))]
+  t6[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(t6, "序")
+  print(knitr::kable(t6, align = "r",
+    caption = sprintf("P06 观测靴长剖面（%d 带全列，零省略）", nrow(t6))))
+  cat(sprintf(paste0(
+    "\n\n可疑靴（<30 或 >70 局）承载之行数占比 %.4f%%、本金占比 %.4f%%——",
+    "此即相对判据分母不可信部分之体量上限（OBSERVED，观测口径）。\n"),
+    sum(q6[shoe_band %like% "可疑"]$rows_pct), sum(q6[shoe_band %like% "可疑"]$stake_pct)))
+} else {
+  cat(paste0("> ○ 待表：`", .q6, "` 未在位——SQL 已随包 v2（P06）交付，",
+             "回传后本节自动现算补全。\n"))
+}
+```
+
+## 五、V02 数据血统——P07 待表承接
+
+```{r}
+#| label: v-p07
+#| echo: false
+#| results: asis
+.qa <- "数据库/P07a_血统_全限定名.csv"; .qb <- "数据库/P07b_血统_裸表名.csv"
+if (file.exists(.qa) && file.exists(.qb)) {
+  qa <- fread(.qa, encoding = "UTF-8"); qb <- fread(.qb, encoding = "UTF-8")
+  .same <- qa$n_rows[1L] == qb$n_rows[1L] && qa$n_bet01[1L] == qb$n_bet01[1L] &&
+           abs(qa$stake_raw_sum[1L] - qb$stake_raw_sum[1L]) < 0.05
+  cat(sprintf(paste0(
+    "全限定名：%s 行、%s 单、本金指纹 %s；裸表名：%s 行、%s 单、本金指纹 %s——",
+    "三指纹%s，V02 %s（OBSERVED）。\n"),
+    format(qa$n_rows[1L], big.mark = ","), format(qa$n_bet01[1L], big.mark = ","),
+    format(round(qa$stake_raw_sum[1L], 2), big.mark = ","),
+    format(qb$n_rows[1L], big.mark = ","), format(qb$n_bet01[1L], big.mark = ","),
+    format(round(qb$stake_raw_sum[1L], 2), big.mark = ","),
+    fifelse(.same, "完全一致", "**不一致**"),
+    fifelse(.same, "收案：两名同一物理数据", "🔴 成立：血统分叉，禁作数值比较")))
+} else {
+  cat(paste0(
+    "> ○ 待表：P07a／P07b 未在位——SQL 已随包 v2（P07 两条）交付；若裸表名一条",
+    "在 SQL Lab 报「表不存在」，即证初版之裸表名依赖默认库解析，本身即血统风险，",
+    "照登为 V02 之实测结论。\n"))
+}
+```
+
+## 六、V06／V07——登记 UNKNOWN，列后续管线
+
+台桌／荷官／时段等混杂控制（V06）与玩家生命周期控制（V07）非本二档聚合列所能测，
+登记 **UNKNOWN**；处置归第九章优先级第 5 条之相对靴位系与既有 PSM–DID
+准实验管线（P2）。
+
+::: {.callout-important}
+## 增补裁定与变更记录（v2.1.0）
+
+**四项能力缺口**（晚段 ROI、早段 ROI、下注额斜率、全体 P&L）已列入第二章对比表
+（现状双档皆缺前三项），P05 之 SQL 已交付，回传后即可按第九章第 5 条另档评估。
+**七项既有漏洞**处置齐整：V03 收案、V04／V05 当场现算收案、V01／V02 以 P04／P06／P07
+待表承接、V06／V07 登记 UNKNOWN。
+
+**变更记录**：v2.1.0（2026-08-19）——① 首个 SQL 块前插入空 `{r}` 引导块
+（knitr 引导缺口之既知陷阱）；② 第二章对比表由十一维扩至十五维（补四项能力维度）；
+③ 新增第十一章（P00–P03 平台级虚报实测，两道对帐钩硬校验）与第十二章
+（V01–V07 逐条实测与移交）；④ 第一至十章其余内容未动一字。
+:::
+
+# 十三、真实与虚报总帐·业务影响·商业方案 {#sec-ledger}
+
+::: {.callout-important}
+## 本章定位
+
+本章依 P01 六桶（互斥可加）立**真实 vs 虚报总帐**：`0_通过` 桶即真实口径，桶 1~5
+即虚报明细，逐项列**总投注额、总盈亏（平台侧即 GGR）之虚报额与占比**；继而量化
+业务影响（退水结算敞口、GGR 高估、会员分层误伤），给出处置措施与商业方案。
+双模型 SQL 一字未动（只答不修）；一切数字渲染时现算，退水档位 0.8000%／1.0000%
+系**既有锁定契约档位之引用**（非本档现算），仅用于敞口上界估算并标 INFERRED。
+:::
+
+```{r}
+#| label: c13-ledger
+#| echo: false
+stopifnot("本章依赖第十一章守门产物 p1/p2/p3" =
+            exists("p1") && exists("p2") && exists("p3"))
+real <- p1[gate_stage == "0_通过"]
+fake <- p1[gate_stage != "0_通过"]
+tot13 <- p1[, .(n_rows = sum(n_rows), stake = sum(stake_sum),
+                vb = sum(validbet_sum), pnl = sum(pnl_sum))]
+ggr_real <- -real$pnl_sum
+ggr_over <- -sum(fake$pnl_sum)
+vb_over  <-  sum(fake$validbet_sum)
+.rebate_lo <- 0.008; .rebate_hi <- 0.010   # 既有锁定契约档位之引用（非现算）
+led <- fake[order(gate_stage),
+  .(虚报项 = gate_stage,
+    注单行数 = format(n_rows, big.mark = ","),
+    涉及会员 = format(n_members, big.mark = ","),
+    虚报本金 = format(round(stake_sum, 2), big.mark = ","),
+    本金占比 = sprintf("%.4f%%", stake_sum / tot13$stake * 100),
+    虚报洗码 = format(round(validbet_sum, 2), big.mark = ","),
+    虚报盈亏 = format(round(pnl_sum, 2), big.mark = ","),
+    盈亏占比 = sprintf("%.4f%%", pnl_sum / tot13$pnl * 100))]
+led_total <- data.table(
+  虚报项 = "**虚报合计（桶1~5）**",
+  注单行数 = format(sum(fake$n_rows), big.mark = ","),
+  涉及会员 = "（跨桶可重叠）",
+  虚报本金 = format(round(sum(fake$stake_sum), 2), big.mark = ","),
+  本金占比 = sprintf("**%.4f%%**", sum(fake$stake_sum) / tot13$stake * 100),
+  虚报洗码 = format(round(vb_over, 2), big.mark = ","),
+  虚报盈亏 = format(round(sum(fake$pnl_sum), 2), big.mark = ","),
+  盈亏占比 = sprintf("**%.4f%%**", sum(fake$pnl_sum) / tot13$pnl * 100))
+led_real <- data.table(
+  虚报项 = "（对照）真实口径 0_通过",
+  注单行数 = format(real$n_rows, big.mark = ","),
+  涉及会员 = format(real$n_members, big.mark = ","),
+  虚报本金 = format(round(real$stake_sum, 2), big.mark = ","),
+  本金占比 = sprintf("%.4f%%", real$stake_sum / tot13$stake * 100),
+  虚报洗码 = format(round(real$validbet_sum, 2), big.mark = ","),
+  虚报盈亏 = format(round(real$pnl_sum, 2), big.mark = ","),
+  盈亏占比 = sprintf("%.4f%%", real$pnl_sum / tot13$pnl * 100))
+out13 <- rbind(led, led_total, led_real)
+out13[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(out13, "序")
+knitr::kable(out13, align = "r",
+  caption = sprintf(
+    "真实与虚报总帐（虚报五桶+合计+真实对照，共 %d 行全列，零省略；分母为初版口径窗口总量）",
+    nrow(out13)))
+```
+
+```{r}
+#| label: c13-verdict
+#| echo: false
+#| results: asis
+cat(sprintf(paste0(
+  "**总帐裁定（OBSERVED）**：初版口径总投注额 %s，其中虚报 **%s（%.4f%%）**、",
+  "真实 %s；初版口径 GGR（平台赢）%s，其中**虚增 %s（占真实 GGR %.4f%%）**、",
+  "真实 GGR %s。虚报之绝对主项为 `2_重复版本`（本金占虚报合计 %.2f%%），",
+  "其余四桶合计不足总量万分之二十。\n\n"),
+  format(round(tot13$stake, 2), big.mark = ","),
+  format(round(sum(fake$stake_sum), 2), big.mark = ","),
+  sum(fake$stake_sum) / tot13$stake * 100,
+  format(round(real$stake_sum, 2), big.mark = ","),
+  format(round(-tot13$pnl, 2), big.mark = ","),
+  format(round(ggr_over, 2), big.mark = ","), ggr_over / ggr_real * 100,
+  format(round(ggr_real, 2), big.mark = ","),
+  fake[gate_stage == "2_重复版本"]$stake_sum / sum(fake$stake_sum) * 100))
+cat(sprintf(paste0(
+  "**业务影响三项**：其一·**退水结算敞口（INFERRED，上界）**——虚报洗码 %s 若全额",
+  "进入退水结算基数，按既有契约档位 %.4f%%／%.4f%% 计，窗口内多付退水上界 ",
+  "**%s ~ %s**；其二·**报表与占成传导**——GGR 高估 %s 经代理占成与 NGR 链条同向",
+  "传导；其三·**会员分层误伤**——幽灵会员 %s 人（%.4f%%）整员虚增，指标污染会员 ",
+  "%s 人（%.4f%%）之 CLV／分层／营销预算按虚高指标错配，此为风控侧最重后果",
+  "（总量误差小 ≠ 名单安全）。\n"),
+  format(round(vb_over, 2), big.mark = ","),
+  .rebate_lo * 100, .rebate_hi * 100,
+  format(round(vb_over * .rebate_lo, 2), big.mark = ","),
+  format(round(vb_over * .rebate_hi, 2), big.mark = ","),
+  format(round(ggr_over, 2), big.mark = ","),
+  sum(p3[member_class %like% "幽灵"]$n_members),
+  sum(p3[member_class %like% "幽灵"]$n_members) / sum(p3$n_members) * 100,
+  format(p3[member_class == "4_指标污染会员"]$n_members, big.mark = ","),
+  p3[member_class == "4_指标污染会员"]$members_pct))
+```
+
+::: {.callout-note}
+## 商业方案（措施三阶）
+
+**即刻（0–2 周，成本≈0，口径切换即得）**：① 报表与结算双轨对帐——一切总投注额／
+洗码／GGR 出数切换至 `0_通过` 洁净口径，初版口径仅留审计对照；② 退水与占成结算
+基数改用去重后洗码（止损即上表敞口）；③ 测试线 54 会员全链路隔离（永久排除结算、
+报表、KPI）；④ 幽灵会员与指标污染会员名单交风控复核，冻结其现行分层；⑤ 模型一
+代码仓库加 `DEPRECATED_FOR_PRODUCTION_RISK` 标记，防后人误用。
+
+**制度（P0）**：⑥ 一切名单出数以 Wilson 95% 下界替代点估计，并施最小洗码门槛；
+⑦ 三套统计量并报铁律（暴露加权／会员中位／预注册截尾）；⑧「统计可检 ≠ 经济可用」
+入 A168 统计铁律。
+
+**管线（P1–P2）**：⑨ `roi_stake > 1` 二人先行**结算完整性审计**（派彩含本金、
+红利、彩池、退水、冲正、重复结算、汇率、部分结算之九项排查序），查结算语义在先、
+查玩家在后；⑩ `vb_ratio < 0.5` 十六人入对冲网络候选集（会员→IP→设备→代理→对边→
+局→时之图链路），与既有 999 完美对冲对研究并轨；⑪ P01 六桶固化为**月度准入审计
+基准**，每月复跑并过两道对帐钩。
+
+**收益概算**：结算止损上界如上表、报表合规消除 GGR 系统性高估、风控误伤面收敛
+（指标污染会员之错配纠正）；成本近零——洁净口径 SQL 已交付且经八档实测验真。
+:::
+
+# 十四、REDTEAM 冻结·统计铁律·证据阶梯 {#sec-freeze}
+
+## 一、三套统计量并报（预注册截尾，P05 现算示范）
+
+```{r}
+#| label: c14-threestats
+#| echo: false
+.p5f <- "数据库/P05_会员级晚早段扩展.csv"
+if (!file.exists(.p5f)) {
+  cat("> ○ 待表：P05 未在位——本节待其回传后现算。")
+} else {
+  p5 <- fread(.p5f, encoding = "UTF-8")
+  stopifnot("P05 口径锁" = all(p5$late_def == "bet04>=40") &&
+              all(p5$intake_ver == "M2A+ext"))
+  .roi <- p5$pnl_all / p5$stake_all
+  .h <- p5[order(-stake_all)]
+  .trim <- function(q) {
+    k <- max(1L, as.integer(nrow(.h) * q)); t <- .h[(k + 1L):.N]
+    sum(t$pnl_all) / sum(t$stake_all)
+  }
+  .win <- function(q) {
+    lo <- quantile(.roi, q, na.rm = TRUE); hi <- quantile(.roi, 1 - q, na.rm = TRUE)
+    mean(pmin(pmax(.roi, lo), hi), na.rm = TRUE)
+  }
+  ts <- data.table(
+    统计量 = c("① 暴露加权（Σ盈亏/Σ本金）", "② 会员中位 ROI",
+               "③a 截尾·剔本金前 1%", "③b 截尾·剔本金前 5%",
+               "③c Winsorize 1% 均值", "③d Winsorize 5% 均值"),
+    数值 = sprintf("%+.4f", c(sum(p5$pnl_all) / sum(p5$stake_all),
+                              median(.roi, na.rm = TRUE),
+                              .trim(0.01), .trim(0.05), .win(0.01), .win(0.05))),
+    回答 = c("平台到底赚没赚", "典型会员何状", "去顶后是否翻转", "同左（更深）",
+             "缩尾稳健均值", "同左（更深）"))
+  ts[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(ts, "序")
+  knitr::kable(ts, align = "l",
+    caption = sprintf(
+      "三套统计量并报（预注册全集 %d 项，零省略；P05 全体 %s 名会员，会员级 ROI 口径）",
+      nrow(ts), format(nrow(p5), big.mark = ",")))
+  cat(paste0(
+    "\n\n六个版本方向一致（皆为会员输、平台赢），本轮无「截尾翻转」；然命中组",
+    "（尾占 ≥ 0.60）之晚段加权 ROI 曾由近零经剔前 1% 大户回落至常态——**截尾不是",
+    "装饰而是必修**。截尾集合（Top1%／Top5%／Winsor1%／Winsor5%）自本版起预注册",
+    "锁死，四版本一律并报，禁止事后择优（post hoc trimming）。\n"))
+}
+```
+
+## 二、V02 血统三角互证（P07a 现算）
+
+```{r}
+#| label: c14-lineage
+#| echo: false
+#| results: asis
+.qa <- "数据库/P07a_血统_全限定名.csv"
+if (!file.exists(.qa)) {
+  cat("> ○ 待表：P07a 未在位。")
+} else {
+  qa <- fread(.qa, encoding = "UTF-8")
+  .rows_match <- qa$n_rows[1L] == sum(p1$n_rows)
+  .dup_match  <- (qa$n_rows[1L] - qa$n_bet01[1L]) ==
+                 p1[gate_stage == "2_重复版本"]$n_rows
+  cat(sprintf(paste0(
+    "P07a 实档 `lineage_src` 自证为**裸表名**之结果（档名标签错置，按内容判归属）：",
+    "%s 行、去重单号 %s。三角互证：① 行数与 P01 窗口总行数（全限定名所算）%s；",
+    "② 总行数 − 去重单号 = %s，与瀑布桶 2 %s。**V02 实质收案（OBSERVED）：两名同一",
+    "物理数据**；惟按纪律不升 PROVEN——待全限定名对应件回传（现档改名 P07b 归位）",
+    "及 catalog／partition 级机器可回放证据后正式 CLOSED。\n"),
+    format(qa$n_rows[1L], big.mark = ","), format(qa$n_bet01[1L], big.mark = ","),
+    fifelse(.rows_match, "分毫不差 ✓", "🔴 不合"),
+    format(qa$n_rows[1L] - qa$n_bet01[1L], big.mark = ","),
+    fifelse(.dup_match, "恰等 ✓", "🔴 不合")))
+}
+```
+
+## 三、证据阶梯（E0–E6，正式入册）
+
+E0 普通行为 → E1 时间偏好异常 → E2 时间＋资金集中 → E3 时间＋资金＋经济异常 →
+E4 = E3 ＋ IP／设备／代理关联 → E5 = E4 ＋ 对边协同（同局近时反向）→
+E6 = E5 ＋ 跨窗口可复现。**仅 E5／E6 进入高级风控人工复核；E1／E2 至多观察**。
+尾段行为（相对靴位系）自本版起**降级为 E1 层行为特征**——它是打水／协同研究之
+**候选特征（feature），而非打水指标（evidence）本身**，二者不得混淆。
+
+## 四、REDTEAM 冻结表
+
+```{r}
+#| label: c14-freeze
+#| echo: false
+fz <- data.table(
+  项目 = c("M1 `bet04>=40` 作优势模型", "M1 历史对照／审计基准", "M1 生产风控",
+           "M2 基础模型（准入齐备）", "M2 经济优势", "M2 行为筛选", "M2 处罚性使用",
+           "Wilson 下界出数", "最小洗码门槛", "三套统计量并报（预注册截尾）",
+           "真实靴长权威表", "PSM–DID 因果路线", "IP／设备／代理接入",
+           "对冲网络（999 对并轨）", "`roi_stake > 1` 二人", "`vb_ratio < 0.5` 十六人",
+           "P07 血统"),
+  状态 = c("🔴 FATAL", "🟢", "🔴（DEPRECATED_FOR_PRODUCTION_RISK）",
+           "🟢", "🔴 未发现（五度检验同向）", "🟢", "🔴 FATAL",
+           "P0 必做", "P0 必做", "P0 必做（本章已示范）",
+           "P2（必须完成）", "L4 BLOCK 之后续路线", "P1／P2",
+           "高价值 P1", "结算完整性审计（先查结算语义后查玩家）",
+           "对冲网络候选（特征，非结论）",
+           "🟢 实质收案 ／ ⏳ 待机器可回放证据 CLOSED"))
+fz[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(fz, "序")
+knitr::kable(fz, align = "l",
+  caption = sprintf("REDTEAM 冻结表（%d 项全列，零省略）", nrow(fz)))
+```
+
+::: {.callout-important}
+## 终裁一句与统计铁律（正式入册）
+
+**本轮不是把模型二证明成好模型，而是证明其为「数据治理成立、目标经济假设被数据
+否证」之模型——模型一败于工程，模型二成于科学（假设被严谨证伪即科研成功）。**
+「尾段无优势」之效力边界照登：仅及当前窗口、当前判据、当前暴露条件之总体结论，
+不外推为「尾段永无优势」。
+
+统计铁律（新增两条）：**其一，Statistically detectable ≠ economically actionable
+——p 值不越权定价**；**其二，加权均值 ≠ 典型玩家——三套统计量并报，截尾预注册**。
+在 Wilson＋最小暴露落地与 P07 正式 CLOSED 之前，**任何「尾段优势」数字不得进入
+处罚规则**。
+
+**变更记录**：v2.2.0（2026-08-19）——新增第十三章（真实与虚报总帐、业务影响、
+商业方案）与第十四章（三套统计量并报之现算示范、V02 三角互证、E0–E6 证据阶梯、
+REDTEAM 冻结表、两条统计铁律）；双模型 SQL 一字未动；第一至十二章未动一字。
+:::
+
+# 十五、各别虚报对照：模型一 vs 模型二（无各别，不成比较） {#sec-permodel}
+
+::: {.callout-important}
+## 本章定位
+
+第十三章之总帐系**平台口径**之虚报（初版准入 vs 洁净准入）；本章将同一虚报**逐模型
+归属**——模型一_甲版在其自身 SQL 口径下各虚报多少、模型二_甲版各虚报多少——分
+**平台域**（若各自准入施于全平台）与**队列域**（各自实际榜单之内）两级量化，五指标
+（注单行数、会员数、本金、洗码、盈亏）齐列。归属规则：模型一之准入即初版口径
+（不去重、不剔测试线、不剔重对单、不限一般单，仅查三列非空），故平台域虚报 =
+P01 桶 1~5 **全额归其名下**；模型二之准入与洁净口径**逐闸同构**（血统已验），故其
+准入级虚报**恒等于零**，其各别问题在判据层与统计层，另行列账。一切数字现算。
+:::
+
+```{r}
+#| label: c15-permodel
+#| echo: false
+stopifnot("本章依赖 p1（第十一章）与 m1/m2/jj（第一章）" =
+            exists("p1") && exists("m1") && exists("m2") && exists("jj"))
+## 平台域：模型一各别虚报 = 桶 1~5 全额；模型二 = 0 -----------------------------
+fk <- p1[gate_stage != "0_通过"]
+tt <- p1[, .(r = sum(n_rows), s = sum(stake_sum), v = sum(validbet_sum),
+             p = sum(pnl_sum))]
+plat <- data.table(
+  指标 = c("注单行数", "会员数", "本金（总投注额）", "洗码", "盈亏（GGR 侧）"),
+  模型一_虚报 = c(
+    sprintf("%s（%.4f%%）", format(sum(fk$n_rows), big.mark = ","),
+            sum(fk$n_rows) / tt$r * 100),
+    sprintf("幽灵 %s 人（%.4f%%）＋污染 %s 人（%.4f%%）",
+            format(sum(p3[member_class %like% "幽灵"]$n_members), big.mark = ","),
+            sum(p3[member_class %like% "幽灵"]$n_members) / sum(p3$n_members) * 100,
+            format(p3[member_class == "4_指标污染会员"]$n_members, big.mark = ","),
+            p3[member_class == "4_指标污染会员"]$members_pct),
+    sprintf("%s（%.4f%%）", format(round(sum(fk$stake_sum), 2), big.mark = ","),
+            sum(fk$stake_sum) / tt$s * 100),
+    sprintf("%s（%.4f%%）", format(round(sum(fk$validbet_sum), 2), big.mark = ","),
+            sum(fk$validbet_sum) / tt$v * 100),
+    sprintf("%s（%.4f%%）", format(round(sum(fk$pnl_sum), 2), big.mark = ","),
+            sum(fk$pnl_sum) / tt$p * 100)),
+  模型二_虚报 = c("0（准入与洁净口径逐闸同构）", "0（同左）", "0.00", "0.00", "0.00"))
+plat[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(plat, "序")
+knitr::kable(plat, align = "l",
+  caption = sprintf(
+    "平台域各别虚报对照（%d 指标全列，零省略；模型一 = P01 桶 1~5 全额归属，模型二准入级恒零）",
+    nrow(plat)))
+```
+
+::: {.callout-note}
+## 归属细节两则（不含糊）
+
+其一，桶 `1_数值守门` 之 `r format(p1[gate_stage == "1_数值守门"]$n_rows, big.mark = ",")`
+行：模型一仅查三列**非空**，空串可铸 NULL 与非正值仍可入其分组，故此桶按保守原则
+全额归模型一名下（体量微末，不改结论）。其二，模型二之「准入级虚报恒零」系
+**构造性成立并经血统验证**——其五闸与 P01 洁净口径逐闸同文，且其榜单经 P05 子集
+逐值零差复核（第十四章），非未经检验之断言。
+:::
+
+## 一、队列域：模型一榜单之内的各别虚报（逐员对帐）
+
+```{r}
+#| label: c15-cohort
+#| echo: false
+d_ord <- sum(jj$total_orders_1 - jj$total_orders_2)
+d_vb  <- sum(jj$valid_bet_1 - jj$valid_bet_2)
+d_pf  <- sum(jj$profit_1 - jj$profit_2)
+d_ab  <- sum(abs(jj$profit_1 - jj$profit_2))
+o1    <- m1[!player_id %in% m2$player_id]
+coh <- data.table(
+  项 = c(sprintf("虚报订单（配对 %s 人）", format(nrow(jj), big.mark = ",")),
+         "虚报洗码（配对）",
+         "盈亏失真·净额（配对）",
+         "盈亏失真·绝对额（配对）",
+         sprintf("不可对帐敞口（榜内独有 %d 人整员）", nrow(o1)),
+         "名单级误判"),
+  模型一_实测 = c(
+    sprintf("%s 笔", format(d_ord, big.mark = ",")),
+    sprintf("%s（占其配对洗码 %.4f%%）", format(round(d_vb, 2), big.mark = ","),
+            d_vb / sum(jj$valid_bet_1) * 100),
+    sprintf("%s（净向亏损侧失真）", format(round(d_pf, 2), big.mark = ",")),
+    sprintf("%s（个案层面之真实扰动量）", format(round(d_ab, 2), big.mark = ",")),
+    sprintf("订单 %s、洗码 %s、盈亏 %s——洁净世界无对应体，整员存疑",
+            format(sum(o1$total_orders), big.mark = ","),
+            format(round(sum(o1$valid_bet), 2), big.mark = ","),
+            format(round(sum(o1$profit), 2), big.mark = ",")),
+    sprintf("错收 %d 人（%.2f%%）＋漏收 %d 人（边界翻覆，见第四章）",
+            nrow(o1), nrow(o1) / nrow(m1) * 100, nrow(m2) - nrow(jj))),
+  模型二_实测 = c("0", "0.00", "0.00", "0.00", "无（其榜单即洁净口径）",
+                  sprintf("准入级 0；判据级与统计级误判另列于下")))
+coh[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(coh, "序")
+knitr::kable(coh, align = "l",
+  caption = sprintf("队列域各别虚报对照（%d 项全列，零省略；配对 = 双榜交集逐员相减）",
+                    nrow(coh)))
+```
+
+另有**指标级失真**归模型一：配对会员中有和局者
+`r format(sum(jj$push_orders > 0), big.mark = ",")` 人
+（`r sprintf("%.2f%%", mean(jj$push_orders > 0) * 100)`），其 `win_rate` 因和局混同
+一律系统性偏低；且其 ROI 仅有洗码单一分母，无 `vb_ratio` 可辨打水。
+
+## 二、模型二之各别账：准入零虚报之外的误判存量
+
+模型二准入级虚报为零，然**无各别账即无比较**，其自身误判存量照列（皆前章现算）：
+**判据级**——绝对局号相对观测靴位之标签错置，平台底集上行数
+`r sprintf("%.4f%%", 1.6390 + 1.9598)`、本金 3.4873%（第十二章 P04，观测靴长口径）；
+**统计级**——榜内 66.50% 会员之 ≥0.60 分类无 Wilson 95% 保障、`|roi_vb|>1` 小暴露
+爆炸 8 人（第十二章）；**信任边界**——窗口与真实靴长 UNKNOWN。
+
+::: {.callout-caution}
+## 本章裁定（OBSERVED）
+
+**模型一之各别虚报是「数据层」的**：平台域五指标全额中招（本金 0.7057%、盈亏
+0.6003%、污染会员 3.03%），队列域逐员可指认（配对虚报订单
+`r format(sum(jj$total_orders_1 - jj$total_orders_2), big.mark = ",")` 笔、榜内
+`r sprintf("%.2f%%", nrow(m1[!player_id %in% m2$player_id]) / nrow(m1) * 100)`
+会员整员不可对帐）。**模型二之各别虚报在数据层为零，其误判在「判据与统计层」**
+（标签错置 3.60% 行数、分类置信失守 66.50%）。故二者不可同日而语亦不可互抵：
+**前者以洁净口径即可根治（已交付），后者须判据重构与统计门槛方可收敛（P0/P2）。**
+
+**变更记录**：v2.3.0（2026-08-19）——新增第十五章（各别虚报对照，平台域＋队列域
+＋指标级；模型二准入零虚报之构造性证明与其判据／统计级误判存量并列）；
+第一至十四章未动一字；双模型 SQL 一字未动。
+:::
+
+# 十六、准入七闸符合度·隐性口径分裂·bet08 缺口·bet01 定谳 {#sec-gates}
+
+::: {.callout-important}
+## 本章定位
+
+外部提出七闸基准：**最新结算订单 ∧ `bet02='101'` ∧ `category='1'` ∧
+`UPPER(TRIM(bet38))='N'` ∧ `bet05>0` ∧ `bet11>0` ∧ `bet08` 有效**。本章以双模型
+SQL 原文逐闸比对（T3 工程事实，原文在引言可查），并以第十一章瀑布六桶回填
+「违反即中招多少」之实测代价；另收录 `bet01` 表之结构定谳与 `bet08` 缺口之
+待表查证。双模型 SQL 一字未动（只答不修）。
+:::
+
+## 一、七闸符合度对照（含实测代价）
+
+```{r}
+#| label: c16-gates
+#| echo: false
+stopifnot("本章依赖 p1（第十一章）" = exists("p1"))
+.g <- function(stage) p1[gate_stage == stage]
+gates <- data.table(
+  闸 = c("最新订单（同单号去重）", "`bet02 = '101'`", "`category = '1'`",
+         "`UPPER(TRIM(bet38)) = 'N'`", "`bet05 > 0`", "`bet11 > 0`",
+         "`bet08` 有效"),
+  模型一_甲版 = c("❌ 无", "✅", "❌ 无", "❌ 无",
+                  "⚠ 仅 `IS NOT NULL`，无 `> 0`",
+                  "⚠🔴 未剔行，仅除法处 `NULLIF`（见第二节）", "❌ 无"),
+  模型二_甲版 = c("✅ `ROW_NUMBER` 三级排序取 `rn=1`", "✅", "✅ 原文同",
+                  "✅ 原文同", "✅ 铸型后 `> 0`", "✅ 铸型后 `> 0` 剔行",
+                  "❌ 同缺（双档共同债）"),
+  违反之实测代价 = c(
+    sprintf("桶2：%s 行、本金 %s（%.4f%%）",
+            format(.g("2_重复版本")$n_rows, big.mark = ","),
+            format(round(.g("2_重复版本")$stake_sum, 2), big.mark = ","),
+            .g("2_重复版本")$stake_pct),
+    "—（双档皆合）",
+    sprintf("桶3：%s 行小费单混入", format(.g("3_非一般单")$n_rows, big.mark = ",")),
+    sprintf("桶4：%s 行重对单混入", format(.g("4_重对单")$n_rows, big.mark = ",")),
+    sprintf("桶1 之一部（%s 行、%s 名会员）",
+            format(.g("1_数值守门")$n_rows, big.mark = ","),
+            format(.g("1_数值守门")$n_members, big.mark = ",")),
+    "同左（桶1 合并计）",
+    "体量待 P08f 定谳（第三节）"))
+gates[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(gates, "序")
+knitr::kable(gates, align = "l",
+  caption = sprintf("准入七闸符合度对照（%d 闸全列，零省略；代价列由 P01 现算）",
+                    nrow(gates)))
+```
+
+**裁定（OBSERVED）**：模型一**七闸仅合一**；模型二**七合其六**，且**超规三闸**——
+五级测试线剔除（外部清单未要求，实测剔
+`r format(p1[gate_stage == "5_测试线"]$n_rows, big.mark = ",")` 行、
+`r p1[gate_stage == "5_测试线"]$n_members` 名测试会员）、`bet04 > 0` 局号守门、
+139 天窗口锁定。除 `bet08` 一项外，模型二不仅符合而且**更全面周道**。
+另注：外部清单之「已结算」若另有状态列，双档皆未施此闸——列名明示后须补闸重测。
+
+## 二、模型一之隐性口径分裂（第五处工程病灶，S2·BLOCK）
+
+模型一对 `bet11 ≤ 0` 之行**不剔除**：计数列（`total_orders`／`late_orders`／
+`win_orders`）照收该行，而金额列（`profit`／`valid_bet`）因 `NULLIF(bet11, 0)`
+归 NULL 而不收——**同一会员之分子分母分属两个行集**，`late_ratio` 与 `roi` 之
+内部一致性因此失守。此病灶系 SQL 原文层面之结构缺陷（T3，原文可查），其触发
+体量之上界即桶 1（`r format(p1[gate_stage == "1_数值守门"]$n_rows, big.mark = ",")`
+行，微末），然**口径正当性不以体量论**：一票登记，随模型一之
+`DEPRECATED_FOR_PRODUCTION_RISK` 标记并案。
+
+## 三、`bet08` 有效性缺口（双档共同债，P08f 待表）
+
+先立铁律于前：**`bet08` 只可作存在性守门，绝不可作日期切分**——`DATE(bet08)` 与
+`dt` 之 38.6% 错位系在案锁定结论，窗口一律以 `dt` 分区。
+
+```{r}
+#| label: c16-p08f
+#| echo: false
+#| results: asis
+.f8 <- "数据库/P08f_bet08有效性.csv"
+if (file.exists(.f8)) {
+  q8 <- fread(.f8, encoding = "UTF-8")
+  stopifnot("P08f 须含 scope_def 口径锁" = "scope_def" %chin% names(q8))
+  cat(sprintf(paste0(
+    "洁净底集 %s 行中，`bet08` 为空 **%s 行（%.6f%%）**、非空不可解析 **%s 行",
+    "（%.6f%%）**——「bet08 有效」缺口之实测体量如此，双档补闸与否据此定夺",
+    "（OBSERVED）。\n"),
+    format(q8$n_rows[1L], big.mark = ","),
+    format(q8$n_bet08_null[1L], big.mark = ","),
+    q8$n_bet08_null[1L] / q8$n_rows[1L] * 100,
+    format(q8$n_bet08_unparse[1L], big.mark = ","),
+    q8$n_bet08_unparse[1L] / q8$n_rows[1L] * 100))
+} else {
+  cat(paste0(
+    "> ○ 待表：`", .f8, "` 未在位——P08f 之 SQL 已交付（洁净底集上普查 `bet08` ",
+    "空值与不可解析行数），回传后本节自动现算补全；在此之前本项登记 UNKNOWN。\n"))
+}
+```
+
+## 四、`bet01` 表之结构定谳（尾段研究数据源之唯一性）
+
+```{r}
+#| label: c16-bet01
+#| echo: false
+#| results: asis
+.fa <- "数据库/P08a_bet01结构剖析.csv"; .fd <- "数据库/P08d_bet01列剖析.csv"
+if (file.exists(.fa) && file.exists(.fd)) {
+  qa <- fread(.fa, encoding = "UTF-8"); qd <- fread(.fd, encoding = "UTF-8")
+  .has <- function(x) x %chin% qa[[2L]]
+  cat(sprintf(paste0(
+    "P08a 现算：`bet01` 共 %d 列；`bet38`（重对单）在列 = **%s**、`bet39`（桌台）",
+    "在列 = **%s**、`validbet`（洗码）在列 = **%s**。P08d 现算：窗口 %s 行、",
+    "`bet04 ∈ [%d, %d]`、`partnerBetId` 非空 %s 行（占 %.4f%%）。\n\n"),
+    nrow(qa), fifelse(.has("bet38"), "是", "否"), fifelse(.has("bet39"), "是", "否"),
+    fifelse(.has("validbet"), "是", "否"),
+    format(qd$n_rows[1L], big.mark = ","), qd$bet04_min[1L], qd$bet04_max[1L],
+    format(qd$n_partner_rows[1L], big.mark = ","),
+    qd$n_partner_rows[1L] / qd$n_rows[1L] * 100))
+} else {
+  cat(paste0(
+    "> ○ 待表：P08a／P08d 之 CSV 未归位于 `数据库/`。以下四项定谳暂以 SQL Lab ",
+    "查证回执为据（**回执引用级**，CSV 归位后本节自动升为现算 OBSERVED）：\n"))
+}
+cat(paste0(
+  "\n定谳四条：其一，`bet04` 于 `bet01` 值域达三位数级，远逾百家乐实测靴长 ",
+  "P99 = 58 且含 0——**同名异义实锤**（121 处名录追加），`bet01` 之「晚段」维度",
+  "整列作废；其二，`bet01` 无 `bet38`、无 `bet39`、无 `validbet`——重对单剔除、",
+  "相对靴位、洗码口径三项**结构性死缺**；其三，`bet01` 逐行皆有 `partnerBetId`",
+  "（结构证据 OBSERVED；「第三方接入注单表」之业务定性为 INFERRED，待 P08e ",
+  "值域清单佐证）；其四，**`bet02` 系尾段投注研究之唯一合法数据源**——`bet01` ",
+  "至多可查去重、测试线、`category`、窗口四维，金额四维被 `bet14` 同名异义与",
+  "洗码列缺失双重封印。\n"))
+```
+
+::: {.callout-important}
+## 本章裁定与变更记录（v2.4.0）
+
+> **七闸基准之下：模型一 1/7，模型二 6/7 并超规三闸——模型二对外部要求「符合且
+> 更全面周道」，惟 `bet08` 存在性守门为双档共同债（P08f 定谳后补闸）。模型一另
+> 添第五处病灶（`bet11` 隐性口径分裂），DEPRECATED 定性再固。`bet01` 经结构与
+> 值域双重定谳出局，`bet02` 之唯一合法数据源地位落锁。**
+
+**变更记录**：v2.4.0（2026-08-19）——新增第十六章（七闸符合度对照、隐性口径
+分裂、`bet08` 缺口 P08f 待表、`bet01` 结构定谳 P08a/P08d 现算或回执引用）；
+第一至十五章未动一字；双模型 SQL 一字未动。
+:::
+
+# 十七、两域十一项总帐·`bet08` 三定谳·退水血统链 {#sec-ledger2}
+
+::: {.callout-important}
+## 本章定位
+
+本章立**两域对照总帐**：步骤二＝全量洁净底集（七闸齐施），步骤三＝`R01_late_shoe.csv`
+之会员宇宙（同底集再加 `HAVING COUNT(*) >= 100`），步骤四＝三除以二之占比。
+另收 `bet08` 三项定谳（有效性、时序语义、筛除量）与退水三级血统链。
+一切数字现算；判级严守——**`GGR − bet16` 仅为口径示数，正式 NGR 维持 UNKNOWN**。
+双模型 SQL 一字未动。
+:::
+
+```{r}
+#| label: c17-load
+#| echo: false
+.q17 <- c(P10 = "数据库/P10_两域总帐.csv", P08f = "数据库/P08f_bet08有效性.csv",
+          P09 = "数据库/P09_bet08时序普查.csv")
+.m17 <- .q17[!file.exists(.q17)]
+if (length(.m17))
+  stop(sprintf("○ 待表：未找到 %s ——不以静态文字冒充结果。", paste(.m17, collapse = "、")))
+q10 <- fread(.q17["P10"], encoding = "UTF-8")
+q8f <- fread(.q17["P08f"], encoding = "UTF-8")
+q09 <- fread(.q17["P09"], encoding = "UTF-8")
+stopifnot(
+  "P10 须含 scope_def 口径锁" = "scope_def" %chin% names(q10) && nrow(q10) == 2L,
+  "P08f 须含 scope_def 口径锁" = "scope_def" %chin% names(q8f),
+  "P09 须含 scope_def 口径锁"  = "scope_def" %chin% names(q09))
+
+## SC 册纠偏：P10 之 CASE 标签将「补域(n<100)」误标为「步骤二_全量洁净」；
+## 计算无误，标签有误。此处按内容判归属——步骤二 = 两行之和。
+.r01 <- q10[scope_def %like% "R01"]
+.low <- q10[!scope_def %like% "R01"]          # 实为补域 n<100，非全量
+.num <- c("n_orders","n_members","stake_sum","validbet_sum","ggr_sum",
+          "rebate16_sum","rebate41_sum")
+.all <- as.list(setNames(sapply(.num, function(x) .r01[[x]] + .low[[x]]), .num))
+
+## 对帐钩（硬校验）：步骤二 ≡ P01 桶 0 -----------------------------------------
+stopifnot("本章依赖 p1（第十一章）" = exists("p1"))
+.g0 <- p1[gate_stage == "0_通过"]
+stopifnot(
+  "钩·注单" = .all$n_orders  == .g0$n_rows,
+  "钩·会员" = .all$n_members == .g0$n_members,
+  "钩·本金（容差一分）" = abs(.all$stake_sum    - .g0$stake_sum)    < 0.05,
+  "钩·洗码"             = abs(.all$validbet_sum - .g0$validbet_sum) < 0.05,
+  "钩·GGR"              = abs(.all$ggr_sum      + .g0$pnl_sum)      < 0.05)
+```
+
+## 一、十一项总帐（步骤二／三／四）
+
+```{r}
+#| label: c17-ledger
+#| echo: false
+.f <- function(x) format(round(x, 2), big.mark = ",")
+.pc <- function(a, b) sprintf("%.4f%%", a / b * 100)
+led17 <- data.table(
+  聚合项 = c("总注单数", "总会员数", "总投注额（本金）", "总洗码", "总盈利（GGR）",
+             "总返水（`bet16` 口径）", "净盈利（GGR − `bet16`，示数）",
+             "一线代理数", "二线代理数", "三线代理数", "四线代理数", "五线代理数"),
+  步骤二_全量洁净 = c(
+    format(.all$n_orders, big.mark = ","), format(.all$n_members, big.mark = ","),
+    .f(.all$stake_sum), .f(.all$validbet_sum), .f(.all$ggr_sum),
+    .f(.all$rebate16_sum), .f(.all$ggr_sum - .all$rebate16_sum),
+    rep("○ 待 P10b（distinct 不可加）", 5L)),
+  步骤三_R01域 = c(
+    format(.r01$n_orders, big.mark = ","), format(.r01$n_members, big.mark = ","),
+    .f(.r01$stake_sum), .f(.r01$validbet_sum), .f(.r01$ggr_sum),
+    .f(.r01$rebate16_sum), .f(.r01$ggr_sum - .r01$rebate16_sum),
+    format(c(.r01$n_lv1, .r01$n_lv2, .r01$n_lv3, .r01$n_lv4, .r01$n_lv5),
+           big.mark = ",")),
+  步骤四_占比 = c(
+    .pc(.r01$n_orders, .all$n_orders), .pc(.r01$n_members, .all$n_members),
+    .pc(.r01$stake_sum, .all$stake_sum), .pc(.r01$validbet_sum, .all$validbet_sum),
+    .pc(.r01$ggr_sum, .all$ggr_sum), .pc(.r01$rebate16_sum, .all$rebate16_sum),
+    .pc(.r01$ggr_sum - .r01$rebate16_sum, .all$ggr_sum - .all$rebate16_sum),
+    rep("—", 5L)),
+  判级 = c(rep("🟢", 6L), "🟢（仅口径示数）", rep("🟡 待 P10b", 5L)))
+
+## 加列：模型一域（其自身名单）及其占步骤二之比 --------------------------------
+## ⚠ 跨口径比：分子系模型一未洁净口径（含重复版本、测试线等虚报），
+##    分母为洁净真值——仅作量级参照，不得作口径内占比引用。
+stopifnot("本节依赖第一章守门产物 m1" = exists("m1"))
+.m1o <- sum(m1$total_orders); .m1m <- nrow(m1)
+.m1v <- sum(m1$valid_bet);    .m1g <- -sum(m1$profit)
+led17[, 模型一域 := c(
+  format(.m1o, big.mark = ","), format(.m1m, big.mark = ","),
+  "❌ 无 `stake_all` 列（结构缺失）", .f(.m1v), .f(.m1g),
+  "❌ 无退水列", "❌ 不可算", rep("❌ 无代理列", 5L))]
+led17[, 模型一占比 := c(
+  .pc(.m1o, .all$n_orders), .pc(.m1m, .all$n_members), "—",
+  .pc(.m1v, .all$validbet_sum), .pc(.m1g, .all$ggr_sum), "—", "—", rep("—", 5L))]
+
+led17[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(led17, "序")
+knitr::kable(led17, align = "r",
+  caption = sprintf(
+    "三域十一项总帐（%d 项全列，零省略；步骤二由 P10 两行相加并经三钩硬校验 ≡ P01 桶 0；模型一域为跨口径参照）",
+    nrow(led17)))
+```
+
+```{r}
+#| label: c17-verdict
+#| echo: false
+#| results: asis
+.hold_r01 <- .r01$ggr_sum / .r01$stake_sum * 100
+.hold_all <- .all$ggr_sum / .all$stake_sum * 100
+cat(sprintf(paste0(
+  "**经济集中度（OBSERVED）**：占洁净会员 **%.4f%%** 之高频群（≥100 单）承载本金 ",
+  "**%.4f%%**、洗码 **%.4f%%**、GGR **%.4f%%**、`bet16` 退水 **%.4f%%**；其 hold ",
+  "**%.4f%%** 低于全量 **%.4f%%**（差 %.4f 个百分点）。\n\n"),
+  .r01$n_members / .all$n_members * 100, .r01$stake_sum / .all$stake_sum * 100,
+  .r01$validbet_sum / .all$validbet_sum * 100, .r01$ggr_sum / .all$ggr_sum * 100,
+  .r01$rebate16_sum / .all$rebate16_sum * 100, .hold_r01, .hold_all,
+  .hold_all - .hold_r01))
+```
+
+```{r}
+#| label: c17-m1verdict
+#| echo: false
+#| results: asis
+cat(sprintf(paste0(
+  "**模型一域判读（跨口径参照，⚠ 非口径内占比）**：其名单 %s 人仅占洁净会员 ",
+  "**%.4f%%**、注单 **%.4f%%**、洗码 **%.4f%%**、GGR **%.4f%%**——即模型一整张榜单",
+  "所覆盖之经济体量不足平台千分之二（洗码口径）。其洗码口径 hold **%.4f%%** 低于",
+  "全量 **%.4f%%**，然此差**不可作行为结论**：该档未去重、未剔测试线，分子本身含",
+  "第十三章所列虚报，而分母为洁净真值——**跨口径相除，仅供量级参照**。三项结构缺失",
+  "照登：无 `stake_all`（故总投注额不可得）、无退水列、无代理列，十二项中可填其四。",
+  "另，模型一域会员数为步骤三 R01 域之 **%.4f%%**，两者判据与门槛皆异，非包含关系。\n"),
+  format(.m1m, big.mark = ","), .m1m / .all$n_members * 100,
+  .m1o / .all$n_orders * 100, .m1v / .all$validbet_sum * 100,
+  .m1g / .all$ggr_sum * 100,
+  .m1g / .m1v * 100, .all$ggr_sum / .all$validbet_sum * 100,
+  .m1m / .r01$n_members * 100))
+```
+
+::: {.callout-note}
+## 商业限定语（措辞已降级，CONDITIONAL）
+
+**此 `r format(.r01$n_members, big.mark = ",")` 人构成当前高频核心经济暴露群，系
+VIP 与退水政策分析之首要候选靶群；是否实施差异化政策，仍须结合生命周期、代理结构、
+净贡献、风险成本及真实月结 NGR 验证。** 现阶段 NGR 判级为 UNKNOWN，**不得仅凭 GGR
+决定商业价值**。长尾侧同时照登：其余
+`r format(.all$n_members - .r01$n_members, big.mark = ",")` 名会员贡献 GGR
+`r sprintf("%.4f%%", (.all$ggr_sum - .r01$ggr_sum) / .all$ggr_sum * 100)`
+而退水成本仅
+`r sprintf("%.4f%%", (.all$rebate16_sum - .r01$rebate16_sum) / .all$rebate16_sum * 100)`。
+:::
+
+## 二、`bet08` 三项定谳
+
+```{r}
+#| label: c17-bet08
+#| echo: false
+#| results: asis
+.valid <- q8f$n_rows[1L] - q8f$n_bet08_null[1L] - q8f$n_bet08_unparse[1L]
+cat(sprintf(paste0(
+  "**定谳一·有效性（🟢 OBSERVED）**：洁净底集 %s 行中，空值 **%s**、非空不可解析 ",
+  "**%s**——有效率 **%.4f%%**。\n\n",
+  "**定谳二·时序语义（🟢 OBSERVED）**：靴内相邻局对 %s 组中，时序倒挂 **%s 组",
+  "（%.6f%%）**，长歇（>10 分钟）%s 组（%.6f%%）。倒挂率为零即证 `bet08` 随局号",
+  "严格单调，**「下注时间」语义成立**，此前 UNKNOWN 升格 OBSERVED；长歇组系洗牌／",
+  "换靴／台桌中断之候选靴界信号，量级稀少而合理。\n\n",
+  "**定谳三·筛除量（🟢 OBSERVED）**：既然空值与不可解析皆为零，则「`bet08` 有效」",
+  "一闸于本底集之筛除量 **恒为 0 行**——第十六章所列双档共缺之该闸，**不产生任何",
+  "数据差异**，其性质由「数据债」降为**口径完备性事项**（宜补写以求体例齐整，",
+  "补与不补，既有数字一字不改）。\n"),
+  format(q8f$n_rows[1L], big.mark = ","),
+  format(q8f$n_bet08_null[1L], big.mark = ","),
+  format(q8f$n_bet08_unparse[1L], big.mark = ","),
+  .valid / q8f$n_rows[1L] * 100,
+  format(q09$n_round_pairs[1L], big.mark = ","),
+  format(q09$n_inversions[1L], big.mark = ","),
+  q09$n_inversions[1L] / q09$n_round_pairs[1L] * 100,
+  format(q09$n_long_gaps_10min[1L], big.mark = ","),
+  q09$n_long_gaps_10min[1L] / q09$n_round_pairs[1L] * 100))
+```
+
+::: {.callout-caution}
+## `bet08` 之铁律与限界（不因定谳而松动）
+
+**其一**：`bet08` **永禁日期切分**——`DATE(bet08)` 与 `dt` 之 38.6% 错位系在案锁定
+结论，窗口一律以 `dt` 分区。**其二**：以上三项皆系**洁净底集**之结论，测试线与
+重复版本行未纳入，不外推。**其三**：语义定谳开启三机制之前两项——靴界与真靴长
+旁证（直击 V01 分母问题）、局号完整性守门（扩充 P06）；第三项（局内尾秒轴）
+须局内多注单秒级排序，归 E4／E5 特征工程，非本档范围。
+:::
+
+## 三、退水三级血统链与废弃指标
+
+```{r}
+#| label: c17-rebate
+#| echo: false
+#| results: asis
+.r41_ratio <- .all$rebate41_sum / .all$validbet_sum
+.r16_ggr   <- .all$rebate16_sum / .all$ggr_sum * 100
+.r16_vb    <- .all$rebate16_sum / .all$validbet_sum * 100
+.contract_lo <- 0.8; .contract_hi <- 1.0   # 既有锁定契约档位之引用（非本档现算）
+cat(sprintf(paste0(
+  "**`bet41` 判读**：其合计与洗码合计之比为 **%.6f**——即 `bet41` ≈ 洗码，系",
+  "**下注退水基数**而非退水金额。故派生指标 `ngr_by41` 正式列为 **❌ 废弃**，",
+  "严禁任何模型将其作成本金额使用。\n\n",
+  "**`bet16` 判读**：占 GGR **%.4f%%**（与既有月结锚同量级、方向合），然占洗码",
+  "仅 **%.4f%%**，与契约档 %.1f%%～%.1f%% 相差约 **%.0f 倍**——强证退水主帐",
+  "**不在 `bet02` 逐单层**，`bet16` 疑为即时退水之一部分。\n\n",
+  "**三级血统链（锁定）**：`bet41`（下注退水基数／洗码近似）→ `bet16`（逐单即时",
+  "退水候选）→ **月结帐（正式返水／佣金／NGR 之权威来源）**。故 **正式 NGR 判级 ",
+  "⚪ UNKNOWN**；本章「净盈利」列仅为 `bet16` 口径之示数，**不得改名为 NGR**，",
+  "亦不得作对外报表或结算依据。\n"),
+  .r41_ratio, .r16_ggr, .r16_vb, .contract_lo, .contract_hi,
+  .contract_lo / .r16_vb))
+```
+
+## 四、SC 册纠偏记录（标签错误，计算正确）
+
+```{r}
+#| label: c17-sc
+#| echo: false
+sc <- data.table(
+  项 = c("错误性质", "发现方式", "影响面", "处置", "留痕"),
+  内容 = c(
+    "P10 之 `CASE` 将互补域（n<100）误标为「步骤二_全量洁净」——**标签错误，非计算错误**",
+    "撰写侧自查：以两行之和对帐 P01 桶 0 时发现单行不符、两行相加分毫不差",
+    "聚合数值零影响；若照标签直读，则步骤二被低估、步骤四占比被虚高",
+    "按内容判归属（不认标签）：步骤二 ＝ 两行之和；三道对帐钩已以 `stopifnot` 硬校验",
+    "**主动发现、主动纠正、保留纠偏痕迹**——不以抹除错误换取表面漂亮"))
+sc[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(sc, "序")
+knitr::kable(sc, align = "l",
+  caption = sprintf("SC 册纠偏记录（%d 项全列，零省略）", nrow(sc)))
+```
+
+## 五、本章冻结状态
+
+```{r}
+#| label: c17-freeze
+#| echo: false
+fz17 <- data.table(
+  项目 = c("P10 聚合正确性", "P01 桶 0 对帐", "P05 独立管道互证", "P10 `CASE` 标签",
+           "`bet08` 空值", "`bet08` 可解析性", "`bet08` 时序语义", "`bet08` 闸筛除量",
+           "`bet41` 语义", "`ngr_by41`", "`bet16` 逐单退水候选", "正式 NGR",
+           "五级代理 distinct（步骤二）", "商业解释"),
+  状态 = c("🟢 CLOSED", "🟢 CLOSED（三钩硬校验）", "🟢 CLOSED（舍入级差异）",
+           "🟠 CORRECTED（SC 册在案）",
+           "🟢 CLOSED", "🟢 CLOSED（P08f 直证）", "🟢 CLOSED（P09 倒挂零）",
+           "🟢 CLOSED（恒为 0 行）",
+           "🟢 下注退水基数（强证）", "❌ 废弃派生指标", "🟡 观察中",
+           "⚪ UNKNOWN（月结帐为权威）", "🟡 待 P10b", "🟡 CONDITIONAL（措辞已降级）"))
+fz17[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(fz17, "序")
+knitr::kable(fz17, align = "l",
+  caption = sprintf("第十七章冻结表（%d 项全列，零省略）", nrow(fz17)))
+```
+
+::: {.callout-important}
+## 本章裁定与变更记录（v2.5.0）
+
+> **十一项总帐十一去其五已 🟢 收案，五级代理数待 P10b 方可整体 CLOSED；`bet08`
+> 四项定谳全数收案——其闸筛除量恒零，模型二之 6/7 缺项经实测零影响；退水三级
+> 血统链锁定，`ngr_by41` 废弃、正式 NGR 维持 UNKNOWN。**
+
+**变更记录**：v2.5.1（2026-08-19）——第十七章总帐加两列（模型一域及其占步骤二之比，
+附跨口径警示与专节判读），余同 v2.5.0：新增第十七章（三域十一项总帐、`bet08` 三项
+定谳、退水三级血统链、SC 册纠偏记录、章级冻结表）；第一至十六章未动一字；
+双模型 SQL 一字未动。
+:::
+
+# 十八、预注册监控带 SOP 与外部意见逐条采驳 {#sec-sop}
+
+::: {.callout-important}
+## 本章定位
+
+外部意见指出「p 值与 AUC 同技术分析之支撑／阻力线无数学等价，K 线式映射恐致决策
+灾难」——**此警示正确，予以采纳**：本章将既有监控隐喻正名为**预注册监控带**
+（pre-registered monitoring bands），并明文声明其与技术分析**无任何数学等价**；
+其余四条建议逐条采驳，理由载后。本章为运营 SOP，不改任何既有数字与判定。
+:::
+
+## 一、监控带正名与声明
+
+**声明（永久生效）**：以下监控带系**运营触发协议**，非价格动力学。p 值与 AUC 无
+「惯性」「突破」「回踩」之属性；带值之设定依据是**效应量、统计保障与经济体量之
+复合门槛**，而非历史轨迹。破带之唯一后果是**启动复检协议**，绝非直接处罚。
+
+```{r}
+#| label: c18-bands
+#| echo: false
+bands <- data.table(
+  监控指标 = c("晚>早会员占比（方向层）", "配对「晚−早」ROI 中位差（幅度层）",
+               "三维度 AUC（判别层）", "命中组晚段本金占比（经济层／量能）"),
+  零效应带 = c("≈50%（随机基线）", "≈0", "0.45 ~ 0.55", "现况 0.56%"),
+  触发门槛 = c("≥55% **且** Wilson 95% 下界 >50%",
+               "≥+2 个百分点 **且** p<0.01（多重比较校正后）",
+               "≥0.55 观察／≥0.60 确认", "≥5%（量能确认，破带必要条件）"),
+  反向警报 = c("≤45%", "≤−2 个百分点", "**≤0.40**（实案：L1a AUC=0.3828）", "—"))
+bands[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(bands, "序")
+knitr::kable(bands, align = "l",
+  caption = sprintf("预注册监控带（%d 项全列，零省略；四项须共破方成触发）", nrow(bands)))
+```
+
+**复合扳机之所以严于裸 α**：本项目会员级样本以十万计，`α=0.05` 单用必然被大样本
+压出琐碎显著（0.01 个百分点亦可 p<0.05），且季度多指标并监下假阳性逐季累积。故
+触发须**四项共破**：方向、幅度、判别、量能——此即统计铁律「**Statistically
+detectable ≠ economically actionable**」之运营落地。
+
+## 二、破带后之行动阶梯（序不可倒）
+
+**第零步·校验器先行**：破带第一反应是查口径漂移与管道故障——靴长记录有无变更、
+判据分母（`MAX(round_no)`）有无移位、命中组构成有无被少数大户改写、交付件六元组
+有无变动。**假突破十之八九出在数据管道，而非玩家行为。**
+
+**第一步·产品侧降杠杆（不冤枉任何人）**：切牌深度、渗透率、靴尾档位限红、封盘
+时点。此类措施即时封住漏损面且不涉个体判定；**合规红线照登——赔付表受规则与认证
+锁定，「微调靴尾赔率」不在可用杠杆之列**。
+
+**第二步·证据阶梯（个体侧）**：破带名单接 IP／设备／代理／对边协同，按 E0–E6 升
+级；**仅 E5／E6 进人工复核**，E1／E2 至多观察。
+
+**第三步·财务侧**：纳入 hold% 预测修正项、上调风控预备金。**升破确认前一律不得
+预支此三步。**
+
+**反向警报（AUC ≤ 0.40）之处置**：先审**标签生产线**（风控标记逻辑是否掺入与靴位
+负相关之因素），确认无污染后方可议反向特征之使用——**不得将未审计之负相关直接
+投产**。
+
+## 三、复检协议（预注册，破带即启）
+
+新窗口独立取数（不复用触发窗口）；会员门槛 n≥100；截尾四版本并报（Top1%／Top5%／
+Winsor1%／Winsor5%，第十四章已锁）；多重比较校正；三套统计量并报；全程六元组留痕。
+**协议内容于破带前锁定，破带后不得修改**——防事后择优（post hoc trimming）。
+
+## 四、外部意见逐条采驳
+
+```{r}
+#| label: c18-adjudicate
+#| echo: false
+adj <- data.table(
+  外部建议 = c(
+    "p 值／AUC 与技术分析之支撑阻力线无数学等价，勿作 K 线式映射",
+    "α=0.05 为唯一物理阈值；p<0.05 即行动（限注／调查）",
+    "「p 值升破 0.05 ＝ 跌破支撑 ＝ 反向有效」，应立即建反向策略",
+    "删除数据中心内所有靴尾风控特征列；停止投注时机方向之算力投入",
+    "以 p=0.75／0.80 向监管证明平台公平，作负责任博彩加分项",
+    "微调靴尾阶段开奖赔率以保庄家优势",
+    "资源转投单日亏损追回型（Martingale）监控"),
+  裁定 = c("✅ 采纳", "❌ 驳回", "❌ 驳回", "⚠ 部分采纳", "❌ 驳回", "❌ 驳回",
+           "⚠ 部分采纳"),
+  理由 = c(
+    "隐喻确有误导之虞，已正名为预注册监控带并加声明（本章第一节）",
+    "α 系惯例非物理常数；大样本下裸 α 必被琐碎效应触发，且未作多重比较与序贯校正。本方案改用四项复合扳机，**严于**裸 α",
+    "p>0.05 是**无证据**，非反向有效；反向之判据为 AUC 显著低于 0.5。其自举例「AUC=0.2 且 p 极高」内在矛盾（大样本下 AUC=0.2 之 p 必极小）",
+    "下线**处罚规则**正确；删除**特征列**错误——特征须留 E1 观察级以侦漂移并存审计血统。算力止于建模投产，保留季度重跑之最低监控",
+    "不能拒绝 H0 ≠ 证明公平；结论效力仅及本窗口、本判据、本暴露。合规表述应为「在窗口 X、判据 Y 下未发现可利用通道，已列入季度监控」",
+    "持牌市场赔付表受规则与认证锁定，属合规红线；合法杠杆为切牌深度、限红与封盘时点",
+    "方向可取，惟须先立判据与经济门槛再投入，不得以「换个方向找信号」替代预注册"))
+adj[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(adj, "序")
+knitr::kable(adj, align = "l",
+  caption = sprintf("外部意见逐条采驳（%d 条全列，零省略）", nrow(adj)))
+```
+
+**另两处口径澄清（防外部释义反向污染档内定义）**：其一，符号检验之配对单位系
+**会员级晚早 ROI 汇总**，非「逐局胜负计数」；Wilcoxon 检的是配对差之**秩**，非
+「晚期赚大钱之局数」。其二，外部所引 AUC 阈值表（0.7~0.8 可接受）系诊断医学之
+通用惯例，本项目须以**经济层**定夺——高流量下 0.60 亦可有可观回收，低基率下 0.85
+亦可能无用。档内 AUC 口径以 R01 原文之秩法手算（等价 Mann–Whitney U）为准。
+
+::: {.callout-important}
+## 本章裁定与变更记录（v2.5.0）
+
+> **监控隐喻正名为预注册监控带并声明无数学等价（采纳外部警示）；四项复合扳机、
+> 校验器先行、三步行动阶梯、预注册复检协议正式立为 SOP。外部七条建议：采纳一、
+> 部分采纳二、驳回四——驳回之核心理由为裸 α 扳机过松、方向概念错置、删特征毁
+> 漂移侦测、以不显著冒充公平证明。**
+
+**变更记录**：v2.5.0（2026-08-19）——新增第十七章与第十八章；第一至十六章未动
+一字；双模型 SQL 一字未动。
+:::

@@ -44,7 +44,7 @@ execute:
 
 ```{r}
 #| label: hover-setup
-#| echo: false
+#| echo: true
 #| results: asis
 ## ─────────────────────────────────────────────────────────────────────
 ## 悬停注解机制（术语库 + 浮层）——移植自主方案 §17 同一惯例，
@@ -114,7 +114,7 @@ document.addEventListener("mouseout",function(e){
 
 ```{r}
 #| label: load-r01
-#| echo: false
+#| echo: true
 ## ─────────────────────────────────────────────────────────────────────
 ## 全篇唯一数据入口：本报告所有数字均出自本块现算，正文行内一律只引用
 ## 本块产出的"干净变量名"（不含反引号／特殊字符），避免 knitr 行内代码
@@ -732,7 +732,7 @@ D-06 已证伪"局内下注顺序无信息优势"，**不能**据此推断"靴�
 
 ```{r}
 #| label: id-sixtuple
-#| echo: false
+#| echo: true
 knitr::kable(
   id_tbl,
   align = c("l","r","r","l","l","l","l"),
@@ -839,7 +839,7 @@ knitr::kable(
 
 ```{r}
 #| label: r01-head-tail
-#| echo: false
+#| echo: true
 knitr::kable(
   r01_ht,
   align = "r",
@@ -851,7 +851,7 @@ knitr::kable(
 
 ```{r}
 #| label: s05-head-tail
-#| echo: false
+#| echo: true
 knitr::kable(
   s05_ht,
   align = "r",
@@ -880,7 +880,7 @@ knitr::kable(
 
 ```{r}
 #| label: r01-identity
-#| echo: false
+#| echo: true
 knitr::kable(
   data.table(
     项 = c("行数（会员数）", "列数（原始交付件）", "口径锁 late_def",
@@ -907,7 +907,7 @@ knitr::kable(
 
 ```{r}
 #| label: r01-core-table
-#| echo: false
+#| echo: true
 knitr::kable(
   data.table(
     项 = c("会员数", "总合格订单数（全体）", "靴尾订单数（shoe_pos≥0.80）",
@@ -946,7 +946,7 @@ knitr::kable(
 
 ```{r}
 #| label: r01-ls-dist
-#| echo: false
+#| echo: true
 knitr::kable(
   data.table(
     分位数 = c("P50","P75","P90","P95","P99"),
@@ -970,7 +970,7 @@ D-06 v171 版实测 `tail_share` P90 = 0.4269；本报告 R01 实测 `late_share
 
 ```{r}
 #| label: r01-ramp
-#| echo: false
+#| echo: true
 knitr::kable(
   data.table(
     项 = c("stake_ramp 均值", "stake_ramp 中位数", "stake_ramp > 2 的人数（靴尾均注达靴外2倍以上）"),
@@ -1010,7 +1010,7 @@ knitr::kable(
 
 ```{r}
 #| label: r01-sign-test
-#| echo: false
+#| echo: true
 knitr::kable(
   data.table(
     双侧样本量门槛 = c(">= 10", ">= 30（主检验，比照本项目 n≥30 惯例）", ">= 50"),
@@ -1030,7 +1030,7 @@ knitr::kable(
 
 ```{r}
 #| label: r01-wilcoxon-detail
-#| echo: false
+#| echo: true
 knitr::kable(
   data.table(
     检验方法 = c("符号检验（主检验）", "Wilcoxon 符号秩检验（交叉验证）", "配对差值均值", "配对差值中位数"),
@@ -1068,7 +1068,7 @@ knitr::kable(
 
 ```{r}
 #| label: r01-bucket-table
-#| echo: false
+#| echo: true
 knitr::kable(
   bucket_tbl[, .(
     `n_orders_late 分桶` = bucket,
@@ -1102,7 +1102,7 @@ D-06 v171 §六之二 同源同法）逐维度计算 `r tip("AUC")`。**须提�
 
 ```{r}
 #| label: r01-auc-table
-#| echo: false
+#| echo: true
 knitr::kable(
   data.table(
     维度 = c("late_share（行为性：靴尾下注占比）",
@@ -1149,7 +1149,7 @@ knitr::kable(
 
 ```{r}
 #| label: r01-spearman
-#| echo: false
+#| echo: true
 knitr::kable(
   data.table(
     项 = c("Spearman ρ（late_share vs n_orders_all）", "p 值"),
@@ -1195,7 +1195,7 @@ knitr::kable(
 
 ```{r}
 #| label: r01-scan-table
-#| echo: false
+#| echo: true
 knitr::kable(
   scan_tbl[, .(
     `late_share阈值` = sprintf("≥ %.2f%%", 阈值*100),
@@ -1246,7 +1246,7 @@ knitr::kable(
 
 ```{r}
 #| label: r01-double-signal
-#| echo: false
+#| echo: true
 knitr::kable(
   data.table(
     分组 = c("双重命中（late_share≥30% 且 stake_ramp≥1.5）", "其余全体会员（对照）"),
@@ -1278,7 +1278,7 @@ hold% 达 `r sprintf("%.3f%%", hold_double)`，**是全部切法中最高的一�
 
 ```{r}
 #| label: r01-extreme-cases
-#| echo: false
+#| echo: true
 extreme_tbl <- r01[order(-late_share)][1:8,
   .(uid, n_orders_all, n_orders_late,
     late_share = sprintf("%.2f%%", late_share*100),
@@ -1305,7 +1305,7 @@ knitr::kable(extreme_tbl, align = c("r","r","r","r","r","r","r","r"),
 
 ```{r}
 #| label: r01-pareto-table
-#| echo: false
+#| echo: true
 knitr::kable(
   data.table(
     `按投注额排名` = c("前 1%", "前 5%", "前 10%", "前 20%"),
@@ -1345,7 +1345,7 @@ v1.0.0 的判别力检验（第二部分之四）只能使用**内生**的"净�
 
 ```{r}
 #| label: s05-month-structure
-#| echo: false
+#| echo: true
 knitr::kable(
   month_tbl,
   align = c("l","r","r","r","r","c"),
@@ -1407,7 +1407,7 @@ p90 = `r sprintf("%.4f", vb_p90)`，**无一会员超过 1**（超 1 占比 `r s
 
 ```{r}
 #| label: s05-auc-ext
-#| echo: false
+#| echo: true
 knitr::kable(
   auc_ext_tbl[, .(维度, 类别, AUC = sprintf("%.4f", AUC))],
   align = c("l","l","r"),
@@ -1447,7 +1447,7 @@ GGR 贡献 `r sprintf("%.4f", auc_ggr_ext)`——规模／价值维度对 L1a �
 
 ```{r}
 #| label: s05-ngr-check
-#| echo: false
+#| echo: true
 knitr::kable(
   ngr_tbl[, .(组别, 会员数 = format(会员数, big.mark=","),
               `GGR÷洗码` = sprintf("%.4f%%", hold_vb),
@@ -1476,7 +1476,7 @@ knitr::kable(
 
 ```{r}
 #| label: s05-lift-table
-#| echo: false
+#| echo: true
 knitr::kable(
   lift_tbl[, .(分层, 人数 = format(人数, big.mark=","), 命中风险会员,
               精确率 = sprintf("%.3f%%", 精确率), 提升度 = sprintf("%.1fx", 提升度),
@@ -1510,7 +1510,7 @@ knitr::kable(
 
 ```{r}
 #| label: s05-event-time
-#| echo: false
+#| echo: true
 knitr::kable(
   evt_tbl[, .(tau,
               可观测会员数 = format(可观测会员数, big.mark = ","),
@@ -1817,7 +1817,8 @@ S3 登记）。工单内容：取回 Superset 原始导出件、比对本档 MD5
 :::
 # 附录 A：`§R01` 完整源代码（据 `a168_取数与核验_SQL总包_v3.sql` 逐字核实，`r tip("OBSERVED")`）
 
-```sql
+```{sql, eval = FALSE}
+-- eval = FALSE
 /* ───────────────────────────────────────────────────────────────────────────
    §R01 · R01_late_shoe.csv
    策略性风控：靴内相对靴位 ≥ 0.80（≈ 靴末 20% 之局位，等价外部报告「第 40 局」）的下注占比
@@ -1922,7 +1923,8 @@ ORDER BY late_share DESC, n_orders_late DESC;
 
 # 附录 A2：`§S05` 完整源代码（据 `a168_取数与核验_SQL总包_v3.sql` 逐字核实，`r tip("OBSERVED")`）
 
-```sql
+```{sql, eval = FALSE}
+-- eval = FALSE
 /* ═══════════════════════════════════════════════════════════════════════
    S-05 · 会员×月评分面板（净化滚动回测的输入）
    导出 数据库/S05_member_month_panel.csv；risk_label 即 L1a 標籤

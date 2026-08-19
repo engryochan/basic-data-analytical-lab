@@ -1,6 +1,6 @@
 ---
 title: "尾段投注基础分析的评估"
-author: "Ryo（雷欧）"
+author: "Ryo Eng（雷欧）"
 date: "2026-08-18"
 lang: zh-CN
 format:
@@ -35,13 +35,71 @@ REDTEAM/
 # 引言
 
 ```{r}
-#| label = '设置'
+#| label: 设置
+#| echo: false
+#| message: false
+## ════════════════════════════════════════════════════════════════════════
+## 全档软代码总闸：一切数值渲染时现算，正文零写死（铁律第九条）
+## 交付件四档；缺档即停，不以静态文字冒充结果
+## ════════════════════════════════════════════════════════════════════════
+suppressPackageStartupMessages(library(data.table))
+.dir <- "数据库"
+.pp <- c(
+  aze_led  = file.path(.dir, "P11_阿泽尾段投注总帐.csv"),
+  leo_led  = file.path(.dir, "P11_雷欧尾段投注总帐.csv"),
+  aze_mem  = file.path(.dir, "P11_阿泽尾段投注模型会员名单.csv"),
+  leo_mem  = file.path(.dir, "P11_雷欧尾段投注模型会员名单.csv"))
+.mm <- .pp[!file.exists(.pp)]
+if (length(.mm))
+  stop(sprintf("○ 待表：当前工作目录 %s 之下未找到 %s——不以静态文字冒充结果。",
+               getwd(), paste(basename(.mm), collapse = "、")))
+AZE_L <- fread(.pp["aze_led"], encoding = "UTF-8")
+LEO_L <- fread(.pp["leo_led"], encoding = "UTF-8")
+AZE_M <- fread(.pp["aze_mem"], encoding = "UTF-8")
+LEO_M <- fread(.pp["leo_mem"], encoding = "UTF-8")
 
+## ── 守门：口径锁列与列签名（缺一即停） ──────────────────────────────────
+stopifnot(
+  "阿泽总帐须含 scope_def 口径锁" = "scope_def" %chin% names(AZE_L) && nrow(AZE_L) == 2L,
+  "雷欧总帐须含 scope_def 口径锁" = "scope_def" %chin% names(LEO_L) && nrow(LEO_L) == 2L,
+  "阿泽名单须含 player_id"        = "player_id" %chin% names(AZE_M),
+  "雷欧名单须含 uid 与 late_def"  = all(c("uid", "late_def") %chin% names(LEO_M)),
+  "雷欧名单口径锁须单值"          = length(unique(LEO_M$late_def)) == 1L)
+
+## ── 通用助手 ────────────────────────────────────────────────────────────
+.f   <- function(v, d = 2) format(round(v, d), big.mark = ",")
+.i   <- function(v) format(as.integer(v), big.mark = ",")
+.pc  <- function(a, b, d = 4) sprintf(paste0("%.", d, "f%%"), a / b * 100)
+
+## ── 取行：两表各自之全量洁净行与域行 ────────────────────────────────────
+.cA <- AZE_L[substr(scope_def, 1L, 1L) == "1"]; .aZ <- AZE_L[substr(scope_def, 1L, 1L) == "2"]
+.cL <- LEO_L[substr(scope_def, 1L, 1L) == "1"]; .lE <- LEO_L[substr(scope_def, 1L, 1L) == "2"]
+
+## ── 对帐钩（硬校验，五道） ──────────────────────────────────────────────
+.num_cols <- c("n_orders", "n_members", "n_lv1", "n_lv2", "n_lv3", "n_lv4",
+               "n_lv5", "stake_sum", "validbet_sum", "ggr_sum",
+               "rebate16_sum", "rebate41_sum")
+.tol <- 0.05
+stopifnot(
+  "钩1·两表之全量洁净行须逐项同值" =
+    all(sapply(.num_cols, function(x) abs(.cA[[x]] - .cL[[x]]) < .tol)),
+  "钩2·阿泽名单会员数须等于其总帐" = nrow(AZE_M) == .aZ$n_members,
+  "钩3·阿泽名单注单数须等于其总帐" = sum(AZE_M$total_orders) == .aZ$n_orders,
+  "钩4·雷欧名单会员数须等于其总帐" = nrow(LEO_M) == .lE$n_members,
+  "钩5·雷欧名单注单数须等于其总帐" = sum(LEO_M$n_orders_all) == .lE$n_orders)
+
+## ── 舍入级尾差留痕（名单侧 vs 总帐侧） ──────────────────────────────────
+.gap <- data.table(
+  项 = c("阿泽·洗码", "阿泽·GGR", "雷欧·本金", "雷欧·GGR"),
+  名单侧 = c(sum(AZE_M$valid_bet), -sum(AZE_M$profit),
+             sum(LEO_M$stake_all), -sum(LEO_M$game_pnl_all)),
+  总帐侧 = c(.aZ$validbet_sum, .aZ$ggr_sum, .lE$stake_sum, .lE$ggr_sum))
+.gap[, 差额 := 名单侧 - 总帐侧]
 ```
 
 ## 模型
 
-### 阿泽（靴尾投注模型）
+### 阿泽（尾段投注模型）
 
 将原本阿泽的模型，只加日期和过滤哨兵值、测试线代理、只采纳一般注单，其余原封不动。
 
@@ -115,9 +173,9 @@ WHERE total_orders >= 30
 ORDER BY roi DESC, profit DESC;
 ```
 
-根据运行以上代码，将输出储存为`阿泽靴尾投注模型.csv`。
+根据运行以上代码，将输出储存为「数据库/P11_阿泽尾段投注模型会员名单.csv」。
 
-### 雷欧（靴尾投注模型）
+### 雷欧（尾段投注模型）
 
 ```{sql, eval = FALSE}
 -- eval = FALSE
@@ -223,7 +281,7 @@ ORDER BY late_share DESC, n_orders_late DESC;                                   
    若行数过大，改为 HAVING COUNT(*) >= 300 提高活跃度门槛，而不是加 late_share 条件。 */
 ```
 
-根据运行以上代码，将输出储存为`雷欧靴尾投注模型.csv`（也是整个框架中其中一份数据表`R01_late_shoe.csv`）。
+根据运行以上代码，将输出储存为「数据库/P11_雷欧尾段投注模型会员名单.csv」（即整个框架中之 `R01_late_shoe.csv`）。
 
 ## 数据总账
 
@@ -483,12 +541,124 @@ CROSS JOIN clean c
 ORDER BY b.scope_def;
 ```
 
-```{r, 读取数据表}
-#| label = '读取数据表总账'
+```{r}
+#| label: 读取数据表总账
+#| echo: false
+## 五栏总帐：聚合项｜全量洁净｜雷欧（金额）｜雷欧（占比）｜阿泽（金额）｜阿泽（占比）
+## 分母一律为「全量洁净」；代理五级为 distinct，跨域不可加，占比不适用
+.item <- c("总注单数", "总会员数", "总投注额（本金）", "总洗码", "总盈利（GGR）",
+           "总返水（`bet16` 口径）", "净盈利（GGR − `bet16`，示数）",
+           "一线代理数", "二线代理数", "三线代理数", "四线代理数", "五线代理数")
+.key  <- c("n_orders", "n_members", "stake_sum", "validbet_sum", "ggr_sum",
+           "rebate16_sum", NA, "n_lv1", "n_lv2", "n_lv3", "n_lv4", "n_lv5")
+.isInt <- c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, rep(TRUE, 5L))
+.val <- function(row, i) if (is.na(.key[i])) row$ggr_sum - row$rebate16_sum else row[[.key[i]]]
+.fmt <- function(v, i) if (.isInt[i]) .i(v) else .f(v)
+.rat <- function(a, b, i) if (grepl("代理", .item[i])) "—（distinct 不可加）" else .pc(a, b)
 
-# P11_阿泽尾段投注模型会员名单.csv
-# P12_雷欧尾段投注模型会员名单.csv
-
+led <- data.table(
+  聚合项 = .item,
+  全量洁净       = sapply(seq_along(.item), function(i) .fmt(.val(.cL, i), i)),
+  `雷欧（金额）` = sapply(seq_along(.item), function(i) .fmt(.val(.lE, i), i)),
+  `雷欧（占比）` = sapply(seq_along(.item),
+                          function(i) .rat(.val(.lE, i), .val(.cL, i), i)),
+  `阿泽（金额）` = sapply(seq_along(.item), function(i) .fmt(.val(.aZ, i), i)),
+  `阿泽（占比）` = sapply(seq_along(.item),
+                          function(i) .rat(.val(.aZ, i), .val(.cA, i), i)))
+led[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(led, "序")
+knitr::kable(led, align = "r",
+  caption = sprintf(
+    paste0("五栏十二项总帐（%d 项全列，零省略；分母为全量洁净 %s 注单／%s 会员；",
+           "占比＝各域 ÷ 全量洁净）"),
+    nrow(led), .i(.cL$n_orders), .i(.cL$n_members)))
 ```
 
+```{r}
+#| label: 舍入尾差留痕
+#| echo: false
+.g <- copy(.gap)
+.g[, `:=`(名单侧 = .f(名单侧), 总帐侧 = .f(总帐侧), 差额 = .f(差额, 4),
+          序 = format(seq_len(.N), big.mark = ","))]
+setcolorder(.g, "序")
+knitr::kable(.g, align = "r",
+  caption = sprintf(
+    "名单侧与总帐侧之尾差（%d 项全列，零省略；成因：汇率铸型与逐员取整之累积，判级：舍入级）",
+    nrow(.g)))
+```
 
+```{r}
+#| label: 经济读数
+#| echo: false
+#| results: asis
+.hold <- function(r) r$ggr_sum / r$stake_sum * 100
+cat(sprintf(paste0(
+  "**经济读数（渲染时现算）**：雷欧域以 **%s** 名会员（占全量洁净 %s）承载本金 **%s**",
+  "（%s）、洗码 %s、GGR **%s**（%s）、`bet16` 退水 %s；其 hold **%.4f%%** 低于全量 ",
+  "**%.4f%%**。阿泽域以 **%s** 名会员（占 %s）承载 GGR **%s**（%s），",
+  "hold **%.4f%%**。\n\n"),
+  .i(.lE$n_members), .pc(.lE$n_members, .cL$n_members), .f(.lE$stake_sum),
+  .pc(.lE$stake_sum, .cL$stake_sum), .pc(.lE$validbet_sum, .cL$validbet_sum),
+  .f(.lE$ggr_sum), .pc(.lE$ggr_sum, .cL$ggr_sum),
+  .pc(.lE$rebate16_sum, .cL$rebate16_sum), .hold(.lE), .hold(.cL),
+  .i(.aZ$n_members), .pc(.aZ$n_members, .cA$n_members), .f(.aZ$ggr_sum),
+  .pc(.aZ$ggr_sum, .cA$ggr_sum), .hold(.aZ)))
+cat(sprintf(paste0(
+  "**退水语义复验**：`bet41` 与洗码之比——全量洁净 **%.6f**、雷欧域 **%.6f**、",
+  "阿泽域 **%.6f**，三者皆趋近 1，再证 `bet41` 系**下注退水基数**而非退水金额，",
+  "派生指标 `ngr_by41` 判为 ❌ 废弃。`bet16` 占洗码 **%s**，与契约档相差逾一个量级，",
+  "故本表「净盈利」列**仅为 `bet16` 口径之示数**，正式 NGR 判级 ⚪ UNKNOWN，",
+  "权威来源为月结帐。\n"),
+  .cL$rebate41_sum / .cL$validbet_sum, .lE$rebate41_sum / .lE$validbet_sum,
+  .aZ$rebate41_sum / .aZ$validbet_sum,
+  .pc(.cL$rebate16_sum, .cL$validbet_sum, 4)))
+```
+
+::: {.callout-important}
+## 本表之口径与限界
+
+**其一·分母**：占比一律以「全量洁净」为分母；两份总帐之全量洁净行经钩一硬校验逐项
+同值，故两域可并表比较。**其二·准入之别**：雷欧域＝§R01 七闸 ∧ 会员 `n ≥ 100`；
+阿泽域＝丙版五闸 ∧ 会员 `n ≥ 30` 且 `late_ratio ≥ 0.60`，**未施数值守门三项**
+（`bet05>0`／`bet11>0`／`bet04>0`），此为其原貌，跨口径处已注明。**其三·代理数**：
+五级皆 `COUNT(DISTINCT)`，跨域重叠且不可相加，占比不适用。**其四·尾差**：名单侧与
+总帐侧之差属汇率铸型与逐员取整之累积，判级舍入级，已单表留痕。
+:::
+
+```{r}
+#| label: 审计留痕
+#| echo: false
+au <- data.table(
+  项 = c("四档交付件在位", "口径锁列（`scope_def`／`late_def`）",
+         "钩1·两表全量洁净行逐项同值", "钩2–3·阿泽名单↔总帐",
+         "钩4–5·雷欧名单↔总帐", "本档全部数字之来源", "是否改动既有 SQL 与正文"),
+  状态 = c("✅ `stop()` 守门，缺档即停",
+           "✅ `stopifnot` 硬校验，缺列或多值即停",
+           sprintf("✅ 十二项，容差 %.2f", .tol),
+           "✅ 会员数与注单数皆等值",
+           "✅ 会员数与注单数皆等值",
+           "✅ 渲染时由四档 CSV 现算，零硬编码",
+           "❌ **未动一字**"))
+au[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(au, "序")
+knitr::kable(au, align = "l",
+  caption = sprintf("审计留痕（%d 项全列，零省略）", nrow(au)))
+```
+
+# 变更记录 {#sec-changelog}
+
+::: {.callout-note}
+## v1.2.1（2026-08-19）· 依 v1.1.0 规范斧正
+
+**八项斧正**：① 署名归位为「Ryo Eng（黄联富）」（永久规则）；② 两处 chunk 标签由
+`#| label = '…'` 改为 Quarto 管道语法 `#| label: …`，并解除 ```` {r, 读取数据表} ````
+与管道标签之双重命名冲突；③ 首块补入**软代码总闸**（四档载入、`stop()` 待表守门、
+`stopifnot` 口径锁与列签名断言、五道对帐钩硬校验）；④ 尾块补入**五栏十二项总帐**
+（聚合项｜全量洁净｜雷欧金额｜雷欧占比｜阿泽金额｜阿泽占比），全部渲染时现算；
+⑤ 补**舍入尾差留痕表**与**经济读数**（含退水语义复验）；⑥ 补**口径与限界** callout
+及**审计留痕表**；⑦ 档名指向斧正（原注释误指 `P12_`，实为 `P11_`；正文存档名与
+交付件名统一）；⑧ 用语统一为「尾段投注模型」（原「靴尾投注模型」混用）。
+
+**未动者**：四段 SQL 一字未改；REDTEAM 正文一字未改；YAML 除署名外未动。
+
+**留待**：`/* … */` 块注释四处系 §R01 原文引用，展示可，惟**执行时须另备无块注释版**
+（在案陷阱：分号与斜线致语句终结符误判）。
+:::

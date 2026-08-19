@@ -75,7 +75,7 @@ GLOSS <- list(
   "OBSERVED" = "证据分级：本文件内可直接复算验证。",
   "INFERRED" = "证据分级：由已锁定事实推得，未经独立外部验证，不得径自升级为 OBSERVED。",
   "UNKNOWN" = "证据分级：须另行取数核验，禁止以推测填补。",
-  "登记册" = "《风险类型 × 交付件 × 判据维度 × 证据裁定》登记册：数据资产（配置件），YAML 为单一真相源、CSV 为派生字典，由 函数/registry_loader.R 载入并施行门闸。它分类的是证据，不是用户。",
+  "登记册" = "《风险类型 × 交付件 × 判据维度 × 证据裁定》登记册：数据资产（配置件），YAML 为单一真相源、CSV 为派生字典，由标记后档载入并施行门闸——**本档不读取该件**。它分类的是证据，不是用户。",
   "门闸" = "评分管道引用未获准入之特征时，渲染直接失败并报出该特征所属类型、门禁等级与裁定理由。",
   "门禁五档" = "FATAL 停止分析／BLOCK 禁入正式结论／CONDITIONAL 条件可用／ADVISORY 建议可用／NA 不适用。",
   "准入评分" = "该类判据获准进入风险评分管道；未准入者至多进入画像，不得据以处置。"
@@ -1009,198 +1009,50 @@ knitr::kable(
 等规模维度筛选，与 D-06 系列既有结论（"携带风险信息的是金额，不是压哨"）方向完全一致，
 构成第三重独立佐证。
 :::
-# 第五部分：十五类风险会员判据——灵活搭配与证据裁定 {#sec-typology}
+# 第五部分：十五类风险会员判据——本档不接入，移交标记后档 {#sec-typology}
 
 ::: {.callout-important}
-## 本章定位：本报告只是十五类之一，且是被判 FATAL 的那一类
+## 本章定位与移交声明（本版处置）
 
-前四部分证明「靴尾」这一条路走不通。但风控不能因此停摆——本章把 a168 现有交付件所能
-支撑的**全部**风险类型一次列清，并对每类出具证据裁定，使读者看得见：**哪几类现在就能用、
-哪几类被什么卡住、哪几类已被证伪**。
+前四部分证明「靴尾」这一条路走不通。风控不因此停摆——**十五类风险会员判据之登记、
+搭配与逐类证据裁定，改由 `a168策略性靴尾下注风控与商业变现实测_R01_标记后.qmd`
+承载**，本档不再复述、亦**不读取任何登记册相关档案**。
 
-本章内容不写死于正文，而是**渲染时自 `r tip("登记册")` 现算**（YAML 为单一真相源、
-CSV 为派生字典，载入时交叉比对，不一致即停止渲染）。故本章与登记册**永不分家**：
-登记册改了，本章下次渲染自动跟着改。
+**本档之外部读取仅一件**：`数据库/R01_late_shoe.csv`。以下四件**一律不读**——
+`函数/registry_loader.R`、`数据库/registry_risk_typology_v1.1.0.yaml`、
+同名 `.csv`、`数据库/S05_member_month_panel.csv`。故本档渲染**只需一份 CSV 在位**，
+不依赖任何 R 工具件与登记册。
+
+**理由**：其一·**单一承载**——同一内容两处现算易生漂移，登记册章由标记后档独占；
+其二·**依赖最小化**——前四部分之实测与商业方案不应因工具件缺位而无法产出；
+其三·**判级不移**——本档正文凡引登记册或 S05 之数，一律标**引用级**，
+不因写入本档而升为 OBSERVED。
 :::
-
-```{r}
-#| label: registry-load
-#| echo: true
-source("函数/registry_loader.R")
-REG <- registry_load()          # 默认路径：数据库/registry_risk_typology_v1.1.0.{yaml,csv}
-n_type    <- uniqueN(REG$dict[axis == "R", type_id])
-n_crit    <- nrow(REG$dict)
-n_admit   <- uniqueN(REG$dict[admit_to_scoring == TRUE & axis == "R", type_id])
-n_blocker <- length(REG$meta$blockers)
-reg_ver   <- REG$meta$registry$version
-
-## 交付件总数：自 SQL 总包现算，禁止写死（铁律第九条）
-dlv        <- registry_count_deliverables()
-n_dlv      <- dlv$实际交付件
-n_dlv_line <- dlv$声明行数
-n_dlv_ascii<- dlv$ASCII口径唯一名
-n_dlv_cn   <- length(dlv$中文命名者)
-```
-
-::: {.callout-warning}
-## 交付件总数：勘误存证（`r tip("OBSERVED")`）
-
-本报告所依托之 `a168_取数与核验_SQL总包_v3.sql`，实际产出交付件
-**`r n_dlv` 个**（导出声明行 `r n_dlv_line` 行，剔占位符后一行一件）。
-
-SQL 总包自述及两份 D-06 姊妹档变更日志此前所记之「69 份」为**旧数**，
-根因是一次**纯 ASCII 文件名正则**扫描：ASCII 口径仅得 `r n_dlv_ascii` 个唯一名，
-**静默漏掉 `r n_dlv_cn` 个中文命名交付件**（`P0C02`–`P0C09` 族），
-同时未剔占位符，两处误差部分相抵而成 69。
-
-本处数字**渲染时自 SQL 总包现算**，不写死于正文——凡此类计数一律如此，
-以杜绝「文档间各说各话」之漂移（本项目已三次实证：75／154 互斥、189% 上限、
-以及本次 69／74）。
-:::
-
-## 一、登记册身份核验（渲染时现算）
-
-```{r}
-#| label: registry-identity
-#| echo: true
-knitr::kable(
-  REG$identity, align = c("l","r","r","l","l","l"),
-  caption = sprintf("登记册六元组身份锚定（v%s；模式=%s；数据行数 = 按LF计总行数 − 表头/结构行）",
-                    reg_ver, REG$mode)
-)
-```
-
-## 二、灵活搭配：十五类风险会员判据
-
-每类均标注**证据裁定**——这是本节最重要的部分。原「九类」与「另补六类」已于登记册
-v1.1.0 合并为统一体例：补录六类不再是附注，而是与前九类同格登记、同受
-`r tip("门闸")` 管辖的正式条目。
-
-```{r}
-#| label: registry-typology-table
-#| echo: true
-.gate_icon <- c(FATAL = "🔴 FATAL", BLOCK = "🟠 BLOCK",
-                CONDITIONAL = "🟡 CONDITIONAL", ADVISORY = "🟢 ADVISORY", `NA` = "⚪ NA")
-tp <- REG$dict[axis == "R", .(
-        判据维度组合 = paste(criterion_column, collapse = " ＋ "),
-        搭配表 = {s <- unique(supporting_deliverables)
-                  s <- unlist(strsplit(s, "；")); s <- s[nzchar(s)]
-                  if (length(s)) paste(sub("\\.csv$", "", s), collapse = "·") else "—"}),
-      by = .(序 = type_id, 风险类型 = name_zh, 类别 = category,
-             主表 = sub("\\.csv$", "", primary_deliverable),
-             证据 = evidence_tier, 门禁 = gate, 严重度 = severity,
-             准入评分 = fifelse(admit_to_scoring, "✅", "—"),
-             准入画像 = fifelse(admit_to_profile, "✅", "—"),
-             阻断 = fifelse(nzchar(blockers), blockers, "—"))]
-tp[, 门禁 := .gate_icon[门禁]]
-setcolorder(tp, c("序","风险类型","类别","主表","搭配表","判据维度组合",
-                  "证据","门禁","严重度","准入评分","准入画像","阻断"))
-setorder(tp, 序)
-knitr::kable(
-  tp, align = "l",
-  caption = sprintf("十五类风险会员判据登记（登记册 v%s：%d 类 × %d 条判据维度；准入评分 %d 类；未闭阻断项 %d 项）",
-                    reg_ver, n_type, n_crit, n_admit, n_blocker)
-)
-```
-
-### 逐类证据裁定（自登记册 `verdict` 栏现算）
-
-```{r}
-#| label: registry-verdicts
-#| echo: true
-vd <- unique(REG$dict[axis == "R", .(序 = type_id, 风险类型 = name_zh,
-                                     门禁 = gate, 裁定 = verdict)], by = "序")
-setorder(vd, 序)
-knitr::kable(vd, align = c("l","l","l","l"),
-             caption = sprintf("逐类证据裁定全文（%d 类；文字取自登记册，非正文转录）", nrow(vd)))
-```
-
-## 三、准入与拒入：门闸的实际效力
-
-```{r}
-#| label: registry-gate-demo
-#| echo: true
-adm <- registry_admitted_columns(REG)                      # 当前合法取材范围
-registry_gate(REG, used = adm, purpose = "scoring")        # 全数通过，静默继续
-n_adm_col <- length(adm)
-```
-
-当前获 `r tip("准入评分")` 者共 **`r n_admit` 类 / `r n_adm_col` 条特征**。其余各类至多进入
-画像，**不得据以处置**。本报告主角 `late_share` 即在拒入之列——若有人误写入评分管道，
-`r tip("门闸")` 会令渲染直接失败并报出「T-03 尾投·门禁=FATAL·严重度=S1」及其裁定理由。
-这不是提醒，是拦截。
 
 ::: {.callout-caution}
-## 为何本报告的主角被自己判了死刑
+## 本报告主角之裁定（结论保留，出处移交）
 
-`late_share` 属 T-03，`r tip("门禁五档")` 判 **FATAL**。理由是本报告第二、三部分逐层现算所得：
-配对 `r tip("符号检验")` p = `r sprintf("%.4f", sign_p30)`、`r tip("Wilcoxon符号秩检验")`
-p = `r sprintf("%.4f", wilcox_p30)`、`r tip("AUC")` = `r sprintf("%.4f", auc_late_share)`
-（`r tip("净赢玩家")` 标签）、九档阈值扫描中命中组 `r tip("hold%")` 低于对照组者
-**`r scan_tbl[命中hold < 对照hold, .N]` 档**。
+`late_share` 于登记册中属 T-03，门禁判 **FATAL**，理由即本报告第二、三部分逐层
+现算所得：配对 `r tip("符号检验")` p = `r sprintf("%.4f", sign_p30)`、
+`r tip("Wilcoxon符号秩检验")` p = `r sprintf("%.4f", wilcox_p30)`、
+`r tip("AUC")` = `r sprintf("%.4f", auc_late_share)`（`r tip("净赢玩家")` 标签）、
+九档阈值扫描中命中组 `r tip("hold%")` 低于对照组者
+**`r scan_tbl[命中hold < 对照hold, .N]` 档**——**四项皆本档现算，非取自登记册**。
 
-登记册另载 D-06 独立管道之符号检验读数与外部标签读数（本档未接入外部标签，故不在此复述）。
-四路证据同向，故裁定为「降格为画像字段，禁作独立触发器」。
+裁定「降格为画像字段，禁作独立触发器」之**正式登记条目与门闸实现**见标记后档；
+本档只留结论与其现算依据。
 :::
 
-## 四、阻断项台账——「暂不可用」不等于「不可用」
+::: {.callout-note}
+## 价值轴之复用（本档已有，不依赖登记册）
 
-```{r}
-#| label: registry-blockers
-#| echo: true
-knitr::kable(
-  registry_blockers(REG), align = "l",
-  caption = sprintf("阻断项台账（%d 项，全部 OPEN；每项均附解锁条件，见登记册 unblock_conditions 栏）",
-                    n_blocker)
-)
-```
-
-十五类中被判 CONDITIONAL 或 BLOCK 者，**卡住它们的多是数据缺口与口径未定，而非方法错误**。
-这与 T-03 有本质区别：T-03 是**结论已定的证伪**，其余是**尚未开工的待办**。二者不可混为一谈——
-前者投再多资源也无用，后者补齐条件即可启用。
-
-```{r}
-#| label: registry-pending
-#| echo: true
-pf <- registry_pending_features(REG)
-knitr::kable(
-  pf, align = "l",
-  caption = sprintf("待建特征清单（%d 条：登记册已登记判据维度，但该列尚不存在于任何交付件，须现建）",
-                    nrow(pf))
-)
-```
-
-## 五、价值轴 × 风险轴：处置矩阵
-
-不做单一分数。行为维度对标签之判别力近乎为零，规模维度虽强却受复核强度混杂污染；
-压成一个分数，等于让「注额大」冒充「风险高」——业务读不懂，也不服。故取双轴：
-
-```{r}
-#| label: registry-matrix
-#| echo: true
-knitr::kable(
-  registry_matrix(REG), align = "l",
-  caption = sprintf("处置矩阵（价值轴 V＝按 %s 分位；风险轴 R 仅由准入评分之 %d 类构成）",
-                    REG$meta$value_axis$criterion_column, n_admit)
-)
-```
-
-价值轴取 `stake_all` 分位，正是第四部分 `r tip("GGR集中度")` 所证之同一坐标：
+处置矩阵之价值轴取 `stake_all` 分位，与第四部分 `r tip("GGR集中度")` 同一坐标：
 前 1% 会员贡献全体 GGR 的 **`r sprintf("%.1f%%", pa1$ggr_pct)`**、前 10% 贡献
 **`r sprintf("%.1f%%", pa10$ggr_pct)`**。**同一张分层表，营销侧用于 VIP 经营、
-风控侧用于复核排程——一次建设，两处复用**，这是本报告四部分实测之外最可直接落地的一条。
+风控侧用于复核排程——一次建设，两处复用**，此为本报告四部分实测之外最可直接落地者。
+风险轴之构成、阻断项台账、待建特征清单与治理悬案，皆见标记后档。
+:::
 
-## 六、治理悬案
-
-```{r}
-#| label: registry-open-questions
-#| echo: true
-knitr::kable(
-  registry_open_questions(REG), align = "l",
-  caption = sprintf("治理悬案（%d 项；一律 UNKNOWN，禁止以推测填补）",
-                    length(REG$meta$open_questions))
-)
-```
 
 # 第六部分：宗旨、价值与可落实的商业方案
 
@@ -1382,7 +1234,7 @@ AUC 0.14~0.49），本报告新增的靴尾三维（`late_share`／`stake_ramp`�
 |:--:|:--|:--|
 | **高** | 边注专属 P&L 拆分（方案四） | 唯一能直接检验指南 [R-1] 具体命题的路径，零假设成本，直接决定"是否值得建边注专属规则" |
 | **高** | 结 `validbet` 口径（沿用本项目既有 V-03 待办） | S1 未结则一切金额类结论全部悬空，非本报告独有问题，但影响本报告"经济裁定"的严谨度 |
-| 中 | 接入 `risk_label`（`S05_member_month_panel.csv`） | 使"能否标记风险会员"从内生代理标签升级为真实精确率/召回率实测 |
+| 中 | 接入 `risk_label`（`S05_member_month_panel.csv`；**本档不读取，属后续管线**） | 使"能否标记风险会员"从内生代理标签升级为真实精确率/召回率实测 |
 | 中 | 多源证据融合联合建模（方案三丙类） | 需与 C06、金额维度联合训练并交叉验证，非本报告单表现有信息可完成 |
 | **低** | 靴尾阈值调优（0.30 之外的更多切法） | **建议停止投入**——第三部分已扫描 9 档，无一档支持玩家占优，边际信息量低 |
 
@@ -1631,7 +1483,7 @@ boot_width <- function(n_target, B = 500) {
 | A-01a | 上游集合不同 | §R01 取自 `base`（含 `bet04>0` 过滤）；§B01／§B01-D 取自 `ord`（**无**该过滤） | 对 `max_round` 实际无影响（非正局号不会成为最大值），但 §B01 侧可能出现 `round_no<=0` 之局，其 `shoe_pos<=0` |
 | A-01b | 计算粒度不同 | §R01 在注单级算 `round_no/max_round`；§B01 在 `rk`（会员×日×局键）级算 `MAX(round_no)/NULLIF(MAX(max_round),0)` | **实质等价**（`round_key` 已含 `bet04`，组内 `round_no` 恒定），仅表达不同 |
 | A-01c | **窗口不同** | §R01／§B01 为 `2026-03-21 ~ 2026-08-07`（139 天）；**§B01-D 为 `2026-08-04 ~ 2026-08-07`（3 日增量）** | ⚠ **真实不一致**：跨窗牌靴之 `max_round` 在 §B01-D 侧被窗口截断，分母偏小，`shoe_pos` 被系统性放大。日增量档与全量档之靴位坐标**不可直接比较** |
-| A-01d | 分组键无日期 | 分组键为 `(shoe_id, table_id)`，不含 `dt` | 实证（S05 面板 63,662 个靴号样本）：跨桌者 **0 个（0.0000%）**、跨月者 **7 个（0.0110%）**。故跨日合并**存在但极罕见**，不构成系统性威胁；惟 `shoe_id` 取值跨越 1,211 ~ 114,735,806 五个数量级，疑存多套编号体系，另立 `r tip("UNKNOWN")` 待查 |
+| A-01d | 分组键无日期 | 分组键为 `(shoe_id, table_id)`，不含 `dt` | 实证（**引用级**：S05 面板 63,662 个靴号样本，本档不读取该档）：跨桌者 **0 个（0.0000%）**、跨月者 **7 个（0.0110%）**。故跨日合并**存在但极罕见**，不构成系统性威胁；惟 `shoe_id` 取值跨越 1,211 ~ 114,735,806 五个数量级，疑存多套编号体系，另立 `r tip("UNKNOWN")` 待查 |
 
 
 **R01-标记前-1.0.2（2026-08-18 勘误同步）**
@@ -1699,4 +1551,27 @@ R 代码块的计算逻辑与 Python 验证逻辑逐项对应（`fread`↔`pd.re
 核对 HTML 输出与本变更日志所列数字一致后再正式发布；若渲染报错，大概率是环境本地 R 包版本
 差异（如 `data.table`／`knitr` 版本），代码结构本身已尽量贴合 `a168会员活跃度分层` 两档
 已验证可渲染的既有写法。
+:::
+
+::: {.callout-note}
+## 变更（2026-08-19）· 第五部分改为移交，外部依赖收敛为**单一 CSV**
+
+**处置**：原第五部分于块首 `source("函数/registry_loader.R")` 并调用八个
+`registry_*` 函数；本版**整段移除该等代码**，改为**移交声明**——十五类判据之登记、
+搭配、逐类裁定、阻断台账、待建特征与治理悬案，一律由
+`a168策略性靴尾下注风控与商业变现实测_R01_标记后.qmd` 承载。
+
+**依赖收敛（本版之要点）**：本档外部读取**仅 `数据库/R01_late_shoe.csv` 一件**。
+以下四件一律不读——`函数/registry_loader.R`、
+`数据库/registry_risk_typology_v1.1.0.yaml`、同名 `.csv`、
+`数据库/S05_member_month_panel.csv`；正文凡引其数者，一律标**引用级**并注明
+「本档不读取该档」。
+
+**保留者**：`late_share` 之 FATAL 裁定与其四项现算依据（符号检验 p、Wilcoxon p、
+AUC、九档扫描）**皆本档自算**，故结论原样保留；价值轴前 1%／前 10% GGR 集中度亦
+本档自算，一并保留。**未动者**：前四部分之实测、SQL、悬停术语库、参考文献与既有
+变更日志一字未改。
+
+**渲染前提**：`数据库/R01_late_shoe.csv` 在位即可，不需 `函数/` 目录、
+不需任何 R 工具件与登记册档案。
 :::
