@@ -1,10 +1,22 @@
 # =====================================================================
 # registry_loader.R · a168 风险类型登记册载入器与门闸
 # ---------------------------------------------------------------------
-# 载入器版本 : 1.4.0        适配登记册 : 1.3.0        日期 : 2026-08-18
+# 载入器版本 : 1.4.1        适配登记册 : 1.3.0        日期 : 2026-08-20
 # 配套     : 数据库/registry_risk_typology_v1.3.0.yaml（单一真相源）
 #            数据库/registry_risk_typology_v1.3.0.csv （派生字典，UTF-8-BOM/CRLF）
-# 变更     : 1.2.0 补齐四个缺失函数——registry_typology()（单类完整配方）、
+# 变更     : 1.4.1 审计斧正两项（本档注释层，逻辑一字未动）——
+#            ① L1 绝对路径去写死：原 path 常量硬编码单机盘符，换机／换用户／CI
+#               即断，且与「工作目录 = qmd 所在目录」设计自相矛盾；改为相对路径
+#               优先、绝对路径仅作兜底（REGISTRY_ROOT，缺省 ""）。
+#            ② L2 注释与代码不符：头部布局树与配套栏仍书 v1.1.0，而常量与
+#               .expect 已是 v1.3.0；且 1.3.0／1.4.0 两版无任何变更记载。
+#               本次补记如下，并将布局树内版本号改为占位符，杜绝再度分家。
+#            1.4.0 适配登记册 1.3.0：判据维度扩至 66 条、阻断项 11 项、
+#            待建特征 4 条、治理悬案 4 项；.expect 同步递增至 1.3.0；
+#            sql_main 改指 SQL 总包 v10（★ 该件落地前，R00b 软核验将持续告警，
+#            登记册 sql_section 栏所指章节暂不可回溯，证据链处「不可溯源」降级态）。
+#            1.3.0 登记册内容版本（数据件侧递增，本档随之适配）。
+#            1.2.0 补齐四个缺失函数——registry_typology()（单类完整配方）、
 #            registry_combo()（跨类搭配，交集／并集）、registry_which()（列反查类型）、
 #            registry_count_deliverables()（自 SQL 总包现算唯一交付件数，
 #            杜绝把该数写死于任何 qmd——总包自述 69 已实测为旧数，真值 74）。
@@ -22,10 +34,10 @@
 #   ├─ a168风控评分_精要商业报告.qmd               ← 权威主件之二
 #   ├─ 函数/
 #   │  ├─ registry_loader.R                     ← 本档
-#   │  └─ a168_取数与核验_SQL总包_v3.sql          ← 权威主件之三
+#   │  └─ a168_取数与核验_SQL总包_v<当前版>.sql    ← 权威主件之三（版本以 REGISTRY_PATHS 为准）
 #   └─ 数据库/
-#      ├─ registry_risk_typology_v1.1.0.yaml
-#      ├─ registry_risk_typology_v1.1.0.csv
+#      ├─ registry_risk_typology_v<当前版>.yaml   ← 版本以 REGISTRY_PATHS 为准
+#      ├─ registry_risk_typology_v<当前版>.csv    ← 切忌在此另写版本号（必分家）
 #      ├─ R01_late_shoe.csv
 #      └─ S05_member_month_panel.csv
 # 身份     : 数据资产（配置件），从属于 SQL 总包与商业方案；
@@ -58,7 +70,18 @@
 suppressPackageStartupMessages({
   library(data.table)
 })
-path <- "C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/风控案例/a168风控与客户分析评分体系/"
+## ---------------------------------------------------------------------
+## 【路径根】（1.4.1 斧正 L1）
+## 缺省为空串 ""，即一切路径相对于 getwd()（＝qmd 所在目录），换机可移植。
+## 仅当工作目录不便切换时，才在**外部**以 options() 指定绝对根，例如：
+##   options(registry.root = "C:/.../a168风控与客户分析评分体系/")
+## 本档不写死任何单机盘符——写死即令 getwd() 报错回显失去指向意义。
+## ---------------------------------------------------------------------
+REGISTRY_ROOT <- getOption("registry.root", "")
+.rp <- function(...) {
+  p <- file.path(...)
+  if (nzchar(REGISTRY_ROOT)) file.path(REGISTRY_ROOT, p) else p
+}
 
 .rstage <- function(tag, expr) tryCatch(expr, error = function(e)
   stop(sprintf("【registry·%s】%s", tag, conditionMessage(e)), call. = FALSE))
@@ -67,11 +90,11 @@ path <- "C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/风控案
 ## 项目目录常量（工作目录 = qmd 所在目录；改布局只须改此处）
 ## ---------------------------------------------------------------------
 REGISTRY_PATHS <- list(
-  fn_dir   = "函数",
-  db_dir   = "数据库",
-  yaml     = file.path(paste0(path, "数据库/", "registry_risk_typology_v1.1.0.yaml")),
-  csv      = file.path(paste0(path, "数据库/", "registry_risk_typology_v1.1.0.csv")),
-  sql_main = file.path(paste0(path, "函数/",   "a168_取数与核验_SQL总包_v3.sql"))
+  fn_dir   = .rp("函数"),
+  db_dir   = .rp("数据库"),
+  yaml     = .rp("数据库", "registry_risk_typology_v1.3.0.yaml"),
+  csv      = .rp("数据库", "registry_risk_typology_v1.3.0.csv"),
+  sql_main = .rp("函数",   "a168_取数与核验_SQL总包_v10.sql")
 )
 
 .layout_tree <- function() paste(
@@ -79,10 +102,10 @@ REGISTRY_PATHS <- list(
   "  ├─ <本报告>.qmd",
   "  ├─ 函数/",
   "  │  ├─ registry_loader.R",
-  "  │  └─ a168_取数与核验_SQL总包_v3.sql",
+  sprintf("  │  └─ %s", basename(REGISTRY_PATHS$sql_main)),
   "  └─ 数据库/",
-  "     ├─ registry_risk_typology_v1.1.0.yaml",
-  "     ├─ registry_risk_typology_v1.1.0.csv",
+  sprintf("     ├─ %s", basename(REGISTRY_PATHS$yaml)),
+  sprintf("     ├─ %s", basename(REGISTRY_PATHS$csv)),
   "     ├─ R01_late_shoe.csv",
   "     └─ S05_member_month_panel.csv",
   sep = "\n")

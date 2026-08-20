@@ -81,7 +81,11 @@ GLOSS <- list(
   "事件时间" = "以每名会员的首次标记月为原点 τ=0，前后各月记 τ=−1、+1……将不同日历月份的标记会员对齐到同一相对时间轴上观察。",
   "交错采纳" = "各会员在不同月份先后被标记（treatment 非同时发生）。此情形下朴素双重差分的双向固定效应估计存在负权重污染，须改用 Callaway–Sant'Anna 或 Sun–Abraham 类分组-时期估计量。",
   "平行趋势" = "因果识别前提：若未被标记，标记组与对照组的结果轨迹应平行演进。标记恰逢峰值月（本报告实测）即是其最典型的威胁。",
-  "解除率" = "被标记会员次月仍在面板且 risk_label 转回 0 的占比。解除 ≠ 误判——可能是案结、行为终止或标签惯例所致，仅可作误判讨论的代理量与上界参考。"
+  "解除率" = "被标记会员次月仍在面板且 risk_label 转回 0 的占比。解除 ≠ 误判——可能是案结、行为终止或标签惯例所致，仅可作误判讨论的代理量与上界参考。",
+  "登记册" = "《风险类型 × 交付件 × 判据维度 × 证据裁定》登记册：数据资产（配置件），YAML 为单一真相源、CSV 为派生字典，由本档第七部分载入并施行门闸，缺档即停止渲染（铁律第九条）。它分类的是证据，不是用户。",
+  "门闸" = "评分管道引用未获准入之特征时，渲染直接失败并报出该特征所属类型、门禁等级与裁定理由。",
+  "门禁五档" = "FATAL 停止分析／BLOCK 禁入正式结论／CONDITIONAL 条件可用／ADVISORY 建议可用／NA 不适用。",
+  "准入评分" = "该类判据获准进入风险评分管道；未准入者至多进入画像，不得据以处置。"
 )
 esc <- function(x) gsub('"','&quot;', gsub("<","&lt;", gsub(">","&gt;", x)))
 tip <- function(k, show = NULL) {
@@ -1815,6 +1819,181 @@ S3 登记）。工单内容：取回 Superset 原始导出件、比对本档 MD5
    （`shoe_pos≥0.80`、`game_pnl_all` 总体口径），不外推至边注专属命题、不外推至未来
    规则变动后的牌局，亦不与 D-06／X-01 两套独立判据互相代入。
 :::
+# 第七部分：十五类风险会员判据——灵活搭配与证据裁定 {#sec-typology}
+
+::: {.callout-important}
+## 本章定位：本报告只是十五类之一，且是被判 FATAL 的那一类
+
+前四部分证明「靴尾」这一条路走不通。但风控不能因此停摆——本章把 a168 现有交付件所能
+支撑的**全部**风险类型一次列清，并对每类出具证据裁定，使读者看得见：**哪几类现在就能用、
+哪几类被什么卡住、哪几类已被证伪**。
+
+本章内容不写死于正文，而是**渲染时自 `r tip("登记册")` 现算**（YAML 为单一真相源、
+CSV 为派生字典，载入时交叉比对，不一致即停止渲染）。故本章与登记册**永不分家**：
+登记册改了，本章下次渲染自动跟着改。
+
+本章系 2026-08-19 标记前档移交声明所指之承载义务——该义务此前从未落地（移交悬空），
+本版斧正补入；章体取自原始版本，适配处仅二，详见变更日志 R01-1.3.0。
+:::
+
+```{r}
+#| label: registry-load
+#| echo: true
+source("函数/registry_loader.R")
+REG <- registry_load()          # 默认路径：数据库/registry_risk_typology_v1.1.0.{yaml,csv}
+n_type    <- uniqueN(REG$dict[axis == "R", type_id])
+n_crit    <- nrow(REG$dict)
+n_admit   <- uniqueN(REG$dict[admit_to_scoring == TRUE & axis == "R", type_id])
+n_blocker <- length(REG$meta$blockers)
+reg_ver   <- REG$meta$registry$version
+```
+
+## 一、登记册身份核验（渲染时现算）
+
+```{r}
+#| label: registry-identity
+#| echo: false
+knitr::kable(
+  REG$identity, align = c("l","r","r","l","l","l"),
+  caption = sprintf("登记册六元组身份锚定（v%s；模式=%s；数据行数 = 按LF计总行数 − 表头/结构行）",
+                    reg_ver, REG$mode)
+)
+```
+
+## 二、灵活搭配：十五类风险会员判据
+
+每类均标注**证据裁定**——这是本节最重要的部分。原「九类」与「另补六类」已于登记册
+v1.1.0 合并为统一体例：补录六类不再是附注，而是与前九类同格登记、同受
+`r tip("门闸")` 管辖的正式条目。
+
+```{r}
+#| label: registry-typology-table
+#| echo: false
+.gate_icon <- c(FATAL = "🔴 FATAL", BLOCK = "🟠 BLOCK",
+                CONDITIONAL = "🟡 CONDITIONAL", ADVISORY = "🟢 ADVISORY", `NA` = "⚪ NA")
+tp <- REG$dict[axis == "R", .(
+        判据维度组合 = paste(criterion_column, collapse = " ＋ "),
+        搭配表 = {s <- unique(supporting_deliverables)
+                  s <- unlist(strsplit(s, "；")); s <- s[nzchar(s)]
+                  if (length(s)) paste(sub("\\.csv$", "", s), collapse = "·") else "—"}),
+      by = .(序 = type_id, 风险类型 = name_zh, 类别 = category,
+             主表 = sub("\\.csv$", "", primary_deliverable),
+             证据 = evidence_tier, 门禁 = gate, 严重度 = severity,
+             准入评分 = fifelse(admit_to_scoring, "✅", "—"),
+             准入画像 = fifelse(admit_to_profile, "✅", "—"),
+             阻断 = fifelse(nzchar(blockers), blockers, "—"))]
+tp[, 门禁 := .gate_icon[门禁]]
+setcolorder(tp, c("序","风险类型","类别","主表","搭配表","判据维度组合",
+                  "证据","门禁","严重度","准入评分","准入画像","阻断"))
+setorder(tp, 序)
+knitr::kable(
+  tp, align = "l",
+  caption = sprintf("十五类风险会员判据登记（登记册 v%s：%d 类 × %d 条判据维度；准入评分 %d 类；未闭阻断项 %d 项）",
+                    reg_ver, n_type, n_crit, n_admit, n_blocker)
+)
+```
+
+### 逐类证据裁定（自登记册 `verdict` 栏现算）
+
+```{r}
+#| label: registry-verdicts
+#| echo: false
+vd <- unique(REG$dict[axis == "R", .(序 = type_id, 风险类型 = name_zh,
+                                     门禁 = gate, 裁定 = verdict)], by = "序")
+setorder(vd, 序)
+knitr::kable(vd, align = c("l","l","l","l"),
+             caption = sprintf("逐类证据裁定全文（%d 类；文字取自登记册，非正文转录）", nrow(vd)))
+```
+
+## 三、准入与拒入：门闸的实际效力
+
+```{r}
+#| label: registry-gate-demo
+#| echo: true
+adm <- registry_admitted_columns(REG)                      # 当前合法取材范围
+registry_gate(REG, used = adm, purpose = "scoring")        # 全数通过，静默继续
+n_adm_col <- length(adm)
+```
+
+当前获 `r tip("准入评分")` 者共 **`r n_admit` 类 / `r n_adm_col` 条特征**。其余各类至多进入
+画像，**不得据以处置**。本报告主角 `late_share` 即在拒入之列——若有人误写入评分管道，
+`r tip("门闸")` 会令渲染直接失败并报出「T-03 尾投·门禁=FATAL·严重度=S1」及其裁定理由。
+这不是提醒，是拦截。
+
+::: {.callout-caution}
+## 为何本报告的主角被自己判了死刑
+
+`late_share` 属 T-03，`r tip("门禁五档")` 判 **FATAL**。理由是本报告第二、三部分逐层现算所得：
+配对 `r tip("符号检验")` p = `r sprintf("%.4f", sign_p30)`、`r tip("Wilcoxon符号秩检验")`
+p = `r sprintf("%.4f", wilcox_p30)`、`r tip("AUC")` = `r sprintf("%.4f", auc_late_share)`
+（`r tip("净赢玩家")` 标签）、九档阈值扫描中命中组 `r tip("hold%")` 低于对照组者
+**`r scan_tbl[命中hold < 对照hold, .N]` 档**。
+
+本档另有外部 `r tip("L1a标签")` 交叉验证（第五部分之三）：`late_share` 对外部标签
+AUC = `r sprintf("%.4f", auc_ls_ext)`，方向反转——**五路证据同向**，
+故裁定为「降格为画像字段，禁作独立触发器」。
+:::
+
+## 四、阻断项台账——「暂不可用」不等于「不可用」
+
+```{r}
+#| label: registry-blockers
+#| echo: false
+knitr::kable(
+  registry_blockers(REG), align = "l",
+  caption = sprintf("阻断项台账（%d 项，全部 OPEN；每项均附解锁条件，见登记册 unblock_conditions 栏）",
+                    n_blocker)
+)
+```
+
+十五类中被判 CONDITIONAL 或 BLOCK 者，**卡住它们的多是数据缺口与口径未定，而非方法错误**。
+这与 T-03 有本质区别：T-03 是**结论已定的证伪**，其余是**尚未开工的待办**。二者不可混为一谈——
+前者投再多资源也无用，后者补齐条件即可启用。
+
+```{r}
+#| label: registry-pending
+#| echo: false
+pf <- registry_pending_features(REG)
+knitr::kable(
+  pf, align = "l",
+  caption = sprintf("待建特征清单（%d 条：登记册已登记判据维度，但该列尚不存在于任何交付件，须现建）",
+                    nrow(pf))
+)
+```
+
+## 五、价值轴 × 风险轴：处置矩阵
+
+不做单一分数。行为维度对标签之判别力近乎为零，规模维度虽强却受复核强度混杂污染；
+压成一个分数，等于让「注额大」冒充「风险高」——业务读不懂，也不服。故取双轴：
+
+```{r}
+#| label: registry-matrix
+#| echo: false
+knitr::kable(
+  registry_matrix(REG), align = "l",
+  caption = sprintf("处置矩阵（价值轴 V＝按 %s 分位；风险轴 R 仅由准入评分之 %d 类构成）",
+                    REG$meta$value_axis$criterion_column, n_admit)
+)
+```
+
+价值轴取 `stake_all` 分位，正是第四部分 `r tip("GGR集中度")` 所证之同一坐标：
+前 1% 会员贡献全体 GGR 的 **`r sprintf("%.1f%%", pa1$ggr_pct)`**、前 10% 贡献
+**`r sprintf("%.1f%%", pa10$ggr_pct)`**。**同一张分层表，营销侧用于 VIP 经营、
+风控侧用于复核排程——一次建设，两处复用**，这是本报告四部分实测之外最可直接落地的一条。
+
+## 六、治理悬案
+
+```{r}
+#| label: registry-open-questions
+#| echo: false
+knitr::kable(
+  registry_open_questions(REG), align = "l",
+  caption = sprintf("治理悬案（%d 项；一律 UNKNOWN，禁止以推测填补）",
+                    length(REG$meta$open_questions))
+)
+```
+
+
 # 附录 A：`§R01` 完整源代码（据 `a168_取数与核验_SQL总包_v3.sql` 逐字核实，`r tip("OBSERVED")`）
 
 ```{sql, eval = FALSE}
@@ -2072,6 +2251,25 @@ boot_width <- function(n_target, B = 500) {
 | [M-4] | Abadie, A., Diamond, A. & Hainmueller, J. (2010). *Synthetic Control Methods for Comparative Case Studies*. Journal of the American Statistical Association, 105(490). |
 
 # 变更日志 {#sec-changelog}
+
+**R01-1.3.0（2026-08-20 移交悬空斧正：补入第七部分）**
+
+- **补入第七部分「十五类风险会员判据——灵活搭配与证据裁定」**（@sec-typology）：
+  2026-08-19 标记前档 v1.0.1 整章移除该章并声明「改由本档承载」，然本档此前
+  **从未接章**——移交悬空，内容双档皆失。本版依原始版本（渲染时自
+  `函数/registry_loader.R` 载入 `数据库/registry_risk_typology_v1.1.0.yaml`
+  与同名 `.csv` 现算，零硬编码）恢复承载义务。含：登记册身份表、十五类判据总表、
+  逐类证据裁定全文、门闸实效演示、阻断项台账、待建特征清单、价值×风险处置矩阵、
+  治理悬案，凡八节。
+- **适配仅二处**：其一·章序——本档一至六部分已满且「第五部分之N」活引用遍布正文，
+  为最小爆炸半径列**第七部分**，不重排既有章序；其二·FATAL 裁定证据由四路增至
+  **五路**——并入本档第五部分之三外部 L1a 标签 AUC 现算读数（`auc_ls_ext`，方向反转），
+  原章「本档未接入外部标签」语句不适用于本档，已改写。除此二处，章体逐字沿用原始版本。
+- GLOSS 新增 4 条：登记册、门闸、门禁五档、准入评分（登记册条按本档铁律第九条
+  表述为「缺档即停」，与标记前档软依赖表述相区别）。
+- 本章八个 chunk 标签（registry-*）经全档唯一性核验，无冲突。
+- 本档正文其余部分一字未动；渲染前置新增：`函数/` 与 `数据库/` 两目录之登记册
+  三件须在位，缺档时载入器报错将回显完整布局树与当前工作目录。
 
 **R01-1.2.1（2026-08-18 口径斧正：MAX ≠ COUNT）**
 
