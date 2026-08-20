@@ -169,7 +169,13 @@ stopifnot(
   bet41 = "ODS 洗码基数字段：与洗码合计比值 0.999994——系基数非金额。本报告用途：ngr_by41 废弃之依据（引用级）",
   OBSERVED = "证据三级之最高级：本档由交付件现算所得、可逐步复现之事实。禁由推断升格；升格须有证",
   INFERRED = "证据三级之中级：由 OBSERVED 事实经合理推导而得，未经直接观测证实。正文须显式标注，禁与 OBSERVED 混列",
-  UNKNOWN = "证据三级之最低级：机制或成因未明。禁以推测填补——零行不是无异常，缺档不是无内容")
+  UNKNOWN = "证据三级之最低级：机制或成因未明。禁以推测填补——零行不是无异常，缺档不是无内容",
+  登记册 = "《风险类型 × 交付件 × 判据维度 × 证据裁定》登记册：数据资产（配置件），YAML 为单一真相源、CSV 为派生字典，由本档载入并施行门闸，缺档即停止渲染（铁律第九条）。它分类的是证据，不是用户",
+  门闸 = "评分管道引用未获准入之特征时，渲染直接失败并报出该特征所属类型、门禁等级与裁定理由",
+  门禁五档 = "FATAL 停止分析／BLOCK 禁入正式结论／CONDITIONAL 条件可用／ADVISORY 建议可用／NA 不适用",
+  准入评分 = "该类判据获准进入风险评分管道；未准入者至多进入画像，不得据以处置",
+  净赢玩家 = "内生标签：以自身盈亏为正与否所定之标签——与 ROI 类特征同源，用于自证倾向须声明",
+  L1a标签 = "外部风险标签之一档：来自平台风控处置记录，非本档现算——用于交叉验证行为维度之外部效度")
 tip <- function(x) {
   k <- gsub("%", "率", gsub("[-–~ ]", "", x))
   d <- .GL[match(k, names(.GL))]
@@ -2933,6 +2939,178 @@ cat(sprintf(paste0(
 先口径后结论**。
 :::
 
+# 第七部分：十五类风险会员判据——灵活搭配与证据裁定 {#sec-typology}
+
+::: {.callout-important}
+## 本章定位：本档只是十五类之一，且是被判 FATAL 的那一类
+
+本档诸章已证明「靴尾」这一条路走不通。但风控不能因此停摆——本章把 a168 现有交付件所能
+支撑的**全部**风险类型一次列清，并对每类出具证据裁定，使读者看得见：**哪几类现在就能用、
+哪几类被什么卡住、哪几类已被证伪**。
+
+本章内容不写死于正文，而是**渲染时自 `r tip("登记册")` 现算**（YAML 为单一真相源、
+CSV 为派生字典，载入时交叉比对，不一致即停止渲染）。故本章与登记册**永不分家**：
+登记册改了，本章下次渲染自动跟着改。
+
+本章章体自 `a168策略性靴尾下注风控与商业变现实测_R01_标记后.qmd` 第七部分**逐字移植**，
+以保两档规范一致；不得已之替换仅三处，逐项列于变更记录 v1.2.23。
+:::
+
+```{r}
+#| label: registry-load
+#| echo: true
+source("函数/registry_loader.R")
+REG <- registry_load()          # 默认路径由 REGISTRY_PATHS 定，见 registry_loader.R
+n_type    <- uniqueN(REG$dict[axis == "R", type_id])
+n_crit    <- nrow(REG$dict)
+n_admit   <- uniqueN(REG$dict[admit_to_scoring == TRUE & axis == "R", type_id])
+n_blocker <- length(REG$meta$blockers)
+reg_ver   <- REG$meta$registry$version
+```
+
+## 一、登记册身份核验（渲染时现算）
+
+```{r}
+#| label: registry-identity
+#| echo: true
+knitr::kable(
+  REG$identity, align = c("l","r","r","l","l","l"), escape = FALSE,
+  caption = sprintf("登记册六元组身份锚定（v%s；模式=%s；数据行数 = 按LF计总行数 − 表头/结构行）",
+                    reg_ver, REG$mode)
+)
+```
+
+## 二、灵活搭配：十五类风险会员判据
+
+每类均标注**证据裁定**——这是本节最重要的部分。原「九类」与「另补六类」已于登记册
+合并为统一体例：补录六类不再是附注，而是与前九类同格登记、同受
+`r tip("门闸")` 管辖的正式条目。
+
+```{r}
+#| label: registry-typology-table
+#| echo: true
+.gate_icon <- c(FATAL = "🔴 FATAL", BLOCK = "🟠 BLOCK",
+                CONDITIONAL = "🟡 CONDITIONAL", ADVISORY = "🟢 ADVISORY", `NA` = "⚪ NA")
+tp <- REG$dict[axis == "R", .(
+        判据维度组合 = paste(criterion_column, collapse = " ＋ "),
+        搭配表 = {s <- unique(supporting_deliverables)
+                  s <- unlist(strsplit(s, "；")); s <- s[nzchar(s)]
+                  if (length(s)) paste(sub("\\.csv$", "", s), collapse = "·") else "—"}),
+      by = .(序 = type_id, 风险类型 = name_zh, 类别 = category,
+             主表 = sub("\\.csv$", "", primary_deliverable),
+             证据 = evidence_tier, 门禁 = gate, 严重度 = severity,
+             准入评分 = fifelse(admit_to_scoring, "✅", "—"),
+             准入画像 = fifelse(admit_to_profile, "✅", "—"),
+             阻断 = fifelse(nzchar(blockers), blockers, "—"))]
+tp[, 门禁 := .gate_icon[门禁]]
+setcolorder(tp, c("序","风险类型","类别","主表","搭配表","判据维度组合",
+                  "证据","门禁","严重度","准入评分","准入画像","阻断"))
+setorder(tp, 序)
+knitr::kable(
+  tp, align = "l", escape = FALSE,
+  caption = sprintf("十五类风险会员判据登记（登记册 v%s：%d 类 × %d 条判据维度；准入评分 %d 类；未闭阻断项 %d 项）",
+                    reg_ver, n_type, n_crit, n_admit, n_blocker)
+)
+```
+
+### 逐类证据裁定（自登记册 `verdict` 栏现算）
+
+```{r}
+#| label: registry-verdicts
+#| echo: true
+vd <- unique(REG$dict[axis == "R", .(序 = type_id, 风险类型 = name_zh,
+                                     门禁 = gate, 裁定 = verdict)], by = "序")
+setorder(vd, 序)
+knitr::kable(vd, align = c("l","l","l","l"), escape = FALSE,
+             caption = sprintf("逐类证据裁定全文（%d 类；文字取自登记册，非正文转录）", nrow(vd)))
+```
+
+## 三、准入与拒入：门闸的实际效力
+
+```{r}
+#| label: registry-gate-demo
+#| echo: true
+adm <- registry_admitted_columns(REG)                      # 当前合法取材范围
+registry_gate(REG, used = adm, purpose = "scoring")        # 全数通过，静默继续
+n_adm_col <- length(adm)
+```
+
+当前获 `r tip("准入评分")` 者共 **`r n_admit` 类 / `r n_adm_col` 条特征**。其余各类至多进入
+画像，**不得据以处置**。本档主角 `late_share` 即在拒入之列——若有人误写入评分管道，
+`r tip("门闸")` 会令渲染直接失败并报出「T-03 尾投·门禁=FATAL·严重度=S1」及其裁定理由。
+这不是提醒，是拦截。
+
+::: {.callout-caution}
+## 为何本档的主角被自己判了死刑
+
+`late_share` 属 T-03，`r tip("门禁五档")` 判 **FATAL**。理由是本档 @sec-tests 逐层现算所得：
+配对 `r tip("符号检验")` p = `r sprintf("%.4f", .ps_use)`、`r tip("Wilcoxon")`
+p = `r sprintf("%.4f", .pw_use)`、三项行为维度 `r tip("AUC")` `r .auc_txt`。
+
+登记册另载 R01 独立管道之同向读数（引用级）：外部 `r tip("L1a标签")` 交叉验证 AUC 方向反转。
+**本档实测与 R01 管线同向**，故裁定为「降格为画像字段，禁作独立触发器」。
+:::
+
+## 四、阻断项台账——「暂不可用」不等于「不可用」
+
+```{r}
+#| label: registry-blockers
+#| echo: true
+knitr::kable(
+  registry_blockers(REG), align = "l", escape = FALSE,
+  caption = sprintf("阻断项台账（%d 项，全部 OPEN；每项均附解锁条件，见登记册 unblock_conditions 栏）",
+                    n_blocker)
+)
+```
+
+十五类中被判 CONDITIONAL 或 BLOCK 者，**卡住它们的多是数据缺口与口径未定，而非方法错误**。
+这与 T-03 有本质区别：T-03 是**结论已定的证伪**，其余是**尚未开工的待办**。二者不可混为一谈——
+前者投再多资源也无用，后者补齐条件即可启用。
+
+```{r}
+#| label: registry-pending
+#| echo: true
+pf <- registry_pending_features(REG)
+knitr::kable(
+  pf, align = "l", escape = FALSE,
+  caption = sprintf("待建特征清单（%d 条：登记册已登记判据维度，但该列尚不存在于任何交付件，须现建）",
+                    nrow(pf))
+)
+```
+
+## 五、价值轴 × 风险轴：处置矩阵
+
+不做单一分数。行为维度对标签之判别力近乎为零，规模维度虽强却受复核强度混杂污染；
+压成一个分数，等于让「注额大」冒充「风险高」——业务读不懂，也不服。故取双轴：
+
+```{r}
+#| label: registry-matrix
+#| echo: true
+knitr::kable(
+  registry_matrix(REG), align = "l", escape = FALSE,
+  caption = sprintf("处置矩阵（价值轴 V＝按 %s 分位；风险轴 R 仅由准入评分之 %d 类构成）",
+                    REG$meta$value_axis$criterion_column, n_admit)
+)
+```
+
+价值轴取 `stake_all` 分位，即本档五栏总帐所用之同一坐标系。**同一张分层表，营销侧用于
+VIP 经营、风控侧用于复核排程——一次建设，两处复用**，这是本档诸章实测之外最可直接
+落地的一条，亦为 @sec-biz 之输入。
+
+## 六、治理悬案
+
+```{r}
+#| label: registry-open-questions
+#| echo: true
+knitr::kable(
+  registry_open_questions(REG), align = "l", escape = FALSE,
+  caption = sprintf("治理悬案（%d 项；一律 UNKNOWN，禁止以推测填补）",
+                    length(REG$meta$open_questions))
+)
+```
+
+
+
 # 商业方案 {#sec-biz}
 
 ::: {.callout-important}
@@ -3016,6 +3194,48 @@ knitr::kable(biz, align = "l",
 :::
 
 # 变更记录 {#sec-changelog}
+
+::: {.callout-note}
+## v1.2.23（2026-08-20）· 逐字移植「第七部分：十五类风险会员判据」章
+
+**新设 @sec-typology**，位列 @sec-payout 与 @sec-biz 之间。章体自
+`a168策略性靴尾下注风控与商业变现实测_R01_标记后.qmd` 之
+「第七部分：十五类风险会员判据——灵活搭配与证据裁定」**逐字移植**，以保两档规范一致：
+标题、六节次序与节名、callout 体例、八个 chunk 标签（`registry-*`）、全部 caption
+措辞与 `sprintf` 格式，一律照录。登记册为**硬依赖**（`registry_load()` 直载，
+缺档即停），与来源档同——本档「四档交付件缺档即停」之契约据此扩为五件。
+
+**不得已之替换七处**（逐项登记，除此之外一字未改）：
+
+1. **D1 档别陈述**：原章末段述及「标记前档移交悬空、本版斧正补入」，系来源档之
+   身世，于本档不实——改书本章系逐字移植、替换处列于本条。
+2. **D2 前置章引称**：原书「前四部分证明……」，本档无「第 X 部分」编制——改
+   「本档诸章已证明……」。
+3. **D3 去写死版本号**（两处）：原注「默认路径：……v1.1.0.{yaml,csv}」与正文
+   「已于登记册 v1.1.0 合并」——登记册现为 v1.3.0，版本号写死于正文必再分家，
+   故改指 `REGISTRY_PATHS`／略去版本号。此与 `registry_loader.R` 1.4.1 之
+   「布局树版本号自常量现算」同轴。
+4. **D4 检验读数改指本档现算**：原章引来源档之 `sign_p30`／`wilcox_p30`／
+   `auc_late_share`／`scan_tbl` 四变量，本档无此四者；改引本档 @sec-tests 现算之
+   `.ps_use`／`.pw_use`／`.auc_txt`。**裁定结论与措辞未改**，仅换数据来源；
+   R01 管线之外部标签读数保留为引用级互证。
+5. **D5 `kable` 补 `escape = FALSE`**（7 处）：本档悬停术语引擎须原样出 HTML，
+   缺此则 `<span title=...>` 被转义成明文。此系本档既有铁律，非新设。
+6. **D6 帕累托读数改指本档**：原章引来源档之 `pa1`／`pa10`，本档无此两者；改述
+   「即本档五栏总帐所用之同一坐标系」，并接 @sec-biz。
+7. **D7 「本报告」统一改「本档」**（3 处）：随本档既有行文体例。
+
+**GLOSS 新增 6 条**：登记册、门闸、门禁五档、准入评分、净赢玩家、L1a标签——
+后二者为原章 `tip()` 所引而本档库中无载，补齐以免越界。
+
+**未动者**：既有十二章正文、四档数据入口块、五道对帐钩、悬停引擎与既有变更记录，
+一字未改。
+
+**渲染前置**：本章生效须 `函数/registry_loader.R` 与
+`数据库/registry_risk_typology_v1.3.0.{yaml,csv}` 三件在位；缺件即停并回显完整
+布局树（与来源档同一守卫，不设软降级）。
+
+:::
 
 ::: {.callout-note}
 ## v1.2.22（2026-08-20）· 补入「数据口径」章（依 R01 标记前档 v1.0.5 规范）
