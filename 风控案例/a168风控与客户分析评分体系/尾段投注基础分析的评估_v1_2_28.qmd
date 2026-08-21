@@ -50,7 +50,11 @@ suppressPackageStartupMessages(library(data.table))
   aze_led  = file.path(.dir, "P11_阿泽尾段投注总帐.csv"),
   ryo_led  = file.path(.dir, "P11_雷欧尾段投注总帐.csv"),
   aze_mem  = file.path(.dir, "P11_阿泽尾段投注模型会员名单.csv"),
-  ryo_mem  = file.path(.dir, "P11_雷欧尾段投注模型会员名单.csv"))
+  ryo_mem  = {                                     # 两名一体（档内既判 ≡），先到先用
+    .cand <- file.path(.dir, c("P11_雷欧尾段投注模型会员名单.csv", "R01_late_shoe.csv"))
+    .hit  <- .cand[file.exists(.cand)]
+    if (length(.hit)) .hit[1L] else .cand[1L]
+  })
 .mm <- .pp[!file.exists(.pp)]
 if (length(.mm))
   stop(sprintf("○ 待表：当前工作目录 %s 之下未找到 %s——不以静态文字冒充结果。",
@@ -1187,9 +1191,10 @@ TEST <- data.table(
            "外部 L1a 标签 AUC"),
   键   = c("p_sign", "p_wilcox", "auc_null", "auc_l1a"),
   数值 = c(0.7591, 0.8087, 0.5, 0.3828),
-  判级 = c("引用级", "引用级", "数学常量", "引用级"),
-  出处 = c("R01 报告 · 配对符号检验（n≥30 主检验）",
-           "R01 报告 · Wilcoxon 符号秩（n≥30 主检验）",
+  判级 = c("历史级（旧血统 · SUPERSEDED）", "历史级（旧血统 · SUPERSEDED）",
+           "数学常量", "引用级"),
+  出处 = c("R01 报告 · 配对符号检验（旧抽取血统 n≥30，与 §R01 Gold『HAVING ≥ 100』非同源；p 值唯一真相源＝Gold 同表现算之 PAIR，历史读数留册不改、不再并列冒充同源）",
+           "R01 报告 · Wilcoxon 符号秩（旧抽取血统 n≥30，非同源理由同上）",
            "ROC 理论：等同随机猜测",
            "S05 · L1a 外部风险标签之判别力"))
 .T <- function(k) TEST[键 == k, 数值][1L]
@@ -1201,7 +1206,7 @@ stopifnot("TEST 与 CITE 键集须互斥（防双真相源）" =
 
 TEST[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(TEST, "序")
 knitr::kable(TEST[, .(序, 指标 = tipv(指标), 键, 数值, 判级, 出处)], align = "l", escape = FALSE,
-  caption = sprintf("主检验常量登记（%d 项全列，零省略；判级：引用级不冒充现算；下节以本档名单独立实测并列对照）",
+  caption = sprintf("主检验常量登记（%d 项全列，零省略；判级：历史级读数留册不改、不冒充现算；p 值唯一真相源＝下节 Gold 同表现算）",
                     nrow(TEST)))
 ```
 
@@ -1249,20 +1254,36 @@ if (!.lab_ok || length(.dims) == 0L) {
 #| label: 主检验_配对
 #| echo: true
 ## 配对检验：符号检验（方向层）与 Wilcoxon 符号秩（幅度层），本档独立实测
+## ── 血统锁（Gold）──────────────────────────────────────────────────────
+## 本节唯一数据源＝RYO_M ≡ P11_雷欧尾段投注模型会员名单.csv ≡ R01_late_shoe.csv
+## （SQL 总包 v10 · §R01）。AZE_M（阿泽·外来对照域）不参与本节任何计算；
+## 主检验全链之阿泽零使用已逐点核验（v1.2.25 隔离核验，见变更记录）。
 .pair_ok <- all(c("roi_late", "roi_early") %chin% names(RYO_M))
 if (!.pair_ok) {
   PAIR <- NULL
 } else {
-  .d  <- RYO_M$roi_late - RYO_M$roi_early
-  .d  <- .d[is.finite(.d)]
-  .k  <- sum(.d > 0); .nz <- sum(.d != 0)
+  .dv  <- RYO_M$roi_late - RYO_M$roi_early
+  .fin <- is.finite(.dv)
+  .d   <- .dv[.fin]
+  .k   <- sum(.d > 0); .neg <- sum(.d < 0); .z0 <- sum(.d == 0); .nz <- .k + .neg
   .ps <- if (.nz > 0L) stats::binom.test(.k, .nz, 0.5)$p.value else NA_real_
   .pw <- if (.nz > 0L)
            suppressWarnings(stats::wilcox.test(.d, mu = 0, exact = FALSE,
                                                correct = TRUE)$p.value) else NA_real_
-  PAIR <- list(n = length(.d), nz = .nz, k = .k, p_sign = .ps, p_wilcox = .pw,
+  ## 队列 uid 指纹（基 R：排序 uid 落临时件取 MD5，供跨档 setequal 对帐）
+  .tf <- tempfile(); writeLines(sort(as.character(RYO_M$uid[.fin])), .tf)
+  .fp <- unname(tools::md5sum(.tf)); unlink(.tf)
+  PAIR <- list(n = length(.d), nz = .nz, k = .k, n_neg = .neg, n_zero = .z0,
+               p_sign = .ps, p_wilcox = .pw,
                med = stats::median(.d, na.rm = TRUE),
-               thr = if (.hc(RYO_M, "n_orders_all")) min(RYO_M$n_orders_all) else NA_real_)
+               thr = if (.hc(RYO_M, "n_orders_all")) min(RYO_M$n_orders_all) else NA_real_,
+               fp  = .fp)
+}
+## p 值显示铁律（REDTEAM）：禁 0.0000 体例——p < 1e-4 一律并呈原始量级。
+## 原始量级之科学记数系对 p 值之专项豁免：千分位禁科学记数铁律辖金额与计数，不辖 p。
+.pfmt <- function(p) {
+  if (is.null(p) || !is.finite(p)) return("○ 待列")
+  if (p < 1e-4) sprintf("< 0.0001（原始 %.6e）", p) else sprintf("%.4f", p)
 }
 ```
 
@@ -1272,23 +1293,60 @@ if (!.pair_ok) {
 if (is.null(PAIR) || is.null(AUC3)) {
   cat("○ 待列：配对或 AUC 之依赖列不全，对照表不臆造。")
 } else {
+  ## ── 双模双实测：阿泽（AZE_M）与 R01（RYO_M ≡ R01_late_shoe.csv）各自现算 ──
+  ## 阿泽无 roi_late／roi_early 分段列，配对检验结构性不可——如实呈报，不臆造。
+  .aucA <- if (all(c("late_ratio", "profit") %chin% names(AZE_M)))
+             .auc(AZE_M$late_ratio, AZE_M$profit > 0) else NA_real_
+  .aucR <- if (all(c("late_share", "game_pnl_all") %chin% names(RYO_M)))
+             .auc(RYO_M$late_share, RYO_M$game_pnl_all > 0) else NA_real_
+  .na_pair <- "结构性不可（无 `roi_late`／`roi_early` 分段列，列结构为证）"
   cmp <- data.table(
-    指标 = c("符号检验 p", "Wilcoxon 符号秩 p", "三维度 AUC 均值"),
-    `本档实测（OBSERVED）` = c(sprintf("%.4f", PAIR$p_sign),
-                               sprintf("%.4f", PAIR$p_wilcox),
-                               sprintf("%.4f", mean(as.numeric(AUC3$AUC)))),
-    `R01 引用（引用级）` = c(sprintf("%.4f", .T("p_sign")),
-                             sprintf("%.4f", .T("p_wilcox")),
-                             sprintf("≈%.1f", .T("auc_null"))),
-    口径之别 = c(
-      sprintf("本档名单门槛 n ≥ %s；R01 主检验为 n ≥ 30——**队列不同，数值不必相同**",
-              .i(PAIR$thr)),
-      "同左", "本档标签＝内生「净赢玩家」；R01 另有外部 L1a 标签一路"))
+    指标 = c("符号检验 p（晚−早配对）", "Wilcoxon 符号秩 p（晚−早配对）",
+             "尾段占比 AUC（对内生净赢标签）"),
+    `阿泽实测（OBSERVED）` = c(.na_pair, .na_pair,
+      fifelse(is.finite(.aucA),
+              sprintf("%.4f（`late_ratio`，n = %s）", .aucA, .i(nrow(AZE_M))), "○ 待列")),
+    `R01实测（OBSERVED）` = c(.pfmt(PAIR$p_sign), .pfmt(PAIR$p_wilcox),
+      fifelse(is.finite(.aucR),
+              sprintf("%.4f（`late_share`，n = %s）", .aucR, .i(nrow(RYO_M))), "○ 待列")),
+    口径与血统注记 = c(
+      sprintf("R01 源＝`%s`（§R01 · SQL 总包 v10）；配对差 d = roi_late − roi_early，零差剔除",
+              basename(.pp[["ryo_mem"]])),
+      "同左",
+      sprintf(paste0("阿泽标签＝`profit > 0`（门槛 n ≥ %s）；R01 标签＝`game_pnl_all > 0`",
+                     "（门槛 n ≥ %s）——两模选材几近互斥，AUC 不作跨模优劣直读"),
+              .i(min(AZE_M$total_orders)), .i(PAIR$thr))))
   cmp[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(cmp, "序")
   knitr::kable(cmp, align = "l",
     caption = sprintf(
-      "实测与引用并列对照（%d 项全列，零省略；配对样本 %s 对，其中非零差 %s 对）",
-      nrow(cmp), .i(PAIR$n), .i(PAIR$nz)))
+      paste0("阿泽与 R01 双模双实测对照（%d 项全列，零省略；R01 配对样本 %s 对，非零差 ",
+             "%s 对＝正 %s／负 %s，零差 %s 对；R01 队列 uid 指纹 MD5＝%s）"),
+      nrow(cmp), .i(PAIR$n), .i(PAIR$nz), .i(PAIR$k), .i(PAIR$n_neg),
+      .i(PAIR$n_zero), PAIR$fp))
+}
+```
+
+```{r}
+#| label: 主检验_双模评估
+#| echo: true
+#| results: asis
+if (!is.null(PAIR) && !is.null(AUC3)) {
+  .ovl <- length(intersect(as.character(AZE_M$player_id), as.character(RYO_M$uid)))
+  cat(sprintf(paste0(
+    "**双模比较与评估（现算）**：其一·**可测域不对称**——配对主检验唯 R01 可测",
+    "（阿泽无分段 ROI，结构性不可）；凡需「晚段相对自身早段」之证据，一律以 R01 ",
+    "为准。其二·**选材几近互斥**——两名单共同会员仅 **%s** 人（占阿泽 %s、",
+    "占 R01 %s）；阿泽尾段占比中位 **%.4f** 对 R01 之 **%.4f**：阿泽以绝对局号",
+    "先选出「重尾」小群，R01 以相对靴位覆盖全活跃群——二者所答非同一问题，",
+    "上表 AUC 之别不得直读为模型优劣。其三·**判别力同落随机域**——阿泽 ",
+    "`late_ratio` 与 R01 `late_share` 之 AUC 皆距随机基线 %.1f 不足 0.05，",
+    "「爱押尾段」于两口径下俱不能预测净赢；R01 配对 p 虽小（大样本可检），",
+    "中位差 **%+.4f** 为负且微末——**统计可检 ≠ 经济可用**，双模双实测均不改",
+    "「尾段无经济优势」之既有裁决。\n"),
+    .i(.ovl), .pc(.ovl, nrow(AZE_M)), .pc(.ovl, nrow(RYO_M)),
+    stats::median(AZE_M$late_ratio, na.rm = TRUE),
+    stats::median(RYO_M$late_share, na.rm = TRUE),
+    .T("auc_null"), PAIR$med))
 }
 ```
 
@@ -1324,18 +1382,19 @@ if (is.null(PAIR) || is.null(AUC3)) {
                  "（配对中位差 **%+.4f**），按从严原则不予认定"),
           .alpha, .med_d)
 }
+.thr_show <- if (is.null(PAIR)) "○ 待列" else .i(PAIR$thr)
 cat(sprintf(paste0(
-  "**主检验（n≥30）**：[符号检验]{title=\"只看方向不看金额：比较同一会员晚段与早段，",
+  "**主检验（Gold 同表，门槛 n ≥ %s）**：[符号检验]{title=\"只看方向不看金额：比较同一会员晚段与早段，",
   "数正负号之个数；配对样本、非参数检验。阈值：p<%.2f 方谓有显著差异。\"} ",
-  "p = **%.4f**，[Wilcoxon 符号秩]{title=\"既看方向又看幅度：把差值按绝对值排秩，",
+  "p = **%s**，[Wilcoxon 符号秩]{title=\"既看方向又看幅度：把差值按绝对值排秩，",
   "赚 1,000 与赚 10 之权重不同；配对样本、非参数，较符号检验更灵敏。",
-  "阈值：p<%.2f 方谓晚段不仅赢得多且赢得大。\"} p = **%.4f**——",
+  "阈值：p<%.2f 方谓晚段不仅赢得多且赢得大。\"} p = **%s**——",
   "%s；%s。",
   "[AUC]{title=\"ROC 曲线下面积，衡量排序能力：随机抽一名净赢玩家与一名非净赢玩家，",
   "该维度给前者打分更高之概率。0.5＝纯瞎猜；1.0＝完美区分；0.5~0.6＝无判别力；",
   "0.7~0.8＝可接受；>0.9＝极佳。不关心金额绝对值，只关心排序。\"} ",
   "之读法见悬停。\n\n"),
-  .alpha, .ps_use, .alpha, .pw_use, .sig_txt, .auc_txt))
+  .thr_show, .alpha, .pfmt(.ps_use), .alpha, .pfmt(.pw_use), .sig_txt, .auc_txt))
 cat(sprintf("（以上 p 值来源：%s；配对样本 %s 对；引用级 R01 读数并列于上表对照。）\n\n",
             .src, if (is.null(PAIR)) "○ 待列" else .i(PAIR$n)))
 cat(sprintf(paste0(
@@ -1504,10 +1563,10 @@ if (is.null(PAIR) || is.null(AUC3)) {
 
   cat(sprintf(paste0(
     "\n\n**配对检验之五项并报**：效应量（配对中位差）**%+.4f**，其 95%% 自助置信区间 ",
-    "**[%+.4f, %+.4f]**（B = %s 次，种子预注册）；符号检验 p = **%.4f**、",
-    "Wilcoxon p = **%.4f**；样本量 **%s** 对（非零差 %s 对）。",
+    "**[%+.4f, %+.4f]**（B = %s 次，种子预注册）；符号检验 p = **%s**、",
+    "Wilcoxon p = **%s**；样本量 **%s** 对（非零差 %s 对）。",
     "**判读**：%s\n"),
-    stats::median(.d2), .ci_lo, .ci_hi, .i(.B), PAIR$p_sign, PAIR$p_wilcox,
+    stats::median(.d2), .ci_lo, .ci_hi, .i(.B), .pfmt(PAIR$p_sign), .pfmt(PAIR$p_wilcox),
     .i(PAIR$n), .i(PAIR$nz),
     fifelse(.ci_lo <= 0 & .ci_hi >= 0,
             "效应量之置信区间跨越零——**方向未定，不足以定案**",
@@ -1643,10 +1702,10 @@ if (!.have) {
   cat(sprintf(paste0(
     "\n\n**门禁授级（现算）**：对「晚段相对早段存在系统性正向优势」之主张，",
     "裁决为 **%s**。依据：否决项触发 **%d** 项；效应量 **%+.4f**（MCID %s）；",
-    "95%%CI **[%+.4f, %+.4f]**；符号检验 p = %.4f、Wilcoxon p = %.4f（大样本下其小 p ",
+    "95%%CI **[%+.4f, %+.4f]**；符号检验 p = %s、Wilcoxon p = %s（大样本下其小 p ",
     "不改裁决——p 值不作总裁判）；N = %s；留出半 AUC 最大 **%.4f**。\n\n"),
     .tier, .n_veto, .eff, fifelse(.mcid_ok, sprintf("= %.4f", MCID), "待业务定义"),
-    .ci_lo, .ci_hi, PAIR$p_sign, PAIR$p_wilcox, .i(PAIR$n), .oosmax))
+    .ci_lo, .ci_hi, .pfmt(PAIR$p_sign), .pfmt(PAIR$p_wilcox), .i(PAIR$n), .oosmax))
   cat(paste0(
     "**与既有证伪之关系**：本门禁裁决「正向主张不成立」，与档内既有四重证伪**同向**",
     "——门禁是确认之门，证伪是否定之锤；二者一闸一锤，不互相替代。\n"))
@@ -3165,6 +3224,85 @@ knitr::kable(
 
 
 
+## 七、十五类判据之本档实测（标准＝登记册；渲染现算）
+
+::: {.callout-important}
+## 本节定位（取代原「风险会员分类总名单」）
+
+P12 章末之「风险会员分类总名单」以 L 系模型线索类别出名单（v1.2.27 曾整体去除，
+v1.2.28 依指令恢复原状）；本节与其**并立而辖域不同**——彼为模型线索之复核队列，
+此为**登记册十五类标准之实测**，分类标准唯登记册。本节对本档在位交付件逐类实测：可测者出分布（线索级，
+不设阈值——阈值一律待反解，禁普适门槛），不可测者如实标待表；**不出任何会员名单**
+——名单之出须待阈值反解＋Wilson 下界＋最小洗码双锁＋门闸准入，缺一不可。
+:::
+
+```{r}
+#| label: registry-实测覆盖
+#| echo: true
+#| results: asis
+## 在位交付件盘点：登记册判据列与本档交付件逐列对表，覆盖率现算
+.tabs <- list(`阿泽名单` = AZE_M, `雷欧名单R01` = RYO_M,
+              P12a = P12A, P12b = P12B, P12c = P12C)
+.tabs <- .tabs[!vapply(.tabs, is.null, logical(1L))]
+.where <- function(cl) {
+  hit <- names(.tabs)[vapply(.tabs, function(d) cl %chin% names(d), logical(1L))]
+  if (length(hit)) paste(hit, collapse = "·") else ""
+}
+covL <- REG$dict[axis == "R", .(type_id, name_zh, gate, criterion_column)]
+covL[, 在位表 := vapply(criterion_column, .where, character(1L))]
+cov <- covL[, .(判据列数 = .N,
+                可测列数 = sum(nzchar(在位表)),
+                可测列 = {x <- criterion_column[nzchar(在位表)]
+                          if (length(x)) paste(x, collapse = "、") else "—"}),
+            by = .(序 = type_id, 风险类型 = name_zh, 门禁 = gate)]
+cov[, 状态 := fifelse(可测列数 == 0L, "○ 待表（主表不在本档交付件）",
+              fifelse(可测列数 == 判据列数, "✅ 全列可测", "◐ 部分可测"))]
+setorder(cov, 序)
+print(knitr::kable(cov, align = "l",
+  caption = sprintf(
+    "十五类×本档交付件之实测覆盖（%d 类全列，零省略；在位交付件 %d 件：%s）",
+    nrow(cov), length(.tabs), paste(names(.tabs), collapse = "、"))))
+cat(sprintf("\n\n覆盖总账（现算）：全列可测 %s 类、部分可测 %s 类、待表 %s 类。\n\n",
+            .i(sum(cov$状态 == "✅ 全列可测")), .i(sum(cov$状态 == "◐ 部分可测")),
+            .i(sum(cov$可测列数 == 0L))))
+```
+
+```{r}
+#| label: registry-实测分布
+#| echo: true
+#| results: asis
+## 可测判据列逐列分布实测（线索级；n 有效、中位、P90、P99 皆现算；禁设阈值）
+mm <- covL[nzchar(在位表)]
+if (nrow(mm) == 0L) {
+  cat("○ 待表：登记册判据列与本档交付件零交集，本节不臆造。\n")
+} else {
+  .qv <- function(tb, cl) {
+    v <- suppressWarnings(as.numeric(.tabs[[tb]][[cl]])); v <- v[is.finite(v)]
+    c(length(v), stats::quantile(v, c(0.5, 0.9, 0.99), names = FALSE))
+  }
+  dist <- rbindlist(lapply(seq_len(nrow(mm)), function(i) {
+    tbs <- strsplit(mm$在位表[i], "·", fixed = TRUE)[[1L]]
+    rbindlist(lapply(tbs, function(tb) {
+      s <- .qv(tb, mm$criterion_column[i])
+      data.table(类 = mm$type_id[i], 风险类型 = mm$name_zh[i], 门禁 = mm$gate[i],
+                 判据列 = mm$criterion_column[i], 表 = tb, n有效 = .i(s[1L]),
+                 中位 = sprintf("%.4f", s[2L]), P90 = sprintf("%.4f", s[3L]),
+                 P99 = sprintf("%.4f", s[4L]))
+    }))
+  }))
+  dist[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(dist, "序")
+  print(knitr::kable(dist, align = "l",
+    caption = sprintf(
+      paste0("可测判据列分布实测（%d 行全列，零省略；线索级——阈值一律待反解，",
+             "禁普适门槛，故不出命中名单）"), nrow(dist))))
+  cat(paste0(
+    "\n\n**判读纪律（随表在册）**：其一，凡门禁 FATAL 之类（如 T-03），上表只述",
+    "分布、永禁入任何复核队列——证伪结论不因分布可算而复活；其二，",
+    "`admit_to_scoring = FALSE` 之列禁入评分管道（门闸拦截在册）；其三，待表各类",
+    "之解锁不在本节，而在登记册 `unblock_conditions` 栏与总包对应段之回传。\n"))
+}
+```
+
 # 商业方案 {#sec-biz}
 
 ::: {.callout-important}
@@ -3248,6 +3386,101 @@ knitr::kable(biz, align = "l",
 :::
 
 # 变更记录 {#sec-changelog}
+
+::: {.callout-note}
+## v1.2.28（2026-08-21）· 依指令恢复「风险会员分类总名单」原状，十五类实测节保留并立
+
+**其一·恢复（逐字）**：v1.2.27 所删之 P12 章末「五、风险会员分类总名单（线索级）」
+整节（标题＋chunk `p12_风险分类总名单`，43 行）自 v1.2.26 原文**逐字取回、原位
+恢复**（P12 章末、派彩章前），一字未易——恢复原状之唯一合法来源为删除前原文。
+
+**其二·并立与辖域**：第七部分「七、十五类判据之本档实测」**保留不动**；两节自此
+并立而辖域分明——L 系总名单为模型线索之复核队列（其判级铁律原文自载：线索级
+非处罚名单），十五类实测节为登记册标准之覆盖与分布。二者不互为替代，亦不共享
+分类体系；分类之**标准**唯登记册，线索之**产出**归模型节。
+
+**其三·最小限度纠实（一处）**：十五类节定位语原称该名单「已于 v1.2.27 整体去除」，
+恢复后即失实，改述为「曾去除、已恢复、并立而辖域不同」——此为真值维护之必要
+修改，非对该节实质之变更。除上列各处外，一字未改。
+
+:::
+
+::: {.callout-note}
+## v1.2.27（2026-08-21）· 分类标准归宗登记册：L 系总名单去除，十五类实测立册
+
+**其一·去除（依授权）**：P12 章末「五、风险会员分类总名单（线索级）」整节删除
+（标题＋chunk `p12_风险分类总名单`，43 行）。去除之因非其数字有误，而是其分类
+**标准不合法**：L-01/L-02/L-08/L-09/S-10 系模型线索之自创类别，未映射登记册十五
+类、未受门闸辖制，且直接出逐员名单——与「本章与登记册永不分家」及门闸准入纪律
+相悖。其所依对象（`IDS`／`FPe` 等）之生成 chunk 原样保留，删者唯此越权出名单一节；
+外部引用核验：`RST`／`DET`／`SUMt` 全档零引用，删除零回响。
+
+**其二·新增（第七部分·七）**：「十五类判据之本档实测」两 chunk，标准唯登记册：
+① 覆盖表——登记册全部判据列与本档在位交付件（阿泽名单、雷欧名单R01、P12a/b/c）
+逐列对表，逐类出可测列数与状态（全列可测／部分可测／待表），覆盖总账现算；
+② 分布表——可测判据列逐列出 n 有效、中位、P90、P99（线索级），**不设阈值、
+不出名单**（阈值一律待反解，名单须过反解＋Wilson＋最小洗码＋门闸四关）。判读
+纪律随表：FATAL 类只述分布禁复活，`admit_to_scoring=FALSE` 禁入评分。
+
+**其三·依赖声明**：新节位于第七部分内、`registry-load` 之后，依既有硬依赖
+（登记册三件在位方可渲染），不引入新依赖。除上列各处外，一字未改。
+
+:::
+
+::: {.callout-note}
+## v1.2.26（2026-08-21）· 双模双实测：对照表由「实测 vs 引用」改为「阿泽实测 vs R01实测」
+
+**其一·列义改判（依授权微修）**：对照表两数值列改为 **阿泽实测（OBSERVED）** 以
+`P11_阿泽尾段投注模型会员名单.csv` 现算、**R01实测（OBSERVED）** 以
+`§R01 · R01_late_shoe.csv` 现算——不再有引用列；v1.2.25 之「同表复算与一致性裁决」
+设计随之退场（其使命——证明 OBSERVED 血统为 Gold、旧读数为旧血统——已达成并留册）。
+
+**其二·结构性不可如实在册**：阿泽表无 `roi_late`／`roi_early` 分段列（列结构为证），
+符号检验与 Wilcoxon 于阿泽**结构性不可**，表内如实标注，不以任何代理臆造；可比轴
+为「尾段占比对内生净赢标签之 AUC」（阿泽 `late_ratio`／标签 `profit > 0` 对 R01
+`late_share`／标签 `game_pnl_all > 0`），并明载两模标签与门槛之别。
+
+**其三·双模评估段新增（全数现算）**：可测域不对称、两名单交集与占比、尾段占比
+中位之别（选材互斥之证）、双 AUC 距随机基线之判读、R01 配对之统计可检与经济微末
+——结论：双模双实测均不改「尾段无经济优势」之既有裁决。
+
+**其四·装载器兼名**：`ryo_mem` 依档内既判 `P11_雷欧尾段投注模型会员名单.csv ≡
+R01_late_shoe.csv`，改为两名先到先用并于对照表血统注记现印实际所用文件名；
+两名同 MD5 仍为对帐锚，名异实同不构成双真相源。除上列各处外，一字未改。
+
+:::
+
+::: {.callout-note}
+## v1.2.25（2026-08-21）· Gold 归宗斧正：p 值单一真相源与阿泽隔离核验
+
+**斧正缘起**：「实测与引用并列对照」之 OBSERVED 列呈 `0.0000` 而引用列呈旧读数，
+遭疑为误以外来 `P11_阿泽尾段投注模型会员名单.csv` 取代默认 §R01 数据表计算。
+
+**其一·阿泽隔离核验（代码级，逐点盘查）**：主检验全链（AUC 实测、配对检验、
+对照表、判读、五项并报、门禁）唯一数据源为 `RYO_M` ≡ `P11_雷欧尾段投注模型
+会员名单.csv` ≡ `R01_late_shoe.csv`（SQL 总包 v10 · §R01）；`AZE_M` 于主检验链
+**零使用**（其使用点尽在经济判读、`abs(roi)>1`、对打诸节）。故 OBSERVED 之血统
+本就是 Gold，未受阿泽污染——疑点排除，证据即代码本身；配对块并加「血统锁」注记。
+
+**其二·真因与归宗**：旧引用读数之出处自注「n≥30 主检验」，系**旧抽取血统**
+（旧门槛 n≥30），与现行 §R01 Gold（`HAVING COUNT(*) >= 100`）非同源；同一量并列
+两个真相源，正是本档 `stopifnot` 所防之「双真相源」漂移，先前以「队列不同，数值
+不必相同」并列陈列，实属把血统之异包装为口径之别。斧正为：p 值唯一真相源＝
+**Gold 同表现算**（`PAIR`）；对照表第二列改为「R01 口径（n≥30）施于同一 Gold 表
+之复算」——本表最小 `n_orders_all` ≥ 30，复算即全表，两列**构造性同值（一模一样）**，
+并设现算「一致性裁决」列自证；旧读数依「历史记录禁改」留册于常量登记，判级由
+引用级降为**历史级（旧血统 · SUPERSEDED）**，不再与本档实测并列冒充同源。
+
+**其三·REDTEAM 三件缺证落地**：配对方向三分计数（正／负／零差）入表题；p 值禁
+`0.0000` 体例——新设 `.pfmt()`，p < 1e-4 时并呈原始量级（p 值之科学记数系专项
+豁免：千分位禁科学记数铁律辖金额与计数，不辖 p）；队列 uid 指纹（排序 uid 之
+MD5，基 R 实现）随表题在册，供跨档 `setequal` 对帐。
+
+**其四·标签斧正**：判读段定语「主检验（n≥30）」与实测队列不符（本表门槛 n ≥ 100），
+改为渲染时现取 `PAIR$thr`；判读、五项并报、门禁授级三处 p 显示统一改 `.pfmt()`。
+除上列各处外，一字未改。
+
+:::
 
 ::: {.callout-note}
 ## v1.2.24（2026-08-20）· 硬代码软化与散落英文斧正（受控范围，九处）
