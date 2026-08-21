@@ -4,7 +4,7 @@ rem 用法：与 qmd 同目录双击即可。无须判断跑哪个、无须改档。
 rem 第一级：依 YAML 出【单文件自包含 HTML】（推荐规格，分发无须携目录）。
 rem 第二级：第一级若因内存不足失败，自动降为轻装版（HTML + _files 目录）并回显。
 cd /d "%~dp0"
-set "QMD=尾段投注基础分析的评估_v1_2_46_REDTEAM_去外部模型版.qmd"
+set "QMD=尾段投注基础分析的评估_v1_2_47_REDTEAM_去外部模型版.qmd"
 
 if not exist "%QMD%" (
   echo [错误] 同目录未见 %QMD%
