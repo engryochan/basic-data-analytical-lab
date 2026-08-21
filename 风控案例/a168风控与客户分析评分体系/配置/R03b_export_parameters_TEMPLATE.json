@@ -1,0 +1,83 @@
+{
+  "_README": [
+    "§Z-20 Gate-0 · R03b 导出参数原始留痕 · 模板 v1.0.0（2026-08-18）",
+    "",
+    "⛔ 填写纪律（违反任一即判 Gate-0 FAIL）：",
+    "  ① 本档须记录【本轮实际执行】之参数，不得回溯猜测，不得拿历史参数冒充。",
+    "  ② 凡值仍为 \"<<FILL>>\" 者，校验器一律判 MISSING —— 模板不填即不通过，",
+    "     此为刻意设计：本项目已实证『可运行的占位』会静默产出假读数（v1 三档 VOID）。",
+    "  ③ 时间戳一律 ISO-8601 含时区偏移。库时钟已实测为 UTC（§TZ-01/TZ-02），",
+    "     若导出工具报本地时，须换算后填 UTC 并于 _notes 注明原始值。",
+    "  ④ query_hash 须为 source_sql 之实际摘要（建议 SHA-256），",
+    "     不得手工编造；校验器会以 source_sql 重算比对。",
+    "",
+    "★★ 本档性质 = 事实记录（ACTUAL_EXECUTION），非审计规则。",
+    "   ⛔ 一切字段须记录【本次 Superset 实际提交】之值，原样照录。",
+    "   ⛔ 即使某值经审计判为应改（如 order_by 宜取 K4），**亦不得改写历史实际值**。",
+    "   审计规则另置于本档 _audit_rules 区块，与事实记录严格分离。",
+    "",
+    "   此为 v1.1.0 斧正：v1.0.0 曾把 order_by 预锁为 K4 四键写入待填位，",
+    "   属【以审计规则冒充事实记录】之性质错误；若实际执行用的是 K3 三键，",
+    "   该预锁即构成伪造留痕。现改为 <<FILL>>，据实照录。",
+    "",
+    "   where_predicate 同理改为 <<FILL>>：§A/§D 之实测边界（2026-03-21 ~ 2026-08-06,",
+    "   LABEL_MATCH）系【核验用之对照值】，置于 _expected_values；",
+    "   本区只记实际提交之谓词原文。校验器以二者比对，不一致即 STOP —— ",
+    "   由比对判定，而非由预填保证。",
+    "",
+    "⛔ 本档不得写入任何期望行数。18,139,550 系本轮 §A 之 current evidence，",
+    "  6,143,388 系 historical observation；二者皆不得作为导出之 expected value。"
+  ],
+
+  "probe": "§Z-20 Gate-0 · R03b",
+  "template_version": "1.0.0",
+  "filled_by": "<<FILL>>",
+  "filled_at": "<<FILL>>",
+
+  "source_sql": "<<FILL>>",
+  "database": "<<FILL>>",
+  "schema": "<<FILL>>",
+  "tables": ["<<FILL>>"],
+
+  "where_predicate": "<<FILL>>",
+  "order_by": "<<FILL>>",
+
+  "page_mode": "<<FILL>>",
+  "page_size": "<<FILL>>",
+
+  "export_started_at": "<<FILL>>",
+  "export_finished_at": "<<FILL>>",
+
+  "total_count_query": "<<FILL>>",
+  "query_hash": "<<FILL>>",
+
+  "_audit_rules": {
+    "_note": "审计规则 —— 属下一阶段之执行要求，不属本次历史执行留痕。二者不得混写。",
+    "EXPECTED_WHERE_PREDICATE": "dt >= '2026-03-21' AND dt < '2026-08-07'",
+    "EXPECTED_WHERE_SOURCE": "§R03b 主体 L5271 逐行核实；§D 实测边界 2026-03-21~2026-08-06 判 LABEL_MATCH",
+    "RECOMMENDED_RUN_ORDER": "bet_date, uid, dealer_id, is_sentinel_dealer",
+    "RECOMMENDED_RUN_ORDER_REASON": "K3 之 duplicate = 0 系当前数据之偶然属性，非结构性全序保证；一旦同一 (日,会员,荷官) 出现哨兵与非哨兵两行，K3 立即失效而 ORDER BY 不会报错。K4 把偶然变必然。此为 RISK-K3-fragile 之处置。",
+    "RECOMMENDED_RUN_ORDER_SCOPE": "适用于【下一次 Run A / Run B】；⛔ 不适用于本档之 order_by 字段——该字段须记录本次实际执行值，纵与本推荐不符亦须原样照录。",
+    "FORBID_DISTINCT": "⛔ 不得以 DISTINCT 消除潜在并列 —— 那会改变观测集。"
+  },
+
+  "_expected_values": {
+    "_note": "以下为本轮 §A/§B/§D 之 current evidence，供导出后对账，非导出前之预期",
+    "db_row_count_from_gateA": 18139550,
+    "n_distinct_K3": 18139550,
+    "n_distinct_K4": 18139550,
+    "duplicate_K3_n": 0,
+    "duplicate_K4_n": 0,
+    "date_min": "2026-03-21",
+    "date_max": "2026-08-06",
+    "window_label_verdict": "LABEL_MATCH"
+  },
+
+  "_open_items": {
+    "ANOM-dealer-neg": "dealer_min = -1（负值荷官号）· ANOMALY / INVESTIGATION REQUIRED · 三种解释皆 HYPOTHESIS，不得自行认定",
+    "RISK-K3-fragile": "K3 唯一性为当前数据偶然属性 · ADVISORY · 已以 order_by 取 K4 处置",
+    "B-02": "2026-08-12 旧导出之停因 · UNKNOWN · ⛔ 不得由本轮 18,139,550 反推旧导出应得同数"
+  },
+
+  "_notes": "<<FILL 或留空字符串>>"
+}
