@@ -40,8 +40,8 @@ renv/library/
 
 # ── 生产数据：含真实会员与 IP，严禁入库 ──
 数据库/
-*.csv
-!数据库/.gitkeep
+# *.csv
+# !数据库/.gitkeep
 
 # ── 系统 ──
 .DS_Store
