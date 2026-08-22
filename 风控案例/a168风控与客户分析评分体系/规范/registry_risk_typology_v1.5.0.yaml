@@ -1,0 +1,1560 @@
+registry:
+  schema_version: '1.0'
+  version: 1.5.0
+  issued: '2026-08-22'
+  revision_note: "v1.1.0：原 candidates 五项（多账户共享设备／机器人脚本／夜间异常／限红试探／静默复活） 全部提升为正式登记条目 T-11…T-15，各自挂载判据列、门禁裁定、阻断项与解锁条件。\
+    \ 立册人裁示：一条带明确 UNKNOWN 与阻断条件的条目，胜于一个隐形空缺——隐形才是真危险。 候选桶自此清空并保留为空集，供日后新类型暂驻。 v1.2.0：承 §Z-12／§Z-14 首跑实测（2026-08-18）——源库\
+    \ validbet 零 NULL 已双版互证， F-02 之实际影响归零，B-11 相应降级；T-05 首获 166 会员-月纯度 100% 标注样本集。 v1.3.0：v1.2.0 之依据已变，整版冻结重出。承\
+    \ §Z-17／§Z-18／§Z-19（SQL 总包 v4-revised-2）： ① bet16／bet41 语义锁定（H16 恒等式 125,654,711／125,654,711 ＝ 100%）；\
+    \ ② T-05 样本改自 §Z-14 且门槛由「承 S05 之 >=30」改为「逐层反解之 >=5」，\n   旧 166 行标 SUPERSEDED — legacy derivation，保留不删；\n\
+    ③ 新增 treatment 四级状态表（S1 CLOSED／S2 PROVEN／S3·S4 OPEN），\n   并立防偷渡明令：「lmc02 接线键已解 ≠ treatment 已解」；\n\
+    ④ 新增「证据存在 ≠ 评分主表存在」之准入二分； ⑤ DQ-COMMISSION 门与 P01A-contract-2 悬案入册。\nv1.4.0：四层防串线结构化（承 REDTEAM 预审 R4-01～R4-04\
+    \ 与台账 RT-04～RT-12）：① 新增纵向证据链四层字段 phenomenon_status／label_validation_status／causal_status／admission\
+    \ 二分（admit_to_feature_scoring／admit_to_risk_decision），全册 admit_to_risk_decision=FALSE×16 无例外；② criterion_role\
+    \ 十枚举归一（STAT_DIRECTIONAL=42 闭环校验），direction 仅方向行非空；threshold_status 归四枚举，36 种原文全迁 threshold_note 一字不删（M-01：T-15/n_ip\
+    \ 方向判据改判 PENDING_INVERSE，原文存注）；③ 主生命周期状态×阻断门禁双轴状态机（R4-02），废五层互斥制；④ 五门状态与解锁谓词机器化（R4-04）：G01 FAIL／G02\
+    \ FAIL／G03 PARTIAL／G04 RENDER_COMPUTED／G05 FAIL（自评估档 v1.2.47 §gate5 取证）；⑤ RT-04 T-10 补 admit_to_profile:true；RT-05\
+    \ T-05/T-08 回挂 B-11；RT-12 T-05 verdict 同步 §Z-14 口径，166 样本入 SUPERSEDED 证据登记；⑥ profile_feature 与 admit_to_feature_scoring\
+    \ 彻底分立（防 WHERE profile_feature 误拉 T-03 入评分管线）。本版由 v1.3.0 双档（YAML MD5 90e8306d…／CSV MD5 e2267cd5…）机器派生。"
+  owner: Ryo Eng
+  parent_authorities:
+  - a168风控与客户分层评分体系_商业方案.qmd
+  - a168风控评分_精要商业报告.qmd
+  - a168_取数与核验_SQL总包_v3.sql
+  window:
+    start: '2026-03-21'
+    end_exclusive: '2026-08-07'
+    days: 139
+    product_lock: bet02='101'（百家乐）
+    universe_members: 721190
+axes:
+  evidence_tier:
+    OBSERVED: 文档内／交付件内可直接计算复现
+    INFERRED: 由已锁定事实推导，推导链须在 rationale 写明
+    UNKNOWN: 须外部核实方可使用，禁止以推测填补
+  gate:
+    FATAL: 🔴 停止分析：该用法已被证伪或将致错误结论
+    BLOCK: 🟠 禁入正式结论：存在未闭阻断项
+    CONDITIONAL: 🟡 条件可用：须先满足 unblock_conditions
+    ADVISORY: 🟢 建议可用：可进影子期，仍须完成 shadow_requirements
+    NA: ⚪ 不适用
+  severity:
+    S1: 致命 FATAL
+    S2: 阻断 BLOCK
+    S3: 条件 CONDITIONAL
+    S4: 建议 ADVISORY
+global_prohibitions:
+- id: P-01
+  target: 候选_同桌异常_最终版_已去重.csv
+  rule: 永久禁止读取
+  reason: 无生成声明，疑存在 round_key 折叠污染；同桌判据须自 R02_same_table.csv 重跑
+  severity: S1
+- id: P-02
+  target: ods_a168_game_log.ip
+  rule: 禁作下注 IP 使用
+  reason: 已裁定为网关 IP（§E1-03）；下注 IP 只取 ods_a168_bet02.ip
+  severity: S1
+- id: P-03
+  target: 卷一 §C-06 原版
+  rule: 禁止运行，改跑 卷二 §C06fix
+  reason: 原版以 '1'/'B'/'庄' 判庄闲，与库内实际 Banker/Player 不符，实测零行；且争抢同一导出文件名
+  severity: S1
+- id: P-04
+  target: §S-04a
+  rule: 禁止运行，改跑 §S04p
+  reason: S-04a 出 IP 明细，风控员雷达需实体级聚合；争抢同一导出文件名
+  severity: S2
+- id: P-05
+  target: ods_a168_bet01
+  rule: 金额算式禁止施用于本表
+  reason: 自 bet14 起与 ods_a168_bet02 整段错位（bet17 在本表为 LV3ID 而非净输赢）；误用则数值照算而结果全错且无任何报警
+  severity: S1
+- id: P-06
+  target: 普适样本量门槛（如 n>=30）
+  rule: 禁止手写
+  reason: 最小样本量须逐指标反解，含有效样本量 n_eff 校正；MDE 须依 estimand、结局分布族与设计效应分别推导
+  severity: S2
+- id: P-07
+  target: OFFSET 分页
+  rule: 禁止使用，强制键集游标
+  reason: 已实证 36.49% 重复率
+  severity: S1
+- id: P-09
+  target: valid_bet 跨章合计
+  rule: 条件许可：须先核验该窗口内 validbet 之 NULL 率为零，方可跨章合计
+  reason: §T03 系与 §E02c 系对 validbet 之 NULL 处理契约不同（回退本金 vs 直取）。 2026-08-18 实测本窗口 NULL 率为零，两者等价；但该等价性依赖数据实况而非设计保证，
+    故不设永久禁令，改设复检前提。核验方法见 §Z-14a 之 n_vb_null 列。
+  severity: S3
+- id: P-08
+  target: 以 DATE(bet08) 切日
+  rule: 禁止；窗口切日唯一合法字段为 dt（= bet07 账户日期）
+  reason: 两者差异 38.6%
+  severity: S1
+value_axis:
+  axis_id: V
+  name_zh: 价值轴（复核优先级排序键）
+  source_deliverable: R01_late_shoe.csv
+  criterion_column: stake_all
+  criterion_role: RANK
+  direction: ''
+  threshold_status: NO_THRESHOLD_BY_DESIGN
+  threshold_note: 分位排名，非阈值
+  method: 分位排名，V3=前10%，V2=10–50%，V1=长尾
+  evidence_tier: OBSERVED
+  gate: ADVISORY
+  admit_to_scoring: true
+  observed_facts:
+    base_rate_pct: 0.1331
+    lift_top01_x: 19.5
+    recall_top01_pct: 19.5
+    lift_top10_x: 7.6
+    recall_top10_pct: 75.6
+    external_auc_stake_all: 0.9154
+  caveat: 高 AUC 部分反映「谁被复核得多」而非「谁更危险」（复核强度混杂）。 本轴定性为「排序效率证据」，不得作为因果证据或处置理由。
+  standard_basis: 无对口外部标准 · 本项目自订（方法论借鉴 SR 26-2 有效挑战原则）
+  phenomenon_status: OBSERVED
+  label_validation_status: NOT_APPLICABLE
+  causal_status: NOT_APPLICABLE
+  admit_to_feature_scoring: true
+  admit_to_risk_decision: false
+  lifecycle_state: SHADOW_MODEL
+  blocker_state: UNBLOCKED
+  profile_display: true
+  profile_feature: true
+typologies:
+- type_id: T-01
+  name_zh: 同桌聚集
+  category: 会员风险
+  tls: T3·L3·S3
+  primary_deliverable: R02_same_table.csv
+  supporting_deliverables:
+  - C06_hedge_pairs.csv
+  - I_ip_player.csv
+  sql_section: §R02
+  criterion_columns:
+  - column: lift
+    source: R02_same_table.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: jaccard
+    source: R02_same_table.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: same_rate
+    source: R02_same_table.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: exp_same
+    source: R02_same_table.csv
+    criterion_role: REFERENCE
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 期望基线，非阈值
+  - column: n_tables
+    source: R02_same_table.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: low
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解（锁桌行为）
+  evidence_tier: INFERRED
+  gate: CONDITIONAL
+  severity: S3
+  admit_to_scoring: false
+  admit_to_profile: true
+  verdict: 结构完备（20 列，含期望基线与 lift），但对外部 L1a 标签之判别力从未独立实测。
+  blockers:
+  - B-01
+  unblock_conditions:
+  - 自 R02_same_table.csv 重跑，禁用 P-01 所指之污染档
+  - 对 risk_member 计算 AUC 并报告置信区间
+  - 阈值逐指标反解（含 n_eff 校正），禁写普适门槛
+  standard_basis: 无对口外部标准 · 本项目自订
+  phenomenon_status: INFERRED
+  label_validation_status: NOT_TESTED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: PROFILE_CANDIDATE
+  blocker_state: BLOCKED(B-01)
+  profile_display: true
+  profile_feature: true
+- type_id: T-02
+  name_zh: 荷官—玩家串谋
+  category: 会员风险 · 内部关联
+  tls: T2·L4·S2
+  primary_deliverable: R03b_player_dealer_daily.csv
+  supporting_deliverables:
+  - R03_player_dealer.csv
+  - S02_dealer_score.csv
+  - R03inv_pair_census.csv
+  sql_section: §R03b
+  criterion_columns:
+  - column: delta_z
+    source: R03b_player_dealer_daily.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: delta_p
+    source: R03b_player_dealer_daily.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: z_score_w
+    source: R03b_player_dealer_daily.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: eligibility_status
+    source: R03b_player_dealer_daily.csv
+    criterion_role: FILTER
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 准入过滤器，非阈值
+  - column: 特定玩家复现率
+    source: S02_dealer_score.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: 节奏稳定度
+    source: S02_dealer_score.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: abnormal
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解（双向偏离）
+  evidence_tier: UNKNOWN
+  gate: BLOCK
+  severity: S2
+  admit_to_scoring: false
+  admit_to_profile: false
+  verdict: 交付件不完整：R03b 止于 6,143,388 行而非预期 18,139,550 行。 182 批次 Superset 查询历史全部 status=success，已排除查询层截断（分支
+    B）； 停止原因仍为 UNKNOWN，归因于导出／Artifact 层。 在文件补全前，任何基于本类的结论皆不可信。
+  blockers:
+  - B-02
+  unblock_conditions:
+  - R03b 重导并通过六元组身份核验与行数对账
+  - 2026-08-14 之第二次停止事件（自 OFFSET 0 起、至批次 7 止）不得用于解释 2026-08-12 事件
+  - 补全后重跑 delta_z 分布与外部标签 AUC
+  standard_basis: 无对口外部标准 · 本项目自订
+  phenomenon_status: UNKNOWN
+  label_validation_status: BLOCKED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: PROFILE_CANDIDATE
+  blocker_state: BLOCKED(B-02)
+  profile_display: false
+  profile_feature: false
+- type_id: T-03
+  name_zh: 尾投／靴尾下注
+  category: 会员风险 · 行为时序
+  tls: T2·L3·S1
+  primary_deliverable: R01_late_shoe.csv
+  supporting_deliverables:
+  - S_player_tail.csv
+  - X_combo.csv
+  - D03S_daily_roi_diff.csv
+  sql_section: §R01 · §D-06 · §X-01
+  criterion_columns:
+  - column: late_share
+    source: R01_late_shoe.csv
+    criterion_role: PROFILE_ONLY
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 禁设阈值
+  - column: shoe_pos_p50
+    source: R01_late_shoe.csv
+    criterion_role: PROFILE_ONLY
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 禁设阈值
+  - column: stake_ramp
+    source: R01_late_shoe.csv
+    criterion_role: PROFILE_ONLY
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 禁设阈值
+  - column: tail_share
+    source: S_player_tail.csv
+    criterion_role: PROFILE_ONLY
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 禁设阈值
+  evidence_tier: OBSERVED
+  gate: FATAL
+  severity: S1
+  admit_to_scoring: false
+  admit_to_profile: true
+  verdict: 信息优势假说已四重证伪，本类禁作独立风控触发器，仅保留为画像字段。
+  falsification_evidence:
+  - id: F-A
+    source: D-06 / S_player_tail.csv
+    statistic: 符号检验 p
+    value: 0.5847
+    note: 个体级 winrate_diff>0 仅 49.7%
+  - id: F-B
+    source: R01 配对检验（n=75,024）
+    statistic: 符号检验 p
+    value: 0.7591
+    note: Wilcoxon p=0.8087
+  - id: F-C
+    source: R01 九档阈值扫描
+    statistic: 命中组 hold% 低于对照之档数
+    value: 0
+    note: 无任何一档支持玩家占优
+  - id: F-D
+    source: R01×S05 外部 L1a 标签
+    statistic: late_share AUC
+    value: 0.3828
+    note: 低于 0.5，方向反转；风险组中位 0.2002 < 非风险组 0.2263，Mann-Whitney p<0.0001
+  rejected_variants:
+  - round_no>=40 或 >=50 视为『最后一手』（实测鞋均长 49.86 手、P50=50）
+  - late_ratio>=60% + 胜率>55% 自动黑名单（外部来源建议，与本项目四重证伪直接冲突）
+  standard_basis: 无对口外部标准 · 本项目自订
+  phenomenon_status: OBSERVED
+  label_validation_status: REFUTED
+  causal_status: REFUTED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: FATAL_PROFILE_ONLY
+  blocker_state: UNBLOCKED
+  profile_display: true
+  profile_feature: true
+  ranking: false
+  scoring: false
+  trigger: false
+  enforcement: false
+- type_id: T-04
+  name_zh: 跨账户对打／对冲
+  category: 会员风险 · 关联
+  tls: T3·L3·S4
+  primary_deliverable: C06_hedge_pairs.csv
+  supporting_deliverables:
+  - I_ip_player.csv
+  - R02_same_table.csv
+  - C06d_hedge_pairs_dated.csv
+  sql_section: §C06fix
+  criterion_columns:
+  - column: opposite_rate
+    source: C06_hedge_pairs.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: n_opposite_round
+    source: C06_hedge_pairs.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: hedge_coverage
+    source: C06_hedge_pairs.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: dir_stake
+    source: C06_hedge_pairs.csv
+    criterion_role: REFERENCE
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 方向净额，非阈值
+  - column: bet_ip
+    source: C06_hedge_pairs.csv
+    criterion_role: JOIN_KEY
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 关联键
+  - column: lv3
+    source: C06_hedge_pairs.csv
+    criterion_role: JOIN_KEY
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 关联键（三级代理线）
+  evidence_tier: OBSERVED
+  gate: ADVISORY
+  severity: S4
+  admit_to_scoring: true
+  admit_to_profile: true
+  verdict: 结构信号强且与金额维度正交：实测 999 对完美对打、最长连续 1,185 把。 为当前最具建设价值之候选。惟对外部 L1a 标签之判别力尚未量测。
+  observed_facts:
+    perfect_pairs: 999
+    longest_streak_rounds: 1185
+  shadow_requirements:
+  - 对 risk_member 计算 AUC 与提升度，报告置信区间
+  - 影子模式静默运行不少于既定影子期，期间禁止据以处置
+  - 阈值逐指标反解，禁写普适门槛（P-06）
+  - 必须自 §C06fix 产出，禁用卷一 §C-06 原版（P-03）
+  standard_basis: 间接对应 AUSTRAC 赌场可疑行为指标之「玩家间共享资金／押注对立结果」项（非约束性参考）； 量化判据部分为本项目自订
+  forbidden_sources:
+  - 卷一 §C-06 原版产出物
+  phenomenon_status: OBSERVED
+  label_validation_status: NOT_TESTED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: true
+  admit_to_risk_decision: false
+  lifecycle_state: SHADOW_MODEL
+  blocker_state: UNBLOCKED
+  profile_display: true
+  profile_feature: true
+- type_id: T-05
+  name_zh: 自我对冲／打水
+  category: 会员风险 · 套利
+  tls: T4·L6·S4
+  primary_deliverable: T03_arbitrage.csv
+  supporting_deliverables:
+  - K01_risk_feature_matrix.csv
+  - E02_segment_econ.csv
+  sql_section: §T03
+  criterion_columns:
+  - column: is_self_hedge
+    source: T03_arbitrage.csv
+    criterion_role: FLAG
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 布尔标志
+  - column: hedge_rate
+    source: T03_arbitrage.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: stake_cv
+    source: T03_arbitrage.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: low
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解（注额高度一致＝机械对冲特征）
+  - column: rebate_dep
+    source: K01_risk_feature_matrix.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解（退水依赖度）
+  - column: side_entropy
+    source: K01_risk_feature_matrix.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: low
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  evidence_tier: OBSERVED
+  gate: ADVISORY
+  severity: S4
+  admit_to_scoring: true
+  admit_to_profile: true
+  verdict: 经济机制已由平台规则与标注样本直接验证（等额对押之注不计洗码，该月洗码合计为零而盈亏照记）；样本依 §Z-14 逐层反解口径（367 行正例，非全集），旧 166 会员-月样本 SUPERSEDED
+    仅存档；具体损益影响依 NGR／退水契约口径另算，不在本册断言。判据结构完备（自打标志＋对冲率＋注额变异＋退水依赖度四维互证）。
+  labelled_samples:
+    file: 数据库/T05_hedge_labelled_samples_v2.0.0.csv
+    n_member_month: 367
+    n_member: 325
+    purity_pct: 100.0
+    rule: sum_valid_bet = 0 且 n_orders >= 5 且 n_hedge_eq > 0
+    strata:
+      5-29单: 224
+      '>=30单': 143
+    threshold_rationale: 门槛 5 系逐层反解所得，非承自 §S-05 之 >=30： =1 单者 5,076 行纯度 0.0%（其零多系单注和局退注）； 2–4 单 928 行纯度
+      58.1%；5–29 单 224 行纯度 100.0%；>=30 单 143 行纯度 100.0%。
+    cross_check: 退水合计恰为 0.00，与『洗码为零→退水必为零』恒等式吻合
+    platform_pnl: -14897.07
+    source: §Z-14（软编码，库内现算，SQL 总包 v4-revised-2）
+    lock_checks:
+      n_orders边界: 实测 min=5；被排除者 max=4，无越界
+      分层互斥穷尽: 交集 0；并集 367 = 全集
+      精确相加: 224 + 143 = 367
+      "NULL与重复": 关键列 NULL 0；(member_id, bet_month) 重复 0
+      n_vb_positive: 全为 0（该月每一单洗码皆零）
+    reconciliation_with_legacy:
+      legacy_file: 数据库/T05_hedge_labelled_samples_v1.0.0.csv
+      legacy_status: SUPERSEDED — legacy derivation（保留供审计留痕，禁止删除）
+      legacy_n: 166
+      交集: 160
+      仅新有: 207
+      仅旧有: 6
+      仅旧有之成因: 6 行皆 n_orders < 5，为新门槛所排除
+      仅新有之成因: 旧版会员清单取自 S05（HAVING>=30／月），月内 <30 单者旧版不可见；实测 207 行全为 <30 单
+      裁定: 差异全由两版取样口径不同解释，无一行因调整门槛而人为凑近旧数
+    caveat: 样本为「已被平台规则识别并剔除洗码」者，属规则已生效之群体； 尚未被规则捕获之隐性打水（如跨账户、非等额、跨桌对冲）不在此集， 故本集可作正例，不可作全集，更不可据以估计打水总规模。
+  shadow_requirements:
+  - 对 risk_member 计算 AUC；并另行计算『退水漏损金额』作为业务侧主指标
+  - 须与 T-08 联合裁定，避免把契约档位内的正常洗码误判为套利
+  - 阈值逐指标反解（P-06）
+  standard_basis: 无对口外部标准 · 本项目自订（经济学口径依主方案 NGR 定义）
+  blockers:
+  - B-11
+  phenomenon_status: OBSERVED
+  label_validation_status: NOT_TESTED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: true
+  admit_to_risk_decision: false
+  lifecycle_state: SHADOW_MODEL
+  blocker_state: BLOCKED(B-11)
+  profile_display: true
+  profile_feature: true
+- type_id: T-06
+  name_zh: 异常 IP 聚集
+  category: 会员风险 · 关联
+  tls: T3·L3·S3
+  primary_deliverable: I_ip_agg.csv
+  supporting_deliverables:
+  - I_ip_player.csv
+  - C01_ip_chain.csv
+  - C08_subnet_all.csv
+  - C08_subnet_sparse.csv
+  - A_anchor.csv
+  - V_ipmatch.csv
+  sql_section: §C-02 · §C-00 · §C-01 · §C-08 · §N1
+  criterion_columns:
+  - column: n_member_eff
+    source: I_ip_agg.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: BLOCKED
+    threshold_note: ★口径悬案，见 B-03
+  - column: n_member_raw
+    source: I_ip_agg.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: BLOCKED
+    threshold_note: ★口径悬案，见 B-03
+  - column: share_p90
+    source: I_ip_agg.csv
+    criterion_role: REFERENCE
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 分布参照
+  - column: ip_order_share
+    source: I_ip_player.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  evidence_tier: UNKNOWN
+  gate: CONDITIONAL
+  severity: S3
+  admit_to_scoring: false
+  admit_to_profile: true
+  verdict: 判定完全取决于口径选择，悬而未决：n_member_ip>=20 之阈值在原始成员数口径下 落于第 64 百分位，在有效成员数口径下落于第 98.7 百分位——同一阈值， 两个口径给出截然相反的稀有性判断。
+    另：金 IP 白名单 17 个 IP 三年内零命中，风控关注名单从未维护（K01b_seed_goldip 已证伪）。 CGNAT 饱和段须条件化处理（§N1 已设 n_ip<=30 稀疏段靶向）。
+  blockers:
+  - B-03
+  unblock_conditions:
+  - 先固化 n_member_raw 与 n_member_eff 之择一口径并书面立据
+  - 口径固化后重算阈值分位，禁止沿用 20 这一历史数字
+  - CGNAT 段须以 §N1 稀疏段口径分离后再判
+  standard_basis: 无对口外部标准 · 本项目自订
+  forbidden_sources:
+  - ods_a168_game_log.ip（P-02）
+  phenomenon_status: UNKNOWN
+  label_validation_status: BLOCKED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: PROFILE_CANDIDATE
+  blocker_state: BLOCKED(B-03)
+  profile_display: true
+  profile_feature: true
+- type_id: T-07
+  name_zh: 技术型玩家（优势打法）
+  category: 会员风险 · 技能
+  tls: T2·L5·S3
+  primary_deliverable: S01_player_score.csv
+  supporting_deliverables:
+  - R03_player_dealer.csv
+  - K01_risk_feature_matrix.csv
+  - DX04_bet09_profile.csv
+  sql_section: §S-01 · §DX-04
+  criterion_columns:
+  - column: 索提诺稳定性
+    source: S01_player_score.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: 投注产品结构熵
+    source: S01_player_score.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: low
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解（专精单一玩法）
+  - column: win_rate_all
+    source: R03_player_dealer.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解（须剔和局）
+  - column: stake_p90_p50
+    source: K01_risk_feature_matrix.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  evidence_tier: UNKNOWN
+  gate: CONDITIONAL
+  severity: S3
+  admit_to_scoring: false
+  admit_to_profile: true
+  verdict: 结构可探但从未验证。存在已知数据缺口：bet09 有 23 种玩法取值， 边注（龙宝等）之 P&L 从未与主注拆分——而边注庄家优势远高于主注， 不拆分则「高胜率」与「高波动边注」无法区分。
+  blockers:
+  - B-04
+  unblock_conditions:
+  - 先完成 bet09 玩法维度拆分（免佣 commission=1 亦须分层）
+  - 主注与边注 P&L 分离核算后，再论优势打法
+  - 禁以复合 hold% 直接推断技能，避免玩法结构混杂
+  standard_basis: 无对口外部标准 · 本项目自订
+  phenomenon_status: UNKNOWN
+  label_validation_status: BLOCKED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: PROFILE_CANDIDATE
+  blocker_state: BLOCKED(B-04)
+  profile_display: true
+  profile_feature: true
+- type_id: T-08
+  name_zh: 退水／占成套利
+  category: 会员与代理风险 · 套利
+  tls: T4·L6·S4
+  primary_deliverable: E02_segment_econ.csv
+  supporting_deliverables:
+  - S03_agent_score.csv
+  - R_rebate_dist.csv
+  - S05_member_month_panel.csv
+  sql_section: §E02c · §E1-11
+  criterion_columns:
+  - column: reb_k
+    source: E02_segment_econ.csv
+    criterion_role: REFERENCE
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 量纲系数，自适应判定
+  - column: comm_k
+    source: E02_segment_econ.csv
+    criterion_role: REFERENCE
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 量纲系数，自适应判定
+  - column: rebate_rate_bkt
+    source: E02_segment_econ.csv
+    criterion_role: BUCKET
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 契约档位分桶
+  - column: 退水消耗比
+    source: S03_agent_score.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: 退水支出
+    source: S05_member_month_panel.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  evidence_tier: OBSERVED
+  gate: ADVISORY
+  severity: S4
+  admit_to_scoring: true
+  admit_to_profile: true
+  verdict: 唯一可直接调节 NGR 的杠杆，且实测契约档位高度整齐，异常者易辨。
+  observed_facts:
+    rebate_over_ggr_pct: 4.251
+    rate_median_pct: 0.8
+    rate_p99_pct: 1.0
+    nonzero_member_month_pct: 3.86
+    config_buckets_pct:
+    - 0.3
+    - 0.8
+    - 0.9
+  shadow_requirements:
+  - 须与 T-05 联合裁定，区分契约内正常退水与套利性洗量
+  - 占成 κ 之量纲须经 §E02c 自适应判据确认后方可入算
+  standard_basis: 无对口外部标准 · 本项目自订（NGR 口径依主方案）
+  blockers:
+  - B-11
+  phenomenon_status: OBSERVED
+  label_validation_status: NOT_TESTED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: true
+  admit_to_risk_decision: false
+  lifecycle_state: SHADOW_MODEL
+  blocker_state: BLOCKED(B-11)
+  profile_display: true
+  profile_feature: true
+- type_id: T-09
+  name_zh: 代理线自打／养号
+  category: 代理风险
+  tls: T3·L3·S3
+  primary_deliverable: S03_agent_score.csv
+  supporting_deliverables:
+  - T03_arbitrage.csv
+  - C06_hedge_pairs.csv
+  - C01_ip_chain.csv
+  sql_section: §S-03 · §C-01
+  criterion_columns:
+  - column: 新增会员质量
+    source: S03_agent_score.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: low
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: 下线留存
+    source: S03_agent_score.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: low
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: 真实流水
+    source: S03_agent_score.csv
+    criterion_role: REFERENCE
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 对照量
+  - column: member_per_chain
+    source: C01_ip_chain.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解（实测榜首 2,132 人单链）
+  evidence_tier: INFERRED
+  gate: CONDITIONAL
+  severity: S3
+  admit_to_scoring: false
+  admit_to_profile: true
+  verdict: 结构齐备但从未开工。须先确认单链 2,132 人是否 CGNAT 或代理归并所致。
+  blockers:
+  - B-05
+  unblock_conditions:
+  - 五级代理线必须全部 LEFT JOIN（单级孤儿率 78.17%，五级完全孤儿率仅 1.371%）
+  - 测试线 214 条代理须先剔除（age022='1'）
+  standard_basis: 无对口外部标准 · 本项目自订
+  phenomenon_status: INFERRED
+  label_validation_status: NOT_TESTED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: PROFILE_CANDIDATE
+  blocker_state: BLOCKED(B-05)
+  profile_display: true
+  profile_feature: true
+- type_id: T-10
+  name_zh: 账务恒等式残差（内控对账／内部舞弊侦测）
+  category: 内控 · 非会员风险
+  tls: T1·L2·S4
+  primary_deliverable: ods_a168_bet02（直算，无中间交付件）
+  supporting_deliverables:
+  - V_recon.csv
+  sql_section: §A-06M
+  criterion_columns:
+  - column: resid_identity
+    source: 现算
+    criterion_role: IDENTITY
+    direction: ''
+    threshold: 0
+    threshold_status: NOT_APPLICABLE
+    threshold_note: 恒等式，非统计阈值
+  identity_formula: net_pnl − (payout − stake) − rebate = 0（同一注单、同一汇率口径）
+  evidence_tier: OBSERVED
+  gate: ADVISORY
+  severity: S4
+  admit_to_scoring: false
+  admit_to_control: true
+  verdict: 本类不是会员风险特征，而是日度内控 KRI：残差不为零即账已错， 须先修账再谈任何风控结论。为本册中唯一有外部标准背书者。
+  standard_basis: 内华达 MICS（依 NGC 第 6.090(5) 条采纳，为博彩运营内控最低要求， 持牌人须据以撰写书面内控体系）之职责分离与双人复核原则； 惟 a168 持牌辖区未定（见
+    open_questions Q-01），故本项现为自愿采用
+  admit_to_profile: true
+  phenomenon_status: OBSERVED
+  label_validation_status: NOT_APPLICABLE
+  causal_status: NOT_APPLICABLE
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: INTERNAL_CONTROL
+  blocker_state: UNBLOCKED
+  profile_display: true
+  profile_feature: true
+  external_standard_status: REFERENCED
+  applicability_status: UNRESOLVED
+- type_id: T-11
+  name_zh: 多账户／共享设备
+  category: 会员风险 · 关联
+  tls: T3·L3·S2
+  primary_deliverable: I_ip_player.csv
+  supporting_deliverables:
+  - R02_same_table.csv
+  - C01_ip_chain.csv
+  - C08_subnet_sparse.csv
+  - Z03_column_dictionary.csv
+  sql_section: §C-00 · §R02 · §C-01
+  criterion_columns:
+  - column: bet_ip
+    source: I_ip_player.csv
+    criterion_role: JOIN_KEY
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 关联键
+  - column: ip_order_share
+    source: I_ip_player.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: n_orders_ip
+    source: I_ip_player.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: jaccard
+    source: R02_same_table.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解（与 T-01 共用列，用途不同）
+  - column: member_per_chain
+    source: C01_ip_chain.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: 注册时点邻近度
+    source: 待建（ods_a168_member_dtl 注册时间差分）
+    criterion_role: STAT_DIRECTIONAL
+    direction: low
+    threshold: null
+    threshold_status: BLOCKED
+    threshold_note: ★列名未核实，见 B-06
+  evidence_tier: UNKNOWN
+  gate: BLOCK
+  severity: S2
+  admit_to_scoring: false
+  admit_to_profile: true
+  verdict: 本类之决定性证据（设备指纹）在现有 ODS 中根本不存在——这是真数据缺口， 非分析方法问题。仅凭 IP 与同桌共现无法区分「同一人多开」与「同一网段多住户」： §C-08 已实测榜首网段为
+    CGNAT 饱和段，误判风险极高。 在补埋点前，本类只能产出线索而非判据，禁止据以处置。
+  blockers:
+  - B-06
+  unblock_conditions:
+  - 产品侧补设备指纹埋点（device_id／浏览器指纹／端末型号），并回填至 ODS
+  - ods_a168_member_dtl 注册时间字段名须先经 Z03_column_dictionary 核实后方可引用
+  - CGNAT 段须以 §N1 稀疏段口径（n_ip<=30）分离后再判，禁止全网段一刀切
+  - 与 T-04 联合裁定：同 IP 且互为对打者，优先归 T-04（证据更强）
+  standard_basis: 间接对应 PAGCOR 明列之「使用多个账户」违规项与 AUSTRAC 身份类红旗（均为非约束性参考）； 量化判据为本项目自订
+  phenomenon_status: UNKNOWN
+  label_validation_status: BLOCKED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: PROFILE_CANDIDATE
+  blocker_state: BLOCKED(B-06)
+  profile_display: true
+  profile_feature: true
+- type_id: T-12
+  name_zh: 机器人／脚本下注
+  category: 会员风险 · 行为机械性
+  tls: T3·L3·S3
+  primary_deliverable: K01_risk_feature_matrix.csv
+  supporting_deliverables:
+  - X_combo.csv
+  - T03_arbitrage.csv
+  - T_table_span.csv
+  sql_section: §K01 · §X-01 · §E1-07
+  criterion_columns:
+  - column: stake_cv
+    source: K01_risk_feature_matrix.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: low
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解（注额近乎恒定＝机械特征）
+  - column: side_entropy
+    source: K01_risk_feature_matrix.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: low
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: progress
+    source: X_combo.csv
+    criterion_role: REFERENCE
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 局内进度参照
+  - column: 下注时点延迟方差
+    source: 待建（bet08 − gi004 之会员内方差）
+    criterion_role: STAT_DIRECTIONAL
+    direction: low
+    threshold: null
+    threshold_status: BLOCKED
+    threshold_note: ★特征待建，见 B-07
+  evidence_tier: UNKNOWN
+  gate: CONDITIONAL
+  severity: S3
+  admit_to_scoring: false
+  admit_to_profile: true
+  verdict: 判据构想合理但核心特征尚未建成：脚本之决定性痕迹是「下注延迟的方差极小」， 而该特征目前不存在于任何交付件，须自 bet08 与 gi004（开局时间）差分现建。 注意 §E1-07
+    已实测局时长桌内 SD≈5 秒、桌间 SD=18.2 秒—— 延迟方差之基线必须按桌分层，否则桌间差异会冒充个体机械性。
+  blockers:
+  - B-07
+  unblock_conditions:
+  - 自 bet08 − gi004 现建会员内下注延迟方差，并按桌台分层标准化
+  - 先通过第〇批时区守卫（§TZ-01…TZ-05），确认 bet08 落库时区后方可做时点差分
+  - 与 T-05 联合裁定：低 stake_cv 亦是机械对冲特征，须以延迟方差区分二者
+  standard_basis: 无对口外部标准 · 本项目自订
+  phenomenon_status: UNKNOWN
+  label_validation_status: BLOCKED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: PROFILE_CANDIDATE
+  blocker_state: BLOCKED(B-07)
+  profile_display: true
+  profile_feature: true
+- type_id: T-13
+  name_zh: 夜间异常活动
+  category: 会员风险 · 时段
+  tls: T3·L3·S3
+  primary_deliverable: K01_risk_feature_matrix.csv
+  supporting_deliverables:
+  - B_online_base.csv
+  - S05_member_month_panel.csv
+  sql_section: §K01 · §B-01 · §TZ-04b
+  criterion_columns:
+  - column: night_share
+    source: K01_risk_feature_matrix.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: BLOCKED
+    threshold_note: ★夜间定义依赖时区，见 B-08
+  - column: bet_hour
+    source: K01_risk_feature_matrix.csv
+    criterion_role: REFERENCE
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 小时轴，非阈值
+  evidence_tier: UNKNOWN
+  gate: CONDITIONAL
+  severity: S3
+  admit_to_scoring: false
+  admit_to_profile: true
+  verdict: 特征已在矩阵中，但从未使用，且「夜间」之定义悬于时区未定： §TZ-04b（全窗逐小时分布反推落库时区）之结论若未固化，night_share 的分子口径即不成立。 另须以 §B-01
+    在线人数基准作分母校正——深夜在线基数本就低， 不校正则「夜间占比高」只是反映平台整体作息，而非个体异常。
+  blockers:
+  - B-08
+  unblock_conditions:
+  - 先完成第〇批 §TZ-01…§TZ-05 时区与营业日守卫，书面固化落库时区与切点
+  - 以 §B-01 在线人数基准做时段暴露校正（分母）后再算相对夜间偏好
+  - 跨币别会员须按其所在时区分层，禁止以单一平台时区一刀切
+  standard_basis: 无对口外部标准 · 本项目自订
+  phenomenon_status: UNKNOWN
+  label_validation_status: BLOCKED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: PROFILE_CANDIDATE
+  blocker_state: BLOCKED(B-08)
+  profile_display: true
+  profile_feature: true
+- type_id: T-14
+  name_zh: 限红试探
+  category: 会员风险 · 试探性行为
+  tls: T3·L3·S3
+  primary_deliverable: TL14_limit_treatment.csv
+  supporting_deliverables:
+  - ods_a168_bet_limit_default
+  - ods_a168_tablelimit
+  - ods_a168_betchange_log
+  - ods_a168_change_log
+  sql_section: §TL14 · §TL02
+  criterion_columns:
+  - column: 注额贴顶率
+    source: 待建（bet13/限红上限 之贴顶比例）
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: BLOCKED
+    threshold_note: ★特征待建，见 B-09
+  - column: 贴顶后回撤
+    source: 待建（贴顶遭拒后之下一注额）
+    criterion_role: REFERENCE
+    direction: ''
+    threshold: null
+    threshold_status: BLOCKED
+    threshold_note: 试探特征待建
+  - column: limit_change_time
+    source: ods_a168_betchange_log
+    criterion_role: JOIN_KEY
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 时点对齐键
+  evidence_tier: UNKNOWN
+  gate: BLOCK
+  severity: S2
+  admit_to_scoring: false
+  admit_to_profile: false
+  verdict: 本类有一处易致全盘错误的时点陷阱：ods_a168_bet_limit_default 与 tablelimit 所载为「当前快照」，而分析窗口跨 139 天，期间限红曾经变更。 以今日限红去除历史注额，算出的贴顶率全错且无任何报警。
+    须先自 change_log／betchange_log 还原逐时点有效限红（PIT 重建），方可开工。
+  blockers:
+  - B-09
+  unblock_conditions:
+  - 自 §TL02 配置变更与 betchange_log 还原逐时点有效限红（PIT，参照 §PIT-01 修订滞后守卫）
+  - 限红本身亦是风控处置手段（TL14），须区分『会员试探限红』与『风控调降限红』两种因果方向，禁止倒果为因
+  - 限红按桌台与币别分层，禁止跨币别直接比较注额
+  standard_basis: 无对口外部标准 · 本项目自订
+  phenomenon_status: UNKNOWN
+  label_validation_status: BLOCKED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: PROFILE_CANDIDATE
+  blocker_state: BLOCKED(B-09)
+  profile_display: false
+  profile_feature: false
+- type_id: T-15
+  name_zh: 静默复活／账户接管
+  category: 会员风险 · 生命周期
+  tls: T3·L3·S3
+  primary_deliverable: S01_player_score.csv
+  supporting_deliverables:
+  - S05_member_month_panel.csv
+  - P_player_month.csv
+  - I_ip_player.csv
+  - ods_a168_log_mem_change
+  sql_section: §S-01 · §S-05 · §P-01
+  criterion_columns:
+  - column: silent_days
+    source: S01_player_score.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: high
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 待反解
+  - column: 生命周期阶段
+    source: S01_player_score.csv
+    criterion_role: STATE
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 状态量，非阈值
+  - column: span_days
+    source: S01_player_score.csv
+    criterion_role: REFERENCE
+    direction: ''
+    threshold: null
+    threshold_status: NO_THRESHOLD_BY_DESIGN
+    threshold_note: 在场跨度参照
+  - column: 活跃稳定
+    source: S05_member_month_panel.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: jump
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 月度跃变，待反解
+  - column: 流水贡献
+    source: S05_member_month_panel.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: jump
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 月度跃变，待反解
+  - column: n_ip
+    source: S05_member_month_panel.csv
+    criterion_role: STAT_DIRECTIONAL
+    direction: jump
+    threshold: null
+    threshold_status: PENDING_INVERSE
+    threshold_note: 复活同时换 IP ＝ 接管强线索
+  evidence_tier: UNKNOWN
+  gate: CONDITIONAL
+  severity: S3
+  admit_to_scoring: false
+  admit_to_profile: true
+  verdict: 窗口长度构成根本限制：分析窗口仅 139 天，而 S05 面板实测 112,798 名会员 （占 67.1%）只现身 1 个月、6 个月全勤者仅 2.01%。 在如此结构下，「长眠后复活」与「新客首月」「流失后偶回」在数据上无法区分——
+    silent_days 之长眠阈值若在窗口内反解，必然被窗口截断污染。 须以更长历史窗口重取数方可成立。
+  blockers:
+  - B-10
+  unblock_conditions:
+  - 以显著长于 139 天之窗口重取会员活跃史，消除左截断
+  - 复活事件须与 ods_a168_log_mem_change 处置台账对齐，排除『解封后复活』之混淆
+  - 『复活同时 IP 全换』方为接管线索；单纯复活不足以构成判据
+  standard_basis: 间接对应 AUSTRAC 身份类与资金类红旗（非约束性参考）；量化判据为本项目自订
+  phenomenon_status: UNKNOWN
+  label_validation_status: BLOCKED
+  causal_status: NOT_ESTABLISHED
+  admit_to_feature_scoring: false
+  admit_to_risk_decision: false
+  lifecycle_state: PROFILE_CANDIDATE
+  blocker_state: BLOCKED(B-10)
+  profile_display: true
+  profile_feature: true
+treatment_status:
+  warning: ⛔ 下游任何文档不得因某一级 CLOSED 而推断上级已解。 「lmc02 接线键已解」≠「treatment 已解」。 「lmc04」是日志操作类型，不是 treatment taxonomy——treatment
+    须按字段定义。 凡把 Probe-02 写作「已验证」「treatment 已定义」「已完成处置识别」者，判 REDTEAM FAIL。
+  levels:
+  - id: S1
+    name: ENTITY JOIN
+    detail: lmc02 → member_id；lmc03 = 7 为会员
+    status: CLOSED
+  - id: S2
+    name: EVENT SEMANTICS
+    detail: lmc05 文本 → 字段级变更
+    status: PARTIALLY CLOSED
+  - id: S3
+    name: TREATMENT MAPPING
+    detail: 风控字段 → treatment 类别
+    status: OPEN
+  - id: S4
+    name: OUTCOME LINKAGE
+    detail: treatment → 后续投注行为
+    status: OPEN
+  blocked_until_S3_S4_closed:
+  - HMM
+  - 处置效应估计
+  - PSM
+  - DID
+  - 任何因果分析
+  probe02_overall: OPEN
+admission_dichotomy:
+  principle: 登记册 ≠ 评分结果 ≠ 评分主表。某类型 admit_to_scoring = true 仅表示 「证据等级容许其进入评分」，**不表示其主表交付件已存在**。 评分不得因登记册存在而假定主表已备。
+  evidence_vs_table:
+  - type_id: T-04
+    主表: C06_hedge_pairs.csv
+    证据存在: true
+    主表已取: false
+  - type_id: T-05
+    主表: T03_arbitrage.csv
+    证据存在: true
+    主表已取: false
+    备注: 惟已另有 §Z-14 直算之标注样本 367 行，可作正例，不可作全集
+  - type_id: T-08
+    主表: E02_segment_econ.csv
+    证据存在: true
+    主表已取: false
+  note: 本会话所见交付件 20 件／声明 83 件；上列三张评分主表一件未取。
+blockers:
+- id: B-01
+  affects:
+  - T-01
+  title: 同桌候选档污染
+  detail: 候选_同桌异常_最终版_已去重.csv 无生成声明，疑 round_key 折叠污染
+  severity: S1
+  status: OPEN
+- id: B-02
+  affects:
+  - T-02
+  title: R03b 导出截断
+  detail: 止于 6,143,388 行 vs 预期 18,139,550 行；182 批次查询全部 success，分支 B 已排除；停止原因 UNKNOWN
+  severity: S2
+  status: OPEN
+- id: B-03
+  affects:
+  - T-06
+  title: 异常 IP 阈值口径悬案
+  detail: n_member_ip>=20 在原始成员口径为 P64、在有效成员口径为 P98.7
+  severity: S3
+  status: OPEN
+- id: B-04
+  affects:
+  - T-07
+  title: bet09 玩法未拆分
+  detail: 23 种玩法取值未拆；边注与主注 P&L 未分离，庄家优势结构不同
+  severity: S3
+  status: OPEN
+- id: B-05
+  affects:
+  - T-09
+  title: 单链人数归因未定
+  detail: member_per_chain 榜首 2,132 人，未确认是否 CGNAT 或代理归并所致
+  severity: S3
+  status: OPEN
+- id: B-06
+  affects:
+  - T-11
+  title: 设备指纹字段缺失（真数据缺口）
+  detail: ODS 二十张源表中无任何设备指纹字段；仅凭 IP 无法区分多开与同网段多住户（§C-08 榜首为 CGNAT 饱和段）。另 member_dtl 注册时间字段名未经 Z03 词典核实
+  severity: S2
+  status: OPEN
+  remedy_owner: 产品侧埋点
+- id: B-07
+  affects:
+  - T-12
+  title: 下注延迟方差特征未建
+  detail: 脚本之决定性痕迹为下注延迟方差，须自 bet08 − gi004 现建，且须按桌分层（§E1-07 实测桌内 SD≈5s、桌间 SD=18.2s）
+  severity: S3
+  status: OPEN
+- id: B-08
+  affects:
+  - T-13
+  title: 夜间口径悬于时区未定
+  detail: night_share 之分子依赖落库时区，§TZ-04b 结论未固化；且未以 §B-01 在线基准做时段暴露校正
+  severity: S3
+  status: OPEN
+- id: B-09
+  affects:
+  - T-14
+  title: 限红为当前快照，未做 PIT 重建
+  detail: bet_limit_default／tablelimit 载当前值，窗口跨 139 天期间限红曾变更；以今日限红除历史注额则贴顶率全错且无报警。另须区分会员试探与风控调降两种因果方向
+  severity: S2
+  status: OPEN
+- id: B-11
+  affects:
+  - T-05
+  - T-08
+  title: valid_bet 实现分叉（F-02）——当前窗口内影响为零
+  detail: §T03／§B01／§B01-D／§K01 用 COALESCE(vb_raw, stake_raw) 回退本金， §E02c／§DX-05／§EX／§PIT-01 等直取（空即 NULL）——源码差异属事实。
+    惟 2026-08-18 §Z-12／§Z-14 双版实测：本窗口内源库 validbet **零 NULL** （n_validbet_dbnull = 0／361 行、n_vb_null =
+    0／393 行）， 故两种实现在本窗口产出完全相同，跨章合计当前可行。 ⚠ NULL 率为零非结构性保证，换窗口、换币种、换产品须重验； 故本项不闭，降为随窗口复检之常设项。
+  severity: S3
+  status: OPEN·随窗口复检
+- id: B-10
+  affects:
+  - T-15
+  title: 窗口过短致长眠不可辨
+  detail: 窗口 139 天；S05 实测 112,798 人（67.1%）仅现身 1 个月、6 月全勤仅 2.01%，长眠复活与新客首月在数据上不可区分（左截断）
+  severity: S3
+  status: OPEN
+candidates: []
+open_questions:
+- id: Q-01
+  question: a168 之持牌辖区为何？
+  impact: 决定甲组法定标准中哪几项对本平台具法律约束力；若未确立而对外宣称『符合国际标准』，构成不实陈述风险
+  severity: S1
+  status: UNKNOWN
+- id: Q-02
+  question: S05 面板正例数版本身份（本档 255 会员-月／124 会员 vs SQL 总包 L6848–6851 记载之 251／252／125）
+  impact: 三组数字并存，凡对外引用正例数须随附所据版本 MD5
+  severity: S3
+  status: UNKNOWN
+- id: Q-04
+  question: P01A-contract-2：窗口内是否存在 bet16 > 0 且 bet41 = 0 之注单？
+  impact: 若存在，则「bet16 为 bet41 之派生」之说立即动摇。 ⛔ 不得以全表口径之读数（该处为 0）替代窗口实测。
+  severity: S3
+  status: OPEN · non-blocking（不阻塞 T-05 重推）
+- id: Q-03
+  question: 『三种套利模式』之官方定义
+  impact: 本册按数据结构反推为 T-05 自我对冲／T-04 跨账户对打／T-08 退水占成套利，属 INFERRED，待确认
+  severity: S3
+  status: UNKNOWN
+scoring_matrix:
+  principle: 不做单一分数。行为维度对外部标签 AUC≈0.5 乃至反向，规模维度 AUC 高但受复核强度混杂污染； 压成一个分数等于让『注额大』冒充『风险高』，业务读不懂亦不服。
+  risk_axis_rule: 风险轴仅由 admit_to_scoring=true 之类型构成；每一分必须可溯源到某一交付件某一列。
+  cells:
+  - value: V3
+    risk: R3
+    action: 立即复核 · 处置须高层批准（高价值×强证据）
+  - value: V3
+    risk: R2
+    action: 优先复核
+  - value: V3
+    risk: R1
+    action: 观察 · 保护优先（勿误伤）
+  - value: V2
+    risk: R3
+    action: 复核
+  - value: V2
+    risk: R2
+    action: 进复核队列
+  - value: V2
+    risk: R1
+    action: 常规
+  - value: V1
+    risk: R3
+    action: 复核
+  - value: V1
+    risk: R2
+    action: 抽检
+  - value: V1
+    risk: R1
+    action: 不动
+vertical_chain:
+  note: 纵向证据升级链（四逻辑层，非字段层）；其余字段为横向正交元数据（criterion_role／threshold_status／external_standard_status／applicability_status／lifecycle_state／blocker_state）。
+  L1: Evidence / Phenomenon
+  L2: Label Validation
+  L3: Causal / Mechanism
+  L4: Admission
+  iron_rule: OBSERVED ≠ LABEL_VALIDATED ≠ CAUSALLY_ESTABLISHED ≠ ADMITTED_TO_RISK_DECISION；逐层独立举证，禁止跨层滑移。
+state_machine:
+  name: 主生命周期状态 × 阻断门禁双轴状态机
+  lifecycle_states:
+  - SHADOW_MODEL
+  - PROFILE_CANDIDATE
+  - FATAL_PROFILE_ONLY
+  - INTERNAL_CONTROL
+  blocker_states:
+  - UNBLOCKED
+  - BLOCKED(B-xx)
+  note: BLOCKED 非生命周期层，系 admission gate 之状态；两轴独立并存（例：T-05 SHADOW_MODEL × BLOCKED(B-11·随窗口复检)）。
+gates:
+  source: 尾段投注基础分析的评估_v1_2_47（§gate5_五门状态，OBSERVED）
+  G01:
+    name: 真实靴生命周期
+    status: FAIL
+  G02:
+    name: uid×shoe_id 逐靴配对
+    status: FAIL
+  G03:
+    name: 晚／早双侧最小暴露
+    status: PARTIAL
+  G04:
+    name: 多重校正 raw→BH/Holm
+    status: RENDER_COMPUTED
+    note: 状态由评估档渲染现算判定，不得静态断言
+  G05:
+    name: 真正跨窗 OOS
+    status: FAIL
+  global_gate_status: NOT_PASS
+mcid_cost_anchor_status: BLOCKED（待 Treatment Ledger 完成）
+unlock_predicate:
+  risk_decision_unlock: (gates.G01=='PASS') AND (gates.G02=='PASS') AND (gates.G03=='PASS')
+    AND (gates.G04=='PASS') AND (gates.G05=='PASS')
+    AND (type.label_validation_status=='TESTED_PASS')
+    AND (type.causal_status=='ESTABLISHED')
+    AND (mcid_cost_anchor_status=='ESTABLISHED')
+  rules:
+  - 五门任一非 PASS 时 admit_to_risk_decision 不得解锁（R22）
+  - L3 因果层不得跳过：causal_status 非 ESTABLISHED 时 admit_to_risk_decision 不得解锁（v1.5.0 新增，补 L3）
+  - SUPERSEDED 证据不得满足 TESTED_PASS（R20，血统防复活，与 T-03 禁复活同构）
+  - external_standard_status 不得作为四层升级证据（R25）
+  - profile_feature ≠ admit_to_feature_scoring，评分管线只准 JOIN admit_to_feature_scoring（R24）
+evidence_registry:
+- id: EV-T05-166
+  type_id: T-05
+  desc: 166 会员-月／133 名会员 纯度100% 标注样本（旧 S05 口径 >=30）
+  status: SUPERSEDED
+  superseded_by: EV-T05-Z14-367
+  rule: 可引用以解释历史版本，不得满足当前 TESTED_PASS
+- id: EV-T05-Z14-367
+  type_id: T-05
+  desc: §Z-14 逐层反解口径（>=5）标注样本 367 行
+  status: VALID
+  note: 可作正例，不可作全集
+invariants:
+  risk_typology_count: 15
+  risk_criterion_count: 65
+  value_axis_count: 1
+  registered_criterion_count: 66
+  stat_directional_count: 42
+  criterion_role_totals:
+    STAT_DIRECTIONAL: 42
+    REFERENCE: 10
+    JOIN_KEY: 4
+    PROFILE_ONLY: 4
+    FILTER: 1
+    FLAG: 1
+    BUCKET: 1
+    IDENTITY: 1
+    STATE: 1
+    RANK: 1
+  caption_rule: 总表标题一律「15 类风险类型 × 65 条判据维度；另有 V 价值轴 1 条判据，合计 66 条登记判据」；禁以 nrow(REG$dict) 拼「15 × 66」。
+  deprecated_fields:
+    evidence_tier: v1.4.0 保留作对照，v1.5.0 议废（由 phenomenon_status 承继）
+    admit_to_scoring: v1.4.0 保留作对照，v1.5.0 议废（由 admit_to_feature_scoring 承继）
+
+criterion_role_enum:
+- STAT_DIRECTIONAL
+- REFERENCE
+- JOIN_KEY
+- PROFILE_ONLY
+- BUCKET
+- FILTER
+- FLAG
+- RANK
+- STATE
+- IDENTITY
+threshold_status_enum:
+- PENDING_INVERSE
+- NO_THRESHOLD_BY_DESIGN
+- BLOCKED
+- NOT_APPLICABLE
+direction_enum:
+- high
+- low
+- jump
+- abnormal
+direction_rule:
+  rule: direction 仅于 criterion_role == 'STAT_DIRECTIONAL' 时取值；其余一律为空字符串。v1.4.0 之前
+    YAML 将 role 混入 direction（ref/filter/join/profile_only 等），v1.5.0 二者正交分离。
+  enforced_by: migrate_registry_v1_5_0.R §6 SR-3
+  applies_to: typologies[].criterion_columns[] 与 value_axis
+status_enums:
+  phenomenon_status:
+    declared:
+    - OBSERVED
+    - INFERRED
+    - UNKNOWN
+    observed:
+    - INFERRED
+    - OBSERVED
+    - UNKNOWN
+    declared_not_observed: []
+    note: declared 为闭词表；declared 减 observed 为解锁靶标，非填充。
+  label_validation_status:
+    declared:
+    - NOT_TESTED
+    - TESTED_PASS
+    - TESTED_FAIL
+    - REFUTED
+    - BLOCKED
+    - NOT_APPLICABLE
+    observed:
+    - BLOCKED
+    - NOT_APPLICABLE
+    - NOT_TESTED
+    - REFUTED
+    declared_not_observed:
+    - TESTED_PASS
+    - TESTED_FAIL
+    note: declared 为闭词表；declared 减 observed 为解锁靶标，非填充。
+  causal_status:
+    declared:
+    - NOT_ESTABLISHED
+    - ESTABLISHED
+    - REFUTED
+    - NOT_APPLICABLE
+    observed:
+    - NOT_APPLICABLE
+    - NOT_ESTABLISHED
+    - REFUTED
+    declared_not_observed:
+    - ESTABLISHED
+    note: declared 为闭词表；declared 减 observed 为解锁靶标，非填充。
+  lifecycle_state:
+    declared:
+    - SHADOW_MODEL
+    - PROFILE_CANDIDATE
+    - FATAL_PROFILE_ONLY
+    - INTERNAL_CONTROL
+    observed:
+    - FATAL_PROFILE_ONLY
+    - INTERNAL_CONTROL
+    - PROFILE_CANDIDATE
+    - SHADOW_MODEL
+    declared_not_observed: []
+    note: declared 为闭词表；declared 减 observed 为解锁靶标，非填充。
+field_scope_registry:
+  note: schema contract：只描述字段域，不承载值。本册非第三份登记册，SSOT 仍为 YAML 单一。
+  criterion_level:
+  - column
+  - source
+  - criterion_role
+  - direction
+  - threshold
+  - threshold_status
+  - threshold_note
+  type_level_scalar_uploadable:
+  - ranking
+  - scoring
+  - trigger
+  - enforcement
+  - admit_to_control
+  - identity_formula
+  - external_standard_status
+  - applicability_status
+  type_level_nested_yaml_only:
+  - criterion_columns
+  - unblock_conditions
+  - shadow_requirements
+  - observed_facts
+  - forbidden_sources
+  - falsification_evidence
+  - rejected_variants
+  - labelled_samples
+  enforcement: 白名单式，非计数式（§6 SR-5）
+csv_scope:
+  statement: CSV 为 YAML 之扁平投影，非独立 SSOT。每行 = 一条登记判据（type_id x criterion_column）。
+  columns: 40
+  rows: 66
+  excludes:
+  - criterion_columns
+  - unblock_conditions
+  - shadow_requirements
+  - observed_facts
+  - forbidden_sources
+  - falsification_evidence
+  - rejected_variants
+  - labelled_samples
+  excludes_reason: 嵌套结构不可无损扁平，扁平即失真
+  round_trip: CSV -> YAML 可复原判据层；YAML -> CSV 必有损
+registry_counts:
+  total_criterion_rows: 66
+  risk_typology_count: 15
+  value_axis_count: 1
+  risk_criterion_count: 65
+  stat_directional_rows: 42
+  direction_enum_size: 4
+  criterion_role_totals:
+    BUCKET: 1
+    FILTER: 1
+    FLAG: 1
+    IDENTITY: 1
+    JOIN_KEY: 4
+    PROFILE_ONLY: 4
+    RANK: 1
+    REFERENCE: 10
+    STAT_DIRECTIONAL: 42
+    STATE: 1
+  threshold_status_totals:
+    BLOCKED: 7
+    NO_THRESHOLD_BY_DESIGN: 22
+    NOT_APPLICABLE: 1
+    PENDING_INVERSE: 36
