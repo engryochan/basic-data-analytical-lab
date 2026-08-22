@@ -15,7 +15,7 @@ suppressPackageStartupMessages(library(data.table))
 
 build_typology_reports <- function(out_dir = file.path("分析", "风险会员商业方案"),
                                    template = file.path("模板", "风险会员商业方案_模板.qmd"),
-                                   version = "v1.1.0", date = format(Sys.Date(), "%Y-%m-%d")) {
+                                   version = "v1.2.0", date = format(Sys.Date(), "%Y-%m-%d")) {
   source("函数/registry_loader.R")
   REG <- registry_load()
   tpl <- readChar(template, file.size(template), useBytes = TRUE); Encoding(tpl) <- "UTF-8"

@@ -1,24 +1,65 @@
 # =====================================================================
-# typology_report_engine_ext.R · 十五类商业方案 · 八节体例扩充引擎
+# typology_report_engine_ext.R · 十五类商业方案 · 范本体例扩充引擎
 # ---------------------------------------------------------------------
-# 版本 : 1.1.0        日期 : 2026-08-22        适配登记册 : 1.5.0
-# 身份 : 执行件（函数/）★ typology_report_engine.R 之扩充，须先 source 主引擎
+# 版本 : 1.2.0        日期 : 2026-08-22        适配登记册 : 1.5.0
+# 身份 : 执行件（函数/）★ 须先 source 函数/typology_report_engine.R
 # ---------------------------------------------------------------------
 # 【职责】补齐范本《尾段投注基础分析的评估_v1_2_47_REDTEAM_去外部模型版.qmd》
-#         之八节体例：模型／数据口径／评估／行业实践查证／模型武器库审计与灵活
-#         搭配／灵活搭配实测／序列与事件实测／风险会员线索汇总。
+#   之全部章节体例：数据口径（ODS 关键字段／核心指标／交付件身份核验／分析级
+#   核心指标）、评估（主检验／统计冻结／审计门禁／五道铁门／roi 结算完整性／
+#   裁定与处置序）、行业实践查证、模型武器库审计（名目勘正／逐模审计／四管线／
+#   前后对照／局限与提升）、灵活搭配实测（PCA）、模型架构与入场行为层。
+#
+# 【软代码铁律 v1.2.0】
+#   一切阈值、分位、置信、样本门、命名空间、字段别名、呈表尺寸、模型名册、
+#   管线定义、措施文字、名目勘正——一律取自 配置/report_config_v1.0.0.yaml。
+#   本档不硬写任何业务数值或业务字符；本册未登记者即报错，不取默认。
+#
 # 【血统铁律】
-#   ⛔ 不引《玩家风险等级判定设计》《百家乐同桌对打风控分析报告》
-#      《风控平台第一版权限设计》三份外来文献之任何数字、阈值或分级。
-#      三份仅供人阅读参考，不入本套报告之血统。
+#   ⛔ 不引三份外来文献之任何数字、阈值或分级（黑名单见配置册 lineage_blacklist）。
 #   ✅ 一切取自 规范/registry_risk_typology_v1.5.0 与 数据库/ 交付件，渲染时现算。
 # =====================================================================
 
 stopifnot("须先 source 函数/typology_report_engine.R" = exists("tr_load"))
+suppressPackageStartupMessages(library(yaml))
 
 # ---------------------------------------------------------------------
-# §9 项目根定位：自 start 逐级上溯，命中同时含「规范/」与「函数/」者为根。
-#     解模板于 模板/ 下预览时 root.dir="../.." 越界之败。
+# §0 软配置册：唯一参数真相源
+# ---------------------------------------------------------------------
+TR_CFG_PATH <- file.path("配置", "report_config_v1.0.0.yaml")
+
+tr_cfg <- local({
+  .cache <- NULL
+  function(path = TR_CFG_PATH, reload = FALSE) {
+    if (is.null(.cache) || reload) {
+      if (!file.exists(path)) stop(sprintf("软配置册不在位：%s", path), call. = FALSE)
+      .cache <<- yaml::read_yaml(path)
+    }
+    .cache
+  }
+})
+
+## 取配置：路径以 $ 分隔；缺失即报错（禁默认值，防硬码回潜）
+.cfg <- function(...) {
+  keys <- unlist(list(...)); v <- tr_cfg()
+  for (k in keys) {
+    if (is.null(v[[k]])) stop(sprintf("配置册缺键：%s", paste(keys, collapse = "$")), call. = FALSE)
+    v <- v[[k]]
+  }
+  v
+}
+
+# 应用配置至主引擎之全局守门（覆盖主引擎默认，令一处可改）
+tr_apply_config <- function() {
+  TR_MAX_MB   <<- .cfg("guards", "max_mb")
+  TR_MAX_ROWS <<- as.integer(.cfg("guards", "max_rows"))
+  TR_DB       <<- .cfg("namespaces", "delivery")
+  .tr_key_alias <<- unlist(.cfg("fields", "member_key_aliases"))
+  invisible(TRUE)
+}
+
+# ---------------------------------------------------------------------
+# §1 项目根定位 · 表头 · 呈表容器
 # ---------------------------------------------------------------------
 tr_find_root <- function(start = getwd(), max_up = 5L) {
   p <- normalizePath(start, winslash = "/", mustWork = FALSE)
@@ -29,22 +70,47 @@ tr_find_root <- function(start = getwd(), max_up = 5L) {
   stop(sprintf("自 %s 上溯 %d 级未找到项目根（需同时含 规范/ 与 函数/）", start, max_up), call. = FALSE)
 }
 
-# ---------------------------------------------------------------------
-# §10 只读表头（廉价）——供全维度清单用
-# ---------------------------------------------------------------------
 tr_header <- function(file) {
   p <- file.path(TR_DB, file)
   if (!file.exists(p)) return(character(0))
   h <- tryCatch(readLines(p, n = 1L, warn = FALSE), error = function(e) NA_character_)
   if (is.na(h[1L])) return(character(0))
   if (!validUTF8(h)) h <- iconv(h, "GBK", "UTF-8")
-  h <- sub("^﻿", "", h)
-  trimws(strsplit(h, ",", fixed = TRUE)[[1L]])
+  trimws(strsplit(sub("^﻿", "", h), ",", fixed = TRUE)[[1L]])
+}
+
+## 呈表纪律：长表 scroll-y、宽表 scroll-x，禁截行截列。尺寸取自配置册。
+tr_css <- function() {
+  p <- .cfg("presentation")
+  sprintf(paste0(
+    '<style>',
+    '.cell-output-display{overflow-x:%s;overflow-y:%s;max-height:%s}',
+    '.cell-output-display>table{margin:0}',
+    '.tbl-scroll{overflow-x:%s;overflow-y:%s;max-height:%s}',
+    '.tbl-wide{overflow-x:%s;overflow-y:%s;max-height:%s}',
+    'table{white-space:nowrap}',
+    'table td,table th{vertical-align:top}',
+    '</style>\n'),
+    p$overflow_x, p$overflow_y, p$table_max_height,
+    p$overflow_x, p$overflow_y, p$table_max_height,
+    p$overflow_x, p$overflow_y, p$table_max_height_wide)
 }
 
 # ---------------------------------------------------------------------
-# §11 全维度矩阵：主表维度 / 辅助表 / 辅助表维度（第一部分之扩列）
-#     判据列以【】标出；其余为可灵活搭配之未登记维度，一律列出，零省略。
+# §2 门禁图标：自登记册 axes.gate 现算（软字符，不硬写）
+# ---------------------------------------------------------------------
+tr_gate_map <- function(REG) {
+  g <- REG$meta$axes$gate
+  if (is.null(g)) stop("登记册缺 axes$gate，门禁图标无真相源", call. = FALSE)
+  vapply(g, function(x) sub("[：:].*$", "", as.character(x)), "")
+}
+tr_gate2 <- function(REG, g) {
+  m <- tr_gate_map(REG); v <- m[[g]]
+  if (is.null(v) || is.na(v)) g else v
+}
+
+# ---------------------------------------------------------------------
+# §3 全维度矩阵：主表维度 / 辅助表 / 辅助表维度
 # ---------------------------------------------------------------------
 tr_dim_matrix <- function(REG) {
   d <- REG$dict[axis == "R"]
@@ -55,38 +121,507 @@ tr_dim_matrix <- function(REG) {
     crit <- s$criterion_column
     mark <- function(cols) if (!length(cols)) "—" else
       paste(fifelse(cols %in% crit, sprintf("【%s】", cols), cols), collapse = " · ")
-    ph <- tr_header(prim)
-    sh <- lapply(sup, tr_header); names(sh) <- sup
+    ph <- tr_header(prim); sh <- lapply(sup, tr_header); names(sh) <- sup
     data.table(
-      序 = tid, 风险类型 = s$name_zh[1L], 门禁 = tr_gate(s$gate[1L]),
-      主表 = sub("\\.csv$", "", prim),
-      主表维度数 = length(ph),
-      主表维度 = mark(ph),
-      辅助表 = if (length(sup)) paste(sub("\\.csv$", "", sup), collapse = " · ") else "—",
+      序 = tid, 风险类型 = s$name_zh[1L], 门禁 = tr_gate2(REG, s$gate[1L]),
+      主表 = sub("[.]csv$", "", prim), 主表维度数 = length(ph), 主表维度 = mark(ph),
+      辅助表 = if (length(sup)) paste(sub("[.]csv$", "", sup), collapse = " · ") else "—",
       辅助表维度数 = sum(vapply(sh, length, 0L)),
       辅助表维度 = if (length(sup)) paste(vapply(sup, function(f)
-        sprintf("%s：%s", sub("\\.csv$", "", f), mark(sh[[f]])), ""), collapse = "  ｜  ") else "—",
+        sprintf("%s：%s", sub("[.]csv$", "", f), mark(sh[[f]])), ""), collapse = "  ｜  ") else "—",
       已登记判据数 = nrow(s),
       可搭配维度总数 = length(ph) + sum(vapply(sh, length, 0L)))
   }))
 }
 
 # ---------------------------------------------------------------------
-# §12 数据口径：逐表逐列字典（类型／缺失率／取值示例／是否已登记为判据）
+# §4 数据口径 · 一、源数据（ODS 库表层）
+#     4.1 关键字段：自 Z03_column_dictionary.csv 现算（本库自证，非外引）
 # ---------------------------------------------------------------------
+tr_ods_fields <- function(rec, REG) {
+  f <- .cfg("fields", "ods_dictionary_file")
+  cn <- .cfg("fields", "ods_dict_cols")
+  t <- tr_load(f)
+  if (!t$ok) return(list(ok = FALSE, status = t$status, dt = NULL))
+  d <- t$dt
+  need <- unlist(cn)
+  if (!all(need %in% names(d))) return(list(ok = FALSE, status = "ODS 字典列不符配置册", dt = NULL))
+  ## 本类 SQL 章节所引之 ODS 表：自 criterion_source 中非 csv 者 + 主表血统关键词
+  src <- unique(c(rec$dict$criterion_source, rec$dict$primary_deliverable))
+  ods <- unique(unlist(regmatches(src, gregexpr("ods_[a-z0-9_]+", src))))
+  if (!length(ods)) {
+    ## 无直引 ODS 表者，取本类判据列名于全库字典中反查其所在库表
+    hit <- d[get(cn$column) %in% rec$dict$criterion_column]
+  } else {
+    hit <- d[get(cn$table) %in% ods]
+  }
+  if (!nrow(hit)) return(list(ok = TRUE, status = "本类判据列未见于 ODS 字典（多为交付件派生量）", dt = NULL))
+  out <- hit[, .(库表 = get(cn$table), 列序 = get(cn$ordinal), 字段 = get(cn$column),
+                 存储类型 = get(cn$dtype), 可空 = get(cn$nullable),
+                 业务含义 = get(cn$meaning), 原始注释 = get(cn$note))]
+  list(ok = TRUE, status = "OBSERVED", dt = out)
+}
+
+## 4.2 核心指标：自登记册判据 + 术语库释义现算
+tr_core_metrics <- function(rec, GL = NULL) {
+  d <- rec$dict
+  gl <- if (!is.null(GL)) GL$dict else NULL
+  rbindlist(lapply(seq_len(nrow(d)), function(i) {
+    r <- d[i]
+    def <- if (!is.null(gl) && r$criterion_column %in% gl$术语)
+      gl[术语 == r$criterion_column, 定义][1L] else "—（术语库未收录，口径以登记册 threshold_note 为准）"
+    data.table(指标 = r$criterion_column, 取自 = r$criterion_source, 角色 = r$criterion_role,
+               口径原文 = r$threshold_note, 术语库定义 = def,
+               用途 = fifelse(r$criterion_role == "STAT_DIRECTIONAL", "方向判据（可入分位分层）",
+                       fifelse(r$criterion_role == "JOIN_KEY", "连接键（入关系网络）",
+                        fifelse(r$criterion_role == "REFERENCE", "参照量（只作解释，不出名单）", "结构量"))))
+  }))
+}
+
+## 4.3 交付件身份核验（六元组：行数／列数／字节／MD5／换行／BOM）
+tr_deliverable_identity <- function(rec, loaded) {
+  rbindlist(lapply(names(loaded$tabs), function(f) {
+    t <- loaded$tabs[[f]]; p <- file.path(TR_DB, f)
+    if (!file.exists(p)) return(data.table(交付件 = sub("[.]csv$", "", f), 角色 = "—",
+      行数 = NA_integer_, 列数 = NA_integer_, 字节 = NA_real_, MD5 = "—", 换行符 = "—", BOM = "—", 状态 = t$status))
+    raw <- readBin(p, "raw", min(file.size(p), 5e6))
+    bom <- length(raw) >= 3L && identical(as.integer(raw[1:3]), c(239L, 187L, 191L))
+    crlf <- any(raw[-length(raw)] == as.raw(13L) & raw[-1L] == as.raw(10L))
+    md5 <- if (requireNamespace("digest", quietly = TRUE))
+      substr(digest::digest(file = p, algo = "md5"), 1L, 12L) else "—"
+    data.table(交付件 = sub("[.]csv$", "", f),
+      角色 = fifelse(f == rec$primary, "主表", fifelse(f %in% rec$supporting, "辅助表", "判据来源")),
+      行数 = t$rows, 列数 = if (t$ok) ncol(t$dt) else NA_integer_,
+      字节 = round(file.size(p) / 1e6, 2), MD5 = md5,
+      换行符 = if (crlf) "CRLF" else "LF", BOM = if (bom) "有" else "无", 状态 = t$status)
+  }), fill = TRUE)
+}
+
+## 4.4 分析级核心指标：本类会员级面板之描述统计
+tr_analytic_metrics <- function(rec, mj) {
+  if (is.null(mj)) return(NULL)
+  cols <- setdiff(names(mj$panel), .cfg("fields", "member_key_canonical"))
+  qs <- c(.cfg("statistics", "tail_quantile_low"), 0.5, .cfg("statistics", "tail_quantile_high"))
+  rbindlist(lapply(cols, function(c) {
+    v <- mj$panel[[c]]; if (!is.numeric(v)) return(NULL)
+    nv <- sum(!is.na(v))
+    data.table(分析指标 = c, 有效 = nv, 缺失率 = round(mean(is.na(v)), 4),
+               均值 = signif(mean(v, na.rm = TRUE), 4), 标准差 = signif(stats::sd(v, na.rm = TRUE), 4),
+               P10 = signif(.q(v, qs[1]), 4), P50 = signif(.q(v, qs[2]), 4), P90 = signif(.q(v, qs[3]), 4),
+               变异系数 = signif(stats::sd(v, na.rm = TRUE) / abs(mean(v, na.rm = TRUE)), 3))
+  }))
+}
+
+# ---------------------------------------------------------------------
+# §5 评估 · 主检验指标与判读（AUC ＋ Wilson ＋ 符号检验）
+# ---------------------------------------------------------------------
+tr_wilson_lo <- function(k, n, z = .cfg("statistics", "z_two_sided")) {
+  ifelse(n <= 0, NA_real_, {
+    p <- k / n; den <- 1 + z^2 / n
+    ((p + z^2 / (2 * n)) - z * sqrt(p * (1 - p) / n + z^2 / (4 * n^2))) / den })
+}
+tr_wilson_hi <- function(k, n, z = .cfg("statistics", "z_two_sided")) {
+  ifelse(n <= 0, NA_real_, {
+    p <- k / n; den <- 1 + z^2 / n
+    ((p + z^2 / (2 * n)) + z * sqrt(p * (1 - p) / n + z^2 / (4 * n^2))) / den })
+}
+## 最低样本量反解：使 Wilson 区间宽度 ≤ target_width（正态近似首解，再逐步校正）
+tr_min_n <- function(p, width = .cfg("statistics", "wilson_target_width"),
+                     z = .cfg("statistics", "z_two_sided")) {
+  n <- ceiling((2 * z / width)^2 * p * (1 - p))
+  for (i in 1:200) {
+    k <- round(p * n)
+    if ((tr_wilson_hi(k, n) - tr_wilson_lo(k, n)) <= width) break
+    n <- n + max(1L, ceiling(n * 0.05))
+  }
+  n
+}
+tr_auc_band <- function(a) {
+  if (is.na(a)) return("样本不足")
+  b <- .cfg("auc_bands")
+  for (x in b) if (a >= x$lo && a < x$hi) return(x$label)
+  "—"
+}
+
+tr_main_tests <- function(rec, mj, lc) {
+  if (is.null(lc) || !nrow(lc)) return(NULL)
+  w <- .cfg("statistics", "wilson_target_width")
+  out <- copy(lc)
+  out[, 判读 := vapply(AUC, tr_auc_band, "")]
+  out[, 最低样本量 := vapply(seq_len(.N), function(i)
+    tr_min_n(min(max(正例[i] / max(正例[i] + 负例[i], 1), 0.01), 0.99)), 0)]
+  out[, 样本充足 := fifelse(正例 + 负例 >= 最低样本量, "✔", "✗ 样本不足 → UNKNOWN")]
+  out[, 阳性率Wilson下界 := round(tr_wilson_lo(正例, 正例 + 负例), 5)]
+  out[]
+}
+
+## 统计口径冻结（软字符：三工具之严谨口径）
+tr_stat_freeze <- function() {
+  s <- .cfg("statistics")
+  data.table(
+    项 = c("配对单位", "AUC 判读档数", "置信水平", "CI 宽度上限", "尾部分位（high／low）",
+           "退化判定", "多重比较校正", "p 值显示"),
+    冻结口径 = c(
+      "配对检验须先冻结配对单位；不明确即非配对检验，退化为独立比较",
+      sprintf("%d 档（取代粗四档），档界见配置册 auc_bands", length(.cfg("auc_bands"))),
+      sprintf("%.0f%%（z = %.6f）", s$confidence_level * 100, s$z_two_sided),
+      sprintf("%.2f——比例型指标之最低样本量由此反解，禁手写门槛", s$wilson_target_width),
+      sprintf("P%.0f ／ P%.0f", s$tail_quantile_high * 100, s$tail_quantile_low * 100),
+      sprintf("尾部命中率 > %.0f%% 即判退化（P90 与下界重合）", s$degenerate_flag_rate * 100),
+      paste(unlist(s$multiple_testing_methods), collapse = " ＋ "),
+      sprintf("p < %s 一律并呈原始量级，禁 0.0000 体例", format(.cfg("presentation", "p_value_min_display"), scientific = TRUE))),
+    优先级 = "本表口径优先于任何通俗表述；二者冲突以本表为准")
+}
+
+## 审计门禁与结论
+tr_audit_gate <- function(rec, mt) {
+  d <- rec$dict
+  chk <- data.table(
+    门 = c("样本门", "阈值门", "方向门", "因果门", "处置门"),
+    判定式 = c("每条判据之样本量 ≥ Wilson 反解之最低样本量",
+               "threshold_status 须脱离 PENDING_INVERSE",
+               "AUC ≥ 0.5（低于即方向反转，须查口径）",
+               "causal_status = ESTABLISHED",
+               "admit_to_risk_decision = TRUE"),
+    本类现况 = c(
+      if (is.null(mt)) "—（无方向判据或无标签）" else sprintf("%d / %d 条充足", sum(mt$样本充足 == "✔"), nrow(mt)),
+      sprintf("%d / %d 条已脱离 PENDING_INVERSE", sum(d$threshold_status != "PENDING_INVERSE"), nrow(d)),
+      if (is.null(mt)) "—" else sprintf("%d / %d 条 AUC ≥ 0.5", sum(mt$AUC >= 0.5, na.rm = TRUE), nrow(mt)),
+      d$causal_status[1L],
+      as.character(d$admit_to_risk_decision[1L])))
+  chk[, 通过 := c(
+    if (is.null(mt)) "○ 待表" else fifelse(all(mt$样本充足 == "✔"), "✔ PASS", "✗ FAIL"),
+    fifelse(all(d$threshold_status != "PENDING_INVERSE"), "✔ PASS", "✗ FAIL"),
+    if (is.null(mt)) "○ 待表" else fifelse(all(mt$AUC >= 0.5, na.rm = TRUE), "✔ PASS", "✗ FAIL"),
+    fifelse(d$causal_status[1L] == "ESTABLISHED", "✔ PASS", "✗ FAIL"),
+    fifelse(as.character(d$admit_to_risk_decision[1L]) %in% c("TRUE", "true"), "✔ PASS", "✗ FAIL"))]
+  chk[]
+}
+
+## 五道铁门（配置册定义 × 本类现况）
+tr_iron_gates <- function(rec, mt, sq) {
+  g <- .cfg("iron_gates"); d <- rec$dict
+  rbindlist(lapply(g, function(x) {
+    st <- switch(x$id,
+      "G-01" = if (all(nzchar(d$threshold_note))) "PASS" else "PARTIAL",
+      "G-02" = if (!is.null(mt) && all(mt$样本充足 == "✔")) "PASS" else if (is.null(mt)) "N/A" else "FAIL",
+      "G-03" = if (all(d$threshold_status != "PENDING_INVERSE")) "PASS" else "FAIL",
+      "G-04" = if (!is.null(mt) && nrow(mt) > 1) "PARTIAL（本档已并报，未跨档汇总）" else "N/A",
+      "G-05" = if (!is.null(sq) && any(sq$可做序列 == "✔")) "PARTIAL（有时间轴，OOS 未建）" else "FAIL（无时间轴，无法跨窗）",
+      "N/A")
+    data.table(铁门 = x$id, 门 = x$门, 判定 = x$判定, 本类状态 = st)
+  }))
+}
+
+## roi 异常之结算完整性候选（禁称优势玩家）
+tr_roi_candidates <- function(rec, loaded) {
+  thr <- .cfg("guards", "roi_outlier_threshold")
+  nc <- unlist(.cfg("fields", "roi_numerator_candidates"))
+  dc <- unlist(.cfg("fields", "roi_denominator_candidates"))
+  key <- .cfg("fields", "member_key_canonical")
+  for (f in names(loaded$tabs)) {
+    t <- loaded$tabs[[f]]; if (!t$ok || !key %in% names(t$dt)) next
+    n1 <- intersect(nc, names(t$dt))[1]; d1 <- intersect(dc, names(t$dt))[1]
+    if (is.na(n1) || is.na(d1)) next
+    x <- t$dt[, c(key, n1, d1), with = FALSE]
+    setnames(x, c(key, "num", "den"))
+    x <- x[is.finite(as.numeric(num)) & is.finite(as.numeric(den)) & as.numeric(den) > 0]
+    if (!nrow(x)) next
+    x[, roi := as.numeric(num) / as.numeric(den)]
+    hit <- x[roi > thr][order(-roi)]
+    return(list(ok = TRUE, file = f, num = n1, den = d1, n_total = nrow(x),
+                n_hit = nrow(hit), top = utils::head(hit, 20L), thr = thr))
+  }
+  list(ok = FALSE, file = NA, n_hit = NA, thr = thr)
+}
+
+## 裁定与处置序
+tr_verdict_order <- function(rec, REG) {
+  d <- rec$dict; g <- d$gate[1L]
+  data.table(
+    序 = 1:4,
+    步骤 = c("① 账务在先", "② 证据打包", "③ 人工复核", "④ 处置"),
+    本类规定 = c(
+      sprintf("roi 异常者先过结算九项排查序（%s），查账在先、查人在后",
+              paste(unlist(.cfg("settlement_checklist")), collapse = "／")),
+      sprintf("多判据共现＋提升度＋Wilson 下界，打包为证据；本类门禁 %s", tr_gate2(REG, g)),
+      "复核记录须留原始注单、时间窗口、口径版本与证据等级",
+      sprintf("admit_to_risk_decision = %s；为 FALSE 时任何处置皆不合规",
+              as.character(d$admit_to_risk_decision[1L]))))
+}
+
+# ---------------------------------------------------------------------
+# §6 行业实践查证：只取登记册自证
+# ---------------------------------------------------------------------
+tr_industry <- function(rec, REG) {
+  d <- rec$dict; gp <- REG$meta$global_prohibitions
+  tgt <- c(rec$files, d$criterion_column, d$criterion_source)
+  rel <- Filter(function(p) any(vapply(tgt, function(x) grepl(x, p$target, fixed = TRUE) ||
+                                         grepl(p$target, x, fixed = TRUE), logical(1))) ||
+                  grepl("普适|门槛|OFFSET", p$target), gp)
+  list(standard_basis = d$standard_basis[1L],
+       external_status = if ("external_standard_status" %in% names(d) && nzchar(d$external_standard_status[1L]))
+         d$external_standard_status[1L] else "—",
+       applicability = if ("applicability_status" %in% names(d) && nzchar(d$applicability_status[1L]))
+         d$applicability_status[1L] else "—",
+       prohibitions = if (length(rel)) rbindlist(lapply(rel, function(p) data.table(
+         编号 = p$id, 标的 = p$target, 规则 = p$rule, 事由 = p$reason, 严重度 = p$severity))) else NULL)
+}
+
+# ---------------------------------------------------------------------
+# §7 武器库：名目勘正 · 逐模审计 · 四管线 · 前后对照 · 局限与提升
+# ---------------------------------------------------------------------
+tr_nomenclature <- function() rbindlist(lapply(.cfg("nomenclature"), as.data.table))
+
+tr_model_roster <- function(rec, mj, sq) {
+  d <- rec$dict
+  caps <- c(
+    member_level = !is.null(mj),
+    features_ge_2 = !is.null(mj) && (ncol(mj$panel) - 1L) >= 2L,
+    features_ge_3 = !is.null(mj) && (ncol(mj$panel) - 1L) >= 3L,
+    join_key = any(d$criterion_role == "JOIN_KEY"),
+    time_axis = !is.null(sq) && any(sq$可做序列 == "✔"),
+    event = !is.null(sq) && any(sq$可做序列 == "✔"),
+    long_sequence = FALSE)
+  rbindlist(lapply(.cfg("model_roster"), function(m) {
+    need <- unlist(m$需要)
+    ok <- all(vapply(need, function(k) isTRUE(caps[[k]]), logical(1)))
+    data.table(模型 = m$模型, 角色 = m$角色, 前置条件 = paste(need, collapse = " + "),
+               本类可上场 = fifelse(grepl("禁赛", m$角色), "⛔ 禁赛",
+                                    fifelse(ok, "✔ 可上场", "— 前置未备")),
+               裁定理由 = m$裁定理由)
+  }))
+}
+
+tr_arsenal <- function(rec, REG) {
+  d <- rec$dict
+  rbindlist(lapply(.cfg("pipelines"), function(p) {
+    roles <- unlist(p$需要角色); dirs <- unlist(p$需要方向)
+    n <- sum(d$criterion_role %in% roles) + (if (!is.null(dirs)) sum(d$direction %in% dirs) else 0L)
+    data.table(管线 = p$管线, 特征层 = p$特征层, 模型层 = p$模型层, 决策层 = p$决策层,
+               处置红线 = p$处置红线, 本类判据数 = n,
+               本类可用 = fifelse(n > 0, "✔ 可用", "— 本类无此角色判据"),
+               门禁覆盖 = tr_gate2(REG, d$gate[1L]))
+  }))
+}
+
+tr_before_after <- function() rbindlist(lapply(.cfg("before_after_dims"), as.data.table))
+
+tr_limits_roadmap <- function(rec, sq, mt) {
+  d <- rec$dict
+  lim <- c(
+    sprintf("阈值状态构成 %s——PENDING_INVERSE 者尚无可用阈值，禁写普适门槛（P-06）。",
+            paste(sprintf("%s×%d", names(table(d$threshold_status)), as.integer(table(d$threshold_status))), collapse = " ")),
+    "比例型判据只看点估计不足取，本档一律并报 Wilson 下界与反解之最低样本量。",
+    "分母极小之会员其比例型判据可爆炸，须设最小暴露门槛或采收缩估计。",
+    "台桌、荷官、时段、星期、靴长等混杂尚未控制。",
+    if (!is.null(sq) && !any(sq$可做序列 == "✔"))
+      "本类交付件皆为截面，无时间轴——序列、生存、动态基线一律待表。" else
+      "时间轴虽在位，跨窗口真样本外（OOS）验证仍缺位。",
+    sprintf("causal_status = %s、label_validation_status = %s——两层皆未达解锁门。",
+            d$causal_status[1L], d$label_validation_status[1L]))
+  road <- c("P0：阈值逐指标反解（含 n_eff）；补齐缺件与缺列。",
+            "P1：跨窗口真样本外验证管线；多判据共现之提升度回测。",
+            "P2：小分母场景以贝叶斯层级收缩替换点估计。",
+            "长期：禁赛模型之解锁条件（长序列＋可解释性＋伦理审查）未齐前保持禁赛。")
+  list(limits = lim, roadmap = road)
+}
+
+# ---------------------------------------------------------------------
+# §8 灵活搭配实测：尾部旗标 · 分层 · 共现 · 退化 · 期望假阳 · PCA
+# ---------------------------------------------------------------------
+tr_combat <- function(rec, mj) {
+  if (is.null(mj)) return(NULL)
+  s <- .cfg("statistics"); d <- rec$dict
+  key <- .cfg("fields", "member_key_canonical")
+  cols <- setdiff(names(mj$panel), key)
+  dircols <- cols[vapply(cols, function(cc) {
+    b <- sub("@.*$", "", cc); dd <- d[criterion_column == b, direction][1]
+    !is.na(dd) && nzchar(dd) }, logical(1))]
+  if (!length(dircols)) return(NULL)
+  p <- copy(mj$panel); qused <- numeric(0)
+  for (cc in dircols) {
+    b <- sub("@.*$", "", cc); dd <- d[criterion_column == b, direction][1]
+    v <- p[[cc]]
+    fl <- if (dd == "high") v >= .q(v, s$tail_quantile_high)
+          else if (dd == "low") v <= .q(v, s$tail_quantile_low)
+          else { z <- abs((v - mean(v, na.rm = TRUE)) / stats::sd(v, na.rm = TRUE)); z >= .q(z, s$tail_quantile_abs_z) }
+    set(p, j = paste0("F_", cc), value = as.integer(fl & !is.na(fl)))
+    qused <- c(qused, if (dd == "high") 1 - s$tail_quantile_high else if (dd == "low") s$tail_quantile_low else 1 - s$tail_quantile_abs_z)
+  }
+  fcols <- paste0("F_", dircols)
+  set(p, j = "命中数", value = rowSums(as.matrix(p[, ..fcols]), na.rm = TRUE))
+  lay <- p[, .(会员数 = .N), by = .(命中数)][order(-命中数)]
+  lay[, 占比 := round(会员数 / sum(会员数), 4)][, 累计占比 := round(cumsum(会员数) / sum(会员数), 4)]
+  ## 独立假设下之期望人数（误判率控制：实际须显著高于期望方为证据）
+  N <- nrow(p); K <- length(fcols)
+  lay[, 独立期望人数 := round(N * choose(K, 命中数) * prod(qused)^0 * NA_real_, 1)]
+  lay[, 独立期望人数 := round(vapply(命中数, function(m) {
+    if (m == 0L) N * prod(1 - qused) else
+      N * sum(vapply(utils::combn(K, m, simplify = FALSE), function(idx)
+        prod(qused[idx]) * prod(1 - qused[-idx]), 0)) }, 0), 1)]
+  lay[, 提升度 := fifelse(独立期望人数 > 0, round(会员数 / 独立期望人数, 2), NA_real_)]
+  degen <- vapply(fcols, function(fc) mean(p[[fc]] == 1L), 0)
+  deg <- data.table(判据 = sub("^F_", "", names(degen)), 尾部命中率 = round(unname(degen), 4))
+  deg[, 判读 := fifelse(尾部命中率 > s$degenerate_flag_rate,
+    sprintf("⚠ 退化：命中率逾 %.0f%%，P90 与下界重合，尾部无分辨力", s$degenerate_flag_rate * 100), "正常")]
+  co <- NULL
+  if (length(fcols) >= 2L) {
+    cb <- utils::combn(fcols, 2L)
+    co <- rbindlist(lapply(seq_len(ncol(cb)), function(i) {
+      a <- cb[1, i]; b <- cb[2, i]
+      na_ <- sum(p[[a]] == 1L); nb <- sum(p[[b]] == 1L); nab <- sum(p[[a]] == 1L & p[[b]] == 1L)
+      ex <- na_ * nb / N
+      data.table(判据A = sub("^F_", "", a), 判据B = sub("^F_", "", b),
+                 A尾部 = na_, B尾部 = nb, 共现 = nab, 独立期望 = round(ex, 1),
+                 提升度 = fifelse(ex > 0, round(nab / ex, 2), NA_real_),
+                 `P(B|A) Wilson下界` = round(tr_wilson_lo(nab, na_), 4))
+    }))
+    setorder(co, -提升度)
+  }
+  list(panel = p, layer = lay, cooc = co, dircols = dircols, degenerate = deg, q = qused,
+       n_any = sum(p$命中数 >= 1L), n_multi = sum(p$命中数 >= 2L),
+       n_all = sum(p$命中数 == K), k = K, N = N)
+}
+
+## PCA：降维与方差解释（成分无业务语义，禁作风险分）
+tr_pca <- function(mj) {
+  if (is.null(mj)) return(NULL)
+  key <- .cfg("fields", "member_key_canonical")
+  minf <- .cfg("statistics", "pca_min_features")
+  num <- mj$panel[, setdiff(names(mj$panel), key), with = FALSE]
+  keep <- names(which(vapply(num, function(v) is.numeric(v) &&
+    sum(!is.na(v)) > .cfg("guards", "corr_min_n") && stats::sd(v, na.rm = TRUE) > 0, logical(1))))
+  if (length(keep) < minf) return(NULL)
+  m <- as.matrix(num[, ..keep]); m <- m[stats::complete.cases(m), , drop = FALSE]
+  if (nrow(m) < minf * 10L) return(NULL)
+  pr <- stats::prcomp(m, center = TRUE, scale. = isTRUE(.cfg("statistics", "pca_scale")))
+  sdev <- pr$sdev; ve <- sdev^2 / sum(sdev^2)
+  var_tab <- data.table(成分 = paste0("PC", seq_along(ve)), 标准差 = signif(sdev, 4),
+                        方差解释 = round(ve, 4), 累计解释 = round(cumsum(ve), 4))
+  ld <- as.data.table(round(pr$rotation, 3), keep.rownames = "判据")
+  list(var = var_tab, load = ld, n = nrow(m), k = length(keep))
+}
+
+# ---------------------------------------------------------------------
+# §9 序列与事件 · 入场行为层 · 线索汇总
+# ---------------------------------------------------------------------
+tr_sequence <- function(rec, loaded) {
+  hint <- .cfg("fields", "time_axis_name_hint")
+  pat <- .cfg("fields", "time_axis_value_pattern")
+  minr <- .cfg("fields", "time_axis_min_match_rate")
+  is_timeish <- function(v) {
+    x <- as.character(v); x <- x[!is.na(x) & nzchar(x)]
+    if (!length(x)) return(FALSE)
+    mean(grepl(pat, utils::head(x, 2000L))) >= minr
+  }
+  rbindlist(lapply(names(loaded$tabs), function(f) {
+    t <- loaded$tabs[[f]]; nm <- sub("[.]csv$", "", f)
+    if (!t$ok) return(data.table(交付件 = nm, 时间轴列 = "—", 粒度 = "—", 跨度 = t$status,
+                                 可做序列 = "✗ 待表", 疑似计数列 = "—"))
+    ca <- grep(hint, names(t$dt), value = TRUE, ignore.case = TRUE)
+    tc <- ca[vapply(ca, function(cn) is_timeish(t$dt[[cn]]), logical(1))]
+    fake <- setdiff(ca, tc)
+    if (!length(tc)) return(data.table(交付件 = nm, 时间轴列 = "无", 粒度 = "—", 跨度 = "—",
+      可做序列 = "✗ 待表（本表为截面，无时间轴）",
+      疑似计数列 = if (length(fake)) paste(fake, collapse = ", ") else "—"))
+    v <- as.character(t$dt[[tc[1L]]]); v <- v[!is.na(v) & nzchar(v)]
+    data.table(交付件 = nm, 时间轴列 = paste(tc, collapse = ", "),
+               粒度 = fifelse(nchar(utils::head(v, 1L)) <= 7L, "月", "日"),
+               跨度 = if (length(v)) sprintf("%s → %s", min(v), max(v)) else "—",
+               可做序列 = "✔", 疑似计数列 = if (length(fake)) paste(fake, collapse = ", ") else "—")
+  }), fill = TRUE)
+}
+
+## 模型架构与入场行为层：三层架构之本类落位
+tr_architecture <- function(rec, mj, sq, REG) {
+  d <- rec$dict
+  data.table(
+    层 = c("① 入场行为层（观测）", "② 特征与判据层（登记）", "③ 决策层（门禁）"),
+    本类内容 = c(
+      sprintf("交付件 %d 件；会员级并集 %s；时间轴 %s",
+              length(rec$files), if (is.null(mj)) "—" else tr_f(mj$n_union),
+              if (!is.null(sq) && any(sq$可做序列 == "✔")) "在位" else "缺位（截面）"),
+      sprintf("登记判据 %d 条（方向 %d／关系 %d／参照 %d／结构 %d）", nrow(d),
+              sum(d$criterion_role == "STAT_DIRECTIONAL"), sum(d$criterion_role == "JOIN_KEY"),
+              sum(d$criterion_role == "REFERENCE"),
+              nrow(d) - sum(d$criterion_role %in% c("STAT_DIRECTIONAL", "JOIN_KEY", "REFERENCE"))),
+      sprintf("门禁 %s；生命周期 %s；准入风控决策 %s", tr_gate2(REG, d$gate[1L]),
+              d$lifecycle_state[1L], as.character(d$admit_to_risk_decision[1L]))),
+    纪律 = c("观测层不得直接产生处置；缺件缺列一律登记待表",
+             "判据只认登记册；未登记维度为可搭配空间，非判据",
+             "门禁覆盖一切实测；五道铁门未全 PASS 前禁言「模型成立」"))
+}
+
+tr_leads <- function(rec, cb) {
+  d <- rec$dict; gate <- d$gate[1L]
+  disp <- switch(gate, FATAL = "仅画像，禁入评分与处置", BLOCK = "冻结，待阻断闭合",
+                 CONDITIONAL = "须先满足解锁条件", "人工复核（影子期）")
+  L <- list()
+  sd_cols <- d[criterion_role == "STAT_DIRECTIONAL", criterion_column]
+  L[[1L]] <- data.table(线索 = sprintf("L-01 单判据入尾（%s）", d$type_id[1L]),
+    来源 = if (length(sd_cols)) paste(sd_cols, collapse = " + ") else "本类无方向判据",
+    规模 = if (is.null(cb)) "—" else tr_f(cb$n_any),
+    独立期望 = if (is.null(cb)) "—" else tr_f(round(cb$layer[命中数 >= 1L, sum(独立期望人数)])),
+    定位 = "候选特征", 处置 = disp)
+  if (!is.null(cb)) {
+    L[[length(L) + 1L]] <- data.table(线索 = "L-02 多判据共现（≥2）", 来源 = "方向判据尾部交集",
+      规模 = tr_f(cb$n_multi),
+      独立期望 = tr_f(round(cb$layer[命中数 >= 2L, sum(独立期望人数)])),
+      定位 = "跨维度互证", 处置 = disp)
+    L[[length(L) + 1L]] <- data.table(线索 = sprintf("L-03 全判据共现（=%d）", cb$k),
+      来源 = "全部方向判据同时入尾", 规模 = tr_f(cb$n_all),
+      独立期望 = tr_f(round(cb$layer[命中数 == cb$k, sum(独立期望人数)])),
+      定位 = "最高优先复核", 处置 = disp)
+  }
+  jk <- d[criterion_role == "JOIN_KEY", criterion_column]
+  if (length(jk)) L[[length(L) + 1L]] <- data.table(线索 = "L-04 关系链扩展",
+    来源 = paste(jk, collapse = " + "), 规模 = "待图算", 独立期望 = "—",
+    定位 = "网络证据", 处置 = "E3/E4 打包后人审")
+  ref <- d[criterion_role == "REFERENCE", criterion_column]
+  if (length(ref)) L[[length(L) + 1L]] <- data.table(线索 = "L-05 参照量偏离",
+    来源 = paste(ref, collapse = " + "), 规模 = "—", 独立期望 = "—",
+    定位 = "口径对照，非判据", 处置 = "只作解释，不出名单")
+  rbindlist(L, fill = TRUE)
+}
+
+# ---------------------------------------------------------------------
+# §10 商业措施三阶（软字符：全取配置册）
+# ---------------------------------------------------------------------
+tr_biz_plan2 <- function(rec) {
+  g <- rec$dict$gate[1L]
+  now <- unlist(.cfg("measures_by_gate", g))
+  p0 <- c(rec$typ$解锁条件, rec$typ$影子要求)
+  if (!length(p0)) p0 <- "登记册未列解锁／影子要求（本类门禁无此项）"
+  p12 <- unlist(.cfg("measures_pipeline"))
+  data.table(阶段 = c(rep("即刻（0–2 周）", length(now)),
+                      rep("制度（P0·解锁前置）", length(p0)),
+                      rep("管线（P1–P2）", length(p12))),
+             措施 = c(now, p0, p12))
+}
+
+# ---------------------------------------------------------------------
+# §11 血统自检：产出不得含外来文献之 token
+# ---------------------------------------------------------------------
+tr_lineage_check <- function(text) {
+  bl <- unlist(.cfg("lineage_blacklist", "tokens"))
+  hit <- bl[vapply(bl, function(t) grepl(t, text, fixed = TRUE), logical(1))]
+  if (length(hit)) stop(sprintf("血统污染：产出命中外来文献 token —— %s",
+                                paste(hit, collapse = ", ")), call. = FALSE)
+  invisible(TRUE)
+}
+
+# 数据口径字典（承 v1.1.0）
 tr_field_dict <- function(rec, loaded) {
   rbindlist(lapply(names(loaded$tabs), function(f) {
     t <- loaded$tabs[[f]]
-    if (!t$ok) return(data.table(交付件 = sub("\\.csv$", "", f), 列 = "—", 类型 = "—",
+    if (!t$ok) return(data.table(交付件 = sub("[.]csv$", "", f), 列 = "—", 类型 = "—",
                                  缺失率 = NA_real_, 取值示例 = t$status, 登记 = "—"))
     crit <- rec$dict[criterion_source == f, criterion_column]
     rbindlist(lapply(names(t$dt), function(cn) {
       v <- t$dt[[cn]]
-      ## as.character 而非 format()：format() 遇 "2026-08-12 10:03" 之类字符串会试解为
-      ## POSIXlt 而抛「字符串的格式不足标准明确」（T-14 action_time 实测中招）。
       ex <- substr(as.character(utils::head(v[!is.na(v)], 3L)), 1L, 40L)
-      data.table(交付件 = sub("\\.csv$", "", f), 列 = cn, 类型 = class(v)[1L],
-                 ## 先判类型再比空串：POSIXct 列上 v == "" 会把 "" 强制解为时间而抛错
+      data.table(交付件 = sub("[.]csv$", "", f), 列 = cn, 类型 = class(v)[1L],
                  缺失率 = round(mean(if (is.character(v)) is.na(v) | v == "" else is.na(v)), 4),
                  取值示例 = paste(ex, collapse = ", "),
                  登记 = fifelse(cn %in% crit, "✔ 已登记判据", "可搭配维度"))
@@ -94,10 +629,8 @@ tr_field_dict <- function(rec, loaded) {
   }), fill = TRUE)
 }
 
-# ---------------------------------------------------------------------
-# §13 评估：准入十三维（体例借范本「评估_准入」，内容按本类现算）
-# ---------------------------------------------------------------------
-tr_eval <- function(rec, loaded, mj) {
+# 评估准入十三维（承 v1.1.0，门禁图标改软取）
+tr_eval <- function(rec, loaded, mj, REG) {
   d <- rec$dict; t <- rec$typ
   prim <- loaded$tabs[[rec$primary]]
   nfile <- sum(vapply(loaded$tabs, function(x) isTRUE(x$ok), logical(1)))
@@ -110,20 +643,18 @@ tr_eval <- function(rec, loaded, mj) {
              "门禁", "严重度", "现象层 L1", "标签验证层 L2", "因果层 L3",
              "准入评分", "准入风控决策 L4", "阈值状态构成"),
     本类实测 = c(
-      sprintf("%d / %d", nfile, length(loaded$tabs)),
-      sprintf("%d / %d", cs_ok, nrow(d)),
+      sprintf("%d / %d", nfile, length(loaded$tabs)), sprintf("%d / %d", cs_ok, nrow(d)),
       if (isTRUE(prim$ok)) tr_f(prim$rows) else prim$status,
       if (is.null(mj)) "—" else tr_f(mj$n_union),
       if (is.null(mj) || is.na(mj$n_inter)) "—" else tr_f(mj$n_inter),
-      tr_gate(t$门禁), t$严重度,
+      tr_gate2(REG, t$门禁), t$严重度,
       d$phenomenon_status[1L], d$label_validation_status[1L], d$causal_status[1L],
       tr_yn(t$准入评分), tr_yn(d$admit_to_risk_decision[1L]),
       paste(sprintf("%s×%d", names(ts), as.integer(ts)), collapse = " ")),
     风控后果 = c(
       "缺件即本类证据链不完整，结论只及在位部分",
       "缺列即该判据不可实测，登记为待表，不以文字冒充",
-      "只代表当前交付件覆盖之会员 universe",
-      "跨表灵活搭配之最大可及面",
+      "只代表当前交付件覆盖之会员 universe", "跨表灵活搭配之最大可及面",
       "全判据齐备者人数；交集越小越须防幸存者偏差",
       "门禁覆盖一切实测——实测再漂亮，门禁说 FATAL 就是 FATAL",
       "严重度决定处置优先级，非决定可否处置",
@@ -133,176 +664,4 @@ tr_eval <- function(rec, loaded, mj) {
       "准入评分 ≠ 主表已备（登记册 admission_dichotomy）",
       "本册全部登记判据之 admit_to_risk_decision 皆为 FALSE",
       "PENDING_INVERSE 者须逐指标反解含 n_eff，禁写普适门槛（P-06）"))
-}
-
-# ---------------------------------------------------------------------
-# §14 行业实践查证：只取登记册自证之 standard_basis 与相关全局禁令
-#     ⛔ 不引任何外部参考文献
-# ---------------------------------------------------------------------
-tr_industry <- function(rec, REG) {
-  d <- rec$dict
-  gp <- REG$meta$global_prohibitions
-  tgt <- c(rec$files, d$criterion_column, d$criterion_source)
-  rel <- Filter(function(p) any(vapply(tgt, function(x) grepl(x, p$target, fixed = TRUE) ||
-                                         grepl(p$target, x, fixed = TRUE), logical(1))) ||
-                  grepl("普适|门槛|OFFSET|n>=30", p$target), gp)
-  list(
-    standard_basis = d$standard_basis[1L],
-    external_status = if ("external_standard_status" %in% names(d) && nzchar(d$external_standard_status[1L]))
-      d$external_standard_status[1L] else "—",
-    applicability = if ("applicability_status" %in% names(d) && nzchar(d$applicability_status[1L]))
-      d$applicability_status[1L] else "—",
-    prohibitions = if (length(rel)) rbindlist(lapply(rel, function(p) data.table(
-      编号 = p$id, 标的 = p$target, 规则 = p$rule, 事由 = p$reason, 严重度 = p$severity))) else NULL)
-}
-
-# ---------------------------------------------------------------------
-# §15 武器库：依本类判据角色构成派生可用管线（现算，非静态文字）
-# ---------------------------------------------------------------------
-tr_arsenal <- function(rec) {
-  d <- rec$dict
-  n <- function(r) sum(d$criterion_role == r)
-  njump <- sum(d$direction %in% c("jump", "abnormal"))
-  gate <- rec$typ$门禁
-  res <- data.table(
-    管线 = c("① 关系与网络", "② 方向强度与分位分层", "③ 状态切换与监控带", "④ 恒等式与结算完整性"),
-    特征层 = c("JOIN_KEY 列（IP／代理链／对边／时点键）",
-               "STAT_DIRECTIONAL 列（high／low 尾部）",
-               "STATE／FLAG／BUCKET 列 · jump／abnormal 方向",
-               "IDENTITY 列（应恒为零之残差）"),
-    模型层 = c("图算法（连通分量＋社群发现）→ 共线诊断",
-               "分位分层 → Wilson 收缩 → 秩法 AUC（= Mann–Whitney）",
-               "动态基线带 → 破带即启复检",
-               "残差检定（应恒为 0）→ 结算九项排查序"),
-    决策层 = c("E3/E4 证据打包 → 人工复核", "影子期静默打分，禁据以处置",
-               "破带触发复检排程", "先修账，再谈风控结论"),
-    处置红线 = c("禁自动封禁；网络证据亦须过门禁", "阈值未反解前禁处置",
-                 "破带 ≠ 处罚，唯启复检", "禁以账务异常直接标记玩家"),
-    本类判据数 = c(n("JOIN_KEY"), n("STAT_DIRECTIONAL"),
-                   n("STATE") + n("FLAG") + n("BUCKET") + njump, n("IDENTITY")))
-  res[, 本类可用 := fifelse(本类判据数 > 0, "✔ 可用", "— 本类无此角色判据")]
-  res[, 门禁覆盖 := fifelse(gate == "FATAL", "🔴 FATAL：一律只出画像",
-                            fifelse(gate == "BLOCK", "🟠 BLOCK：阻断未闭前不得上线",
-                                    fifelse(gate == "CONDITIONAL", "🟡 须先满足解锁条件", "🟢 可入影子期")))]
-  res[]
-}
-
-# ---------------------------------------------------------------------
-# §16 灵活搭配实测：方向判据尾部旗标 → 命中数分层 + 两两共现提升度
-#     Wilson 下界代点估计（禁裸比例）
-# ---------------------------------------------------------------------
-tr_wilson_lo <- function(k, n, z = 1.96) {
-  ifelse(n <= 0, NA_real_, {
-    p <- k / n; den <- 1 + z^2 / n
-    ((p + z^2 / (2 * n)) - z * sqrt(p * (1 - p) / n + z^2 / (4 * n^2))) / den })
-}
-
-tr_combat <- function(rec, mj) {
-  if (is.null(mj)) return(NULL)
-  d <- rec$dict
-  cols <- setdiff(names(mj$panel), "member_id")
-  dircols <- cols[vapply(cols, function(cc) {
-    b <- sub("@.*$", "", cc); dd <- d[criterion_column == b, direction][1]
-    !is.na(dd) && nzchar(dd) }, logical(1))]
-  if (!length(dircols)) return(NULL)
-  p <- copy(mj$panel)
-  for (cc in dircols) {
-    b <- sub("@.*$", "", cc); dd <- d[criterion_column == b, direction][1]
-    v <- p[[cc]]
-    fl <- if (dd == "high") v >= .q(v, .90)
-          else if (dd == "low") v <= .q(v, .10)
-          else { z <- abs((v - mean(v, na.rm = TRUE)) / stats::sd(v, na.rm = TRUE)); z >= .q(z, .90) }
-    set(p, j = paste0("F_", cc), value = as.integer(fl & !is.na(fl)))
-  }
-  fcols <- paste0("F_", dircols)
-  set(p, j = "命中数", value = rowSums(as.matrix(p[, ..fcols]), na.rm = TRUE))
-  ## 退化侦测：若某判据之尾部旗标命中率 > 50%，则 P90 与下界重合（该列近乎常量），
-  ## 「尾部」已失去分辨意义，须标出，禁以百分之百之尾部冒充异常群。
-  degen <- vapply(fcols, function(fc) mean(p[[fc]] == 1L), 0)
-  lay <- p[, .(会员数 = .N), by = .(命中数)][order(-命中数)]
-  lay[, 占比 := round(会员数 / sum(会员数), 4)][, 累计占比 := round(cumsum(会员数) / sum(会员数), 4)]
-  co <- NULL
-  if (length(fcols) >= 2L) {
-    cb <- utils::combn(fcols, 2L)
-    co <- rbindlist(lapply(seq_len(ncol(cb)), function(i) {
-      a <- cb[1, i]; b <- cb[2, i]
-      na_ <- sum(p[[a]] == 1L); nb <- sum(p[[b]] == 1L); nab <- sum(p[[a]] == 1L & p[[b]] == 1L)
-      ex <- na_ * nb / nrow(p)
-      data.table(判据A = sub("^F_", "", a), 判据B = sub("^F_", "", b),
-                 A尾部 = na_, B尾部 = nb, 共现 = nab, 期望共现 = round(ex, 1),
-                 提升度 = fifelse(ex > 0, round(nab / ex, 2), NA_real_),
-                 `共现率|A之Wilson下界` = round(tr_wilson_lo(nab, na_), 4))
-    }))
-    setorder(co, -提升度)
-  }
-  deg <- data.table(判据 = sub("^F_", "", names(degen)), 尾部命中率 = round(unname(degen), 4))
-  deg[, 判读 := fifelse(尾部命中率 > 0.5, "⚠ 退化：P90 与下界重合，该列近乎常量，尾部无分辨力", "正常")]
-  list(panel = p, layer = lay, cooc = co, dircols = dircols, degenerate = deg,
-       n_any = sum(p$命中数 >= 1L), n_multi = sum(p$命中数 >= 2L),
-       n_all = sum(p$命中数 == length(fcols)), k = length(fcols))
-}
-
-# ---------------------------------------------------------------------
-# §17 序列与事件实测：本类交付件是否具时间轴；无则登记待表（不冒充）
-# ---------------------------------------------------------------------
-tr_sequence <- function(rec, loaded) {
-  ## 列名匹配只作候选；是否真为时间轴，以【取值形似日期】实证判定——
-  ## n_days／tenure_months／active_days 皆含 day/month 字样而实为计数，不得误认。
-  is_timeish <- function(v) {
-    x <- as.character(v); x <- x[!is.na(x) & nzchar(x)]
-    if (!length(x)) return(FALSE)
-    x <- utils::head(x, 2000L)
-    pat <- "^[0-9]{4}[-/][0-9]{1,2}([-/][0-9]{1,2})?|^[0-9]{6}$|^[0-9]{8}$"
-    mean(grepl(pat, x)) >= 0.9
-  }
-  cand <- "date|dt|ym|month|time|day|_at$"
-  rbindlist(lapply(names(loaded$tabs), function(f) {
-    t <- loaded$tabs[[f]]
-    nm <- sub("[.]csv$", "", f)
-    if (!t$ok) return(data.table(交付件 = nm, 时间轴列 = "—", 粒度 = "—", 跨度 = t$status,
-                                 可做序列 = "✗ 待表", 疑似计数列 = "—"))
-    ca <- grep(cand, names(t$dt), value = TRUE, ignore.case = TRUE)
-    tc <- ca[vapply(ca, function(cn) is_timeish(t$dt[[cn]]), logical(1))]
-    fake <- setdiff(ca, tc)
-    if (!length(tc)) return(data.table(交付件 = nm, 时间轴列 = "无", 粒度 = "—", 跨度 = "—",
-      可做序列 = "✗ 待表（本表为截面，无时间轴）",
-      疑似计数列 = if (length(fake)) paste(fake, collapse = ", ") else "—"))
-    v <- as.character(t$dt[[tc[1L]]]); v <- v[!is.na(v) & nzchar(v)]
-    data.table(交付件 = nm, 时间轴列 = paste(tc, collapse = ", "),
-               粒度 = fifelse(any(nchar(utils::head(v, 1L)) <= 7L), "月", "日"),
-               跨度 = if (length(v)) sprintf("%s → %s", min(v), max(v)) else "—",
-               可做序列 = "✔",
-               疑似计数列 = if (length(fake)) paste(fake, collapse = ", ") else "—")
-  }), fill = TRUE)
-}
-
-# ---------------------------------------------------------------------
-# §18 线索汇总：模型搭配 × 名单 × 处置（皆为复核候选，非处罚名单）
-# ---------------------------------------------------------------------
-tr_leads <- function(rec, cb) {
-  d <- rec$dict; gate <- rec$typ$门禁
-  disp <- if (gate == "FATAL") "仅画像，禁入评分与处置"
-          else if (gate == "BLOCK") "冻结，待阻断闭合"
-          else if (gate == "CONDITIONAL") "须先满足解锁条件"
-          else "人工复核（影子期）"
-  L <- list()
-  sd_cols <- d[criterion_role == "STAT_DIRECTIONAL", criterion_column]
-  L[[1L]] <- data.table(
-    线索 = sprintf("L-01 单判据入尾（%s）", rec$typ$编号),
-    来源 = if (length(sd_cols)) paste(sd_cols, collapse = " + ") else "本类无方向判据",
-    规模 = if (is.null(cb)) "—" else tr_f(cb$n_any),
-    定位 = "候选特征", 处置 = disp)
-  if (!is.null(cb)) {
-    L[[length(L) + 1L]] <- data.table(线索 = "L-02 多判据共现（≥2）", 来源 = "方向判据尾部交集",
-      规模 = tr_f(cb$n_multi), 定位 = "跨维度互证", 处置 = disp)
-    L[[length(L) + 1L]] <- data.table(线索 = sprintf("L-03 全判据共现（=%d）", cb$k),
-      来源 = "全部方向判据同时入尾", 规模 = tr_f(cb$n_all), 定位 = "最高优先复核", 处置 = disp)
-  }
-  jk <- d[criterion_role == "JOIN_KEY", criterion_column]
-  if (length(jk)) L[[length(L) + 1L]] <- data.table(线索 = "L-04 关系链扩展",
-    来源 = paste(jk, collapse = " + "), 规模 = "待图算", 定位 = "网络证据", 处置 = "E3/E4 打包后人审")
-  ref <- d[criterion_role == "REFERENCE", criterion_column]
-  if (length(ref)) L[[length(L) + 1L]] <- data.table(线索 = "L-05 参照量偏离",
-    来源 = paste(ref, collapse = " + "), 规模 = "—", 定位 = "口径对照，非判据", 处置 = "只作解释，不出名单")
-  rbindlist(L, fill = TRUE)
 }

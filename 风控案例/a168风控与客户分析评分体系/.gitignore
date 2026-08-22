@@ -36,7 +36,7 @@ renv/library/
 *_files/
 *_cache/
 /.quarto/
-# *.html
+# *.html —— 2026-08-22 解禁：HTML 成品一律入库（用户裁定）
 
 # ── 生产数据：含真实会员与 IP，严禁入库 ──
 数据库/

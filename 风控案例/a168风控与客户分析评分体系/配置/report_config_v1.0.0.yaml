@@ -1,0 +1,186 @@
+config:
+  name: typology_report_config
+  version: 1.0.0
+  issued: '2026-08-22'
+  parent: registry_risk_typology_v1.5.0
+  purpose: 十五类风险会员判据商业方案之【软配置册】——一切阈值、分位、样本门、命名空间、
+    字段别名、呈表尺寸、模型名册、管线定义一律登记于此，引擎与模板只取本册，
+    不得在代码或正文内硬写。改参数只改本册，十五份重跑即同步。
+  iron_rule: 硬代码／硬字符／硬数值／硬字段一律归此册；本册未登记者，引擎须报错而非默认。
+
+# ── 命名空间（与 配置/paths_a168.R 同源；改布局只改此处） ──────────────
+namespaces:
+  delivery: 数据库          # 交付件 CSV
+  exec: 函数                # R／SQL 执行件
+  spec: 规范                # 登记册、术语库
+  config: 配置              # 本册与导出参数
+  audit: 审计               # 基线／查询稿／证据／工具
+  analysis: 分析            # 报告产出
+  template: 模板            # 模板
+
+# ── 字段软定义：会员键别名、时间轴候选、ODS 字典表 ──────────────────────
+fields:
+  member_key_canonical: member_id
+  member_key_aliases: [member_id, uid, player_id, mem, member_login]
+  time_axis_name_hint: date|dt|ym|month|time|day|_at$
+  time_axis_value_pattern: '^[0-9]{4}[-/][0-9]{1,2}([-/][0-9]{1,2})?|^[0-9]{6}$|^[0-9]{8}$'
+  time_axis_min_match_rate: 0.9        # 取值形似日期之最低比例，低于此不认时间轴
+  ods_dictionary_file: Z03_column_dictionary.csv
+  ods_dict_cols: {table: 表名, ordinal: 列序, column: 列名, dtype: 存储类型,
+                  nullable: 可空, raw_type: 原始类型, meaning: 业务含义, note: 原始注释}
+  roi_numerator_candidates: [game_pnl, game_pnl_all, net_pnl, profit, 游戏输赢贡献]
+  roi_denominator_candidates: [stake, stake_all, valid_bet, validbet, 流水贡献]
+
+# ── 体量守门 ────────────────────────────────────────────────────────────
+guards:
+  max_mb: 300                 # 逾此只读前 max_rows 行并标 SAMPLED
+  max_rows: 1500000
+  corr_min_n: 30              # 相关阵之最低非缺样本
+  roi_outlier_threshold: 1.0  # roi > 此值 → 结算完整性候选（非优势玩家）
+
+# ── 呈表纪律：长表 scroll-y，宽表 scroll-x，禁截行截列 ──────────────────
+presentation:
+  table_max_height: 520px     # 纵向视口；表体全行在册，只限视口高度
+  table_max_height_wide: 640px
+  overflow_x: auto
+  overflow_y: auto
+  number_big_mark: ','
+  p_value_min_display: 1.0e-4 # p < 此值一律并呈原始量级，禁 0.0000 体例
+
+# ── 统计口径（软数值：分位、置信、样本门）──────────────────────────────
+statistics:
+  tail_quantile_high: 0.90    # high 方向之尾部分位
+  tail_quantile_low: 0.10     # low 方向之尾部分位
+  tail_quantile_abs_z: 0.90   # jump/abnormal 之 |z| 分位
+  confidence_level: 0.95
+  z_two_sided: 1.959964       # 与 confidence_level 对应；改一处须同改
+  wilson_target_width: 0.15   # 比例型指标之 CI 宽度上限，用以反解最低样本量
+  degenerate_flag_rate: 0.50  # 尾部命中率逾此 → 判退化（P90 与下界重合）
+  multiple_testing_methods: [BH, holm]
+  pca_min_features: 2
+  pca_scale: true
+auc_bands:                    # 七档取代四档；judged 由此册现算，禁正文写死
+  - {lo: 0.00, hi: 0.45, label: 方向反转（须查口径）}
+  - {lo: 0.45, hi: 0.55, label: 无区分力}
+  - {lo: 0.55, hi: 0.60, label: 极弱}
+  - {lo: 0.60, hi: 0.65, label: 弱}
+  - {lo: 0.65, hi: 0.75, label: 中}
+  - {lo: 0.75, hi: 0.85, label: 强}
+  - {lo: 0.85, hi: 1.01, label: 很强（须防泄漏）}
+
+# ── 误判率控制（本轮专项）──────────────────────────────────────────────
+false_positive_control:
+  principles:
+    - 一律以 Wilson 下界代点估计——点估计在小分母上系统性高估
+    - 样本未过门者不出旗标，登记 UNKNOWN，永不降为「正常」
+    - 尾部命中率逾 degenerate_flag_rate 即判退化，禁以百分之百之尾部冒充异常群
+    - 多判据共现须与独立期望比（提升度），提升度 ≈ 1 者叠加不产生新信息
+    - k 条判据同时筛查须报多重比较校正后之期望假阳数
+  expected_false_positive_note: 以各判据尾部分位 q 计，独立假设下 k 条全命中之期望人数
+    = N × Π q_i；实际共现显著高于此者方为证据。
+
+# ── 名目勘正（软字符：正名在先，防同词异释）────────────────────────────
+nomenclature:
+  - {来件名目: 索题诺率, 勘正: 索提诺比率（Sortino Ratio）——仅罚下行波动之风险调整收益}
+  - {来件名目: 隐马尔可夫链, 勘正: 标准称谓为隐马尔可夫模型（HMM）；「链」易与马尔可夫链混同——HMM 之状态不可观测}
+  - {来件名目: RTP 大于 20%, 勘正: RTP（返还率）常为 97% 量级；此处应指 ROI（投资回报率）大于 20%}
+  - {来件名目: 对打率 60% 与 75% 并存, 勘正: 同一文献摘要与正文表不一致；以正文表为准并登记矛盾}
+  - {来件名目: 「优势玩家」, 勘正: 未经因果验证前一律称「行为异常候选」；优势玩家系结论，非观测}
+
+# ── 模型名册：逐模审计（谁上场、谁替补、谁禁赛）──────────────────────
+model_roster:
+  - {模型: 梯度提升树（GBDT／XGBoost／LightGBM）, 角色: 主力, 需要: [member_level, features_ge_3], 裁定理由: 表格型会员特征之监督学习基线；任何深度模型上场前须先胜过它}
+  - {模型: 随机森林／ExtraTrees, 角色: 主力, 需要: [member_level, features_ge_3], 裁定理由: 与 GBDT 残差高相关时禁组集成（集成无理论增益）}
+  - {模型: 聚类（K-means／DBSCAN／GMM）, 角色: 主力, 需要: [member_level, features_ge_2], 裁定理由: 客群分层与批量注册甄别；产出画像不产出处置}
+  - {模型: 主成分分析（PCA）, 角色: 先发工兵, 需要: [member_level, features_ge_2], 裁定理由: 降维与共线诊断；成分无业务语义，禁直接作风险分}
+  - {模型: 自编码器（Autoencoder）, 角色: 主力, 需要: [member_level, features_ge_3], 裁定理由: 无标签可用时之首选异常侦测；本项目风险标签含噪，正合此境}
+  - {模型: 隐马尔可夫模型（HMM）, 角色: 轮换, 需要: [time_axis], 裁定理由: 行为隐状态切换侦测；须防状态数过拟合（BIC 选阶）}
+  - {模型: 状态切换（Regime-Switching）, 角色: 轮换, 需要: [time_axis], 裁定理由: 为监控带提供动态基线}
+  - {模型: 生存分析（Cox／AFT／KM）, 角色: 主力, 需要: [time_axis, event], 裁定理由: 流失与标记时点双问}
+  - {模型: 图算法（连通分量／社群发现）, 角色: 主力, 需要: [join_key], 裁定理由: 关系网络证据之唯一正途}
+  - {模型: 夏普／索提诺／最大回撤, 角色: 主力（甄别指标）, 需要: [time_axis], 裁定理由: 高 ROI 低 Sharpe = 小分母；近零波动 = 打水候选}
+  - {模型: CVaR（条件在险价值）, 角色: 主力（财务侧）, 需要: [member_level], 裁定理由: 尾部暴露与风险预算}
+  - {模型: 贝叶斯层级收缩, 角色: 先发工兵, 需要: [member_level], 裁定理由: 小分母场景替换点估计}
+  - {模型: Transformer（序列）, 角色: 禁赛（现阶段）, 需要: [long_sequence], 裁定理由: 长序列数据未成熟、可解释性方案未齐}
+  - {模型: 强化学习（RL）, 角色: 禁赛（处置侧）, 需要: [long_sequence], 裁定理由: 处置侧禁用；伦理审查未过}
+
+# ── 四条灵活搭配管线（特征层→模型层→决策层）────────────────────────
+pipelines:
+  - id: P1
+    管线: ① 关系与网络
+    需要角色: [JOIN_KEY]
+    特征层: JOIN_KEY 列（IP／代理链／对边／时点键）
+    模型层: 图算法（连通分量＋社群发现）→ 共线诊断
+    决策层: E3/E4 证据打包 → 人工复核
+    处置红线: 禁自动封禁；网络证据亦须过门禁
+  - id: P2
+    管线: ② 方向强度与分位分层
+    需要角色: [STAT_DIRECTIONAL]
+    特征层: STAT_DIRECTIONAL 列（high／low 尾部）
+    模型层: 分位分层 → Wilson 收缩 → 秩法 AUC（= Mann–Whitney）
+    决策层: 影子期静默打分，禁据以处置
+    处置红线: 阈值未反解前禁处置
+  - id: P3
+    管线: ③ 状态切换与监控带
+    需要角色: [STATE, FLAG, BUCKET]
+    需要方向: [jump, abnormal]
+    特征层: STATE／FLAG／BUCKET 列 · jump／abnormal 方向
+    模型层: 动态基线带 → 破带即启复检
+    决策层: 破带触发复检排程
+    处置红线: 破带 ≠ 处罚，唯启复检
+  - id: P4
+    管线: ④ 恒等式与结算完整性
+    需要角色: [IDENTITY]
+    特征层: IDENTITY 列（应恒为零之残差）
+    模型层: 残差检定（应恒为 0）→ 结算九项排查序
+    决策层: 先修账，再谈风控结论
+    处置红线: 禁以账务异常直接标记玩家
+
+# ── 结算完整性九项排查序（roi 异常者先查账，后查人）──────────────────
+settlement_checklist: [派彩含本金, 红利, 彩池, 退水, 冲正, 重复结算, 汇率, 部分结算, 人工调整]
+
+# ── 五道铁门：统计验收之硬闸 ────────────────────────────────────────
+iron_gates:
+  - {id: G-01, 门: 口径冻结, 判定: 判据之分子分母与窗口须登记且不随分析漂移}
+  - {id: G-02, 门: 样本门禁, 判定: 比例型指标之最低样本量须以 Wilson 反解，非手写}
+  - {id: G-03, 门: 阈值反解, 判定: threshold_status 须脱离 PENDING_INVERSE}
+  - {id: G-04, 门: 多重比较校正, 判定: 同批检验须并报 BH 与 Holm 校正}
+  - {id: G-05, 门: 真样本外验证, 判定: 须有跨窗口 OOS，非同窗自证}
+gate_wording_ban: [验证完成, 模型成立, 统计生产就绪, 风险模型上线, 已证明, 确认作弊]
+
+# ── 商业方案落实前后对照（维度软定义）────────────────────────────────
+before_after_dims:
+  - {维度: 风控算力投向, 落实前: 单一方向堆模型, 落实后: 依判据角色分四管线}
+  - {维度: 风险名单生成, 落实前: 单因子阈值直接出名单, 落实后: 多判据共现＋提升度＋Wilson 下界}
+  - {维度: 监控基线, 落实前: 静态阈值破线即警, 落实后: 分位分层＋退化侦测}
+  - {维度: 处置依据, 落实前: 统计显著即行动, 落实后: 门禁＋证据阶梯＋人工复核}
+  - {维度: 误伤面, 落实前: 点估计小分母高估, 落实后: Wilson 下界＋最小暴露门槛两锁}
+  - {维度: 模型上线门槛, 落实前: 各模型各说各话, 落实后: 五道铁门全 PASS 方可试运行}
+
+# ── 商业措施三阶：按门禁派生（软字符）────────────────────────────────
+measures_by_gate:
+  FATAL:
+    - 本类判据即刻撤出一切评分／触发／处置管道，只留画像字段
+    - 既有以本类判据出数之名单一律作废并留痕
+  BLOCK:
+    - 本类判据即刻冻结于评分管道之外，画像字段亦加「阻断中」水印
+    - 登记阻断项并指派责任人与复检日
+  CONDITIONAL:
+    - 本类判据进入影子期：静默打分、禁据以处置
+    - 影子期内每周出 AUC 与提升度（含置信区间）
+  ADVISORY:
+    - 本类判据进入影子运行，出数供复核排序，禁作处置理由
+    - 建立月度复跑与五道对帐钩
+measures_pipeline:
+  - 阈值逐指标反解（含 n_eff 校正），禁写普适门槛（P-06）
+  - 单因子线索升级为跨表网络证据（会员→IP→设备→代理→对边→局→时）
+  - 外部 L1a 标签独立复检，AUC 低于 0.5 即方向反转告警
+  - 以 Wilson 下界代点估计，并报最低样本量之反解值
+
+# ── 外部参考文献黑名单：其数字、阈值、分级一概不得入报告血统 ──────────
+lineage_blacklist:
+  files: [玩家风险等级判定设计, 百家乐同桌对打风控分析报告, 风控平台第一版权限设计]
+  tokens: [PLAYER_RISK_V1, PROFIT_SURGE_24H, PROFIT_ANOMALY_7D, PAIR_ANOMALY_7D,
+           STRONG_PAIR_7D, PERSISTENT_SIGNAL_30D, SHARED_DEALER_GAME_EVIDENCE,
+           player_risk_profile, player_risk_publish_state]
+  note: 三份仅供人阅读参考，不入本套报告之血统；引擎自检时若于产出中命中 tokens 即报错。
