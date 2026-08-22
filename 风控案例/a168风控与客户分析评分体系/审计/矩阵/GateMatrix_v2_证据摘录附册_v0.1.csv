@@ -1,0 +1,331 @@
+﻿交付件,锚行,谓词行号,涉闸(层),真代码区谓词原文
+Z08_roundkey_integrity.csv,655,667,bet02(Identity),WHERE bet02 = '101'
+Z09_time_axis_recon.csv,713,722,bet02(Identity),WHERE bet02 = '101'
+Z09_time_axis_recon.csv,713,726,dt(Window),"SUM(CASE WHEN dt = d_acct THEN 1 ELSE 0 END) AS dt等于账务日,"
+Z09_time_axis_recon.csv,713,727,dt(Window),"SUM(CASE WHEN dt = DATE(t_bet) THEN 1 ELSE 0 END) AS dt等于下注日,"
+Z11_sentinel_impact.csv,778,788,bet04(Quality),"OR CAST(bet04 AS VARCHAR) IN ('-1','0','') OR bet04 IS NULL"
+Z11_sentinel_impact.csv,778,792,bet02(Identity),WHERE bet02 = '101'
+Z14_zero_month_diagnosis.csv,836,890,age022(Population),WHERE age022 = '1'
+Z14_zero_month_diagnosis.csv,836,900,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+Z14_zero_month_diagnosis.csv,836,901,bet02(Identity),AND b.bet02 = '101'
+Z14_zero_month_diagnosis.csv,836,923,rn(Identity),WHERE r.rn = 1
+Z14_zero_month_diagnosis.csv,836,924,category(Population),AND r.category = '1'
+Z14_zero_month_diagnosis.csv,836,925,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+Z14_zero_month_diagnosis.csv,836,926,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+Z14_zero_month_diagnosis.csv,836,927,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+V_recon.csv,1359,1369,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+V_recon.csv,1359,1379,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+V_recon.csv,1359,1395,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+V_recon.csv,1359,1396,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+V_recon.csv,1359,1397,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+V_recon.csv,1359,1408,dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND gi001 = '101'
+I_ip_player.csv,1447,1452,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+I_ip_player.csv,1447,1465,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+I_ip_player.csv,1447,1475,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+I_ip_player.csv,1447,1476,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+I_ip_player.csv,1447,1477,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+I_ip_player.csv,1447,1478,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+C01_ip_chain.csv,1521,1526,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+C01_ip_chain.csv,1521,1539,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+C01_ip_chain.csv,1521,1549,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+C01_ip_chain.csv,1521,1550,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+C01_ip_chain.csv,1521,1551,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+C01_ip_chain.csv,1521,1552,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+C08_subnet_all.csv,1617,1622,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+C08_subnet_all.csv,1617,1635,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+C08_subnet_all.csv,1617,1645,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+C08_subnet_all.csv,1617,1646,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+C08_subnet_all.csv,1617,1647,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+C08_subnet_all.csv,1617,1648,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+C08_subnet_sparse.csv,1687,1692,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+C08_subnet_sparse.csv,1687,1705,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+C08_subnet_sparse.csv,1687,1715,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+C08_subnet_sparse.csv,1687,1716,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+C08_subnet_sparse.csv,1687,1717,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+C08_subnet_sparse.csv,1687,1718,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+S_second_dist.csv,1772,1777,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+S_second_dist.csv,1772,1790,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+S_second_dist.csv,1772,1800,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+S_second_dist.csv,1772,1801,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+S_second_dist.csv,1772,1802,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+S_second_dist.csv,1772,1803,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+D03S_daily_roi_diff.csv,1849,1854,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+D03S_daily_roi_diff.csv,1849,1867,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+D03S_daily_roi_diff.csv,1849,1877,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+D03S_daily_roi_diff.csv,1849,1878,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+D03S_daily_roi_diff.csv,1849,1879,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+D03S_daily_roi_diff.csv,1849,1880,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+S_player_tail.csv,1929,1940,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+S_player_tail.csv,1929,1952,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+S_player_tail.csv,1929,1962,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+S_player_tail.csv,1929,1963,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+S_player_tail.csv,1929,1964,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+S_player_tail.csv,1929,1965,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+S01_player_score.csv,2056,2061,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+S01_player_score.csv,2056,2074,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+S01_player_score.csv,2056,2084,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+S01_player_score.csv,2056,2085,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+S01_player_score.csv,2056,2086,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+S01_player_score.csv,2056,2087,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+S02_dealer_score.csv,2187,2202,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+S02_dealer_score.csv,2187,2214,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+S02_dealer_score.csv,2187,2224,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+S02_dealer_score.csv,2187,2225,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+S02_dealer_score.csv,2187,2226,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+S02_dealer_score.csv,2187,2227,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+S03_agent_score.csv,2325,2330,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+S03_agent_score.csv,2325,2343,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+S03_agent_score.csv,2325,2353,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+S03_agent_score.csv,2325,2354,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+S03_agent_score.csv,2325,2355,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+S03_agent_score.csv,2325,2356,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+S05_member_month_panel.csv,2463,2468,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+S05_member_month_panel.csv,2463,2481,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+S05_member_month_panel.csv,2463,2491,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+S05_member_month_panel.csv,2463,2492,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+S05_member_month_panel.csv,2463,2493,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+S05_member_month_panel.csv,2463,2494,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+I_ip_agg.csv,2544,2549,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+I_ip_agg.csv,2544,2562,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+I_ip_agg.csv,2544,2571,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+I_ip_agg.csv,2544,2572,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+I_ip_agg.csv,2544,2573,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+I_ip_agg.csv,2544,2574,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+X_combo.csv,2625,2630,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+X_combo.csv,2625,2643,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+X_combo.csv,2625,2652,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+X_combo.csv,2625,2653,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+X_combo.csv,2625,2654,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+X_combo.csv,2625,2655,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+P_player_month.csv,2714,2719,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+P_player_month.csv,2714,2732,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+P_player_month.csv,2714,2741,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+P_player_month.csv,2714,2742,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+P_player_month.csv,2714,2743,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+P_player_month.csv,2714,2744,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+B_online_base.csv,2778,2783,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+B_online_base.csv,2778,2796,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+B_online_base.csv,2778,2805,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+B_online_base.csv,2778,2806,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+B_online_base.csv,2778,2807,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+B_online_base.csv,2778,2808,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+V_ipmatch.csv,2866,2870,bet02(Identity)、dt(Window),WHERE dt>='2026-03-21' AND dt<'2026-08-07' AND bet02='101'
+V_ipmatch.csv,2866,2875,dt(Window),WHERE dt>='2026-03-21' AND dt<'2026-08-07'
+R01_late_shoe.csv,3281,3285,age022(Population),WHERE age022 = '1'
+R01_late_shoe.csv,3281,3296,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+R01_late_shoe.csv,3281,3297,bet02(Identity),AND b.bet02 = '101'
+R01_late_shoe.csv,3281,3313,rn(Identity),WHERE r.rn = 1
+R01_late_shoe.csv,3281,3314,category(Population),AND r.category = '1'
+R01_late_shoe.csv,3281,3315,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+R01_late_shoe.csv,3281,3316,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+R01_late_shoe.csv,3281,3317,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+R01_late_shoe.csv,3281,3318,bet04(Quality),"AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0"
+R02_same_table.csv,3427,3435,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+R02_same_table.csv,3427,3436,bet02(Identity)、category(Population),AND b.bet02 = '101' AND b.category = '1'
+R02_same_table.csv,3427,3437,bet38(State),AND UPPER(TRIM(b.bet38)) = 'N'
+R02_same_table.csv,3427,3438,bet05(Quality),"AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0"
+R03_player_dealer.csv,3636,3646,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+R03_player_dealer.csv,3636,3647,bet02(Identity)、category(Population),AND b.bet02 = '101' AND b.category = '1'
+R03_player_dealer.csv,3636,3659,rn(Identity),WHERE r.rn = 1
+R03_player_dealer.csv,3636,3660,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+R03_player_dealer.csv,3636,3661,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+R03_player_dealer.csv,3636,3662,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+R03chk_settlement_form.csv,3818,3826,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+R03chk_settlement_form.csv,3818,3827,bet02(Identity)、category(Population),AND b.bet02 = '101' AND b.category = '1'
+R03chk_settlement_form.csv,3818,3836,rn(Identity),WHERE r.rn = 1
+R03chk_settlement_form.csv,3818,3837,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+R03chk_settlement_form.csv,3818,3838,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+R03chk_settlement_form.csv,3818,3839,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+R03inv_pair_census.csv,3873,3886,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+R03inv_pair_census.csv,3873,3887,bet02(Identity)、category(Population),AND b.bet02 = '101' AND b.category = '1'
+R03inv_pair_census.csv,3873,3897,bet38(State)、rn(Identity),WHERE r.rn = 1 AND UPPER(TRIM(r.bet38)) = 'N'
+R03inv_pair_census.csv,3873,3898,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+R03inv_pair_census.csv,3873,3899,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+TL14_limit_treatment.csv,4192,4199,dt(Window),AND dt = ( SELECT MAX(dt) FROM ods_mariadb_2b.ods_a168_bet_limit_default )
+TL14_limit_treatment.csv,4192,4209,dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
+TL14_limit_treatment.csv,4192,4249,dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
+TL14_limit_treatment.csv,4192,4250,bet02(Identity),AND CAST(bet02 AS STRING) = '101'
+T02_daily_roi.csv,4280,4282,age022(Population),SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+T02_daily_roi.csv,4280,4293,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+T02_daily_roi.csv,4280,4294,bet02(Identity),AND b.bet02 = '101'
+T02_daily_roi.csv,4280,4310,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+T02_daily_roi.csv,4280,4311,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+T02_daily_roi.csv,4280,4312,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+T03_arbitrage.csv,4338,4340,age022(Population),SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+T03_arbitrage.csv,4338,4352,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+T03_arbitrage.csv,4338,4353,bet02(Identity),AND b.bet02 = '101'
+T03_arbitrage.csv,4338,4370,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+T03_arbitrage.csv,4338,4371,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+T03_arbitrage.csv,4338,4372,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+B01_bt_panel.csv,4447,4450,age022(Population),SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+B01_bt_panel.csv,4447,4462,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+B01_bt_panel.csv,4447,4463,bet02(Identity),AND b.bet02 = '101'
+B01_bt_panel.csv,4447,4483,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+B01_bt_panel.csv,4447,4484,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+B01_bt_panel.csv,4447,4485,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+B01_bt_panel_delta.csv,4532,4542,age022(Population),SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+B01_bt_panel_delta.csv,4532,4554,dt(Window),WHERE b.dt >= '2026-08-04' AND b.dt < '2026-08-07'
+B01_bt_panel_delta.csv,4532,4555,bet02(Identity),AND b.bet02 = '101'
+B01_bt_panel_delta.csv,4532,4575,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+B01_bt_panel_delta.csv,4532,4576,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+B01_bt_panel_delta.csv,4532,4577,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+K01_risk_feature_matrix.csv,4633,4635,age022(Population),SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+K01_risk_feature_matrix.csv,4633,4648,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+K01_risk_feature_matrix.csv,4633,4649,bet02(Identity),AND b.bet02 = '101'
+K01_risk_feature_matrix.csv,4633,4668,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+K01_risk_feature_matrix.csv,4633,4669,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+K01_risk_feature_matrix.csv,4633,4670,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+K01b_seed_goldip.csv,4771,4775,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+K01b_seed_goldip.csv,4771,4776,bet02(Identity)、category(Population),AND b.bet02 = '101' AND b.category = '1'
+K01b_seed_goldip.csv,4771,4777,bet38(State),AND UPPER(TRIM(b.bet38)) = 'N'
+C06_hedge_pairs.csv,4948,4951,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+C06_hedge_pairs.csv,4948,4963,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+C06_hedge_pairs.csv,4948,4973,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+C06_hedge_pairs.csv,4948,4974,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+C06_hedge_pairs.csv,4948,4975,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+C06_hedge_pairs.csv,4948,4976,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+DX04_bet09_profile.csv,5105,5114,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+DX04_bet09_profile.csv,5105,5124,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+DX04_bet09_profile.csv,5105,5125,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+DX04_bet09_profile.csv,5105,5126,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+DX05_product_panorama.csv,5154,5156,age022(Population),SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+DX05_product_panorama.csv,5154,5167,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+DX05_product_panorama.csv,5154,5187,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+DX05_product_panorama.csv,5154,5188,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+DX05_product_panorama.csv,5154,5189,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+R03b_player_dealer_daily.csv,5252,5287,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+R03b_player_dealer_daily.csv,5252,5288,bet02(Identity)、category(Population),AND b.bet02 = '101' AND b.category = '1'
+R03b_player_dealer_daily.csv,5252,5300,bet38(State)、rn(Identity),WHERE r.rn = 1 AND UPPER(TRIM(r.bet38)) = 'N'
+R03b_player_dealer_daily.csv,5252,5301,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+R03b_player_dealer_daily.csv,5252,5302,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+S02b_dealer_pace.csv,5522,5527,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+S02b_dealer_pace.csv,5522,5538,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+S02b_dealer_pace.csv,5522,5548,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+S02b_dealer_pace.csv,5522,5549,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+S02b_dealer_pace.csv,5522,5550,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+S02b_dealer_pace.csv,5522,5551,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+P0C04_同日泄漏检验.csv,6919,6932,dt(Window),WHERE dt >= '2026-03-21'
+P0C04_同日泄漏检验.csv,6919,6933,dt(Window),AND dt < '2026-08-07'
+P0C04_同日泄漏检验.csv,6919,6935,bet02(Identity),AND CAST(bet02 AS STRING) = '101'
+P0C04_同日泄漏检验.csv,6919,6945,dt(Window),WHERE b.dt >= '2026-03-21'
+P0C04_同日泄漏检验.csv,6919,6946,dt(Window),AND b.dt < '2026-08-07'
+P0C04_同日泄漏检验.csv,6919,6947,bet02(Identity),AND CAST(b.bet02 AS STRING) = '101'
+P0C05_标记时点定位.csv,6966,6982,dt(Window),WHERE dt >= '2026-03-21'
+P0C05_标记时点定位.csv,6966,6983,dt(Window),AND dt < '2026-08-07'
+P0C05_标记时点定位.csv,6966,6985,bet02(Identity),AND CAST(bet02 AS STRING) = '101'
+P0C05_标记时点定位.csv,6966,6994,dt(Window),WHERE dt >= '2026-03-21'
+P0C05_标记时点定位.csv,6966,6995,dt(Window),AND dt < '2026-08-07'
+P0C05_标记时点定位.csv,6966,6996,bet02(Identity),AND CAST(bet02 AS STRING) = '101'
+P0C06_LabelB骨架.csv,7002,7010,dt(Window),WHERE dt >= '2026-03-21'
+P0C06_LabelB骨架.csv,7002,7011,dt(Window),AND dt < '2026-08-07'
+P0C06_LabelB骨架.csv,7002,7013,bet02(Identity),AND CAST(bet02 AS STRING) = '101'
+P0C06_LabelB骨架.csv,7002,7020,dt(Window),WHERE b.dt >= '2026-04-20'
+P0C06_LabelB骨架.csv,7002,7021,dt(Window),AND b.dt < '2026-07-24'
+P0C06_LabelB骨架.csv,7002,7022,bet02(Identity),AND CAST(b.bet02 AS STRING) = '101'
+P0C09_安慰剂检验.csv,7121,7134,dt(Window),WHERE dt >= '2026-03-21'
+P0C09_安慰剂检验.csv,7121,7135,dt(Window),AND dt < '2026-08-07'
+P0C09_安慰剂检验.csv,7121,7137,bet02(Identity),AND CAST(bet02 AS STRING) = '101'
+P0C09_安慰剂检验.csv,7121,7146,dt(Window),WHERE b.dt >= '2026-03-21'
+P0C09_安慰剂检验.csv,7121,7147,dt(Window),AND b.dt < '2026-08-07'
+P0C09_安慰剂检验.csv,7121,7148,bet02(Identity),AND CAST(b.bet02 AS STRING) = '101'
+C06d_hedge_pairs_dated.csv,7192,7204,age022(Population),FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+C06d_hedge_pairs_dated.csv,7192,7216,bet02(Identity)、dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07' AND b.bet02 = '101'
+C06d_hedge_pairs_dated.csv,7192,7226,bet38(State)、category(Population)、rn(Identity),WHERE r.rn = 1 AND r.category = '1' AND UPPER(TRIM(r.bet38)) = 'N'
+C06d_hedge_pairs_dated.csv,7192,7227,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+C06d_hedge_pairs_dated.csv,7192,7228,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+C06d_hedge_pairs_dated.csv,7192,7229,bet08(Quality),"AND NULLIF(TRIM(r.bet08),'') IS NOT NULL"
+TL08_treatment_events.csv,7671,7686,dt(Window),WHERE dt >= '2026-03-21'
+TL08_treatment_events.csv,7671,7687,dt(Window),AND dt < '2026-08-07'
+TL08_treatment_events.csv,7671,7692,dt(Window),WHERE dt >= '2026-03-21'
+TL08_treatment_events.csv,7671,7693,dt(Window),AND dt < '2026-08-07'
+TL08_treatment_events.csv,7671,7694,bet02(Identity),AND CAST(bet02 AS STRING) = '101'
+TL10_treatment_ledger.csv,7745,7759,dt(Window),WHERE dt >= '2026-03-21'
+TL10_treatment_ledger.csv,7745,7760,dt(Window),AND dt < '2026-08-07'
+TL10_treatment_ledger.csv,7745,7794,dt(Window),WHERE dt >= '2026-03-21'
+TL10_treatment_ledger.csv,7745,7795,dt(Window),AND dt < '2026-08-07'
+TL10_treatment_ledger.csv,7745,7796,bet02(Identity),AND CAST(bet02 AS STRING) = '101'
+TL11_treatment_episode.csv,7834,7849,dt(Window),WHERE dt >= '2026-03-21'
+TL11_treatment_episode.csv,7834,7850,dt(Window),AND dt < '2026-08-07'
+TL11_treatment_episode.csv,7834,7896,rn(Identity),SELECT * FROM dedup WHERE rn = 1 AND direction = 'TIGHTEN'
+TL11_treatment_episode.csv,7834,7899,rn(Identity),SELECT * FROM dedup WHERE rn = 1 AND direction = 'RELEASE'
+TL11_treatment_episode.csv,7834,7904,dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
+TL11_treatment_episode.csv,7834,7905,bet02(Identity),AND CAST(bet02 AS STRING) = '101'
+TL11_treatment_episode.csv,7834,7912,dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
+TL11c_population_reconcile.csv,8103,8107,dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
+TL11c_population_reconcile.csv,8103,8126,dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
+TL11c_population_reconcile.csv,8103,8127,bet02(Identity),AND CAST(bet02 AS STRING) = '101'
+P01A_crosstab.csv,8322,8353,bet02(Identity)、dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+P01B_diff_ratio.csv,8357,8373,bet02(Identity)、dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+P01C_split_by_dim.csv,8379,8400,bet02(Identity)、dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+P01D_vs_validbet.csv,8408,8423,bet02(Identity)、dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+P01E_identity_test.csv,8429,8444,bet02(Identity)、dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+P01E_identity_test.csv,8429,8462,bet02(Identity)、dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+P02C_key_check.csv,8517,8533,bet02(Identity)、dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101'
+P11_阿泽尾段投注模型会员名单.csv,8567,8581,age022(Population),WHERE age022 = '1'
+P11_阿泽尾段投注模型会员名单.csv,8567,8591,bet02(Identity),WHERE b.bet02 = '101'
+P11_阿泽尾段投注模型会员名单.csv,8567,8592,dt(Window),AND b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+P11_阿泽尾段投注模型会员名单.csv,8567,8602,rn(Identity),WHERE r.rn = 1
+P11_阿泽尾段投注模型会员名单.csv,8567,8603,category(Population),AND r.category = '1'
+P11_阿泽尾段投注模型会员名单.csv,8567,8604,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+P11_阿泽尾段投注模型会员名单.csv,8567,8612,bet04(Quality),"SUM(CASE WHEN CAST(bet04 AS INT) >= 40 THEN 1 ELSE 0 END) AS late_orders,"
+P11_阿泽尾段投注模型会员名单.csv,8567,8621,bet04(Quality),AND bet04 IS NOT NULL
+P11_阿泽尾段投注模型会员名单.csv,8567,8622,bet05(Quality),AND bet05 IS NOT NULL
+P11_阿泽尾段投注总帐.csv,8652,8657,age022(Population),WHERE age022 = '1'
+P11_阿泽尾段投注总帐.csv,8652,8667,bet02(Identity),WHERE b.bet02 = '101'
+P11_阿泽尾段投注总帐.csv,8652,8668,dt(Window),AND b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+P11_阿泽尾段投注总帐.csv,8652,8680,rn(Identity),WHERE r.rn = 1
+P11_阿泽尾段投注总帐.csv,8652,8681,category(Population),AND r.category = '1'
+P11_阿泽尾段投注总帐.csv,8652,8682,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+P11_阿泽尾段投注总帐.csv,8652,8702,bet04(Quality),AND bet04 IS NOT NULL
+P11_阿泽尾段投注总帐.csv,8652,8703,bet05(Quality),AND bet05 IS NOT NULL
+P11_阿泽尾段投注总帐.csv,8652,8743,bet05(Quality),"WHERE CAST(NULLIF(TRIM(bet05), '') AS BIGINT) > 0"
+P11_阿泽尾段投注总帐.csv,8652,8744,bet11(Quality),"AND CAST(NULLIF(TRIM(bet11), '') AS DECIMAL(20,8)) > 0"
+P11_阿泽尾段投注总帐.csv,8652,8745,bet04(Quality),"AND CAST(NULLIF(TRIM(bet04), '') AS INT) > 0"
+P11_阿泽尾段投注总帐.csv,8652,8746,bet08(Quality),"AND NULLIF(TRIM(bet08), '') IS NOT NULL"
+P11_雷欧尾段投注总帐.csv,8799,8805,age022(Population),WHERE age022 = '1'
+P11_雷欧尾段投注总帐.csv,8799,8815,dt(Window),WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+P11_雷欧尾段投注总帐.csv,8799,8816,bet02(Identity),AND b.bet02 = '101'
+P11_雷欧尾段投注总帐.csv,8799,8839,rn(Identity),WHERE r.rn = 1
+P11_雷欧尾段投注总帐.csv,8799,8840,category(Population),AND r.category = '1'
+P11_雷欧尾段投注总帐.csv,8799,8841,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+P11_雷欧尾段投注总帐.csv,8799,8842,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+P11_雷欧尾段投注总帐.csv,8799,8843,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+P11_雷欧尾段投注总帐.csv,8799,8844,bet04(Quality),"AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0"
+P12a_platform_daily.csv,8938,8946,age022(Population),WHERE age022 = '1'
+P12a_platform_daily.csv,8938,8956,bet02(Identity),WHERE b.bet02 = '101'
+P12a_platform_daily.csv,8938,8957,dt(Window),AND b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+P12a_platform_daily.csv,8938,8967,rn(Identity),WHERE r.rn = 1
+P12a_platform_daily.csv,8938,8968,category(Population),AND r.category = '1'
+P12a_platform_daily.csv,8938,8969,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+P12a_platform_daily.csv,8938,8972,bet04(Quality)、bet05(Quality),AND r.bet03 IS NOT NULL AND r.bet04 IS NOT NULL AND r.bet05 IS NOT NULL
+P12b_member_events.csv,9012,9023,age022(Population),WHERE age022 = '1'
+P12b_member_events.csv,9012,9032,bet02(Identity),WHERE b.bet02 = '101'
+P12b_member_events.csv,9012,9033,dt(Window),AND b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+P12b_member_events.csv,9012,9043,rn(Identity),WHERE r.rn = 1
+P12b_member_events.csv,9012,9044,category(Population),AND r.category = '1'
+P12b_member_events.csv,9012,9045,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+P12b_member_events.csv,9012,9048,bet05(Quality),AND r.bet05 IS NOT NULL
+P12b_member_events.csv,9012,9063,dt(Window),WHERE dt >= '2026-03-21' AND dt < '2026-08-07'
+P12c_member_daily_pnl.csv,9080,9092,age022(Population),WHERE age022 = '1'
+P12c_member_daily_pnl.csv,9080,9102,bet02(Identity),WHERE b.bet02 = '101'
+P12c_member_daily_pnl.csv,9080,9103,dt(Window),AND b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+P12c_member_daily_pnl.csv,9080,9119,rn(Identity),WHERE r.rn = 1
+P12c_member_daily_pnl.csv,9080,9120,category(Population),AND r.category = '1'
+P12c_member_daily_pnl.csv,9080,9121,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+P12c_member_daily_pnl.csv,9080,9124,bet05(Quality),AND r.bet05 IS NOT NULL
+R01_late_shoe_w2.csv,9170,9174,age022(Population),WHERE age022 = '1'
+R01_late_shoe_w2.csv,9170,9185,dt(Window),WHERE b.dt >= '2026-08-07' AND b.dt < '2026-08-20'
+R01_late_shoe_w2.csv,9170,9186,bet02(Identity),AND b.bet02 = '101'
+R01_late_shoe_w2.csv,9170,9202,rn(Identity),WHERE r.rn = 1
+R01_late_shoe_w2.csv,9170,9203,category(Population),AND r.category = '1'
+R01_late_shoe_w2.csv,9170,9204,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+R01_late_shoe_w2.csv,9170,9205,bet05(Quality),"AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0"
+R01_late_shoe_w2.csv,9170,9206,bet11(Quality),"AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0"
+R01_late_shoe_w2.csv,9170,9207,bet04(Quality),"AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0"
+P13_personal_entry.csv,9265,9271,age022(Population),WHERE age022 = '1'
+P13_personal_entry.csv,9265,9281,bet02(Identity),WHERE b.bet02 = '101'
+P13_personal_entry.csv,9265,9282,dt(Window),AND b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+P13_personal_entry.csv,9265,9292,rn(Identity),WHERE r.rn = 1
+P13_personal_entry.csv,9265,9293,category(Population),AND r.category = '1'
+P13_personal_entry.csv,9265,9294,bet38(State),AND UPPER(TRIM(r.bet38)) = 'N'
+P13_personal_entry.csv,9265,9297,bet04(Quality)、bet05(Quality),AND r.bet03 IS NOT NULL AND r.bet04 IS NOT NULL AND r.bet05 IS NOT NULL
