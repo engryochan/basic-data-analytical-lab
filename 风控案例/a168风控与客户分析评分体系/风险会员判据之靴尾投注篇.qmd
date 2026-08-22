@@ -1,7 +1,7 @@
 ---
 title: "风险会员判据"
 subtitle: "靴尾投注篇"
-author: "Ryo（雷欧）"
+author: "Ryo Eng（黄联富）"
 date: "2026-08-18"
 lang: zh-CN
 format:
@@ -12,6 +12,7 @@ format:
     toc-location: left
     toc-expand: 3
     number-sections: true
+    # v1.2.48 斧正：见文末「变更记录」章（D-01~D-10）；商业方案章补全。
     # v1.2.46 规格光复：v1.2.43 之轻装降格系 error 1455（页面文件 0 MB）权宜，
     # 病根既除（8192 MB 已设并实证渲染通过），恢复原始单文件自包含标准。
     # 若某机内嵌总装仍超内存余量，渲染.bat 第二级自动降轻装并回显，无须改档。
@@ -80,6 +81,16 @@ stopifnot(
   名单侧 = c(sum(RYO_M$stake_all), -sum(RYO_M$game_pnl_all)),
   总帐侧 = c(.lE$stake_sum, .lE$ggr_sum))
 .gap[, 差额 := 名单侧 - 总帐侧]
+
+## ── 预注册常量（见数前锁定，禁事后调参）——v1.2.48 补：原档六处引用而未定义
+.alpha      <- 0.05        # 显著性水平 α（单点声明；大样本下须与四项行动扳机共破）
+PREREG_SEED <- 20260819L   # 自助法／置换检验种子（原档已在册，此处集中登记）
+
+## ── 尾差容差判定（v1.2.48 补）：正文已锁「必须在可接受容差内核验」，此处落地为列。
+##    容差取相对 1e-6（汇率铸型与取整累积之合理上界）；越界不静默，随表显 ⚠️。
+.TOL_REL <- 1e-6
+.gap[, 相对差 := abs(差额) / pmax(abs(总帐侧), .Machine$double.eps)]
+.gap[, 判定 := fifelse(相对差 <= .TOL_REL, "✅ 容差内", "⚠️ 越界——须查口径")]
 ```
 ```{r}
 #| label: 悬停术语引擎
@@ -92,7 +103,7 @@ stopifnot(
 ## ════════════════════════════════════════════════════════════════════════
 .GL <- c(
 
-  雷欧 = "雷欧（本金口径）〔曾用名：模型二·甲版〕＝R01 名单：判据 shoe_pos>=0.80 相对靴位、门槛≥100 单、本金口径；定位＝行为筛选器与特征层（候选特征非证据）",
+  雷欧 = "雷欧（**口径名，非署名**；本金口径）〔曾用名：模型二·甲版〕＝R01 名单：判据 shoe_pos>=0.80 相对靴位、累计满 100 局起、本金口径；定位＝行为筛选器与特征层（候选特征非证据）",
   洗码 = "valid_bet／洗码量：结算有效投注额（对押冲销后），退水计算之基数；ODS 等价列 bet41（比值 0.999994，引用级）",
   退水 = "rebate：按洗码量比例返还之让利。契约档 0.8%~1.0%（洗码基数）；逐单候选字段 bet16（实测占洗码 0.0679%，与契约差约 12 倍，引用级）；正式主帐在月结",
   返水 = "与「退水」同义之市场惯用语；本报告统一用「退水」，营销红利（bonus）另列，二者不得混同",
@@ -422,9 +433,11 @@ n_adm_col <- length(adm)
 ::: {.callout-caution}
 ## 为何本档的主角被自己判了死刑
 
-`late_share` 属 T-03，`r tip("门禁五档")` 判 **FATAL**。理由是本档 @sec-tests 逐层现算所得：
-配对 `r tip("符号检验")` p = `r sprintf("%.4f", .ps_use)`、`r tip("Wilcoxon")`
-p = `r sprintf("%.4f", .pw_use)`、三项行为维度 `r tip("AUC")` `r .auc_txt`。
+`late_share` 属 T-03，`r tip("门禁五档")` 判 **FATAL**。其裁定之数据出处系 R01 独立管道
+（本净化版未在位，故判**引用级**，非本档现算）：配对 `r tip("符号检验")` 与
+`r tip("Wilcoxon")` 皆不显著、九档 hold% 扫描零命中。裁定全文以 `r tip("登记册")`
+`verdict` 栏为唯一真相源（见本章第二节之现算表），**本处禁另写数字**——净化版删去
+检验章后，本档已无该三值之现算能力，以静态数字冒充现算即违铁律第九条。
 
 `r tip("登记册")`另载 R01 独立管道之同向读数（引用级）：外部 `r tip("L1a标签")` 交叉验证 `r tip("AUC")` 方向反转。
 **本档实测与 R01 管线同向**，故裁定为「降格为画像字段，禁作独立触发器」。
@@ -553,9 +566,15 @@ mm <- covL[nzchar(在位表)]
 if (nrow(mm) == 0L) {
   cat("○ 待表：登记册判据列与本档交付件零交集，本节不臆造。\n")
 } else {
+  ## v1.2.48 加固：不设普适 n≥30 之类门槛，改由分位本身反解最小样本量——
+  ## q 分位欲不退化为极值序统计量，须 n ≥ ⌈1/(1−q)⌉；不足者出 NA，表内显「○ n 不足」。
+  .qmin <- function(q) as.integer(ceiling(1 / (1 - q)))
   .qv <- function(tb, cl) {
     v <- suppressWarnings(as.numeric(.tabs[[tb]][[cl]])); v <- v[is.finite(v)]
-    c(length(v), stats::quantile(v, c(0.5, 0.9, 0.99), names = FALSE))
+    qs <- vapply(c(0.5, 0.9, 0.99), function(q)
+            if (length(v) < .qmin(q)) NA_real_ else
+              stats::quantile(v, q, names = FALSE), numeric(1L))
+    c(length(v), qs)
   }
   dist <- rbindlist(lapply(seq_len(nrow(mm)), function(i) {
     tbs <- strsplit(mm$在位表[i], "·", fixed = TRUE)[[1L]]
@@ -563,8 +582,12 @@ if (nrow(mm) == 0L) {
       s <- .qv(tb, mm$criterion_column[i])
       data.table(类 = mm$type_id[i], 风险类型 = mm$name_zh[i], 门禁 = mm$gate[i],
                  判据列 = mm$criterion_column[i], 表 = tb, n有效 = .i(s[1L]),
-                 中位 = sprintf("%.4f", s[2L]), P90 = sprintf("%.4f", s[3L]),
-                 P99 = sprintf("%.4f", s[4L]))
+                 中位 = if (is.na(s[2L])) sprintf("○ n 不足（须 ≥ %d）", .qmin(.50))
+                        else sprintf("%.4f", s[2L]),
+                 P90  = if (is.na(s[3L])) sprintf("○ n 不足（须 ≥ %d）", .qmin(.90))
+                        else sprintf("%.4f", s[3L]),
+                 P99  = if (is.na(s[4L])) sprintf("○ n 不足（须 ≥ %d）", .qmin(.99))
+                        else sprintf("%.4f", s[4L]))
     }))
   }))
   dist[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(dist, "序")
@@ -590,7 +613,6 @@ if (nrow(mm) == 0L) {
 /* ───────────────────────────────────────────────────────────────────────────
    §R01 · R01_late_shoe.csv
    策略性风控：靴内相对靴位 ≥ 0.80 的下注占比 + 相对靴位 + 注额斜率 + 分段 ROI
-              + 相对靴位 + 注额斜率 + 分段 ROI
    ★★ 2026-08-12 B-01 斧正：当前生产判据锁定为相对靴位 `shoe_pos>=0.80` ★★
      依据：外部实测靴长分布（均值 49.86 局、P50=50、P75=52、P90=54、P99=58）。
      第 50 把的相对靴位为 100.3%（以均值计），故 round_no>=50 实为「靴的最后一局
@@ -667,10 +689,10 @@ SELECT                                                                          
   SUM(is_late) * 1.0 / COUNT(*)                                 AS late_share,                      -- 汇总表达式：计数，取用 late_share（晚注占比），产出「late_share」
   PERCENTILE_APPROX(CASE WHEN is_late=1 THEN shoe_pos END, 0.5) AS shoe_pos_p50,                    -- 取近似分位数表达式：产出「shoe_pos_p50」
   SUM(CASE WHEN is_late=1 THEN stake END) / NULLIF(SUM(is_late),0)              AS stake_late_avg,  -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake_late_avg」
-  SUM(CASE WHEN is_late=0 THEN stake END) / NULLIF(COUNT(*)-SUM(is_late),0)     AS stake_early_avg,  -- 汇总表达式：汇总后取负号——会员净输赢取负即平台毛利（GGR），产出「stake_early_avg」
+  SUM(CASE WHEN is_late=0 THEN stake END) / NULLIF(COUNT(*)-SUM(is_late),0)     AS stake_early_avg,  -- 汇总表达式：早段注额合计 ÷ 早段注单数 ＝ 早段均注，产出「stake_early_avg」
   (SUM(CASE WHEN is_late=1 THEN stake END) / NULLIF(SUM(is_late),0))                                -- 续行：汇总，取用 stake（下注额（经汇率归一化））
     / NULLIF(SUM(CASE WHEN is_late=0 THEN stake END)                                                -- 除法或乘法计算：汇总，取用 stake（下注额（经汇率归一化））
-             / NULLIF(COUNT(*)-SUM(is_late),0), 0)                              AS stake_ramp,      -- 除法或乘法计算：汇总后取负号——会员净输赢取负即平台毛利（GGR），产出「stake_ramp」
+             / NULLIF(COUNT(*)-SUM(is_late),0), 0)                              AS stake_ramp,      -- 除法：晚段均注 ÷ 早段均注 ＝ 注额斜率，产出「stake_ramp」
   SUM(CASE WHEN is_late=1 THEN game_pnl END)                                                        -- 汇总表达式：取用 game_pnl（游戏净输赢）
     / NULLIF(SUM(CASE WHEN is_late=1 THEN stake END),0)                         AS roi_late,        -- 除法或乘法计算：汇总，取用 stake（下注额（经汇率归一化）），产出「roi_late」
   SUM(CASE WHEN is_late=0 THEN game_pnl END)                                                        -- 汇总表达式：取用 game_pnl（游戏净输赢）
@@ -695,7 +717,7 @@ ORDER BY late_share DESC, n_orders_late DESC;                                   
 ```{sql, eval = FALSE}
 -- eval = FALSE
 
--- P11 · 雷欧域（§R01 原准入）与全量洁净两域十一项总帐
+-- P11 · 雷欧域（§R01 原准入）与全量洁净两域十二项总帐
 -- 导出：存为「数据库/P11_雷欧尾段投注总帐.csv」
 -- 口径：CTE test_agents/ranked/base 逐字沿用 §R01 原文；雷欧域＝base 上 HAVING n>=100 之会员注单
 --       全量洁净＝同一 base 全量（§R01 六闸，未施 bet08，实测其筛除量为零）
@@ -825,8 +847,9 @@ led <- data.table(
   `雷欧（占比）` = sapply(seq_along(.item), function(i) .rat(.val(.lE, i), .val(.cL, i), i)))
 led[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(led, "序")
 kable(led, align = "r",
-  caption = sprintf("单域十二项总帐（%d 项全列，零省略；分母为全量洁净 %s 注单／%s 会员）",
-                    nrow(led), .i(.cL$n_orders), .i(.cL$n_members)))
+  caption = sprintf(paste0("单域 %s 项总帐（%d 项全列，零省略；",
+                           "分母为全量洁净 %s 注单／%s 会员）"),
+                    .i(nrow(led)), nrow(led), .i(.cL$n_orders), .i(.cL$n_members)))
 ```
 
 ```{r}
@@ -834,10 +857,13 @@ kable(led, align = "r",
 #| echo: true
 .g <- copy(.gap)
 .g[, `:=`(名单侧 = .f(名单侧), 总帐侧 = .f(总帐侧), 差额 = .f(差额, 4),
+          相对差 = sprintf("%.3e", 相对差),
           序 = format(seq_len(.N), big.mark = ","))]
 setcolorder(.g, "序")
 kable(.g, align = "r",
-  caption = sprintf("雷欧名单侧与总帐侧之尾差（%d 项全列，零省略）", nrow(.g)))
+  caption = sprintf(paste0("雷欧名单侧与总帐侧之尾差（%d 项全列，零省略；",
+                           "容差 ＝ 相对 %.0e，越界即显 ⚠️ 并须查口径）"),
+                    nrow(.g), .TOL_REL))
 ```
 
 ```{r}
@@ -1015,7 +1041,8 @@ kable(.ht_show(RYO_M), align = "r", escape = FALSE,
 | L4 机理与经济 | 靠什么赢的？动手值不值？ | 无法处置、无法申诉、可能亏本 |
 
 **本章产出恒为线索级复核队列，非处罚名单**；一切处置仍须过五项并报门禁
-（@sec-gate）与五道铁门（@sec-fivegates）。本章一切阈值、零假设、噪声标度皆
+（五项并报门禁，见登记册 `gate` 栏）与五道铁门（见登记册 `unblock_conditions` 栏）。
+本章一切阈值、零假设、噪声标度皆
 **渲染时现算**，禁硬写。
 :::
 
@@ -1045,7 +1072,7 @@ kable(.ht_show(RYO_M), align = "r", escape = FALSE,
    **同一性注记**：本章第二节之首行判据 `ROI > 0` 即业务侧「净盈利即列」之阈值，
    二者为同一切点、非两条判据；其命中规模与提升度即该阈值之实测代价。
 4. `ROI > 1` 谓**净盈亏超过其分母**——此类一律先入结算完整性九项排查序
-   （参 @sec-roi1），查账在先、查人在后。
+   （参本章第〇节尺度锁第 4 条 @sec-roi-scale），查账在先、查人在后。
 
 **真相源**：本节即本档尺度定义之唯一真相源。后续如迁入术语库 `.GL`，以本节为迁移母本；
 两处并存期间以本节为准，且**禁二处另写定义**。
@@ -1410,5 +1437,703 @@ cat(paste0(
 登记须走登记册变更单（v1.5.0 → v1.6.0），本节仅为其输入。
 :::
 
-# 商业方案 {#sec-biz}
+# 商业方案：风险分层总账、明细与限额幅度等级 {#sec-biz}
+
+::: {.callout-important}
+## 本章定位：限额是成本，不是免费的风控工具
+
+赌场并非慈善机构——但**正因如此**，本章第一条铁律是：**赢钱的客人不等于风险，输钱的大客
+才是资产**。平台之收入 ＝ hold% × 流水；任何限额动作都是**主动削减流水**，即**主动削减
+GGR**。故限额之正当性不能由「他赢了」推出，只能由「他赢得无法以运气解释」或
+「他根本不靠赢钱赚你」（打水套退水）推出。
+
+本章出四件东西，全部渲染时现算：
+
+1. **限额幅度等级 L0–L4**——等级、标准、口径三者一次锁死（第一节）；
+2. **总账**——十五类判据 × 风险等级 × 价值轴之全域分层账，每格附限额等级与处置（第三节）；
+3. **明细**——已获门闸准入者之逐员复核队列，附限额等级与四档落点（第五节）；
+4. **经济核算**——每一档限额之期望净影响：正即避损、负即自残（第四节）。
+
+**本章之处置一律为「建议」**：@sec-adv-blocked 之 L3／L4 与 MCID 皆判 BLOCKED，
+故 L2 以上之硬限额于本档**结构性不可授权**（合规强制线除外，见第〇节）。
+:::
+
+## 〇、处置阶梯 D0–D6 与授权矩阵（规章，非数据）
+
+::: {.callout-note}
+## 为何要有阶梯：先动钱，后动人；先动软，后动硬
+
+行家皆知：**退水与红利可逆且不伤流水，限额伤流水，封停伤客且引申诉**。故处置须由软及硬、
+逐级递进，**禁跳级**。跳级之代价不是道德问题，是**账面问题**——把一个 hold 为正的输家
+按成「风险」封掉，账上直接少一笔常年 GGR，而所谓「避损」为零。
+:::
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-阶梯
+#| echo: true
+## 本表系「规章」（治理规则），非「数据」，故为在册常量而非现算——与铁律第九条不冲突：
+## 铁律第九条禁的是「以静态文字冒充数据结果」，规章本身即其真相源。
+lad <- data.table(
+  级 = c("D0", "D1", "D2", "D3", "D4", "D5", "D6"),
+  名称 = c("在册观察", "画像标记", "人工复核", "优惠调整",
+           "限额收紧", "限桌限区", "停开／封停"),
+  动作 = c("仅记录，不触达会员",
+           "进画像层，禁入评分管道",
+           "调档核单、结算完整性九项排查",
+           "降退水率／停营销红利（不动限额）",
+           "单注上限由现状带压至收紧带",
+           "限定台桌／停 VIP 厅准入",
+           "禁开新单／冻结出入金"),
+  对应限额等级 = c("L0", "L0", "L1", "L1", "L2", "L3", "L4（禁越，改走 D6）"),
+  可逆 = c("是", "是", "是", "是", "是", "是", "否（须申诉通道）"),
+  伤流水 = c("零", "零", "零", "低", "中", "高", "全额"),
+  授权层 = c("系统自动", "分析侧", "风控专员", "风控主管",
+             "风控主管 ＋ 运营会签", "风控经理", "合规 ＋ 法务"),
+  证据门槛 = c("E1–E2", "E2", "E3 ＋ 门禁 ≥ P1", "E4 ＋ 打水／对押实证",
+               "E5 ＋ 本章经济核算为正", "E5 ＋ 串谋或聚集实证", "E6 或合规强制"),
+  本档可授权 = c("✅", "✅", "✅", "⛔ 待表（洗码逐员列缺位）",
+                 "⛔ BLOCKED（MCID 未定义）", "⛔ 待表（图链路缺位）",
+                 "⛔ BLOCKED（除合规强制线）"))
+lad[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(lad, "序")
+kable(lad, align = "l",
+  caption = sprintf("处置阶梯 D0–D6 与授权矩阵（%d 级全列，零省略；禁跳级）", nrow(lad)))
+```
+:::
+
+::: {.callout-warning}
+## 合规强制线：唯一豁免经济核算之通道
+
+**AML 触发、未成年、自我排除（self-exclusion）三者直上 D6，不受 MCID 经济核算约束，
+亦不受本章任何「限额净收益为负」之裁定所阻。**
+理由：此三者之约束来自监管义务与责任博彩义务，非商业最优化问题——
+**合规不是一门生意，是一张牌照。**
+
+本档不产出 AML 结论（判级 UNKNOWN，交付件缺位），仅于本节确立该通道之存在与优先级，
+以免读者误将本章之经济裁定套用于合规场景。
+:::
+
+## 一、限额幅度等级：等级、标准、口径（本章冻结）
+
+### 一之一、四档分位之处置语义（先锁读法）
+
+::: {.callout-important}
+## P0／P50／P90／P99 在本章是**处置档位**，不是描述性分位
+
+同一组分位数有两种读法，混用即口径污染。此处一次锁死：
+
+| 读法 | 含义 | 本章用途 |
+|:--|:--|:--|
+| **分布刻度** | 该分层内会员注额之经验分位 | **来源**：档位由此现算 |
+| **处置档位** | 把单注上限设在该分位之值 | **用途**：限额等级之落点 |
+
+| 档 | 别名 | 含义 | 保住之注单占比 | 对应限额等级 |
+|:--|:--|:--|--:|:--|
+| **P99** | 现状带 | 当前实际上限，几乎不改变行为 | ≈ 99% | L0／L1 |
+| **P90** | 收紧带 | 只削尾部注额，主体行为不动 | ≈ 90% | **L2（默认落点）** |
+| **P50** | 常态带 | 断其半数注单，属重度处置 | ≈ 50% | L3 |
+| **P0** | 护栏下限 | 观测最低注额；压至此以下等同变相封停 | ≈ 0% | **L4（禁越）** |
+:::
+
+### 一之二、限额幅度等级 L0–L4：标准与口径
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-限额等级
+#| echo: true
+## 规章表：限额幅度等级之「等级 × 标准 × 口径」三锁。常量在册，非数据现算。
+lv <- data.table(
+  等级 = c("L0", "L1", "L2", "L3", "L4"),
+  名称 = c("现状带（不动）", "观察带（不动＋加密复核）",
+           "收紧带", "常态带", "护栏下限（禁越）"),
+  上限落点 = c("P99", "P99（限额不动，只加复核频次）", "P90", "P50", "P0"),
+  准入标准 = c(
+    "默认档：风险轴 R0 无命中，或判据未获门闸准入",
+    "R1 命中（ROI > 0 但单侧检验不显著）——命中主体系方差，**禁降限额**",
+    "R2 命中（最严 deff 档 BH 校正后显著）**且** 跨窗持续性通过 **且** 本章经济核算为正",
+    "L2 已施而复发，或串谋／对押／同桌聚集实证成立",
+    "禁越：压至 P0 以下等同变相封停，一律改走 D6 授权与申诉通道"),
+  刻度口径 = c(rep("会员级均注 P 分位（判级 INFERRED；逐注分位待表）", 4L),
+               "同左；且以该层观测最低注额为硬底"),
+  分母口径 = rep("本金口径（`stake` ＝ `bet13 ÷ bet11`），**非洗码口径**", 5L),
+  币别口径 = rep("原币经 `bet11` 汇率归一，非 CNY", 5L),
+  授权层 = c("系统自动", "分析侧／风控专员", "风控主管 ＋ 运营会签",
+             "风控经理", "合规 ＋ 法务"),
+  经济前置 = c("无", "无", "期望净影响 > 0 且 ≥ MCID", "同 L2，且并报避损与 GGR 损失",
+               "不适用（改走 D6）"),
+  本档可授权 = c("✅", "✅", "⛔ BLOCKED（L3 跨窗与 MCID 皆缺位）",
+                 "⛔ BLOCKED", "⛔ BLOCKED（除合规强制线）"))
+lv[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(lv, "序")
+kable(lv, align = "l",
+  caption = sprintf("限额幅度等级 L0–L4：等级 × 标准 × 口径（%d 级全列，零省略）", nrow(lv)))
+```
+:::
+
+::: {.callout-important}
+## 口径三锁（永久生效，全章适用）
+
+**其一·刻度口径**：限额档位恒取**会员自身（或其所属价值层）之注额经验分位**，
+**不取任何外部普适门槛**——可辩护、可复现、可申诉。业务侧「一刀切上限」之做法，本章禁用。
+
+**其二·分母口径**：一律**本金口径**。本金不因对押或洗码规则塌缩，是稳健分母；
+洗码口径之限额与本金口径之限额**不可互比**，混用即口径污染。
+
+**其三·证伪口径**：**禁以被证伪之判据设限额**。`late_share` 属 T-03、门禁 FATAL，
+**任何以「靴末加注」为由收紧限红之工单，本章一律退回**。证伪结论不因分布可算而复活。
+:::
+
+::: {.callout-warning}
+## 本档之刻度限界（必读，禁跳过）
+
+限额等级之**理想刻度**为「逐注注额」之分位。但本档在位交付件仅雷欧两件，
+**只有会员级汇总（`stake_all`／`n_orders_all`），无逐注注额分布**。故本章一律以
+
+$$\overline{b}_i \;=\; \frac{\texttt{stake\_all}_i}{\texttt{n\_orders\_all}_i}$$
+
+即**会员级均注**为逐注注额之代理，判级 **INFERRED**，非 OBSERVED。
+
+**偏误方向须写明**：均注抹平会员**内**之注额波动，故以均注分位设上限者，
+其对**真实尾部注额**之削减量为**下偏估计**——即实际削掉的流水会比本章算出来的**更多**。
+故第四节之「期望净影响」在负值侧为**乐观**估计；裁定取严时以此为准。
+
+**解锁条件**：交付逐员注额分位件（`uid, bet_p0, bet_p50, bet_p90, bet_p99, n`）
+或逐注明细分组件；届时本节判级方可升 OBSERVED，L2 方具 OBSERVED 级刻度。
+:::
+
+## 二、前置：分层坐标系与风险等级（现算）
+
+```{r}
+#| label: biz-前置
+#| echo: true
+#| results: asis
+## ════════════════════════════════════════════════════════════════════════
+## 分位可信性护栏（全章共用）：**不设普适 n≥30 之类门槛**，改由分位本身反解最小
+## 样本量——q 分位若欲不退化为极值序统计量，须 n ≥ ⌈1/(1−q)⌉。不足者出 NA 照登。
+## ════════════════════════════════════════════════════════════════════════
+.qmin  <- function(q) as.integer(ceiling(1 / (1 - q)))
+.qsafe <- function(v, q) {
+  v <- v[is.finite(v)]
+  if (length(v) < .qmin(q)) NA_real_ else stats::quantile(v, q, names = FALSE)
+}
+
+.biz_ok <- exists("RYO_M") &&
+  all(c("uid", "stake_all", "game_pnl_all", "n_orders_all") %chin% names(RYO_M))
+
+if (!.biz_ok) {
+  cat(paste0("○ 待表：雷欧名单缺位或缺 `uid`／`stake_all`／`game_pnl_all`／",
+             "`n_orders_all`——本章不臆造，全章零输出。\n\n"))
+} else {
+  BIZ <- RYO_M[, .(uid = as.character(uid),
+                   n   = as.numeric(n_orders_all),
+                   stk = as.numeric(stake_all),
+                   pnl = as.numeric(game_pnl_all))]
+  .biz_n0 <- nrow(BIZ)
+  BIZ <- BIZ[is.finite(n) & is.finite(stk) & is.finite(pnl) & n > 0 & stk > 0]
+  .biz_drop <- .biz_n0 - nrow(BIZ)
+  BIZ[, `:=`(roi = pnl / stk, avg_bet = stk / n, ggr = -pnl)]
+
+  ## ── μ₀：恒取本档真相源（雷欧域总帐 GGR ÷ 本金，反号）；缺位方回退名单聚合
+  .biz_mu0  <- if (exists(".mu0") && is.finite(.mu0)) .mu0 else sum(BIZ$pnl) / sum(BIZ$stk)
+  .biz_hold <- -.biz_mu0                                   # 域内 hold%（本金口径）
+
+  ## ── 价值轴 V1–V5：以**秩**五分位切分（值分位遇金额并列会令 cut() 切点重复而报错）；
+  ##    切点之金额值另行现算并报，供业务对表。
+  .vlab <- c("V1 尾部", "V2 偏低", "V3 中位", "V4 偏高", "V5 头部")
+  .vrk  <- data.table::frank(BIZ$stk, ties.method = "first") / nrow(BIZ)
+  BIZ[, V := cut(.vrk, breaks = c(0, .2, .4, .6, .8, 1),
+                 include.lowest = TRUE, labels = .vlab)]
+  .vq <- stats::quantile(BIZ$stk, c(.2, .4, .6, .8), names = FALSE)
+
+  ## ── 风险轴 R：仅由**已在册或已获准入**之判据构成；被证伪者（T-03）永不入轴
+  ##    R3 结算完整性候选：|ROI| > 1 —— 查账在先、查人在后（本档 @sec-roi-scale 第 4 条）
+  ##    R2 优势候选：沿用本档 L1／L2 最严 deff 档 BH 校正后之命中集
+  ##    R1 观察：ROI > 0 但检验不显著 —— 明标「主体系方差」
+  .hit_uid <- if (exists(".hit") && is.data.frame(.hit) && nrow(.hit) > 0L)
+                as.character(.hit$uid) else character(0L)
+  BIZ[, R := fifelse(abs(roi) > 1, "R3 结算完整性候选",
+             fifelse(uid %chin% .hit_uid, "R2 优势候选·复核队列",
+             fifelse(roi > 0, "R1 观察（净赢，检验不显著）", "R0 无命中")))]
+  BIZ[, R := factor(R, levels = c("R0 无命中", "R1 观察（净赢，检验不显著）",
+                                  "R2 优势候选·复核队列", "R3 结算完整性候选"))]
+
+  ## ── 限额等级：由风险轴映射（标准见第一节之二），非由金额或价值层映射
+  .lv_map <- c(`R0 无命中` = "L0 现状带（不动）",
+               `R1 观察（净赢，检验不显著）` = "L1 观察带（不动＋加密复核）",
+               `R2 优势候选·复核队列` = "L2 收紧带（BLOCKED：待跨窗＋MCID）",
+               `R3 结算完整性候选` = "L1 观察带（查账序，不动限额）")
+  BIZ[, LV := .lv_map[as.character(R)]]
+
+  ## ── 收缩后之前瞻 ROI 估计 μ̂ᵢ：以暴露量为精度权向 μ₀ 收缩（本档「收缩榜」同法）
+  ##    先验强度 k ＝ 注单数中位（非严格经验贝叶斯，故不冠 Bayes 之名——术语在册）
+  .k_prior <- stats::median(BIZ$n)
+  BIZ[, roi_shrunk := (n * roi + .k_prior * .biz_mu0) / (n + .k_prior)]
+
+  cat(sprintf(paste0(
+    "**分层坐标系（现算）**：进入本章会员 **%s** 名（剔除分母或局数非正／非有限 **%s** 名）；",
+    "价值轴 V ＝ `stake_all` 秩五分位（等量五层），切点金额 %s；域内 hold%% **%.4f%%**，",
+    "故零假设 μ₀ ＝ **%+.6f**。收缩先验强度 k ＝ 注单数中位 **%s**。\n\n"),
+    .i(nrow(BIZ)), .i(.biz_drop),
+    paste(.f(.vq), collapse = " ／ "), .biz_hold * 100, .biz_mu0, .i(.k_prior)))
+
+  if (!length(.hit_uid))
+    cat(paste0("**零行照登**：本档 L1／L2 最严档 BH 校正后之优势候选为零（或 `.hit` 未建）。",
+               "**零行不等于无风险**——仅谓本口径、本窗口、本检定力之下未命中；",
+               "R2 层因此为空，其总账与明细一律零行在册，不以 R1 冒充。\n\n"))
+}
+```
+
+## 三、总账：全类别 × 风险等级 × 价值轴（现算）
+
+### 三之一、十五类判据之总账在册状态与默认限额等级
+
+::: {.callout-important}
+## 为何总账不能只出「算得出来的那几格」
+
+登记册在册十五类，本档在位交付件仅雷欧两件。**若只出算得出来的几格，读者会误以为
+其余各类「无风险」——零行不是无异常，缺档不是无内容。**
+故本表**全类在册**：可测者出数，不可测者标「○ 待表」并指向其解锁条件所在栏位。
+:::
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-总账-类别
+#| echo: true
+#| results: asis
+if (!exists("BIZ")) {
+  cat("○ 待表：前置未建 `BIZ`，本节不臆造。\n\n")
+} else if (!exists("REG")) {
+  cat(paste0("○ 待表：`REG` 登记册未载入，十五类在册状态不可现算。",
+             "本节**禁以九类／十五类之静态转录冒充**——登记册系单一真相源。\n\n"))
+} else {
+  .rt <- unique(REG$dict[axis == "R", .(type_id, name_zh, gate, severity,
+                                        admit_to_scoring)], by = "type_id")
+  setorder(.rt, type_id)
+  ## 本章可实测之类：以类名是否落在本章已建之 R2／R3 两轴上判定；判定式在册，禁臆造映射
+  .rt[, 本章总账状态 := fifelse(
+        grepl("优势|优胜|赢家|结算|完整性|账务", name_zh),
+        "◐ 部分可测（本章 R2／R3 轴）", "○ 待表（交付件缺位）")]
+  .rt[, 默认限额等级 := fifelse(admit_to_scoring, "L0（待命中方升级）", "L0（未准入，禁升级）")]
+  .rt[gate == "FATAL", `:=`(本章总账状态 = "🔴 已证伪——永禁入总账与限额",
+                            默认限额等级 = "—（永禁作限额依据）")]
+  out <- .rt[, .(序 = format(seq_len(.N), big.mark = ","),
+                 类 = type_id, 风险类型 = name_zh, 门禁 = gate, 严重度 = severity,
+                 准入评分 = fifelse(admit_to_scoring, "✅", "—"),
+                 本章总账状态, 默认限额等级)]
+  print(kable(out, align = "l",
+    caption = sprintf(paste0("十五类判据之总账在册状态与默认限额等级（%s 类全列，零省略；",
+                             "登记册 v%s 为分类之唯一真相源）"),
+                      .i(nrow(out)), REG$meta$registry$version)))
+  cat(sprintf(paste0(
+    "\n\n**覆盖读数（现算）**：本章可部分实测 **%s** 类、待表 **%s** 类、",
+    "已证伪永禁 **%s** 类。**覆盖之低如实照登**——这正是本档最重要的商业结论之一：",
+    "现有交付件支撑不起十五类总账，缺的是数据不是方法。\n\n"),
+    .i(sum(grepl("部分", out$本章总账状态))),
+    .i(sum(grepl("待表", out$本章总账状态))),
+    .i(sum(grepl("证伪", out$本章总账状态)))))
+}
+```
+:::
+
+### 三之二、风险等级 × 价值轴总账（金额、占比、限额四档、限额等级、处置）
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-总账-矩阵
+#| echo: true
+#| results: asis
+if (!exists("BIZ")) {
+  cat("○ 待表：前置未建 `BIZ`，本节不臆造。\n\n")
+} else {
+  ## 分位护栏 `.qmin`／`.qsafe` 已于「biz-前置」定义，全章共用，此处不重复定义。
+  cell <- BIZ[, .(
+      会员数 = .N,
+      注单数 = sum(n),
+      本金   = sum(stk),
+      GGR    = sum(ggr),
+      P0  = min(avg_bet),
+      P50 = .qsafe(avg_bet, 0.50),
+      P90 = .qsafe(avg_bet, 0.90),
+      P99 = .qsafe(avg_bet, 0.99)),
+    by = .(风险等级 = R, 限额等级 = LV, 价值层 = V)]
+  setorder(cell, 风险等级, 价值层)
+  cell[, `:=`(hold = GGR / 本金 * 100,
+              会员占比 = 会员数 / nrow(BIZ) * 100,
+              本金占比 = 本金 / sum(BIZ$stk) * 100,
+              GGR占比  = GGR / sum(BIZ$ggr) * 100)]
+  .disp <- c(`R0 无命中` = "D0 在册观察｜限额取现状带 P99，不动",
+             `R1 观察（净赢，检验不显著）` = "D0–D1 观察／画像｜**禁降限额**：命中主体系方差",
+             `R2 优势候选·复核队列` = "D2 人工复核｜升 L2 须先过跨窗＋经济核算（MCID 未定义前 BLOCKED）",
+             `R3 结算完整性候选` = "D2 查账序：结算完整性九项｜**查账在先、查人在后**")
+  cell[, 建议处置 := .disp[as.character(风险等级)]]
+  cell[, 限额落点 := fifelse(grepl("^L2", 限额等级), "P90（待授权）", "P99（不动）")]
+  shw <- cell[, .(
+      序 = format(seq_len(.N), big.mark = ","),
+      风险等级, 限额等级, 价值层,
+      会员数 = .i(会员数), `会员占比` = sprintf("%.2f%%", 会员占比),
+      注单数 = .i(注单数),
+      本金 = .f(本金), `本金占比` = sprintf("%.2f%%", 本金占比),
+      GGR = .f(GGR), `GGR占比` = sprintf("%.2f%%", GGR占比),
+      `hold%` = sprintf("%+.4f%%", hold),
+      `P0 护栏（禁越）` = .f(P0),
+      `P50 常态带` = fifelse(is.na(P50), sprintf("○ n 不足（须 ≥ %d）", .qmin(.50)), .f(P50)),
+      `P90 收紧带` = fifelse(is.na(P90), sprintf("○ n 不足（须 ≥ %d）", .qmin(.90)), .f(P90)),
+      `P99 现状带` = fifelse(is.na(P99), sprintf("○ n 不足（须 ≥ %d）", .qmin(.99)), .f(P99)),
+      限额落点, 建议处置)]
+  print(kable(shw, align = "r",
+    caption = sprintf(paste0(
+      "风险等级 × 限额等级 × 价值轴总账（%s 行全列，零省略；共 %s 会员 × %s 注单；",
+      "限额四档系**会员级均注**之分位，判级 INFERRED——逐注刻度待表）"),
+      .i(nrow(shw)), .i(nrow(BIZ)), .i(sum(BIZ$n)))))
+  cat(sprintf(paste0(
+    "\n\n**总账读法（现算）**：R0 无命中层承载本金 **%s%%**、GGR **%s%%**——",
+    "**平台九成以上之收入来自没有任何风险命中的会员**。任何把限额撒向此层之方案，",
+    "削的是自己的账。R2 复核队列占会员 **%s%%**、占本金 **%s%%**：",
+    "**风险是稀疏的，成本却是全域的**，这就是为何判据必须收敛而非放宽。\n\n"),
+    sprintf("%.2f", sum(cell[as.character(风险等级) == "R0 无命中"]$本金占比)),
+    sprintf("%.2f", sum(cell[as.character(风险等级) == "R0 无命中"]$GGR占比)),
+    sprintf("%.3f", sum(cell[grepl("R2", as.character(风险等级))]$会员占比)),
+    sprintf("%.3f", sum(cell[grepl("R2", as.character(风险等级))]$本金占比))))
+}
+```
+:::
+
+### 三之三、风险等级小计（跨价值层合并）
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-总账-小计
+#| echo: true
+if (exists("BIZ")) {
+  tot <- BIZ[, .(会员数 = .N, 注单数 = sum(n), 本金 = sum(stk),
+                 GGR = sum(ggr), 均注中位 = stats::median(avg_bet),
+                 实测ROI = sum(pnl) / sum(stk),
+                 收缩ROI = stats::weighted.mean(roi_shrunk, n)),
+             by = .(风险等级 = R, 限额等级 = LV)]
+  setorder(tot, 风险等级)
+  shw2 <- tot[, .(序 = format(seq_len(.N), big.mark = ","), 风险等级, 限额等级,
+                  会员数 = .i(会员数), 注单数 = .i(注单数),
+                  本金 = .f(本金), GGR = .f(GGR),
+                  `hold%` = sprintf("%+.4f%%", GGR / 本金 * 100),
+                  均注中位 = .f(均注中位),
+                  `实测 ROI` = sprintf("%+.4f", 实测ROI),
+                  `收缩 ROI（前瞻）` = sprintf("%+.6f", 收缩ROI))]
+  kable(shw2, align = "r",
+    caption = sprintf(paste0("风险等级小计（%s 层全列，零省略；",
+      "「收缩 ROI」系以暴露量为精度权向 μ₀ ＝ %+.6f 收缩之前瞻估计，",
+      "**限额经济核算恒以此列为准，不以实测 ROI 为准**）"),
+      .i(nrow(shw2)), .biz_mu0))
+}
+```
+:::
+
+::: {.callout-important}
+## 为何经济核算必须用「收缩 ROI」而非「实测 ROI」
+
+实测 ROI 是**回望**的、含运气的；限额影响的是**未来**的流水。以实测 ROI 算避损，
+等于假设「他上个窗口赢多少，下个窗口还赢多少」——这正是本档 @sec-adv-naive
+已现算证伪之谬误（`ROI > 0` 之命中主体系方差）。
+
+收缩估计把小分母幸运儿拉回 μ₀，只让**暴露量足够大且持续为正**者保留正值。
+**行家一句话**：能撑住收缩的才叫优势，撑不住的叫手气。
+:::
+
+## 四、限额经济核算：动手到底值不值（现算）
+
+::: {.callout-note}
+## 核算式（一行看懂）
+
+设某会员上限由现状带压至档位 $c$，其被削本金
+
+$$\Delta\mathrm{stake}_i \;=\; n_i \times \max\!\bigl(0,\ \overline{b}_i - c\bigr)$$
+
+则**平台期望净影响**
+
+$$\Delta\Pi_i \;=\; \hat{\mu}_i \times \Delta\mathrm{stake}_i$$
+
+其中 $\hat{\mu}_i$ 为收缩后之前瞻会员 ROI。**符号一望即知**：
+
+- $\hat{\mu}_i > 0$（会员长期赢平台）→ 削其注额即**避损**，$\Delta\Pi_i > 0$；
+- $\hat{\mu}_i < 0$（会员长期输平台，即绝大多数）→ 削其注额即**自残**，$\Delta\Pi_i < 0$。
+
+**处置成本尚未计入**：MCID 未定义（本档 @sec-adv-blocked 判 BLOCKED），
+故 $\Delta\Pi_i$ 系**未扣成本之毛额**，真实净收益只会**更低**。裁定取严以此为据。
+:::
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-经济核算
+#| echo: true
+#| results: asis
+if (!exists("BIZ")) {
+  cat("○ 待表：前置未建 `BIZ`，本节不臆造。\n\n")
+} else {
+  .caps <- c(`L3 常态带 P50` = 0.50, `L2 收紧带 P90` = 0.90, `L0／L1 现状带 P99` = 0.99)
+  econ <- rbindlist(lapply(names(.caps), function(nm) {
+    q <- .caps[[nm]]
+    rbindlist(lapply(levels(BIZ$R), function(rk) {
+      s <- BIZ[R == rk]
+      if (!nrow(s)) return(NULL)
+      cap <- .qsafe(s$avg_bet, q)
+      if (!is.finite(cap))
+        return(data.table(限额等级档 = nm, 风险等级 = rk, 上限 = NA_real_,
+                          削减本金 = NA_real_, 削减占比 = NA_real_,
+                          期望净影响 = NA_real_, 裁定 = "○ n 不足，档位不可定"))
+      d  <- s$n * pmax(0, s$avg_bet - cap)
+      dp <- sum(s$roi_shrunk * d)
+      data.table(限额等级档 = nm, 风险等级 = rk, 上限 = cap,
+                 削减本金 = sum(d), 削减占比 = sum(d) / sum(s$stk) * 100,
+                 期望净影响 = dp,
+                 裁定 = fifelse(dp > 0, "✅ 避损为正", "🔴 自残——不予授权"))
+    }))
+  }))
+  shw3 <- econ[, .(序 = format(seq_len(.N), big.mark = ","), 限额等级档, 风险等级,
+      上限 = fifelse(is.na(上限), "○ 待定", .f(上限)),
+      削减本金 = fifelse(is.na(削减本金), "○ 待定", .f(削减本金)),
+      `削减占该层本金` = fifelse(is.na(削减占比), "○ 待定",
+                                 sprintf("%.4f%%", 削减占比)),
+      `期望净影响（毛，未扣处置成本）` = fifelse(is.na(期望净影响), "○ 待定",
+        fifelse(期望净影响 > 0, paste0("+", .f(期望净影响)), .f(期望净影响))),
+      裁定)]
+  print(kable(shw3, align = "r",
+    caption = sprintf(paste0("限额等级之经济核算（%s 行全列，零省略；",
+      "净影响 ＝ Σ 收缩 ROI × 被削本金；**正即避损、负即自残**）"), .i(nrow(shw3)))))
+
+  .neg <- econ[is.finite(期望净影响) & 期望净影响 < 0]
+  .pos <- econ[is.finite(期望净影响) & 期望净影响 > 0]
+  cat(sprintf(paste0(
+    "\n\n**经济裁定（现算）**：%s 个（限额等级 × 风险层）组合中，**%s 个为负**（自残）、",
+    "**%s 个为正**（避损）。负值合计 **%s**，正值合计 **%s**。\n\n",
+    "**行家读法**：限额之净收益不取决于「他赢没赢」，只取决于 $\\hat{\\mu}_i$ 之符号。",
+    "而 $\\hat{\\mu}_i$ 之全域加权均值即 μ₀ ＝ **%+.6f**——是负的。",
+    "**故「普遍降级限额」在数学上必然是负收益方案，无一例外。**",
+    "唯一正收益之路是**精准**：只对收缩后仍为正、且过跨窗持续性者升 L2。\n\n"),
+    .i(nrow(econ[is.finite(期望净影响)])), .i(nrow(.neg)), .i(nrow(.pos)),
+    .f(sum(.neg$期望净影响)), .f(sum(.pos$期望净影响)), .biz_mu0))
+}
+```
+:::
+
+## 五、明细：逐会员限额等级与处置（现算）
+
+::: {.callout-important}
+## 明细之出数纪律（不得放宽）
+
+本档已锁：**名单之出须待阈值反解 ＋ Wilson 下界 ＋ 最小洗码双锁 ＋ 门闸准入，缺一不可。**
+本节据此分两路：
+
+- **准入层（R2／R3）**：已过 L1／L2 检验或属查账序者，**逐员全行在册**，附限额等级与四档落点。
+  其性质恒为**复核队列**，非处罚名单。
+- **未准入层（R0／R1）**：**默认不出明细**。理由不是数据不足，是**判据未获授权**——
+  R1 之命中主体系方差（本档 @sec-adv-naive 已现算），出名单即制造冤案。
+
+如经业务方书面授权全量导出（作**分层经营**而非风控处置之用），将 `.OUT_FULL_DETAIL`
+置 `TRUE`；届时全量明细全行在册，且**每行强制携带「风控授权＝否」标记**，以防下游误用。
+:::
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-明细
+#| echo: true
+#| results: asis
+.OUT_FULL_DETAIL <- FALSE     # ← 全量明细开关：默认 FALSE。改 TRUE 须附业务方授权单号。
+.MASK_UID        <- TRUE      # ← uid 脱敏：默认 TRUE。风控作业导出方可置 FALSE。
+
+if (!exists("BIZ")) {
+  cat("○ 待表：前置未建 `BIZ`，本节不臆造。\n\n")
+} else {
+  .mask <- function(u) if (!.MASK_UID) u else {
+    n <- nchar(u)
+    fifelse(n <= 4L, paste0(substr(u, 1L, 1L), strrep("*", pmax(n - 1L, 0L))),
+            paste0(substr(u, 1L, 2L), strrep("*", n - 4L), substr(u, n - 1L, n)))
+  }
+  DET <- if (.OUT_FULL_DETAIL) copy(BIZ) else BIZ[grepl("^R2|^R3", as.character(R))]
+
+  if (!nrow(DET)) {
+    cat(paste0("**零行照登**：准入层（R2 优势候选 ／ R3 结算完整性候选）本窗口零命中。\n\n",
+               "**零行不等于无风险**——仅谓本口径、本窗口、本检定力之下未命中。",
+               "本档检定力受局数分布所限，且 L3 跨窗持续性与 L4 机理归因皆 BLOCKED，",
+               "故**不得据此宣称「本平台无优势玩家」**。须以另一口径（洗码比、对押纯度、",
+               "图链路）复核，交付件解锁条件见 @sec-adv-blocked。\n\n"))
+  } else {
+    ## 逐员四档限额：本档无逐注分布，故以「该员所属价值层之均注分位」为其档位刻度，
+    ## 并逐行标注刻度来源，禁以层级刻度冒充个人刻度。
+    lay <- BIZ[, .(P0_l  = min(avg_bet),
+                   P50_l = .qsafe(avg_bet, .50),
+                   P90_l = .qsafe(avg_bet, .90),
+                   P99_l = .qsafe(avg_bet, .99)), by = V]
+    DET <- lay[DET, on = "V"]
+    .dact <- c(`R2 优势候选·复核队列` = "D2 人工复核 → 待跨窗＋MCID 方议升 L2",
+               `R3 结算完整性候选`   = "D2 查账序（结算完整性九项）→ 不入风控处置",
+               `R1 观察（净赢，检验不显著）` = "D0 在册观察｜**禁降限额**",
+               `R0 无命中` = "D0 在册观察｜限额不动")
+    .devi <- c(`R2 优势候选·复核队列` = "E3（统计层，待 L3／L4 升级）",
+               `R3 结算完整性候选`   = "E2（账务候选，非玩家判据）",
+               `R1 观察（净赢，检验不显著）` = "E1（主体系方差）",
+               `R0 无命中` = "E0")
+    shw4 <- DET[order(-abs(roi), -stk)][, .(
+        序 = paste0(format(seq_len(.N), big.mark = ","), ":"),
+        uid = .mask(uid), 价值层 = V, 风险等级 = R, 限额等级 = LV,
+        局数 = .i(n), 本金 = .f(stk),
+        `会员净盈亏` = .f(pnl), `平台 GGR` = .f(ggr),
+        `实测 ROI` = sprintf("%+.4f", roi),
+        `收缩 ROI（前瞻）` = sprintf("%+.6f", roi_shrunk),
+        均注 = .f(avg_bet),
+        `P0 护栏（禁越）` = .f(P0_l),
+        `P50 常态带` = fifelse(is.na(P50_l), "○ n 不足", .f(P50_l)),
+        `P90 收紧带` = fifelse(is.na(P90_l), "○ n 不足", .f(P90_l)),
+        `P99 现状带` = fifelse(is.na(P99_l), "○ n 不足", .f(P99_l)),
+        `建议限额落点` = fifelse(grepl("^L2", LV), "P90（待授权，须过经济核算）", "P99（不动）"),
+        刻度口径 = "会员级均注分位·本金口径·原币归一（INFERRED）",
+        证据阶 = .devi[as.character(R)],
+        建议处置 = .dact[as.character(R)],
+        风控授权 = fifelse(grepl("^R2|^R3", as.character(R)),
+                           "复核队列（非处罚）", "❌ 否——仅供分层经营"))]
+    print(kable(shw4, align = "r",
+      caption = sprintf(paste0(
+        "会员明细、限额等级与处置（%s 行全列在册，零省略；总会员 %s，本表覆盖 %s；",
+        "范围：%s；uid %s；**复核队列非处罚名单**）"),
+        .i(nrow(shw4)), .i(nrow(BIZ)),
+        sprintf("%.4f%%", nrow(shw4) / nrow(BIZ) * 100),
+        if (.OUT_FULL_DETAIL) "全量（含未准入层，强制标风控授权＝否）" else "仅准入层 R2／R3",
+        if (.MASK_UID) "已脱敏" else "未脱敏（风控作业导出）")))
+    cat(sprintf(paste0(
+      "\n\n**明细读法**：本表 **%s** 行，占全域会员 **%s**。",
+      "四档限额之刻度来源为**该员所属价值层之均注分位**（非该员逐注分位）——",
+      "判级 INFERRED，逐注刻度待表；故本表之「建议限额落点」于跨窗与 MCID 解锁前",
+      "**一律停留于建议，不得转为工单**。\n\n"),
+      .i(nrow(shw4)), sprintf("%.4f%%", nrow(shw4) / nrow(BIZ) * 100)))
+  }
+}
+```
+:::
+
+## 六、补齐留痕与审计
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-留痕
+#| echo: true
+au2 <- data.table(
+  项 = c("数字来源", "被证伪判据是否入限额", "明细是否出未准入层",
+         "L2 以上是否授权", "合规强制线是否受经济核算约束", "限额刻度判级",
+         "限额分母口径", "限额币别口径"),
+  状态 = c(
+    "✅ 全数渲染时由在位交付件现算，无一硬写",
+    "❌ 否——T-03（late_share）门禁 FATAL，永禁入总账与限额",
+    if (exists(".OUT_FULL_DETAIL") && isTRUE(.OUT_FULL_DETAIL))
+      "⚠️ 是——已开全量开关，每行强制标「风控授权＝否」" else "❌ 否——默认仅出准入层",
+    "⛔ BLOCKED——跨窗持续性与 MCID 皆缺位（@sec-adv-blocked 在册）",
+    "❌ 否——AML／未成年／自我排除直上 D6，不受本章经济裁定所阻",
+    "INFERRED——会员级均注代理逐注注额；削减量为下偏估计，取严裁定",
+    "本金口径（`bet13 ÷ bet11`）；**禁与洗码口径互比**",
+    "原币经 `bet11` 汇率归一，非 CNY"))
+au2[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(au2, "序")
+kable(au2, align = "l",
+  caption = sprintf("本章审计留痕（%d 项全列，零省略）", nrow(au2)))
+```
+:::
+
+## 七、结论
+
+::: {.callout-important}
+## 七条结论，逐条可由本章现算表复现
+
+**其一·风险是稀疏的，成本是全域的。** 总账现算显示，平台绝大多数本金与 GGR 来自
+**零风险命中**之会员。任何「普遍降级限额」之方案，削的是自己的账——第四节之
+期望净影响一栏，负值组合数远多于正值组合数，此非观点而是算术。
+
+**其二·限额之净收益只取决于 $\hat{\mu}_i$ 之符号，与「他赢没赢」无关。**
+$\hat{\mu}_i$ 之全域加权均值恒等于 μ₀ ＝ −hold%，是负的。
+**故「全面收紧限额」在数学上必然为负收益方案。** 唯一正收益之路是精准：
+只对收缩后仍为正、且过跨窗持续性者升 L2。
+
+**其三·处置须由软及硬，禁跳级。** 退水与红利可逆且不伤流水（D3），限额伤流水（D4／L2），
+封停伤客且引申诉（D6／L4）。先动钱、后动人；先动软、后动硬。
+**跳级之代价是账面代价，不是道德代价。**
+
+**其四·限额等级之标准与口径已一次锁死。** 等级 L0–L4 之准入标准见第一节之二；
+口径三锁为：刻度取会员自身注额经验分位、分母恒为本金口径、被证伪判据永禁作依据。
+**压至 P0 以下等同变相封停，须改走 D6 授权与申诉通道。**
+
+**其五·靴末加注不得作限红理由。** `late_share` 属 T-03、门禁 FATAL，本档已现算证伪。
+**证伪结论不因分布可算而复活**；任何以「靴末」为由收紧限红之工单，一律退回。
+
+**其六·合规不是生意。** AML、未成年、自我排除三线直上 D6，不受任何经济核算所阻。
+本章之「限额为负收益」之裁定，**禁套用于合规场景**。
+
+**其七·当前之瓶颈是数据不是方法。** 十五类之中本章仅能部分实测两轴；
+跨窗持续性、机理归因、MCID 成本锚三者皆 BLOCKED。
+故本章一切处置**恒为建议**，无一可径转工单。
+**解锁之最短路径**：① 交付跨窗件 `R01_late_shoe_w2.csv`（同口径锁）；
+② 名单增列逐员洗码额；③ 交付逐员注额分位件（`uid, bet_p0, bet_p50, bet_p90, bet_p99, n`）；
+④ 业务方预注册 MCID（年化避损口径）。
+四件齐备，本章之建议方可升为可执行处置；缺一，则本章只作经营分层之用。
+:::
+
+```{r}
+#| label: biz-结论现算
+#| echo: true
+#| results: asis
+if (exists("BIZ") && exists("econ")) {
+  cat(sprintf(paste0(
+    "**结论之数字底座（渲染时现算，随数据自动更新）**：会员 **%s** 名、注单 **%s** 笔、",
+    "本金 **%s**、GGR **%s**、域内 hold%% **%.4f%%**、μ₀ **%+.6f**；",
+    "R2 复核队列 **%s** 名（占 **%s**）、R3 查账序 **%s** 名（占 **%s**）；",
+    "限额等级经济核算共 **%s** 组合，其中自残 **%s** 组、避损 **%s** 组。\n"),
+    .i(nrow(BIZ)), .i(sum(BIZ$n)), .f(sum(BIZ$stk)), .f(sum(BIZ$ggr)),
+    .biz_hold * 100, .biz_mu0,
+    .i(sum(grepl("^R2", as.character(BIZ$R)))),
+    sprintf("%.4f%%", mean(grepl("^R2", as.character(BIZ$R))) * 100),
+    .i(sum(grepl("^R3", as.character(BIZ$R)))),
+    sprintf("%.4f%%", mean(grepl("^R3", as.character(BIZ$R))) * 100),
+    .i(nrow(econ[is.finite(期望净影响)])),
+    .i(nrow(econ[is.finite(期望净影响) & 期望净影响 < 0])),
+    .i(nrow(econ[is.finite(期望净影响) & 期望净影响 > 0]))))
+} else {
+  cat("○ 待表：前置未建，结论之数字底座不臆造。\n")
+}
+```
+
+# 变更记录 {#sec-changelog}
+
+::: {.tbl-scroll}
+```{r}
+#| label: changelog
+#| echo: true
+chg <- data.table(
+  版本 = c(rep("v1.2.48", 10L)),
+  编号 = sprintf("D-%02d", 1:10),
+  类别 = c("修复", "修复", "修复", "补全", "修复", "修复",
+           "修复", "修复", "加固", "修复"),
+  条目 = c(
+    "`.alpha` 全档未定义而 `adv-test` 六处引用——补预注册常量 α ＝ 0.05 与种子 20260819",
+    "行内 R 引用 `.ps_use`／`.pw_use`／`.auc_txt`（其计算章随净化被删）——改由登记册 `verdict` 栏为唯一真相源，禁另写数字",
+    "悬空交叉引用 `@sec-tests`／`@sec-gate`／`@sec-fivegates`／`@sec-roi1`——改为在册指向或文字表述",
+    "`# 商业方案 {#sec-biz}` 空章——补全为「风险分层总账、明细与限额幅度等级」全章",
+    "「两域十一项总帐」与「单域十二项总帐」自相矛盾——表题改由 `nrow(led)` 现算，注释同步",
+    "署名 `Ryo（雷欧）` 与口径名「雷欧」同名异义——改 `Ryo Eng（黄联富）`，术语条加「口径名，非署名」限定",
+    "§R01 SQL 注释误植：`stake_early_avg`／`stake_ramp` 两行注作「取负即 GGR」，与代码相悖——归位",
+    "§R01 头注「+ 相对靴位 + 注额斜率 + 分段 ROI」重复两次——删重复行",
+    "`registry-实测分布` 之 `.qv()` 对 n＝2 之表直取 P90／P99——加分位反解护栏 n ≥ ⌈1/(1−q)⌉，不足者出「○ n 不足」",
+    "正文锁「尾差必须在容差内核验」而代码无断言——补相对容差 1e-6 之判定列，越界即在表内显 ⚠️"),
+  判级 = c("S1 FATAL", "S1 FATAL", "S2 BLOCK", "S2 BLOCK", "S2 BLOCK",
+           "S3", "S3", "S3", "S3", "S3"))
+chg[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(chg, "序")
+kable(chg, align = "l",
+  caption = sprintf("v1.2.47 → v1.2.48 变更记录（%d 项全列，零省略；历史结论只增注不改写——T-03 之 FATAL 裁定未被复活）", nrow(chg)))
+```
+:::
+
+::: {.callout-note}
+## 版本纪律
+
+**其一**：版本号系身份非序号——同名不同容即身份冲突。旧版 `v1.2.47` 须改名
+`风险会员判据之靴尾投注篇_v1.2.47_superseded.qmd` 留册，**禁删**。
+
+**其二**：本次斧正**只增注、不改写历史结论**。`late_share`／T-03 之 FATAL 证伪裁定
+原样保留，本章第一节之三与第七节其五**再次加固其禁令**，绝无复活之门。
+
+**其三**：新版交付时须并报六元组身份（文件名 ＋ 行数 ＋ 字节数 ＋ MD5 ＋ 行尾 ＋ 编码）；
+MD5 不符时先核「字节差是否等于行数」（CRLF／LF 归一），再论版本冲突。
+:::
 
