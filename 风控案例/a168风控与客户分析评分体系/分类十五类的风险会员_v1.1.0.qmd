@@ -1,0 +1,219 @@
+---
+title: "分类十五类的风险会员 · 从登记册到风险之眼"
+subtitle: "v1.5.0 → Rule → Signal / Evidence / Alert → Review / Action / Feedback（REDTEAM 查证版）"
+author: "Ryo（雷欧）"
+date: "2026-08-22"
+lang: zh-CN
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-summary: "查看代码"
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+---
+
+```{r}
+#| label: 设置
+suppressPackageStartupMessages({ library(data.table); library(knitr) })
+stopifnot("工作目录须为项目根" = dir.exists("规范"))
+source("函数/registry_loader.R"); source("函数/rule_registry_loader.R")
+REG <- registry_load(); CNT <- registry_counts(REG)
+RL  <- rules_load(REG)                       # 六道门闸：任一不合即停止渲染
+RE  <- riskeye_load()
+base::cat('<style>.cell-output-display{overflow-x:auto}</style>\n')
+```
+
+::: {.callout-important}
+## 本档定位与 REDTEAM 裁定
+
+本档是前版《分类十五类的风险会员》之**升级版**：前版为对话稿（含重复段落、无代码、数字皆手写）；
+本版一切表格自 `规范/registry_risk_typology_v1.5.0`（登记册）与 `规范/rule_registry_v0.1.0`（规则册）
+**渲染时现算**，规则册载入时过六道门闸，与登记册冲突即停止渲染。
+
+**裁定不变**：触发风控不取决于「使用者用什么条件搜索」——搜索只产生 `SEARCH_TRIGGER`，
+与正式 `RULE_TRIGGER` 共用同一 `risk_alert` 结构、以 `trigger_source` 区分，**不得篡改规则册**。
+:::
+
+# 一、前版引用之事实 · 逐项查证
+
+前版引用 File Library 三份文献与若干数字。本轮在仓库内逐项查证，结果如下（**OBSERVED** = 仓库内可直读；**CORRECTED** = 查证后须更正）：
+
+```{r}
+#| label: 查证表
+chk <- data.table(
+  前版陈述 = c(
+    "《玩家风险等级判定设计》存在", "《同桌对打风控分析报告》存在", "《风控平台第一版权限设计》存在",
+    "PLAYER_RISK_V1 七条规则分值 10/15/10/15/10/15/25，总和 100",
+    "分级 0–14 LOW / 15–39 MEDIUM / 40–69 HIGH / 70–100 CRITICAL",
+    "样本不足 → UNKNOWN / REVIEW，非 LOW / ALLOW",
+    "样本门 sample_round_count_30d ≥ 5 或 (bet ≥ 20 且 valid_bet ≥ 1000)",
+    "同桌三层：观察 同桌率≥20%/对打率≥62%；重点审核 ≥30%/≥75%；极高 ≥50%/≥90%",
+    "权限三角色：管理员／风控人员／只读人员",
+    "后段下注只可作行为筛选器，不得作优势玩家判定器",
+    "risk_typology_count = 15；登记判据 66 = 65 + V 轴 1"),
+  查证 = c(
+    "OBSERVED · 参考文献/玩家风险等级判定设计.md", "OBSERVED · 分析玛利亚数据案例/参考文献/百家乐同桌对打风控分析报告.md",
+    "OBSERVED · 参考文献/风控平台第一版权限设计.md",
+    "OBSERVED · 该档 §7 表；10+15+10+15+10+15+25 = 100 现算相符",
+    "OBSERVED · 该档 §7 等级表", "OBSERVED · 该档 §6「样本充足且无信号时才能返回 LOW/ALLOW」",
+    "OBSERVED · 该档 §6；本册标 INTERIM，待 Wilson 反解替换",
+    "CORRECTED · 正文表为 62/75/90（OBSERVED），但该档**摘要**写重点审核对打率「≥60%」，文献内部自相矛盾；以正文表为准并登记",
+    "OBSERVED · 该档 §4 表，另含前后端双重权限检查",
+    "OBSERVED · 登记册 T-03 门禁 FATAL，ranking/scoring/trigger/enforcement 四禁令全 FALSE，F-A..F-D 四重证伪在册",
+    sprintf("OBSERVED · registry_counts 现算：%d 类 / %d + %d = %d", CNT$risk_typology_count,
+            CNT$risk_criterion_count, CNT$value_axis_count, CNT$total_criterion_rows)))
+kable(chk, align = "l", caption = sprintf("前版事实查证（%d 项；CORRECTED %d 项）", nrow(chk), sum(grepl("^CORRECTED", chk$查证))))
+```
+
+# 二、业务方四列表 → 四层拆解 → Rule-ID 映射（规则册现算）
+
+截图把 SIGNAL／RULE／EVIDENCE／ACTION 四种性质平铺为四列。规则册 v0.1.0 逐项拆层、映射到
+v1.5.0 之 `type_id × criterion_column`，并补齐分子／分母／样本门／窗口／阈值状态／证据级。
+
+```{r}
+#| label: 规则总表
+rt <- copy(RL$rules)
+rt[, 门禁 := REG$dict[match(rt$type_id, REG$dict$type_id), gate]]
+rt[is.na(门禁), 门禁 := "—"]
+kable(rt[, .(规则 = rule_id, 层 = layer, 名称 = label_zh, 类型 = type_id, 判据列 = criterion_column,
+             门禁, 窗口 = window, 阈值 = threshold, 阈值状态 = threshold_status, 证据级 = evidence_level,
+             触发源 = trigger_source)],
+      align = "l", caption = sprintf("规则册 v%s：%d 条（六道门闸全通）", RL$meta$registry$version, nrow(rt)))
+```
+
+```{r}
+#| label: 规则分布
+kable(dcast(RL$rules[, .N, by = .(layer, threshold_status)], layer ~ threshold_status, value.var = "N", fill = 0),
+      caption = "层 × 阈值状态 交叉表（现算）")
+```
+
+::: {.callout-warning}
+## 与登记册冲突之规则（REJECTED_BY_REGISTRY）——业务方须知
+
+```{r}
+#| label: 冲突清单
+#| results: asis
+rej <- RL$rules[threshold_status == "REJECTED_BY_REGISTRY"]
+for (i in seq_len(nrow(rej))) cat(sprintf("- **%s %s**（%s · %s）：%s\n", rej$rule_id[i], rej$label_zh[i],
+                                         rej$type_id[i], rej$criterion_column[i], rej$mapping_note[i]))
+```
+
+其中 **R-02「25 局后投注占比 70%」** 最要紧：这正是登记册判 FATAL 的 T-03。业务方拟「调整为 30 局后」
+并不改变性质——「round_no ≥ 40/50 视为最后一手」早在 `rejected_variants`。它只能作画像字段展示，不得触发、不得计分。
+:::
+
+::: {.callout-note}
+## 尚无操作化定义者（NOT_DEFINED）——须业务方先定义
+
+```{r}
+#| label: 未定义清单
+#| results: asis
+nd <- RL$rules[threshold_status == "NOT_DEFINED"]
+for (i in seq_len(nrow(nd))) cat(sprintf("- **%s %s**：%s\n", nd$rule_id[i], nd$label_zh[i], nd$mapping_note[i]))
+```
+
+「EV 匹配」「好路」「开牌」三词在本库无任何字段或定义；截图之「RTP > 20%」语义亦存疑（RTP 通常 ≈ 97%，此处应为 ROI）。
+定义未立前，这些只能在候选搜索页灰显。
+:::
+
+## v1.6.0 候选判据（不得先行启用）
+
+```{r}
+#| label: 候选
+nc <- rbindlist(lapply(RL$meta$new_candidates_for_v1_6_0$items, function(x)
+  data.table(候选列 = x$column, 拟归类型 = if (is.null(x$type_id)) "—" else x$type_id, 来源规则 = x$from,
+             阻断 = if (is.null(x$blocker)) "—" else x$blocker)))
+kable(nc, align = "l", caption = sprintf("%d 条候选；须经登记册变更单入 v1.6.0 后方可被规则引用", nrow(nc)))
+```
+
+# 三、样本门禁：每条规则必带，否则不出档
+
+规则册载入门闸 G6 强制 SIGNAL／RULE／EVIDENCE 层每条带 `sample_gate`。政策：
+
+- 比例型指标之最低样本量以 **Wilson 95% CI 宽度 ≤ 0.15** 反解，禁手写「一律 5 局」（P-06）。
+- 反解前沿用 PLAYER_RISK_V1 过渡门并标 **INTERIM**。
+- 样本不足 → `risk_score = 0, risk_level = UNKNOWN, action = REVIEW`。
+
+```{r}
+#| label: Wilson示例
+wilson_n <- function(p, width = 0.15, z = 1.96) ceiling((2 * z / width)^2 * p * (1 - p))
+ex <- data.table(判据 = c("胜率 65%（E-02）", "单边 70%（R-03）", "单边 80%（R-03 拟调）", "对押 20%（R-01）"),
+                 p = c(0.65, 0.70, 0.80, 0.20))
+ex[, 最低样本量 := wilson_n(p)]
+kable(ex, caption = "Wilson 反解示例（宽度 ≤ 0.15，正态近似 n ≈ (2z/w)²·p(1−p)；现算，非硬写）")
+```
+
+# 四、风险之眼：六对象数据结构（schema 现算）
+
+```{r}
+#| label: 六对象
+ob <- rbindlist(lapply(names(RE$objects), function(o) {
+  f <- RE$objects[[o]]$fields
+  data.table(对象 = o, 主键 = RE$objects[[o]]$pk, 字段数 = length(f), 字段 = paste(names(f), collapse = ", "))
+}))
+kable(ob, align = "l", caption = sprintf("risk_eye schema v%s：%d 对象；流程 %s", RE$schema$version, nrow(ob), RE$schema$pipeline))
+```
+
+```{r}
+#| label: 铁律
+#| results: asis
+cat(sprintf("- %s\n", unlist(RE$schema$iron_rules)))
+```
+
+## 候选搜索页之筛选维度（合并「后段下注／玩家—荷官／同桌对打」三页）
+
+```{r}
+#| label: 搜索维度
+fg <- RE$ui_contract_candidate_search$filter_groups
+kable(data.table(维度组 = names(fg), 字段 = vapply(fg, function(v) paste(unlist(v), collapse = ", "), ""),
+                 状态 = fifelse(names(fg) %in% c("好路", "开牌", "EV"), "灰显（NOT_DEFINED）",
+                                fifelse(names(fg) == "后段", "仅画像，不计分", "可用"))),
+      align = "l", caption = sprintf("%d 组；组合器 = %s", length(fg), paste(unlist(RE$ui_contract_candidate_search$combinator), collapse = " / ")))
+```
+
+# 五、处置两级化与评分之 REDTEAM 保留意见
+
+- 「通知代理自行处置」不得 `ALERT → 自动处罚`；按 `action_tier` 四档：LOW 观察 / MEDIUM 通知代理+监控 / HIGH 人工审核 / CRITICAL 高优先级人审+限制评估。
+- PLAYER_RISK_V1 七分值**手设且总和恰 100**，不得包装为统计证明之百分制；第一阶段以「规则命中 + 人工审核」出候选，第二阶段以 `P(confirmed_risk | signal)` 重估为证据加权分。
+- 同桌关系永远是**异常关系证据**，不是作弊认定（与同桌报告审计结论一致）。
+
+# 六、施工序（锁定）
+
+```
+P0  ① v1.5.0 唯一真源（已成）          ④ risk_signal/evidence/alert 结构（本档 schema v0.1.0）
+    ② 截图逐项 → Rule-ID（本档 26 条）   ⑤ 风险之眼统一消费（UI contract 已立）
+    ③ 每条补 numerator/denominator/     ⑥ review/action/feedback（schema 已立；对接 TL10 处置账）
+       sample_gate/window/threshold/evidence_level（已成，G6 强制）
+P1  15 类自动化规则 · 候选联合筛选 · 报告自动生成（已成 15 份）· 五级评级
+P2  历史回测 · OOS · Wilson/Bayesian shrinkage · Precision/Recall · FPR · 人审确认率 · 规则版本升级
+```
+
+# 七、血统与身份
+
+```{r}
+#| label: 身份
+kable(REG$identity, caption = sprintf("登记册六元组（v%s）", REG$meta$registry$version))
+kable(data.table(件 = c("规则册", "风险之眼 schema", "载入器"),
+                 版本 = c(RL$meta$registry$version, RE$schema$version, "rule_registry_loader.R 0.1.0"),
+                 父 = c(RL$meta$registry$parent, paste(unlist(RE$schema$parent), collapse = " + "), "registry_loader.R 1.5.0")),
+      caption = "本档所消费之规范件")
+```
+
+# 变更记录
+
+## v1.1.0（2026-08-22）
+
+- 前版对话稿升格为可渲染文档；删去重复段落；一切表格自登记册与规则册现算。
+- 新增 `规范/rule_registry_v0.1.0.yaml`（26 条，四层）、`规范/risk_eye_schema_v0.1.0.yaml`（六对象 + 两份 UI contract）、`函数/rule_registry_loader.R`（六道门闸）。
+- 查证前版 11 项事实：10 项 OBSERVED、1 项 CORRECTED（同桌报告摘要 60% vs 正文 75%）。
+- 门闸实测拦下一处映射错误（`bet_ip` 误归 T-06），证明闸有效。

@@ -1,0 +1,122 @@
+schema:
+  name: risk_eye
+  version: 0.1.0
+  issued: '2026-08-22'
+  parent: [registry_risk_typology_v1.5.0, rule_registry_v0.1.0]
+  pipeline: SIGNAL/ALERT → EVIDENCE REPORT → RISK ASSESSMENT → HUMAN DECISION → ACTION → FEEDBACK
+  iron_rules:
+    - 人工查询命中（SEARCH）与正式规则命中（RULE）共用同一 risk_alert 结构，以 trigger_source 区分；SEARCH 不得篡改 rule_registry。
+    - 样本不足 → UNKNOWN/REVIEW，永不 → LOW/ALLOW。
+    - 每条 alert 必带 rule_version（登记册版本 + 规则册版本）与 as_of_time。
+    - T-03 判据只可出现在 risk_evidence 之 profile 段，不得进入 risk_score。
+
+objects:
+  risk_signal:
+    pk: signal_id
+    fields:
+      signal_id: uuid
+      player_id: string
+      type_id: enum(registry_risk_typology_v1.5.0.type_id)
+      rule_id: enum(rule_registry.rule_id)
+      trigger_source: enum[RULE, SEARCH, WATCHLIST]
+      trigger_time: timestamp
+      as_of_time: timestamp
+      rule_version: string   # e.g. typology=1.5.0;rules=0.1.0
+      search_query: json|null  # SEARCH 时存原始条件，供复现
+      operator_id: string|null # SEARCH/WATCHLIST 时记操作者
+  risk_evidence:
+    pk: evidence_id
+    fk: signal_id → risk_signal
+    fields:
+      evidence_id: uuid
+      signal_id: uuid
+      metric: string           # = rule_registry.criterion_column 或 new_candidate
+      observed_value: number|null
+      threshold: number|null
+      threshold_status: enum(rule_registry.enums.threshold_status)
+      numerator: number|null
+      denominator: number|null
+      sample_size: integer
+      sample_gate_passed: boolean
+      window: enum[24h, 7d, 30d, session, shoe, month, realtime]
+      source_table: string     # 交付件或 ods 表
+      evidence_level: enum[E0, E1, E2, E3, E4]
+      gate: enum[FATAL, BLOCK, CONDITIONAL, ADVISORY]   # 取自 v1.5.0 type 门禁
+      profile_only: boolean    # T-03 等 PROFILE_ONLY 判据恒 true
+  risk_alert:
+    pk: alert_id
+    fields:
+      alert_id: uuid
+      player_id: string
+      signal_ids: array<uuid>
+      risk_score: integer 0..100
+      risk_level: enum[UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL]
+      evidence_level: enum[E0..E4]   # 取所含 evidence 之最高级
+      data_status: enum[SUFFICIENT, INSUFFICIENT_SAMPLE, STALE, BLOCKED_SOURCE]
+      trigger_source: enum[RULE, SEARCH, WATCHLIST, MIXED]
+      rule_version: string
+      created_at: timestamp
+      expires_at: timestamp
+      recommended_action: enum[ALLOW, OBSERVE, NOTIFY_AGENT, REVIEW, PRIORITY_REVIEW]
+  risk_review:
+    pk: review_id
+    fk: alert_id → risk_alert
+    fields:
+      review_id: uuid
+      alert_id: uuid
+      reviewer: string         # 须为 风控人员/管理员（权限设计 v1）
+      review_time: timestamp
+      decision: enum[PASS, OBSERVE, MONITOR, RESTRICT, ESCALATE]
+      reason: string
+      comment: string|null
+  risk_action:
+    pk: action_id
+    fk: review_id → risk_review
+    fields:
+      action_id: uuid
+      review_id: uuid
+      action_type: enum[NONE, NOTIFY_AGENT, LIMIT_STAKE, LIMIT_TABLE, FREEZE, UNFREEZE]
+      action_time: timestamp
+      operator: string
+      result: enum[DONE, FAILED, REVERTED]
+      treatment_ledger_ref: string|null   # 对接 TL10_treatment_ledger
+  risk_feedback:
+    pk: alert_id
+    fields:
+      alert_id: uuid
+      confirmed: boolean
+      false_positive: boolean
+      confirmed_type_ids: array<type_id>
+      rule_effectiveness: json   # 每 rule_id 之 precision 贡献
+      fed_back_at: timestamp
+
+metrics_for_p2:
+  - precision_by_rule
+  - precision_by_combination
+  - false_positive_rate
+  - human_confirmation_rate
+  - P(confirmed_risk | signal)   # 用以替代手设分值
+
+ui_contract_player_detail:
+  header: [player_id, risk_level, risk_score, evidence_level, rule_version, as_of_time, data_status]
+  hits: list of {rule_id, label_zh, gate_icon, observed_value, threshold, sample_size, window}
+  tabs: [详细注单, 关联玩家, 荷官, IP, 桌台]
+  report: {windows: [24h, 7d, 30d], metrics: [valid_bet, roi, win_rate, late_share(profile_only), opposite_rate, ev_match_rate]}
+  review_form: {decision: [PASS, OBSERVE, MONITOR, RESTRICT, ESCALATE], reason: required}
+
+ui_contract_candidate_search:
+  merge_pages: "[后段下注, 玩家—荷官关联, 同桌对打] → 风控候选玩家之筛选维度；原分析页保留"
+  currency_toggle: true
+  filter_groups:
+    时间: [date, start_time, end_time, window]
+    对押: [n_opposite, opposite_share, opposite_stake, opposite_stake_share]
+    后段: [n_late, late_share, late_stake, late_stake_share]   # 仅画像，不计分
+    荷官: [dealer_id, n_shared_dealer, dealer_win_rate, roi_under_dealer]
+    好路: [n_good_road, good_road_share, good_road_stake]   # NOT_DEFINED，灰显
+    开牌: [n_open, n_open_bet, open_share]                  # NOT_DEFINED，灰显
+    EV: [ev_match_n, ev_match_rate, ev_match_stake, ev_match_streak]   # NOT_DEFINED，灰显
+    盈利: [profit, roi, win_rate, profit_day_streak]
+    下注结构: [stake_max, stake_mean, stake_p50, stake_p90, stake_p95, stake_p99, n_allin, n_fixed_stake, fixed_stake_share]
+    关系: [same_ip, same_device, same_agent, same_table, same_dealer, n_related]
+  combinator: [OR(广泛监控池), AND(重点审核), COMBO(多信号升级)]
+  rule: 筛选产生 SEARCH_TRIGGER 之 risk_signal；不写入 rule_registry。
