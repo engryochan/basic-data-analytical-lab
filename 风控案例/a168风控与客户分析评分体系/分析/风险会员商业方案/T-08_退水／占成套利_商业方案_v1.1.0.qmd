@@ -1,11 +1,11 @@
 ---
-title: "{{TITLE}}"
-subtitle: "十五类风险会员判据商业方案 · {{TYPE_ID}} · 登记册 v1.5.0 同源现算"
+title: "T-08 · 退水／占成套利 · 风险会员判据商业方案"
+subtitle: "十五类风险会员判据商业方案 · T-08 · 登记册 v1.5.0 同源现算"
 author: "Ryo（雷欧）"
-date: "{{DATE}}"
+date: "2026-08-22"
 lang: zh-CN
 params:
-  type_id: "{{TYPE_ID}}"
+  type_id: "T-08"
 format:
   html:
     theme: cosmo
@@ -61,7 +61,7 @@ GL  <- glossary_load(); glossary_activate(GL)
 tip <- function(k, show = NULL) gtip(k, show)
 CNT <- registry_counts(REG)                      # YAML 声明 ↔ CSV 现算互证，不符即停
 ## 占位符回退：模板未经生成器替换即直接预览时（quarto preview 模板/…），
-## params$type_id 仍为 {{TYPE_ID}} 字面量。此时取登记册首类作样例，令模板可独立自检。
+## params$type_id 仍为 T-08 字面量。此时取登记册首类作样例，令模板可独立自检。
 TID <- params$type_id
 .is_tpl <- grepl("[{][{][A-Z_]+[}][}]", TID)
 if (.is_tpl) TID <- REG$dict[axis == "R"][order(type_id)][1L, type_id]
@@ -486,13 +486,13 @@ kable(data.table(计数项 = names(CNT), 现算 = unlist(CNT)), align = "l",
 
 # 变更记录
 
-## v1.1.0（{{DATE}}）
+## v1.1.0（2026-08-22）
 
 - 第一部分总览表扩列：**主表维度 / 辅助表 / 辅助表维度**，全部维度零省略，判据以【】标出。
 - 新增第三部分（模型／数据口径／评估／行业实践查证）与第四部分（武器库审计／灵活搭配实测／序列与事件实测／线索汇总）；商业方案与血统顺次后移为第五、第六部分。
 - 工作目录改为自动上溯定位，模板于 `模板/` 下可直接 `quarto preview`。
 - 灵活搭配实测新增**退化侦测**；序列实测之时间轴改为**取值形实证判定**。
 
-## v1.0.0（{{DATE}}）· 首版
+## v1.0.0（2026-08-22）· 首版
 
 自模板生成；第七部分章体前置为第一部分；一切数字现算；门禁覆盖实测。

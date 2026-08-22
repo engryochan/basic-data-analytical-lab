@@ -15,7 +15,7 @@ suppressPackageStartupMessages(library(data.table))
 
 build_typology_reports <- function(out_dir = file.path("分析", "风险会员商业方案"),
                                    template = file.path("模板", "风险会员商业方案_模板.qmd"),
-                                   version = "v1.0.0", date = format(Sys.Date(), "%Y-%m-%d")) {
+                                   version = "v1.1.0", date = format(Sys.Date(), "%Y-%m-%d")) {
   source("函数/registry_loader.R")
   REG <- registry_load()
   tpl <- readChar(template, file.size(template), useBytes = TRUE); Encoding(tpl) <- "UTF-8"
@@ -32,7 +32,9 @@ build_typology_reports <- function(out_dir = file.path("分析", "风险会员�
     body <- gsub("{{TYPE_ID}}", tid, body, fixed = TRUE)
     body <- gsub("{{TITLE}}", sprintf("%s · %s · 风险会员判据商业方案", tid, nm), body, fixed = TRUE)
     body <- gsub("{{DATE}}", date, body, fixed = TRUE)
-    if (grepl("{{", body, fixed = TRUE)) stop("模板残留未替换占位符")
+    ## 只认真占位符（大写字母+下划线包于双花括号）；模板内用于回退判断之字面量 "{{" 不误伤
+    if (grepl("[{][{][A-Z_]+[}][}]", body)) stop("模板残留未替换占位符：",
+         paste(unique(regmatches(body, gregexpr("[{][{][A-Z_]+[}][}]", body))[[1L]]), collapse = ", "))
     con <- file(file.path(out_dir, fn), open = "wb"); writeBin(charToRaw(enc2utf8(body)), con); close(con)
     files <- c(files, fn)
     cat(sprintf("  + %s\n", fn))
