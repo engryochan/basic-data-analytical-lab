@@ -2,8 +2,8 @@
 # glossary_engine.R · a168 统一术语字典引擎与悬停浮层
 # ---------------------------------------------------------------------
 # 引擎版本 : 1.0.0     适配字典 : 1.0.0     日期 : 2026-08-18
-# 配套     : 数据库/glossary_a168_v1.0.0.yaml（单一真相源）
-#            数据库/glossary_a168_v1.0.0.csv （派生字典，UTF-8-BOM/CRLF）
+# 配套     : 规范/glossary_a168_v1.0.0.yaml（单一真相源）
+#            规范/glossary_a168_v1.0.0.csv （派生字典，UTF-8-BOM）
 # 身份     : 数据资产（配置件），从属于三份权威主件；★ 不构成第四份权威文件
 # ---------------------------------------------------------------------
 # 【血统】浮层定位逻辑移植自 a168风控与客户分层评分体系_商业方案.qmd 之 place()
@@ -25,13 +25,15 @@
 # =====================================================================
 
 suppressPackageStartupMessages(library(data.table))
-path <- "C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/风控案例/a168风控与客户分析评分体系/"
+## v1.5.0 斧正：去单机绝对路径（换机即断），改相对路径；术语库驻 规范/（五命名空间归化）。
+## 工作目录 = qmd 所在目录；如需兜底可 options(registry.root = "<项目根>")。
+path <- { .r <- getOption("registry.root", ""); if (nzchar(.r)) paste0(sub("/+$", "", .r), "/") else "" }
 .gstage <- function(tag, expr) tryCatch(expr, error = function(e)
   stop(sprintf("【glossary·%s】%s", tag, conditionMessage(e)), call. = FALSE))
 
 GLOSSARY_PATHS <- list(
-  yaml = file.path(paste0(path, "数据库/", "glossary_a168_v1.0.0.yaml")),
-  csv  = file.path(paste0(path, "数据库/", "glossary_a168_v1.0.0.csv"))
+  yaml = file.path(paste0(path, "规范/", "glossary_a168_v1.0.0.yaml")),
+  csv  = file.path(paste0(path, "规范/", "glossary_a168_v1.0.0.csv"))
 )
 
 glossary_sixtuple <- function(path) {
