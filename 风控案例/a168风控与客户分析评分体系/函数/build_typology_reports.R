@@ -1,7 +1,7 @@
 # =====================================================================
 # build_typology_reports.R · 十五类风险会员商业方案 · 生成器
 # ---------------------------------------------------------------------
-# 版本 : 1.0.0        日期 : 2026-08-22        适配登记册 : 1.5.0
+# 版本 : 1.3.0        日期 : 2026-08-22        适配登记册 : 1.5.0
 # 身份 : 执行件（函数/）
 # ---------------------------------------------------------------------
 # 【职责】自 模板/风险会员商业方案_模板.qmd 为登记册 v1.5.0 之每一 axis=R 类型
@@ -15,7 +15,7 @@ suppressPackageStartupMessages(library(data.table))
 
 build_typology_reports <- function(out_dir = file.path("分析", "风险会员商业方案"),
                                    template = file.path("模板", "风险会员商业方案_模板.qmd"),
-                                   version = "v1.2.0", date = format(Sys.Date(), "%Y-%m-%d")) {
+                                   version = "v1.3.0", date = format(Sys.Date(), "%Y-%m-%d")) {
   source("函数/registry_loader.R")
   REG <- registry_load()
   tpl <- readChar(template, file.size(template), useBytes = TRUE); Encoding(tpl) <- "UTF-8"

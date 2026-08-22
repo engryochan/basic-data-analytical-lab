@@ -1,7 +1,7 @@
 # =====================================================================
 # typology_report_engine_ext.R · 十五类商业方案 · 范本体例扩充引擎
 # ---------------------------------------------------------------------
-# 版本 : 1.2.0        日期 : 2026-08-22        适配登记册 : 1.5.0
+# 版本 : 1.3.0        日期 : 2026-08-22        适配登记册 : 1.5.0
 # 身份 : 执行件（函数/）★ 须先 source 函数/typology_report_engine.R
 # ---------------------------------------------------------------------
 # 【职责】补齐范本《尾段投注基础分析的评估_v1_2_47_REDTEAM_去外部模型版.qmd》
@@ -50,12 +50,78 @@ tr_cfg <- local({
 }
 
 # 应用配置至主引擎之全局守门（覆盖主引擎默认，令一处可改）
+# 【全量铁律】配置册 guards.full_scan_mandatory 须为 TRUE；为 FALSE 即报错而非降级，
+# 防「抽样」以配置形式回潜。巨档只告警不截行。
 tr_apply_config <- function() {
-  TR_MAX_MB   <<- .cfg("guards", "max_mb")
-  TR_MAX_ROWS <<- as.integer(.cfg("guards", "max_rows"))
-  TR_DB       <<- .cfg("namespaces", "delivery")
+  if (!isTRUE(.cfg("guards", "full_scan_mandatory")))
+    stop("配置册 guards.full_scan_mandatory 非 TRUE——全量铁律被关闭，拒绝出数", call. = FALSE)
+  TR_FULL_SCAN <<- TRUE
+  TR_WARN_MB   <<- .cfg("guards", "large_file_warn_mb")
+  TR_RC_VERIFY <<- isTRUE(.cfg("guards", "rowcount_verify"))
+  TR_RC_MAX_MB <<- .cfg("guards", "rowcount_verify_max_mb")
+  TR_DB        <<- .cfg("namespaces", "delivery")
   .tr_key_alias <<- unlist(.cfg("fields", "member_key_aliases"))
   invisible(TRUE)
+}
+
+# ---------------------------------------------------------------------
+# §0b 呈表体例助手（与范本 v1_2_47 逐字同式）
+#   范本原式：dt[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(dt, "序")
+#   本函数即其封装——一切列表型桌表皆过此器，令十五份与范本同体例。
+# ---------------------------------------------------------------------
+tr_no <- function(x) {
+  if (is.null(x)) return(NULL)
+  d <- if (data.table::is.data.table(x)) data.table::copy(x)
+       else if (is.matrix(x)) data.table::as.data.table(x, keep.rownames = "项")
+       else data.table::as.data.table(x)
+  if ("序" %in% names(d)) return(d[])          # 已有序列者不重复编号
+  d[, 序 := format(seq_len(.N), big.mark = ",")]
+  data.table::setcolorder(d, "序")
+  d[]
+}
+
+# ---------------------------------------------------------------------
+# §0c 全量读取核验（红队铁律：禁抽样，须全量）
+#   逐件并呈：字节、载入行数、文件换行数、差额、核验判读、抽样标记。
+#   任一件之 sampled 为 TRUE 即 stop()——抽样出数一律拒绝渲染。
+# ---------------------------------------------------------------------
+tr_fullscan_audit <- function(rec, loaded) {
+  out <- rbindlist(lapply(names(loaded$tabs), function(f) {
+    t <- loaded$tabs[[f]]
+    data.table(
+      交付件 = sub("[.]csv$", "", f),
+      角色 = fifelse(f == rec$primary, "主表",
+              fifelse(f %in% rec$supporting, "辅助表", "判据来源")),
+      字节MB = round(t$mb, 1),
+      巨档 = fifelse(isTRUE(t$huge), sprintf("⚑ 逾 %s MB", format(TR_WARN_MB, big.mark = ",")), "—"),
+      载入行数 = t$rows,
+      文件换行数 = t$file_lines,
+      差额 = if (is.na(t$file_lines) || is.na(t$rows)) NA_integer_ else (t$file_lines - 1L) - t$rows,
+      抽样 = fifelse(isTRUE(t$sampled), "⛔ 已抽样", "✔ 未抽样"),
+      全量核验 = if (is.null(t$full_scan)) "—" else t$full_scan)
+  }), fill = TRUE)
+  ## 零省略：登记册所声明而非 CSV 者（如 ODS 库表直算）亦须列出并标待表，
+  ## 否则「主表不在清单」易被误读为「本类无主表」。
+  d <- rec$dict
+  sup_all <- trimws(unlist(strsplit(d$supporting_deliverables[1L], "[；;]")))
+  declared <- unique(c(d$primary_deliverable[1L], sup_all[nzchar(sup_all)], d$criterion_source))
+  nocsv <- setdiff(declared, rec$files)
+  if (length(nocsv)) {
+    sup_set <- sup_all[nzchar(sup_all)]
+    out <- rbindlist(list(out, rbindlist(lapply(nocsv, function(f) data.table(
+      交付件 = f,
+      角色 = fifelse(f == d$primary_deliverable[1L], "主表",
+              fifelse(f %in% sup_set, "辅助表", "判据来源")),
+      字节MB = NA_real_, 巨档 = "—", 载入行数 = NA_integer_, 文件换行数 = NA_integer_,
+      差额 = NA_integer_, 抽样 = "✔ 未抽样",
+      全量核验 = fifelse(grepl("^ods_", f),
+        "○ 待表（登记册声明为 ODS 库表直算，无中间交付件——非 CSV，本引擎不读）",
+        "○ 待表（登记册声明为待建／现算，尚无交付件落地——非 CSV，本引擎不读）"))))),
+      fill = TRUE)
+  }
+  if (any(vapply(loaded$tabs, function(t) isTRUE(t$sampled), logical(1))))
+    stop("全量铁律违反：本类有交付件被抽样载入，拒绝渲染", call. = FALSE)
+  out[]
 }
 
 # ---------------------------------------------------------------------
@@ -183,7 +249,8 @@ tr_deliverable_identity <- function(rec, loaded) {
   rbindlist(lapply(names(loaded$tabs), function(f) {
     t <- loaded$tabs[[f]]; p <- file.path(TR_DB, f)
     if (!file.exists(p)) return(data.table(交付件 = sub("[.]csv$", "", f), 角色 = "—",
-      行数 = NA_integer_, 列数 = NA_integer_, 字节 = NA_real_, MD5 = "—", 换行符 = "—", BOM = "—", 状态 = t$status))
+      行数 = NA_integer_, 列数 = NA_integer_, 字节 = NA_real_, MD5 = "—", 换行符 = "—", BOM = "—",
+      文件换行数 = NA_integer_, 全量核验 = "—", 状态 = t$status))
     raw <- readBin(p, "raw", min(file.size(p), 5e6))
     bom <- length(raw) >= 3L && identical(as.integer(raw[1:3]), c(239L, 187L, 191L))
     crlf <- any(raw[-length(raw)] == as.raw(13L) & raw[-1L] == as.raw(10L))
@@ -193,7 +260,8 @@ tr_deliverable_identity <- function(rec, loaded) {
       角色 = fifelse(f == rec$primary, "主表", fifelse(f %in% rec$supporting, "辅助表", "判据来源")),
       行数 = t$rows, 列数 = if (t$ok) ncol(t$dt) else NA_integer_,
       字节 = round(file.size(p) / 1e6, 2), MD5 = md5,
-      换行符 = if (crlf) "CRLF" else "LF", BOM = if (bom) "有" else "无", 状态 = t$status)
+      换行符 = if (crlf) "CRLF" else "LF", BOM = if (bom) "有" else "无",
+      文件换行数 = t$file_lines, 全量核验 = t$full_scan, 状态 = t$status)
   }), fill = TRUE)
 }
 
@@ -348,6 +416,62 @@ tr_verdict_order <- function(rec, REG) {
       "复核记录须留原始注单、时间窗口、口径版本与证据等级",
       sprintf("admit_to_risk_decision = %s；为 FALSE 时任何处置皆不合规",
               as.character(d$admit_to_risk_decision[1L]))))
+}
+
+# ---------------------------------------------------------------------
+# §5b 评估章之「局限（不为其讳）」与「定位裁定」（范本体例；全数现算）
+#   范本《尾段投注基础分析的评估_v1_2_47》评估章末二块：
+#     ::: {.callout-caution} ## 局限（不为其讳）   —— 编号列表
+#     ::: {.callout-important} ## 定位裁定          —— 引用块
+#   本函数按本类实测现算其内容，不写死任何数字或结论。
+# ---------------------------------------------------------------------
+tr_eval_limits <- function(rec, mt, sq, mj) {
+  d <- rec$dict; s <- .cfg("statistics")
+  L <- character(0)
+  L <- c(L, sprintf(
+    "本类 %d 条登记判据之阈值状态构成 %s——`PENDING_INVERSE` 者尚无可用阈值，其分位读数只是**分布描述**，不是判别门槛。",
+    nrow(d), paste(sprintf("`%s`×%d", names(table(d$threshold_status)),
+                           as.integer(table(d$threshold_status))), collapse = " ")))
+  L <- c(L, sprintf(
+    "比例型判据之点估计在小分母上系统性高估，故本章一律并报 Wilson %.0f%% 下界；最低样本量由 CI 宽度 ≤ %.2f 反解，未过门者登记 `UNKNOWN`，**永不降为「正常」**。",
+    s$confidence_level * 100, s$wilson_target_width))
+  L <- c(L, if (is.null(mt))
+    "本类无方向判据或外部标签表不可用，主检验（秩法 AUC）**整体待表**——无 AUC 即无排序效率证据，不得以描述统计代之。"
+    else sprintf(
+    "AUC 系对**外部 L1a 标签**之秩法面积（%d 条方向判据参检，样本充足 %d 条）；标签本身含复核强度混杂，故 AUC 部分反映「谁被复核得多」而非「谁更危险」，**是排序效率证据，不是因果证据**。",
+    nrow(mt), sum(mt$样本充足 == "✔")))
+  L <- c(L, if (is.null(mj))
+    "本类交付件无会员级键，跨表并集、交集与共现提升度**整体待表**。"
+    else sprintf(
+    "会员级并集 %s 人、全表交集 %s 人——交集越小，全判据齐备者愈少，**幸存者偏差之风险愈高**；名单不得只取交集。",
+    tr_f(mj$n_union), if (is.na(mj$n_inter)) "—（单表）" else tr_f(mj$n_inter)))
+  L <- c(L, sprintf(
+    "尾部命中率逾 %.0f%% 即判**退化**（分位阈与下界重合、该列近乎常量）；退化列之「尾部」不是异常群，禁以百分之百之尾部冒充证据。",
+    s$degenerate_flag_rate * 100))
+  L <- c(L, if (!is.null(sq) && any(sq$可做序列 == "✔"))
+    "时间轴虽在位，**跨窗口真样本外（OOS）验证仍缺位**——同窗自证不是验证，G-05 不可因有时间轴而放行。"
+    else "本类交付件皆为截面，**无时间轴**——序列、生存、动态基线与跨窗 OOS 一律待表，G-05 直接 FAIL。")
+  L <- c(L, "台桌、荷官、时段、星期、靴长等混杂尚未控制；无随机化、无处理／对照设计，**只能言相关，不可言因果**。")
+  L <- c(L, sprintf(
+    "四层纵向证据链现况：现象 `%s` → 标签验证 `%s` → 因果 `%s` → 准入风控决策 `%s`——**逐层独立举证，禁跨层滑移**。",
+    d$phenomenon_status[1L], d$label_validation_status[1L], d$causal_status[1L],
+    as.character(d$admit_to_risk_decision[1L])))
+  L
+}
+
+tr_eval_verdict <- function(rec, REG, mt) {
+  d <- rec$dict; g <- d$gate[1L]
+  pos <- switch(g,
+    FATAL = "本类判据经登记册裁定为 FATAL——不论实测如何，**只可作画像字段**，即刻撤出一切评分、触发与处置管道。",
+    BLOCK = "本类判据处 BLOCK——**冻结于评分管道之外**，画像字段亦须加「阻断中」水印，待阻断项闭合方议解锁。",
+    CONDITIONAL = "本类判据处 CONDITIONAL——**只可进入影子期**：静默打分、禁据以处置，影子期内周报 AUC 与提升度（含置信区间）。",
+    ADVISORY = "本类判据处 ADVISORY——**可作影子运行之复核排序**，出数供人审，禁作处置理由。",
+    "本类门禁未登记，**一切用途皆须先补裁定**。")
+  c(sprintf("**当前最佳定位**：%s", pos),
+    sprintf("**准入风控决策** `admit_to_risk_decision = %s`——为 `FALSE` 时，任何以本类判据出数之处置**皆不合规**；门禁覆盖一切实测，实测再漂亮不改此裁。",
+            as.character(d$admit_to_risk_decision[1L])),
+    if (is.null(mt)) "**下一步**：先补齐本类之方向判据与外部标签对照，主检验方可开工；在此之前不得言判别力。"
+    else sprintf("**下一步**：优先解决阈值反解（含 `n_eff` 校正）、最小暴露门槛与跨窗口 OOS；本类现有 %d 条方向判据之 AUC 只作特征去留参考，不作处置依据。", nrow(mt)))
 }
 
 # ---------------------------------------------------------------------
@@ -510,25 +634,42 @@ tr_sequence <- function(rec, loaded) {
   hint <- .cfg("fields", "time_axis_name_hint")
   pat <- .cfg("fields", "time_axis_value_pattern")
   minr <- .cfg("fields", "time_axis_min_match_rate")
+  ## 全量铁律：时间轴之实证判定取【全列取值】，不取前 N 笔——
+  ## 前 N 笔之形似率不等于全列形似率（前段有序、后段异构者会被误判）。
+  ## 以 unique() 去重后仍是全列之完整取值域，非抽样。
   is_timeish <- function(v) {
     x <- as.character(v); x <- x[!is.na(x) & nzchar(x)]
     if (!length(x)) return(FALSE)
-    mean(grepl(pat, utils::head(x, 2000L))) >= minr
+    u <- unique(x)
+    w <- as.numeric(table(factor(x, levels = u)))       # 各取值之实际频次
+    sum(w[grepl(pat, u)]) / sum(w) >= minr              # 频次加权之全列形似率
+  }
+  ## 全列形似率（供呈表举证，非判定用）
+  timeish_rate <- function(v) {
+    x <- as.character(v); x <- x[!is.na(x) & nzchar(x)]
+    if (!length(x)) return(NA_real_)
+    u <- unique(x); w <- as.numeric(table(factor(x, levels = u)))
+    sum(w[grepl(pat, u)]) / sum(w)
   }
   rbindlist(lapply(names(loaded$tabs), function(f) {
     t <- loaded$tabs[[f]]; nm <- sub("[.]csv$", "", f)
     if (!t$ok) return(data.table(交付件 = nm, 时间轴列 = "—", 粒度 = "—", 跨度 = t$status,
+                                 判定基数 = NA_integer_, 全列形似率 = NA_real_,
                                  可做序列 = "✗ 待表", 疑似计数列 = "—"))
     ca <- grep(hint, names(t$dt), value = TRUE, ignore.case = TRUE)
     tc <- ca[vapply(ca, function(cn) is_timeish(t$dt[[cn]]), logical(1))]
     fake <- setdiff(ca, tc)
     if (!length(tc)) return(data.table(交付件 = nm, 时间轴列 = "无", 粒度 = "—", 跨度 = "—",
+      判定基数 = nrow(t$dt),
+      全列形似率 = if (length(ca)) round(max(vapply(ca, function(cn) timeish_rate(t$dt[[cn]]), 0), na.rm = TRUE), 4) else NA_real_,
       可做序列 = "✗ 待表（本表为截面，无时间轴）",
       疑似计数列 = if (length(fake)) paste(fake, collapse = ", ") else "—"))
     v <- as.character(t$dt[[tc[1L]]]); v <- v[!is.na(v) & nzchar(v)]
     data.table(交付件 = nm, 时间轴列 = paste(tc, collapse = ", "),
-               粒度 = fifelse(nchar(utils::head(v, 1L)) <= 7L, "月", "日"),
+               粒度 = fifelse(nchar(v[1L]) <= 7L, "月", "日"),
                跨度 = if (length(v)) sprintf("%s → %s", min(v), max(v)) else "—",
+               判定基数 = length(v),
+               全列形似率 = round(timeish_rate(t$dt[[tc[1L]]]), 4),
                可做序列 = "✔", 疑似计数列 = if (length(fake)) paste(fake, collapse = ", ") else "—")
   }), fill = TRUE)
 }

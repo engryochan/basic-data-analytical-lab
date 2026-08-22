@@ -1,6 +1,6 @@
 config:
   name: typology_report_config
-  version: 1.0.0
+  version: 1.1.0
   issued: '2026-08-22'
   parent: registry_risk_typology_v1.5.0
   purpose: 十五类风险会员判据商业方案之【软配置册】——一切阈值、分位、样本门、命名空间、
@@ -31,10 +31,12 @@ fields:
   roi_numerator_candidates: [game_pnl, game_pnl_all, net_pnl, profit, 游戏输赢贡献]
   roi_denominator_candidates: [stake, stake_all, valid_bet, validbet, 流水贡献]
 
-# ── 体量守门 ────────────────────────────────────────────────────────────
+# ── 体量守门（v1.1.0 铁律：全量读取，禁抽样、禁截行）──────────────────
 guards:
-  max_mb: 300                 # 逾此只读前 max_rows 行并标 SAMPLED
-  max_rows: 1500000
+  full_scan_mandatory: true   # 全量铁律：一切交付件读全部行；任何截行即 stop()
+  large_file_warn_mb: 300     # 逾此只登记「巨档」告警，【不】截行——巨档亦须全量
+  rowcount_verify: true       # 全量核验：文件换行数 ↔ 载入行数逐件对账，不符即标出
+  rowcount_verify_max_mb: 4096 # 逾此不作换行数核验（只登记 SKIPPED，不冒充已核）
   corr_min_n: 30              # 相关阵之最低非缺样本
   roi_outlier_threshold: 1.0  # roi > 此值 → 结算完整性候选（非优势玩家）
 

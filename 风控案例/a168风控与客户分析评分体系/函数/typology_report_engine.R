@@ -1,7 +1,7 @@
 # =====================================================================
 # typology_report_engine.R · 十五类风险会员商业方案 · 共用分析引擎
 # ---------------------------------------------------------------------
-# 版本 : 1.0.0        日期 : 2026-08-22        适配登记册 : 1.5.0
+# 版本 : 1.1.0        日期 : 2026-08-22        适配登记册 : 1.5.0
 # 身份 : 执行件（函数/）★ 非交付件、非规范件
 # ---------------------------------------------------------------------
 # 【职责】被十五份同构 qmd source()。一切数字渲染时现算；登记册 v1.5.0
@@ -9,7 +9,8 @@
 # 【铁律】
 #   1 不硬写任何计数——取 registry_counts(REG)。
 #   2 缺档／缺列不以静态文字冒充结果——一律登记为「待表」并在表中显示。
-#   3 巨档守门：逾 TR_MAX_MB 之交付件只读前 TR_MAX_ROWS 行，并标 SAMPLED。
+#   3 全量铁律（v1.1.0）：一切交付件**读全部行**，禁抽样、禁截行、禁 head。
+#     巨档（逾 TR_WARN_MB）只登记告警，不截行；载入行数与文件换行数逐件对账。
 #   4 会员键异名归一：member_id / uid / player_id / mem → member_id。
 #   5 GBK 交付件自动回退解码（S01／S05 实测为 GBK）。
 #   6 门禁覆盖一切实测：FATAL 类之实测只作画像，图表标题随行带红标。
@@ -17,43 +18,73 @@
 
 suppressPackageStartupMessages({ library(data.table); library(knitr) })
 
-TR_MAX_MB   <- getOption("tr.max_mb",   300)
-TR_MAX_ROWS <- getOption("tr.max_rows", 1500000L)
-TR_DB       <- "数据库"
+TR_FULL_SCAN <- TRUE          # 全量铁律：恒为 TRUE；置 FALSE 即报错（防抽样回潜）
+TR_WARN_MB   <- getOption("tr.warn_mb", 300)      # 巨档【告警】阈，非截行阈
+TR_RC_VERIFY <- TRUE          # 全量核验：文件换行数 ↔ 载入行数对账
+TR_RC_MAX_MB <- getOption("tr.rc_max_mb", 4096)   # 逾此不作换行数核验，登记 SKIPPED
+TR_DB        <- "数据库"
 
 .tr_key_alias <- c("member_id", "uid", "player_id", "mem", "member_login")
 
 # ---------------------------------------------------------------------
 # §1 交付件载入 · 守门 + 键归一 + 编码回退
 # ---------------------------------------------------------------------
+## 文件换行数：流式计数，不载入内存。用以与载入行数对账，坐实「全量」。
+## 注：字段内含换行者，换行数 > 逻辑行数——故只作对账标记，不作 stop() 依据。
+tr_file_lines <- function(path, chunk = 64e6) {
+  con <- file(path, open = "rb"); on.exit(close(con))
+  n <- 0L
+  repeat {
+    b <- readBin(con, "raw", chunk)
+    if (!length(b)) break
+    n <- n + sum(b == as.raw(10L))
+  }
+  n
+}
+
 tr_load <- function(file, select = NULL) {
+  if (!isTRUE(TR_FULL_SCAN))
+    stop("全量铁律被关闭（TR_FULL_SCAN != TRUE）——禁抽样，拒绝出数", call. = FALSE)
   path <- file.path(TR_DB, file)
   if (!file.exists(path))
     return(list(ok = FALSE, status = "待表（档不在位）", dt = NULL, file = file,
-                mb = NA_real_, rows = NA_integer_, sampled = FALSE, key = NA_character_))
+                mb = NA_real_, rows = NA_integer_, sampled = FALSE, key = NA_character_,
+                file_lines = NA_integer_, full_scan = "—", huge = FALSE))
   mb <- file.size(path) / 1e6
-  nrows <- if (mb > TR_MAX_MB) TR_MAX_ROWS else Inf
-  rd <- function(enc) fread(path, encoding = enc, nrows = nrows, showProgress = FALSE)
+  huge <- mb > TR_WARN_MB
+  ## 全量：nrows 恒为 Inf——无论多大之档，一行不截
+  rd <- function(enc) fread(path, encoding = enc, nrows = Inf, showProgress = FALSE)
   dt <- tryCatch(rd("UTF-8"), error = function(e) NULL)
   bad_hdr <- !is.null(dt) && !all(validUTF8(names(dt)))
   if (is.null(dt) || bad_hdr) {
-    # GBK 回退：以 readLines 转码后再 fread
-    txt <- tryCatch(iconv(readLines(path, warn = FALSE, encoding = "GBK",
-                                    n = if (is.finite(nrows)) nrows + 1L else -1L),
+    # GBK 回退：以 readLines 全量转码后再 fread（n = -1L 即全量）
+    txt <- tryCatch(iconv(readLines(path, warn = FALSE, encoding = "GBK", n = -1L),
                           from = "GBK", to = "UTF-8"), error = function(e) NULL)
     if (!is.null(txt)) dt <- tryCatch(fread(text = txt, showProgress = FALSE), error = function(e) NULL)
   }
   if (is.null(dt))
     return(list(ok = FALSE, status = "待表（不可解析）", dt = NULL, file = file,
-                mb = mb, rows = NA_integer_, sampled = FALSE, key = NA_character_))
+                mb = mb, rows = NA_integer_, sampled = FALSE, key = NA_character_,
+                file_lines = NA_integer_, full_scan = "—", huge = huge))
+  ## 全量核验：文件换行数 ↔ 载入行数（含表头 1 行）
+  fl <- if (isTRUE(TR_RC_VERIFY) && mb <= TR_RC_MAX_MB)
+    tryCatch(tr_file_lines(path), error = function(e) NA_integer_) else NA_integer_
+  fs <- if (is.na(fl)) sprintf("○ 未核（档逾 %s MB）", format(TR_RC_MAX_MB, big.mark = ","))
+        else if (fl - 1L == nrow(dt) || fl == nrow(dt)) "✔ 全量（行数对账相符）"
+        else sprintf("⚠ 全量已读，行数与换行数差 %s（疑字段内含换行）",
+                     format(abs((fl - 1L) - nrow(dt)), big.mark = ","))
   key <- intersect(.tr_key_alias, names(dt))[1]
   if (!is.na(key) && key != "member_id") setnames(dt, key, "member_id")
+  ncol_full <- ncol(dt)
   if (!is.null(select)) {
     keep <- intersect(c("member_id", select), names(dt)); dt <- dt[, ..keep]
   }
-  list(ok = TRUE, status = if (mb > TR_MAX_MB) sprintf("SAMPLED 前 %s 行", format(nrow(dt), big.mark = ",")) else "全量",
-       dt = dt, file = file, mb = mb, rows = nrow(dt), sampled = mb > TR_MAX_MB,
-       key = if (is.na(key)) NA_character_ else key)
+  list(ok = TRUE,
+       status = sprintf("全量 %s 行%s", format(nrow(dt), big.mark = ","),
+                        if (huge) sprintf("（巨档 %.0f MB，已全量读入，未截行）", mb) else ""),
+       dt = dt, file = file, mb = mb, rows = nrow(dt), sampled = FALSE,
+       key = if (is.na(key)) NA_character_ else key,
+       file_lines = fl, full_scan = fs, huge = huge, ncol_full = ncol_full)
 }
 
 # ---------------------------------------------------------------------
@@ -80,6 +111,7 @@ tr_load_all <- function(rec) {
     交付件 = t$file,
     角色 = fifelse(t$file == rec$primary, "主表", fifelse(t$file %in% rec$supporting, "搭配表", "判据来源")),
     状态 = t$status, MB = round(t$mb, 1), 行数 = t$rows,
+    文件换行数 = t$file_lines, 全量核验 = t$full_scan,
     会员键 = fifelse(is.na(t$key), "—", t$key),
     列数 = if (t$ok) ncol(t$dt) else NA_integer_)))
   list(tabs = tabs, inventory = inv)
