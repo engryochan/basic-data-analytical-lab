@@ -1,10 +1,19 @@
 # =====================================================================
 # registry_loader.R · a168 风险类型登记册载入器与门闸
 # ---------------------------------------------------------------------
-# 载入器版本 : 1.4.1        适配登记册 : 1.3.0        日期 : 2026-08-20
-# 配套     : 数据库/registry_risk_typology_v1.3.0.yaml（单一真相源）
-#            数据库/registry_risk_typology_v1.3.0.csv （派生字典，UTF-8-BOM/CRLF）
-# 变更     : 1.4.1 审计斧正两项（本档注释层，逻辑一字未动）——
+# 载入器版本 : 1.5.0        适配登记册 : 1.5.0        日期 : 2026-08-22
+# 配套     : 规范/registry_risk_typology_v1.5.0.yaml（单一真相源，UTF-8 无 BOM/LF）
+#            规范/registry_risk_typology_v1.5.0.csv （派生字典，UTF-8-BOM/LF）
+# 变更     : 1.5.0 适配登记册 1.5.0（G-1 三向变换之产物）——
+#            ① 路径常量改指 规范/（五命名空间归化；数据库/ 只放交付件 CSV）；
+#            ② .expect 递增至 1.5.0；
+#            ③ 判据层新增 criterion_role／threshold_note 两列，registry_typology()
+#               之判据维度表随之扩列；direction 仅 STAT_DIRECTIONAL 有值；
+#            ④ 新增 registry_counts(REG)：读 YAML registry_counts 段并与 CSV 现算
+#               互证，不符即 stop（禁止任何 qmd 硬写 15／65／66／42）；
+#            ⑤ 新增 registry_type_scalars(REG, type_id)：取 T-03 四禁令／T-10 内控四键
+#               等上载标量（v1.5.0 起双档可见）。
+#            1.4.1 审计斧正两项（本档注释层，逻辑一字未动）——
 #            ① L1 绝对路径去写死：原 path 常量硬编码单机盘符，换机／换用户／CI
 #               即断，且与「工作目录 = qmd 所在目录」设计自相矛盾；改为相对路径
 #               优先、绝对路径仅作兜底（REGISTRY_ROOT，缺省 ""）。
@@ -92,9 +101,10 @@ REGISTRY_ROOT <- getOption("registry.root", "")
 REGISTRY_PATHS <- list(
   fn_dir   = .rp("函数"),
   db_dir   = .rp("数据库"),
-  yaml     = .rp("数据库", "registry_risk_typology_v1.3.0.yaml"),
-  csv      = .rp("数据库", "registry_risk_typology_v1.3.0.csv"),
-  sql_main = .rp("函数",   "a168_取数与核验_SQL总包_v10.sql")
+  spec_dir = .rp("规范"),
+  yaml     = .rp("规范", "registry_risk_typology_v1.5.0.yaml"),
+  csv      = .rp("规范", "registry_risk_typology_v1.5.0.csv"),
+  sql_main = .rp("a168_取数与核验_SQL总包_v10.sql")   # 08acdbc5 起驻项目根（冻结件）
 )
 
 .layout_tree <- function() paste(
@@ -152,6 +162,7 @@ registry_load <- function(yaml_path = REGISTRY_PATHS$yaml,
   dict <- .rstage("R01 CSV载入", {
     d <- fread(csv_path, encoding = "UTF-8")
     need <- c("axis","type_id","name_zh","criterion_column","criterion_source",
+              "criterion_role","threshold_status","threshold_note",
               "evidence_tier","gate","severity","admit_to_scoring","admit_to_profile")
     miss <- setdiff(need, names(d))
     if (length(miss)) stop(sprintf("CSV 缺列：%s", paste(miss, collapse = "、")))
@@ -190,7 +201,7 @@ registry_load <- function(yaml_path = REGISTRY_PATHS$yaml,
         stop(sprintf("%s 之判据列集合不一致", t$type_id))
     }
     ## 版本号亦须同源（登记册与载入器同进同退，杜绝版本身份碰撞）
-    .expect <- "1.3.0"
+    .expect <- "1.5.0"
     if (!identical(as.character(ymeta$registry$version), .expect))
       stop(sprintf("YAML registry.version=%s，载入器预期 %s —— 请同步递增版本号后重跑",
                    ymeta$registry$version, .expect))
@@ -274,7 +285,8 @@ registry_gate <- function(REG, used, purpose = c("scoring","profile")) {
 
 ## 单类完整配方：主表＋搭配表＋全部判据维度＋裁定＋解锁条件
 registry_typology <- function(REG, type_id) {
-  d <- REG$dict[type_id == ..type_id]
+  .tid <- type_id                      # v1.5.0 斧正：`..` 前缀仅容于 j，置于 i 即报错
+  d <- REG$dict[type_id == .tid]
   if (!nrow(d)) stop(sprintf("登记册中无此类型：%s（现有：%s）", type_id,
                              paste(sort(unique(REG$dict$type_id)), collapse = "、")),
                      call. = FALSE)
@@ -285,7 +297,8 @@ registry_typology <- function(REG, type_id) {
     主表 = d$primary_deliverable[1L],
     搭配表 = { s <- unlist(strsplit(d$supporting_deliverables[1L], "；")); s[nzchar(s)] },
     判据维度 = d[, .(判据列 = criterion_column, 取自 = criterion_source,
-                     方向 = direction, 阈值状态 = threshold_status)],
+                     角色 = criterion_role, 方向 = direction,
+                     阈值状态 = threshold_status, 阈值注 = threshold_note)],
     证据 = d$evidence_tier[1L], 门禁 = d$gate[1L], 严重度 = d$severity[1L],
     准入评分 = d$admit_to_scoring[1L], 准入画像 = d$admit_to_profile[1L],
     阻断 = { b <- unlist(strsplit(d$blockers[1L], "；")); b[nzchar(b)] },
@@ -445,3 +458,42 @@ print.a168_registry <- function(x, ...) {
   if (nrow(pend)) cat(sprintf("  待建特征 %d 条（见 registry_pending_features()）\n", nrow(pend)))
   invisible(x)
 }
+
+# ---------------------------------------------------------------------
+# v1.5.0 新增 · registry_counts：YAML 声明 ↔ CSV 现算互证
+#   任何 qmd 禁止硬写 15／65／66／42，一律取本函数回传值。
+# ---------------------------------------------------------------------
+registry_counts <- function(REG) {
+  d <- REG$dict
+  obs <- list(
+    total_criterion_rows  = nrow(d),
+    risk_typology_count   = uniqueN(d[axis == "R", type_id]),
+    value_axis_count      = uniqueN(d[axis != "R", type_id]),
+    risk_criterion_count  = nrow(d[axis == "R"]),
+    stat_directional_rows = nrow(d[criterion_role == "STAT_DIRECTIONAL"]),
+    direction_enum_size   = uniqueN(d[nzchar(direction), direction]))
+  if (!is.null(REG$meta$registry_counts)) {
+    dec <- REG$meta$registry_counts
+    for (k in names(obs)) {
+      if (!is.null(dec[[k]]) && as.integer(dec[[k]]) != as.integer(obs[[k]]))
+        stop(sprintf("【registry·counts】%s：YAML 声明 %s，CSV 现算 %s —— 双档分家，停止渲染",
+                     k, dec[[k]], obs[[k]]), call. = FALSE)
+    }
+  }
+  obs
+}
+
+# ---------------------------------------------------------------------
+# v1.5.0 新增 · registry_type_scalars：型层上载标量（T-03 四禁令／T-10 内控四键）
+# ---------------------------------------------------------------------
+registry_type_scalars <- function(REG, type_id) {
+  keys <- c("ranking","scoring","trigger","enforcement","admit_to_control",
+            "identity_formula","external_standard_status","applicability_status")
+  keys <- intersect(keys, names(REG$dict))
+  .tid <- type_id
+  d <- REG$dict[type_id == .tid][1L]
+  out <- lapply(keys, function(k) d[[k]])
+  names(out) <- keys
+  Filter(function(v) !is.na(v) && nzchar(v), out)
+}
+

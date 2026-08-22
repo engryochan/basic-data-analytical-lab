@@ -48,8 +48,8 @@ A168_NS <- list(
 )
 
 A168_FILES <- list(
-  registry_yaml = file.path(A168_NS$spec,   "registry_risk_typology_v1.3.0.yaml"),
-  registry_csv  = file.path(A168_NS$spec,   "registry_risk_typology_v1.3.0.csv"),
+  registry_yaml = file.path(A168_NS$spec,   "registry_risk_typology_v1.5.0.yaml"),
+  registry_csv  = file.path(A168_NS$spec,   "registry_risk_typology_v1.5.0.csv"),
   glossary_yaml = file.path(A168_NS$spec,   "glossary_a168_v1.0.0.yaml"),
   glossary_csv  = file.path(A168_NS$spec,   "glossary_a168_v1.0.0.csv"),
   r03b_template = file.path(A168_NS$config, "R03b_export_parameters_TEMPLATE.json"),
