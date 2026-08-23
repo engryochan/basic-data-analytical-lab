@@ -1,0 +1,766 @@
+---
+title: "尾段投注基础分析的评估"
+author: "Ryo（雷欧）"
+date: "2026-08-18"
+lang: zh-CN
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-expand: 3
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看代码"
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+---
+
+REDTEAM/
+我先按**“代码逻辑 → CSV 实证 → 两者可比性 → 业务风控价值 → 漏洞 → 改进路线 → 最终裁定”**逐层审计。这里有一个非常关键的结论先摆出来：
+
+> **阿泽尾段投注模型不是雷欧尾段模型的“简化版”；两者实际上在测量不同的东西。**
+> 阿泽尾段投注模型测的是“玩家是否偏好在某个绝对局号以后下注”；雷欧尾段投注模型测的是“玩家是否偏好在每一靴的相对末段下注，并进一步观察末段下注额与末段 ROI”。
+> **就风控科研价值而言，雷欧尾段投注模型明显高于阿泽尾段投注模型；但雷欧尾段投注模型目前仍不能直接作为处罚/封禁模型。**
+
+---
+
+# 引言
+
+```{r}
+#| label: 设置
+#| results: asis
+
+## ── 0 · 依赖闸（先校验校验器：缺件即显式失败，不静默降级）───────────────────
+.req  <- c("data.table", "knitr")
+.miss <- .req[!vapply(.req, requireNamespace, logical(1), quietly = TRUE)]
+if (length(.miss)) stop("缺少依赖包：", paste(.miss, collapse = "、"), call. = FALSE)
+suppressPackageStartupMessages({ library(data.table); library(knitr) })
+
+## ── 1 · 呈表契约（本文件所有表格一律经此三条，不得例外）─────────────────────
+##   C1 列名冻结：thead th 置 position:sticky; top:0，粘附于滚动容器顶缘。
+##   C2 横条前置：表首另置一条与表尾同步的镜像横向滚动条 —— 滑动前即可见。
+##   C3 常驻滚动条：overflow-x 取 scroll（非 auto），并覆写 macOS 叠加式滚动条，
+##                  使其不因静止而隐藏；容器高度设上限，令表尾横条恒在视区内。
+cat('
+<style>
+.rq-fig{ margin:1.15rem 0 1.75rem; max-width:100%; }
+.rq-fig figcaption{ font-size:.92rem; line-height:1.55; margin:0 0 .45rem; color:#334155; }
+.rq-cap-main{ font-weight:700; color:#0f172a; }
+.rq-cap-sub{ display:block; font-size:.83rem; color:#475569; margin-top:.12rem; }
+.rq-cap-lock{ display:block; font-size:.80rem; color:#0369a1; margin-top:.12rem; }
+.rq-cap-warn{ display:block; font-size:.83rem; color:#b91c1c; font-weight:700; margin-top:.12rem; }
+.rq-alert{ margin:1rem 0; padding:.65rem .9rem; border-left:4px solid #b91c1c;
+           background:#fef2f2; color:#7f1d1d; font-size:.9rem; border-radius:0 6px 6px 0; }
+
+/* C2 · 表首镜像横条 */
+.rq-scroll-top{ overflow-x:scroll; overflow-y:hidden; height:16px;
+                border:1px solid #cbd5e1; border-bottom:0; border-radius:6px 6px 0 0;
+                background:#f8fafc; }
+.rq-scroll-top > div{ height:1px; }
+
+/* C1+C3 · 表体滚动容器 */
+.rq-scroll{ overflow-x:scroll; overflow-y:auto; border:1px solid #cbd5e1;
+            border-radius:0 0 6px 6px; scrollbar-gutter:stable;
+            -webkit-overflow-scrolling:touch; }
+
+/* C3 · 强制常驻可见（覆写 macOS/iOS 叠加式滚动条的默认隐藏行为）*/
+.rq-scroll::-webkit-scrollbar,.rq-scroll-top::-webkit-scrollbar{
+  -webkit-appearance:none; height:12px; width:12px; }
+.rq-scroll::-webkit-scrollbar-track,.rq-scroll-top::-webkit-scrollbar-track{
+  background:#eef2f7; border-radius:6px; }
+.rq-scroll::-webkit-scrollbar-thumb,.rq-scroll-top::-webkit-scrollbar-thumb{
+  background:#94a3b8; border-radius:6px; border:2px solid #eef2f7; }
+.rq-scroll::-webkit-scrollbar-thumb:hover,.rq-scroll-top::-webkit-scrollbar-thumb:hover{
+  background:#64748b; }
+.rq-scroll,.rq-scroll-top{ scrollbar-width:thin; scrollbar-color:#94a3b8 #eef2f7; }
+
+/* 表体 */
+.rq-tbl{ margin:0 !important; width:auto !important; max-width:none !important;
+         border-collapse:separate; border-spacing:0; font-size:13px;
+         font-variant-numeric:tabular-nums; }
+.rq-tbl th,.rq-tbl td{ white-space:nowrap; padding:5px 12px; border:0;
+                       box-shadow:inset 0 -1px 0 #e2e8f0; }
+.rq-tbl tbody tr:nth-child(even) td{ background:#f8fafc; }
+.rq-tbl tbody tr:hover td{ background:#e0f2fe; }
+
+/* C1 · 列名冻结 */
+.rq-tbl thead th{ position:sticky; top:0; z-index:5;
+                  background:#0f172a; color:#f8fafc; font-weight:700;
+                  box-shadow:inset 0 -2px 0 #334155; }
+
+/* 行号列冻结（本列为定位器，非数据列）*/
+.rq-freeze1 .rq-tbl tbody td:first-child{ position:sticky; left:0; z-index:4;
+  background:#f1f5f9; color:#475569; font-weight:600;
+  box-shadow:inset -1px 0 0 #cbd5e1, inset 0 -1px 0 #e2e8f0; }
+.rq-freeze1 .rq-tbl thead th:first-child{ left:0; z-index:6; background:#0f172a; }
+.rq-freeze1 .rq-tbl tbody tr:hover td:first-child{ background:#e0f2fe; }
+
+/* 首尾分隔行（data.table 打印式 --- ）*/
+.rq-tbl tbody tr.rq-sep td{ background:#e2e8f0 !important; color:#475569 !important;
+  font-weight:700; text-align:center !important; letter-spacing:.18em; }
+</style>
+<script>
+(function(){
+  function wire(fig){
+    var body = fig.querySelector(".rq-scroll");
+    var bar  = fig.querySelector(".rq-scroll-top");
+    if(!body || !bar) return;
+    var pad = bar.firstElementChild, tbl = body.querySelector("table");
+    function resize(){
+      var w = tbl ? tbl.scrollWidth : body.scrollWidth;
+      pad.style.width = w + "px";
+      bar.style.display = (w > body.clientWidth + 1) ? "block" : "none";
+    }
+    var lock = false;
+    bar.addEventListener("scroll", function(){ if(lock) return; lock=true; body.scrollLeft=bar.scrollLeft; lock=false; });
+    body.addEventListener("scroll", function(){ if(lock) return; lock=true; bar.scrollLeft=body.scrollLeft; lock=false; });
+    resize();
+    if(window.ResizeObserver){ var ro=new ResizeObserver(resize); ro.observe(body); if(tbl) ro.observe(tbl); }
+    window.addEventListener("resize", resize);
+    setTimeout(resize, 250); setTimeout(resize, 1200);
+  }
+  function mark(){
+    document.querySelectorAll(".rq-tbl tbody tr").forEach(function(tr){
+      var c = tr.querySelector("td");
+      if(c && c.textContent.trim() === "---") tr.classList.add("rq-sep");
+    });
+  }
+  function init(){ mark(); document.querySelectorAll(".rq-fig").forEach(wire); }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+})();
+</script>
+')
+
+## ── 2 · 工具函数 ────────────────────────────────────────────────────────────
+rq_esc <- function(s) {
+  s <- as.character(s); s[is.na(s)] <- "NA"
+  s <- gsub("&", "&amp;", s, fixed = TRUE); s <- gsub("<", "&lt;", s, fixed = TRUE)
+  gsub(">", "&gt;", s, fixed = TRUE)
+}
+rq_alert <- function(...) cat(sprintf('<div class="rq-alert">⚠️ %s</div>\n', rq_esc(paste0(...))))
+rq_n     <- function(x) formatC(x, format = "d", big.mark = ",")
+
+## 取数目录与编码自适应读入（Superset 导出常为 GB18030，非 UTF-8）
+.RQ_DIRS <- c("数据库", ".", "data", "../数据库")
+rq_find <- function(files) {
+  cand <- as.vector(outer(.RQ_DIRS, files, file.path))
+  hit  <- cand[file.exists(cand)]
+  if (length(hit)) hit[1] else NA_character_
+}
+rq_read_csv <- function(path) {
+  raw <- readBin(path, "raw", n = file.info(path)$size)
+  txt <- iconv(rawToChar(raw), from = "UTF-8", to = "UTF-8")
+  enc <- "UTF-8"
+  if (is.na(txt)) { txt <- iconv(rawToChar(raw), from = "GB18030", to = "UTF-8"); enc <- "GB18030" }
+  if (is.na(txt)) stop("编码判定失败（既非 UTF-8 亦非 GB18030）：", path, call. = FALSE)
+  txt <- sub("^\ufeff", "", txt)
+  d <- data.table::fread(text = txt, showProgress = FALSE,
+                         na.strings = c("", "NA", "NULL", "\\N"))
+  data.table::setattr(d, "rq_enc", enc); d
+}
+
+## ── 3 · 呈表主函数：前 first / 后 last 行粒度 + 列名冻结 + 双横条 ───────────
+##   行号取全表实际行号（1:、2: … ---、N-1:、N:），不得使用相对标签。
+##   副标题一律现算：总行数、总列数、显示行数、省略行数、省略占比（铁律第九条）。
+rq_table <- function(x, title, first = 6L, last = 6L,
+                     source_note = NULL, max_height = "60vh",
+                     freeze_index = TRUE, digits = 4L) {
+
+  if (is.null(x)) { rq_alert("表「", title, "」缺件：数据对象为 NULL。缺件 ≠ 无异常，须回溯取数链路。"); return(invisible(FALSE)) }
+  x <- as.data.frame(x, stringsAsFactors = FALSE, check.names = FALSE)
+  N <- nrow(x); K <- ncol(x)
+  if (N == 0L) { rq_alert("表「", title, "」零行（N = 0，列数 ", K, "）。零行 ≠ 无异常，须核实筛选口径与结构性零/经验性零之别。"); return(invisible(FALSE)) }
+
+  if (N <= first + last) { idx <- seq_len(N); sep_at <- 0L
+  } else { idx <- c(seq_len(first), seq.int(N - last + 1L, N)); sep_at <- first }
+  shown <- length(idx); omit <- N - shown; omit_pct <- omit / N * 100
+
+  body <- x[idx, , drop = FALSE]
+  for (j in seq_len(K)) {
+    v <- body[[j]]
+    body[[j]] <- if (is.numeric(v) && !is.integer(v))
+      ifelse(is.na(v), "NA", formatC(v, format = "f", digits = digits)) else as.character(v)
+  }
+  rowlab <- paste0(idx, ":")
+  if (sep_at > 0L) {
+    blank <- body[1, , drop = FALSE]; blank[1, ] <- ""   # 数据格留白，--- 只落在行号列（data.table 打印式）
+    body   <- rbind(body[seq_len(sep_at), , drop = FALSE], blank,
+                    body[(sep_at + 1L):shown, , drop = FALSE])
+    rowlab <- append(rowlab, "---", after = sep_at)
+  }
+  disp <- cbind(`行号` = rowlab, body, stringsAsFactors = FALSE)
+  al   <- c("r", ifelse(vapply(x, is.numeric, logical(1)), "r", "l"))
+
+  kb <- knitr::kable(disp, format = "html", escape = TRUE, row.names = FALSE,
+                     align = al, table.attr = 'class="rq-tbl"')
+
+  cap <- paste0(
+    '<span class="rq-cap-main">表：', rq_esc(title), '</span>',
+    '<span class="rq-cap-sub">全表 <b>', rq_n(N), '</b> 行 × <b>', K,
+    '</b> 列；本表按「前 ', first, ' / 后 ', last, '」粒度显示 <b>', rq_n(shown),
+    '</b> 行，省略 <b>', rq_n(omit), '</b> 行，占 <b>', sprintf("%.4f%%", omit_pct),
+    '</b>。行号为全表实际行号，非相对序号。</span>',
+    if (omit == 0L) '<span class="rq-cap-sub">全表行数不足 12 行，未省略任何行。</span>' else "",
+    '<span class="rq-cap-lock">呈表契约：列名已冻结（滚动时表头常驻）｜横向滚动条置于表首与表尾双条，滑动前即可见｜列不截断、值不改写。</span>',
+    if (!is.null(source_note)) paste0('<span class="rq-cap-sub">来源：', rq_esc(source_note), '</span>') else ""
+  )
+
+  cat(sprintf(
+    '<figure class="rq-fig%s">\n<figcaption>%s</figcaption>\n<div class="rq-scroll-top"><div></div></div>\n<div class="rq-scroll" style="max-height:%s">\n%s\n</div>\n</figure>\n',
+    if (freeze_index) " rq-freeze1" else "", cap, max_height, as.character(kb)))
+  invisible(TRUE)
+}
+
+## ── 4 · 数据表登记册（别名并列；命中即止，未命中记「缺件」不静默跳过）──────
+.RQ_REG <- list(
+  list(key = "aze_model",
+       title = "阿泽靴尾投注模型 · 会员级明细",
+       files = c("阿泽靴尾投注模型.csv", "P11_阿泽尾段投注模型会员名单.csv")),
+  list(key = "leo_model",
+       title = "雷欧靴尾投注模型（§R01 R01_late_shoe）· 会员级明细",
+       files = c("R01_late_shoe.csv", "雷欧靴尾投注模型.csv", "P12_雷欧尾段投注模型会员名单.csv")),
+  list(key = "aze_ledger",
+       title = "P11 · 阿泽域与全量洁净 两域十一项总帐",
+       files = c("P11_阿泽尾段投注总帐.csv")),
+  list(key = "leo_ledger",
+       title = "P11 · 雷欧域与全量洁净 两域十一项总帐",
+       files = c("P11_雷欧尾段投注总帐.csv"))
+)
+```
+
+## 模型
+
+### 阿泽（靴尾投注模型）
+
+将原本阿泽的模型，只加日期和过滤哨兵值、测试线代理、只采纳一般注单，其余原封不动。
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- 阿泽（模型）：原码保持不变，仅加五闸
+--   ① 最新注单版本（ROW_NUMBER 三级排序取 rn=1）
+--   ② 排测试代理（五级 LEFT JOIN，age022='1'）
+--   ③ category='1'
+--   ④ UPPER(TRIM(bet38))='N'
+--   ⑤ 窗口 2026-03-21 ~ 2026-08-06（原码已有，原样保留）
+-- 未加者（不在所列五项之内，故不动）：bet05>0、bet11>0、bet04>0 数值守门
+-- 聚合式、门槛 >=30、内筛 >=0.60、输出九列、ORDER BY 皆与原码逐字相同
+WITH test_agents AS (
+    SELECT age001 AS agent_id
+    FROM ods_mariadb_2b.ods_a168_agent
+    WHERE age022 = '1'
+),
+ranked AS (
+    SELECT b.bet01, b.bet03, b.bet04, b.bet05, b.bet11, b.bet13, b.bet14,
+           b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,
+           b.bet38, b.category, b.validbet,
+           ROW_NUMBER() OVER (
+             PARTITION BY b.bet01
+             ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+    FROM ods_mariadb_2b.ods_a168_bet02 b
+    WHERE b.bet02 = '101'
+      AND b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+),
+gated AS (
+    SELECT r.bet03, r.bet04, r.bet05, r.bet11, r.bet13, r.bet14, r.validbet
+    FROM ranked r
+    LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18
+    LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19
+    LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20
+    LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21
+    LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22
+    WHERE r.rn = 1
+      AND r.category = '1'
+      AND UPPER(TRIM(r.bet38)) = 'N'
+      AND COALESCE(t1.agent_id, t2.agent_id, t3.agent_id,
+                   t4.agent_id, t5.agent_id) IS NULL
+),
+player_stat AS (
+    SELECT
+        CAST(bet05 AS BIGINT) AS player_id,
+        COUNT(*) AS total_orders,
+        SUM(CASE WHEN CAST(bet04 AS INT) >= 40 THEN 1 ELSE 0 END) AS late_orders,
+        SUM(CASE WHEN CAST(bet14 AS DECIMAL(20,4))
+                    > CAST(bet13 AS DECIMAL(20,4)) THEN 1 ELSE 0 END) AS win_orders,
+        SUM((CAST(bet14 AS DECIMAL(20,4)) - CAST(bet13 AS DECIMAL(20,4)))
+            / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)) AS profit,
+        SUM(CAST(validbet AS DECIMAL(20,4))
+            / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)) AS valid_bet
+    FROM gated
+    WHERE bet03 IS NOT NULL
+      AND bet04 IS NOT NULL
+      AND bet05 IS NOT NULL
+    GROUP BY CAST(bet05 AS BIGINT)
+)
+SELECT player_id, total_orders, late_orders,
+       ROUND(late_orders * 1.0 / total_orders, 4) AS late_ratio,
+       win_orders,
+       ROUND(win_orders * 1.0 / total_orders, 4) AS win_rate,
+       ROUND(valid_bet, 2) AS valid_bet,
+       ROUND(profit, 2)    AS profit,
+       ROUND(profit / NULLIF(valid_bet, 0), 4) AS roi
+FROM player_stat
+WHERE total_orders >= 30
+  AND late_orders * 1.0 / total_orders >= 0.60
+ORDER BY roi DESC, profit DESC;
+```
+
+根据运行以上代码，将输出储存为`阿泽靴尾投注模型.csv`。
+
+### 雷欧（靴尾投注模型）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+/* ───────────────────────────────────────────────────────────────────────────
+   §R01 · R01_late_shoe.csv
+   策略性风控：靴内相对靴位 ≥ 0.80（≈ 靴末 20% 之局位，等价外部报告「第 40 局」）的下注占比
+              + 相对靴位 + 注额斜率 + 分段 ROI
+   ★★ 2026-08-12 B-01 斧正：判据由绝对局号 round_no>=50 改为相对靴位 shoe_pos>=0.80 ★★
+     依据：外部实测靴长分布（均值 49.86 局、P50=50、P75=52、P90=54、P99=58）。
+     第 50 把的相对靴位为 100.3%（以均值计），故 round_no>=50 实为「靴的最后一局
+     及长于中位数的那半数靴」——约半数牌靴无末段可言，late_share 被系统性压低。
+     新判据固定的是**局位区间**（每靴末 20% 的局），不是下注占比；late_share 仍由
+     实际下注行为决定，均匀下注之零偏好基准下期望约 20%，实际可为 0%~100%。
+   ★ 新增 late_def 口径锁列：旧版 CSV 因缺此列而在报告侧读入时当场报错，
+     使「新文字配旧数字」的静默语义漂移变成显式失败。
+   对应报告：@sec-r01
+   输出列：late_def(口径锁), uid, n_orders_all, n_orders_late, late_share, shoe_pos_p50,
+           stake_late_avg, stake_early_avg, stake_ramp, roi_late, roi_early,
+           stake_late, game_pnl_late, stake_all, game_pnl_all
+   预期行数：数千 ~ 数万（HAVING 已收敛）
+   ─────────────────────────────────────────────────────────────────────────── */
+-- ▸ 导出：需要 —— 存为「数据库/R01_late_shoe.csv」（§R01 靴末段下注）。
+WITH test_agents AS (                                                                               -- 公共表表达式：开启中间结果集 test_agents，其后各行为其定义体（§R01）
+  SELECT age001 AS agent_id                                                                         -- 取列：产出「agent_id」
+  FROM ods_mariadb_2b.ods_a168_agent                                                                -- 取数来源：取自代理主档（五级代理线归属来源）
+  WHERE age022 = '1'                                  -- 铁律④b：公司测试线
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R01）
+ranked AS (                                            -- 需求 §3.2：同单号保留最新版本
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,                                         -- 取列：起始取列子句，本行先列 b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02，涉 bet02（游戏类别）、dt（营业日）
+         b.bet03, b.bet04, b.bet05, b.bet11, b.bet13,                                               -- 续行：接续上一取列子句，续列 b.bet03, b.bet04, b.bet05, b.bet11, b.bet13，涉 bet03（靴号）、bet04（局内序号）、bet05（会员号）
+         b.bet14, b.bet18, b.bet19, b.bet20, b.bet21,                                               -- 续行：接续上一取列子句，续列 b.bet14, b.bet18, b.bet19, b.bet20, b.bet21，涉 bet14（派彩金额）、bet18（一级代理线）、bet19（二级代理线）
+         b.bet22, b.bet38, b.bet39, b.category,                                                     -- 续行：接续上一取列子句，续列 b.bet22, b.bet38, b.bet39, b.category，涉 bet22（五级代理线）、bet38（测试标识）、bet39（桌号）
+         ROW_NUMBER() OVER (                                                                        -- 行号窗口表达式：以行号窗口取每组头部或去重，免出重复行
+           PARTITION BY b.bet01                                                                     -- 窗口分区：按 b.bet01 分组开窗，组内各自编号或排名
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                           -- 排序：按 b.updatetime（降序）, b.sync_time（降序）, b.dt（降序）) AS rn 排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
+  FROM ods_mariadb_2b.ods_a168_bet02 b                 -- ★ 表名开关
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                                                -- 过滤条件：限定 b.dt不少于 '2026-03-21'、b.dt小于 '2026-08-07'，涉 dt（营业日）
+    AND b.bet02 = '101'                                                                             -- 并列条件：限定 b.bet02等于 '101'，涉 bet02（游戏类别）
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R01）
+base AS (                                                                                           -- 公共表表达式：开启中间结果集 base，其后各行为其定义体（§R01）
+  SELECT r.bet01 AS bet_id, r.bet05 AS member_id,                                                   -- 取列：起始取列子句，本行先取「member_id」，涉 bet05（会员号）、member_id（会员号）
+         r.bet03 AS shoe_id, r.bet39 AS table_id,                                                   -- 取值表达式：取用 bet03（靴号）、bet39（桌号），产出「table_id」
+         CAST(NULLIF(TRIM(r.bet04),'') AS INT)           AS round_no,                               -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「round_no」
+         CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS fx,                                     -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「fx」
+         CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)) AS stake_raw,                              -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「stake_raw」
+         CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4)) AS payout_raw                              -- 取值表达式：先去空白、空串归 NULL，再显式转型——本库字段多为 varchar，不转型即比较失真，产出「payout_raw」
+  FROM ranked r                                                                                     -- 取数来源：取自本条自建的中间结果集 ranked
+  /* StarRocks 不支持 EXISTS + 多列 IN，测试线剔除改五路 LEFT JOIN */
+  LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18                                                 -- 左连接：取自本条自建的中间结果集 test_agents，连接键为 bet18（一级代理线）
+  LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19                                                 -- 左连接：取自本条自建的中间结果集 test_agents，连接键为 bet19（二级代理线）
+  LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20                                                 -- 左连接：取自本条自建的中间结果集 test_agents，连接键为 bet20（三级代理线）
+  LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21                                                 -- 左连接：取自本条自建的中间结果集 test_agents，连接键为 bet21（四级代理线）
+  LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22                                                 -- 左连接：取自本条自建的中间结果集 test_agents，连接键为 bet22（五级代理线）
+  WHERE r.rn = 1                                                                                    -- 过滤条件：限定 r.rn等于 1
+    AND r.category = '1'                                                                            -- 并列条件：限定 r.category等于 '1'
+    AND UPPER(TRIM(r.bet38)) = 'N'                                                                  -- 并列条件：限定 UPPER(TRIM(r.bet38))等于 'N'，涉 bet38（测试标识）
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                                -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT)大于 0，涉 bet05（会员号）
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                         -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))大于 0，涉 bet11（汇率）
+    AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0                                                   -- 并列条件：限定 CAST(NULLIF(TRIM(r.bet04),'') AS INT)大于 0，涉 bet04（局内序号）
+    AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL               -- 并列条件：限定该值为空——本包以左连接加空值判定替代 EXISTS，因 StarRocks 不支持 EXISTS 配多列 IN
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R01）
+shoe_len AS (          /* ★ 命名警示：本 CTE 名为 shoe_len（靴长）系历史沿用，其所算 max_round = MAX(round_no) 为『该靴该桌观测到的最大局号』，非 COUNT(round_no) 之局数；二者仅在局号自1起连续无缺口时相等。选 MAX 为刻意设计：对中间缺口免疫，COUNT 会因清洗剔单而使分母缩水。★ B-01 斧正（2026-08-12）：定标基准逐靴现算，绝对局号不是固定靴位 */   -- 缺陷一修正：定标基准不定，固定 50 不是固定位置
+  SELECT shoe_id, table_id, MAX(round_no) AS max_round                                              -- 取列：取最大局号（≠COUNT 局数），产出「max_round」
+  FROM base GROUP BY shoe_id, table_id                                                              -- 取数来源：取自本条自建的中间结果集 base
+),                                                                                                  -- 续行：收束上方的子查询或函数括号（§R01）
+enriched AS (                                                                                       -- 公共表表达式：开启中间结果集 enriched，其后各行为其定义体（§R01）
+  SELECT b.member_id, b.shoe_id, b.table_id, b.round_no, s.max_round,                               -- 取列：起始取列子句，本行先列 b.member_id, b.shoe_id, b.table_id, b.round_no, s.max_round，涉 member_id（会员号）
+         b.round_no * 1.0 / NULLIF(s.max_round,0)     AS shoe_pos,                                  -- 取值表达式：产出「shoe_pos」
+         b.stake_raw / b.fx                           AS stake,                                     -- 取值表达式：取用 stake（下注额（经汇率归一化）），产出「stake」
+         (b.payout_raw - b.stake_raw) / b.fx          AS game_pnl,                                  -- 续行：取用 game_pnl（游戏净输赢），产出「game_pnl」
+         CASE WHEN b.round_no * 1.0 / NULLIF(s.max_round,0) >= 0.80
+              THEN 1 ELSE 0 END                        AS is_late   -- B-01 斧正：相对靴位                                    -- 条件分支：产出「is_late」
+  FROM base b                                                                                       -- 取数来源：取自本条自建的中间结果集 base
+  JOIN shoe_len s ON s.shoe_id = b.shoe_id AND s.table_id = b.table_id                              -- 连接：取自本条自建的中间结果集 shoe_len，连接键为 s.shoe_id = b.shoe_id AND s.table_id = b.table_id
+)                                                                                                   -- 续行：收束上方的子查询或函数括号（§R01）
+SELECT                                                                                              -- 续行：接续上一取列子句，续列 SELECT
+  member_id                                                     AS uid,                             -- 取值表达式：取用 member_id（会员号）、uid（会员号），产出「uid」
+  COUNT(*)                                                      AS n_orders_all,                    -- 计数表达式：产出「n_orders_all」
+  SUM(is_late)                                                  AS n_orders_late,                   -- 汇总表达式：产出「n_orders_late」
+  'shoe_pos>=0.80'                                              AS late_def,        -- 口径锁：definition_version = v2
+  SUM(is_late) * 1.0 / COUNT(*)                                 AS late_share,                      -- 汇总表达式：计数，取用 late_share（晚注占比），产出「late_share」
+  PERCENTILE_APPROX(CASE WHEN is_late=1 THEN shoe_pos END, 0.5) AS shoe_pos_p50,                    -- 取近似分位数表达式：产出「shoe_pos_p50」
+  SUM(CASE WHEN is_late=1 THEN stake END) / NULLIF(SUM(is_late),0)              AS stake_late_avg,  -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake_late_avg」
+  SUM(CASE WHEN is_late=0 THEN stake END) / NULLIF(COUNT(*)-SUM(is_late),0)     AS stake_early_avg,  -- 汇总表达式：汇总后取负号——会员净输赢取负即平台毛利（GGR），产出「stake_early_avg」
+  (SUM(CASE WHEN is_late=1 THEN stake END) / NULLIF(SUM(is_late),0))                                -- 续行：汇总，取用 stake（下注额（经汇率归一化））
+    / NULLIF(SUM(CASE WHEN is_late=0 THEN stake END)                                                -- 除法或乘法计算：汇总，取用 stake（下注额（经汇率归一化））
+             / NULLIF(COUNT(*)-SUM(is_late),0), 0)                              AS stake_ramp,      -- 除法或乘法计算：汇总后取负号——会员净输赢取负即平台毛利（GGR），产出「stake_ramp」
+  SUM(CASE WHEN is_late=1 THEN game_pnl END)                                                        -- 汇总表达式：取用 game_pnl（游戏净输赢）
+    / NULLIF(SUM(CASE WHEN is_late=1 THEN stake END),0)                         AS roi_late,        -- 除法或乘法计算：汇总，取用 stake（下注额（经汇率归一化）），产出「roi_late」
+  SUM(CASE WHEN is_late=0 THEN game_pnl END)                                                        -- 汇总表达式：取用 game_pnl（游戏净输赢）
+    / NULLIF(SUM(CASE WHEN is_late=0 THEN stake END),0)                         AS roi_early,       -- 除法或乘法计算：汇总，取用 stake（下注额（经汇率归一化）），产出「roi_early」
+  SUM(CASE WHEN is_late=1 THEN stake END)                                       AS stake_late,      -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake_late」
+  SUM(CASE WHEN is_late=1 THEN game_pnl END)                                    AS game_pnl_late,   -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「game_pnl_late」
+  SUM(stake)                                                                    AS stake_all,       -- 汇总表达式：取用 stake（下注额（经汇率归一化）），产出「stake_all」
+  SUM(game_pnl)                                                                 AS game_pnl_all     -- 汇总表达式：取用 game_pnl（游戏净输赢），产出「game_pnl_all」
+FROM enriched                                                                                       -- 取数来源：取自本条自建的中间结果集 enriched
+GROUP BY member_id                                                                                  -- 分组：按 member_id 汇总
+HAVING COUNT(*) >= 100                                    -- 需求：订单数据 > 100 笔
+ORDER BY late_share DESC, n_orders_late DESC;                                                       -- 排序：按 late_share（降序）, n_orders_late（降序）排列；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
+/* ⚠️ 注意：此处**故意不加** late_share >= 0.70 的 HAVING。
+   报告需要「命中组 vs 对照组」的 hold% 对照才能做经济裁定（@sec-r01 的 r01-decision），
+   只导命中组就没有对照组。阈值筛选一律放在 R 侧做，SQL 只负责给全量底料。
+   若行数过大，改为 HAVING COUNT(*) >= 300 提高活跃度门槛，而不是加 late_share 条件。 */
+```
+
+根据运行以上代码，将输出储存为`雷欧靴尾投注模型.csv`（也是整个框架中其中一份数据表`R01_late_shoe.csv`）。
+
+## 数据总账
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- P11 · 阿泽域（模型一丙版）与全量洁净两域十一项总帐
+-- 导出：存为「数据库/P11_阿泽尾段投注总帐.csv」
+-- 读法：ratio_pct 列即「阿泽（占比）」＝ 阿泽域 ÷ 全量洁净；代理五级为 distinct，不可加
+WITH test_agents AS (
+    SELECT age001 AS agent_id
+    FROM ods_mariadb_2b.ods_a168_agent
+    WHERE age022 = '1'
+),
+ranked AS (
+    SELECT b.bet01, b.bet03, b.bet04, b.bet05, b.bet08, b.bet11, b.bet13, b.bet14,
+           b.bet16, b.bet41, b.validbet,
+           b.bet18, b.bet19, b.bet20, b.bet21, b.bet22, b.bet38, b.category,
+           ROW_NUMBER() OVER (
+             PARTITION BY b.bet01
+             ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+    FROM ods_mariadb_2b.ods_a168_bet02 b
+    WHERE b.bet02 = '101'
+      AND b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+),
+gated AS (
+    SELECT r.bet03, r.bet04, r.bet05, r.bet11, r.bet13, r.bet14,
+           r.bet16, r.bet41, r.bet08, r.validbet,
+           r.bet18 AS a1, r.bet19 AS a2, r.bet20 AS a3, r.bet21 AS a4, r.bet22 AS a5
+    FROM ranked r
+    LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18
+    LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19
+    LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20
+    LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21
+    LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22
+    WHERE r.rn = 1
+      AND r.category = '1'
+      AND UPPER(TRIM(r.bet38)) = 'N'
+      AND COALESCE(t1.agent_id, t2.agent_id, t3.agent_id,
+                   t4.agent_id, t5.agent_id) IS NULL
+),
+aze_rows AS (
+    SELECT CAST(bet05 AS BIGINT) AS pid,
+           CAST(bet04 AS INT)    AS rno,
+           a1, a2, a3, a4, a5,
+           CAST(bet13 AS DECIMAL(20,4))
+             / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)                     AS stake,
+           CAST(validbet AS DECIMAL(20,4))
+             / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)                     AS vb,
+           (CAST(bet14 AS DECIMAL(20,4)) - CAST(bet13 AS DECIMAL(20,4)))
+             / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)                     AS pnl,
+           COALESCE(CAST(bet16 AS DECIMAL(20,4)), 0)
+             / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)                     AS reb16,
+           COALESCE(CAST(bet41 AS DECIMAL(20,4)), 0)
+             / NULLIF(CAST(bet11 AS DECIMAL(20,4)), 0)                     AS reb41
+    FROM gated
+    WHERE bet03 IS NOT NULL
+      AND bet04 IS NOT NULL
+      AND bet05 IS NOT NULL
+),
+aze_members AS (
+    SELECT pid
+    FROM aze_rows
+    GROUP BY pid
+    HAVING COUNT(*) >= 30
+       AND SUM(CASE WHEN rno >= 40 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) >= 0.60
+),
+aze AS (
+    SELECT '2_阿泽域（丙版五闸＋会员门槛）' AS scope_def,
+           COUNT(*)                                   AS n_orders,
+           COUNT(DISTINCT r.pid)                      AS n_members,
+           COUNT(DISTINCT r.a1)                       AS n_lv1,
+           COUNT(DISTINCT r.a2)                       AS n_lv2,
+           COUNT(DISTINCT r.a3)                       AS n_lv3,
+           COUNT(DISTINCT r.a4)                       AS n_lv4,
+           COUNT(DISTINCT r.a5)                       AS n_lv5,
+           SUM(r.stake)                               AS stake_sum,
+           SUM(r.vb)                                  AS validbet_sum,
+           -SUM(r.pnl)                                AS ggr_sum,
+           SUM(r.reb16)                               AS rebate16_sum,
+           SUM(r.reb41)                               AS rebate41_sum
+    FROM aze_rows r
+    JOIN aze_members m ON m.pid = r.pid
+),
+clean_rows AS (
+    SELECT CAST(bet05 AS BIGINT) AS pid,
+           a1, a2, a3, a4, a5,
+           CAST(bet13 AS DECIMAL(20,4))
+             / CAST(bet11 AS DECIMAL(20,8))                                AS stake,
+           CAST(validbet AS DECIMAL(20,4))
+             / CAST(bet11 AS DECIMAL(20,8))                                AS vb,
+           (CAST(bet14 AS DECIMAL(20,4)) - CAST(bet13 AS DECIMAL(20,4)))
+             / CAST(bet11 AS DECIMAL(20,8))                                AS pnl,
+           COALESCE(CAST(bet16 AS DECIMAL(20,4)), 0)
+             / CAST(bet11 AS DECIMAL(20,8))                                AS reb16,
+           COALESCE(CAST(bet41 AS DECIMAL(20,4)), 0)
+             / CAST(bet11 AS DECIMAL(20,8))                                AS reb41
+    FROM gated
+    WHERE CAST(NULLIF(TRIM(bet05), '') AS BIGINT) > 0
+      AND CAST(NULLIF(TRIM(bet11), '') AS DECIMAL(20,8)) > 0
+      AND CAST(NULLIF(TRIM(bet04), '') AS INT) > 0
+      AND NULLIF(TRIM(bet08), '') IS NOT NULL
+),
+clean AS (
+    SELECT '1_全量洁净（七闸）' AS scope_def,
+           COUNT(*)                                   AS n_orders,
+           COUNT(DISTINCT pid)                        AS n_members,
+           COUNT(DISTINCT a1)                         AS n_lv1,
+           COUNT(DISTINCT a2)                         AS n_lv2,
+           COUNT(DISTINCT a3)                         AS n_lv3,
+           COUNT(DISTINCT a4)                         AS n_lv4,
+           COUNT(DISTINCT a5)                         AS n_lv5,
+           SUM(stake)                                 AS stake_sum,
+           SUM(vb)                                    AS validbet_sum,
+           -SUM(pnl)                                  AS ggr_sum,
+           SUM(reb16)                                 AS rebate16_sum,
+           SUM(reb41)                                 AS rebate41_sum
+    FROM clean_rows
+),
+both AS (
+    SELECT * FROM clean
+    UNION ALL
+    SELECT * FROM aze
+)
+SELECT
+    b.scope_def,
+    b.n_orders,
+    ROUND(b.n_orders   * 100.0 / c.n_orders,   4)                  AS n_orders_pct,
+    b.n_members,
+    ROUND(b.n_members  * 100.0 / c.n_members,  4)                  AS n_members_pct,
+    b.n_lv1, b.n_lv2, b.n_lv3, b.n_lv4, b.n_lv5,
+    ROUND(b.stake_sum, 2)                                          AS stake_sum,
+    ROUND(b.stake_sum    * 100.0 / c.stake_sum, 4)                 AS stake_pct,
+    ROUND(b.validbet_sum, 2)                                       AS validbet_sum,
+    ROUND(b.validbet_sum * 100.0 / c.validbet_sum, 4)              AS validbet_pct,
+    ROUND(b.ggr_sum, 2)                                            AS ggr_sum,
+    ROUND(b.ggr_sum      * 100.0 / c.ggr_sum, 4)                   AS ggr_pct,
+    ROUND(b.rebate16_sum, 2)                                       AS rebate16_sum,
+    ROUND(b.rebate16_sum * 100.0 / NULLIF(c.rebate16_sum, 0), 4)   AS rebate16_pct,
+    ROUND(b.rebate41_sum, 2)                                       AS rebate41_sum,
+    ROUND(b.ggr_sum - b.rebate16_sum, 2)                           AS ngr_by16,
+    ROUND((b.ggr_sum - b.rebate16_sum) * 100.0
+          / NULLIF(c.ggr_sum - c.rebate16_sum, 0), 4)              AS ngr_by16_pct
+FROM both b
+CROSS JOIN clean c
+ORDER BY b.scope_def;
+```
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+-- P11 · 雷欧域（§R01 原准入）与全量洁净两域十一项总帐
+-- 导出：存为「数据库/P11_雷欧尾段投注总帐.csv」
+-- 口径：CTE test_agents/ranked/base 逐字沿用 §R01 原文；雷欧域＝base 上 HAVING n>=100 之会员注单
+--       全量洁净＝同一 base 全量（§R01 六闸，未施 bet08，实测其筛除量为零）
+WITH test_agents AS (
+  SELECT age001 AS agent_id
+  FROM ods_mariadb_2b.ods_a168_agent
+  WHERE age022 = '1'
+),
+ranked AS (
+  SELECT b.bet01, b.bet03, b.bet04, b.bet05, b.bet11, b.bet13, b.bet14,
+         b.bet16, b.bet41, b.validbet,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22, b.bet38, b.bet39, b.category,
+         ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+),
+base AS (
+  SELECT CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT)        AS member_id,
+         r.bet18 AS a1, r.bet19 AS a2, r.bet20 AS a3,
+         r.bet21 AS a4, r.bet22 AS a5,
+         CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))            AS stake,
+         CAST(NULLIF(TRIM(r.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))            AS vb,
+         (CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))            AS game_pnl,
+         COALESCE(CAST(NULLIF(TRIM(r.bet16),'') AS DECIMAL(20,4)), 0)
+           / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))            AS reb16,
+         COALESCE(CAST(NULLIF(TRIM(r.bet41),'') AS DECIMAL(20,4)), 0)
+           / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))            AS reb41
+  FROM ranked r
+  LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18
+  LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19
+  LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20
+  LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21
+  LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22
+  WHERE r.rn = 1
+    AND r.category = '1'
+    AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0
+    AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL
+),
+leo_members AS (
+  SELECT member_id
+  FROM base
+  GROUP BY member_id
+  HAVING COUNT(*) >= 100
+),
+leo AS (
+  SELECT '2_雷欧域（§R01 原准入 ∧ n>=100）' AS scope_def,
+         COUNT(*)                     AS n_orders,
+         COUNT(DISTINCT b.member_id)  AS n_members,
+         COUNT(DISTINCT b.a1) AS n_lv1, COUNT(DISTINCT b.a2) AS n_lv2,
+         COUNT(DISTINCT b.a3) AS n_lv3, COUNT(DISTINCT b.a4) AS n_lv4,
+         COUNT(DISTINCT b.a5) AS n_lv5,
+         SUM(b.stake) AS stake_sum, SUM(b.vb) AS validbet_sum,
+         -SUM(b.game_pnl) AS ggr_sum,
+         SUM(b.reb16) AS rebate16_sum, SUM(b.reb41) AS rebate41_sum
+  FROM base b
+  JOIN leo_members m ON m.member_id = b.member_id
+),
+clean AS (
+  SELECT '1_全量洁净（§R01 六闸）' AS scope_def,
+         COUNT(*)                   AS n_orders,
+         COUNT(DISTINCT member_id)  AS n_members,
+         COUNT(DISTINCT a1) AS n_lv1, COUNT(DISTINCT a2) AS n_lv2,
+         COUNT(DISTINCT a3) AS n_lv3, COUNT(DISTINCT a4) AS n_lv4,
+         COUNT(DISTINCT a5) AS n_lv5,
+         SUM(stake) AS stake_sum, SUM(vb) AS validbet_sum,
+         -SUM(game_pnl) AS ggr_sum,
+         SUM(reb16) AS rebate16_sum, SUM(reb41) AS rebate41_sum
+  FROM base
+),
+both AS (
+  SELECT * FROM clean
+  UNION ALL
+  SELECT * FROM leo
+)
+SELECT
+  b.scope_def,
+  b.n_orders,
+  ROUND(b.n_orders     * 100.0 / c.n_orders,     4)                AS n_orders_pct,
+  b.n_members,
+  ROUND(b.n_members    * 100.0 / c.n_members,    4)                AS n_members_pct,
+  b.n_lv1, b.n_lv2, b.n_lv3, b.n_lv4, b.n_lv5,
+  ROUND(b.stake_sum, 2)                                            AS stake_sum,
+  ROUND(b.stake_sum    * 100.0 / c.stake_sum,    4)                AS stake_pct,
+  ROUND(b.validbet_sum, 2)                                         AS validbet_sum,
+  ROUND(b.validbet_sum * 100.0 / c.validbet_sum, 4)                AS validbet_pct,
+  ROUND(b.ggr_sum, 2)                                              AS ggr_sum,
+  ROUND(b.ggr_sum      * 100.0 / c.ggr_sum,      4)                AS ggr_pct,
+  ROUND(b.rebate16_sum, 2)                                         AS rebate16_sum,
+  ROUND(b.rebate16_sum * 100.0 / NULLIF(c.rebate16_sum, 0), 4)     AS rebate16_pct,
+  ROUND(b.rebate41_sum, 2)                                         AS rebate41_sum,
+  ROUND(b.ggr_sum - b.rebate16_sum, 2)                             AS ngr_by16,
+  ROUND((b.ggr_sum - b.rebate16_sum) * 100.0
+        / NULLIF(c.ggr_sum - c.rebate16_sum, 0), 4)                AS ngr_by16_pct
+FROM both b
+CROSS JOIN clean c
+ORDER BY b.scope_def;
+```
+
+```{r}
+#| label: 读取数据表总账
+#| results: asis
+
+## 逐件读入并留痕：路径、编码、行数、列数、字节、MD5、修改时间。
+## 缺件不静默跳过 —— 记为「缺件」并在 detail_biz 处显式告警。
+.RQ_DAT <- vector("list", length(.RQ_REG))
+names(.RQ_DAT) <- vapply(.RQ_REG, `[[`, character(1), "key")
+.rows <- list()
+
+for (r in .RQ_REG) {
+  p <- rq_find(r$files)
+  if (is.na(p)) {
+    .RQ_DAT[r$key] <- list(NULL)
+    .rows[[length(.rows) + 1L]] <- data.frame(
+      键 = r$key, 表名 = r$title, 状态 = "缺件",
+      文件 = paste(r$files, collapse = " ｜ "), 编码 = NA_character_,
+      行数 = NA_integer_, 列数 = NA_integer_, 字节 = NA_integer_,
+      MD5 = NA_character_, 修改时间 = NA_character_,
+      stringsAsFactors = FALSE, check.names = FALSE)
+  } else {
+    d <- rq_read_csv(p)
+    .RQ_DAT[[r$key]] <- d
+    fi <- file.info(p)
+    .rows[[length(.rows) + 1L]] <- data.frame(
+      键 = r$key, 表名 = r$title, 状态 = "已载入",
+      文件 = basename(p), 编码 = attr(d, "rq_enc"),
+      行数 = nrow(d), 列数 = ncol(d), 字节 = as.integer(fi$size),
+      MD5 = unname(tools::md5sum(p)),
+      修改时间 = format(fi$mtime, "%Y-%m-%d %H:%M:%S"),
+      stringsAsFactors = FALSE, check.names = FALSE)
+  }
+}
+.RQ_MANIFEST <- do.call(rbind, .rows)
+
+rq_table(.RQ_MANIFEST,
+         title = "载入清单 · 六元组留痕（文件名／行数／列数／字节／MD5／修改时间＋编码）",
+         source_note = paste0("搜索目录：", paste(.RQ_DIRS, collapse = "、"),
+                              "；渲染时刻 ", format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+
+.n_missing <- sum(.RQ_MANIFEST$状态 == "缺件")
+if (.n_missing > 0L)
+  rq_alert("载入清单显示 ", .n_missing, " 件缺失，占登记册 ",
+           sprintf("%.4f%%", .n_missing / nrow(.RQ_MANIFEST) * 100),
+           "。下节 detail_biz 对应表位将以缺件告警替代表格，不得以空表冒充零结果。")
+```
+
+## 业务明细
+
+```{r}
+#| label: detail_biz
+#| results: asis
+
+## detail_biz · 业务明细呈表
+##   粒度：每表仅显示前 6 行与后 6 行（行号为全表实际行号，中段以 --- 分隔）
+##   列名：冻结（sticky thead），纵向滚动时表头常驻
+##   横条：表首镜像横条与表尾横条双向同步，滑动前即可见
+##   省略行数与占比由副标题现算披露，全表行数与列数一并给出。
+for (r in .RQ_REG) {
+  .src <- .RQ_MANIFEST[.RQ_MANIFEST$键 == r$key, , drop = FALSE]
+  rq_table(
+    .RQ_DAT[[r$key]],
+    title       = r$title,
+    first       = 6L,
+    last        = 6L,
+    source_note = if (nrow(.src) && .src$状态[1] == "已载入")
+      paste0(.src$文件[1], "（", .src$编码[1], "，MD5 ", substr(.src$MD5[1], 1, 12), "…）")
+    else NULL
+  )
+}
+```
+
+# 变更记录
+
+本章仅记流程，正文各章不载流程叙述。
+
+| 版本 | 日期 | 变更 | 范围 |
+|---|---|---|---|
+| v1.2.0 | 2026-08-18 | 基线（LF／UTF-8／494 行／33,525 字节／MD5 `47788c7095fb9a85bc68d2d7b1789ba1`） | — |
+| v1.2.1 | 2026-08-24 | ① 新建 `detail_biz` 呈表块（v1.2.0 全文零命中，属新建非修改）；② 填充 `设置` 块：依赖闸、呈表契约 CSS/JS、`rq_table()` 主函数、数据表登记册；③ 填充 `读取数据表总账` 块：编码自适应读入＋六元组留痕清单；④ 新增本章 | 仅呈表层 |
+
+**v1.2.1 未触及项（逐条声明）**：四个 `{sql, eval = FALSE}` 代码块逐字未动（口径、闸门、列序、`ORDER BY` 一律原样）；YAML 头未动；正文论述文字未动。
+
+**待裁定项（未擅改，候批）**：`P11` 前缀在文内被两份不同导出（阿泽总帐、雷欧总帐）同时占用，而原 `读取数据表` 块又记为 `P11_阿泽…会员名单.csv` / `P12_雷欧…会员名单.csv`，三处命名互不相容。v1.2.1 以别名并列（登记册 `files` 多候选）暂时容错，未改任何导出名 —— 正式改名须先行裁定。
