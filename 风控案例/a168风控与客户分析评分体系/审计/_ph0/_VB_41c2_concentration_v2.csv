@@ -1,0 +1,3 @@
+﻿grp,n_rows,n_members,n_dates,n_tables,n_bet09,top1_member_share_pct,top_date_share_pct,top_table_share_pct,top_bet09_share_pct,top_stake_share_pct,st_member,st_date,st_table,st_bet09,st_stake,n_dims_high,n_dims_near_or_high,verdict_concentration,sum_stake
+A_主群,957,420,22,41,16,29.1536,29.9896,12.8527,42.5287,44.5903,NEAR,NEAR,NORMAL,HIGH,HIGH,2,4,MULTI_DIMENSION_SIGNAL,2242638.00
+B_上线测试型,7,1,1,1,7,100.0000,100.0000,100.0000,14.2857,100.0000,HIGH,HIGH,HIGH,NORMAL,HIGH,4,4,MULTI_DIMENSION_SIGNAL,70.00

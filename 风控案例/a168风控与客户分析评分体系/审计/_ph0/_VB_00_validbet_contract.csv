@@ -1,0 +1,2 @@
+﻿scope,n_rows,n_vb_null,n_vb_blank,n_vb_zero,n_vb_pos,n_vb_neg,null_rate_pct,n_fallback_also_null,vb_sum,b13_sum,b41_sum,verdict_contract
+validbet 契约普查（全窗 · 百家乐）,125654711,0,0,9551241,116103470,0,0E-8,0,604032736752.17,676914983188.21,604030494044.17,◐ 本窗口内 null_rate = 0 —— 直取与 COALESCE 二式**数据条件等价**（★ 非设计等价，换窗须重验）

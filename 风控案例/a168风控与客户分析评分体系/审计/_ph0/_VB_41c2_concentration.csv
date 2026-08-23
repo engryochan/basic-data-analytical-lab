@@ -1,0 +1,3 @@
+﻿grp,n_rows,n_members,top1_member_share_pct,top1_member_n,max_member_diff_sum,n_dates,min_date,max_date,top_date_n,top_date_share_pct,n_tables,top_table_share_pct,n_bet09,n_commission,sum_stake,sum_validbet,min_stake,max_stake,verdict_concentration
+A_主群,957,420,29.1536,279,1000000.00,22,2026-03-25,2026-07-29,287,29.9896,41,12.8527,16,7,2242638.00,2242638.00,1.00,1000000.00,◐ 无单一维度显著集中 —— 须并读五维方可判
+B_上线测试型,7,1,100.0000,7,70.00,1,2026-07-20,2026-07-20,7,100.0000,1,100.0000,7,1,70.00,70.00,10.00,10.00,★ 高度集中于少数会员 —— 属风控线索，须逐会员追

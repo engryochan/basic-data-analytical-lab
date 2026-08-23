@@ -1,0 +1,2 @@
+﻿test,n_rows,n_both_null,n_null_asym,n_exact_equal,n_value_diff,pct_exact_equal,max_abs_diff,sum_abs_diff,d_min,d_p01,d_p05,d_p50,d_p95,d_p99,d_max,verdict_identity
+bet41 ≡ validbet（全窗 · 百家乐）,125654711,0,0,125653747,964,99.99923280,1000000.00000000,2242708.00000000,-1000000.00000000,0.0,0.0,0.0,0.0,0.0,0E-8,◐ CONDITIONAL —— 存在数值差异，须并读 max_abs_diff 判其系浮点抑或量纲之别
