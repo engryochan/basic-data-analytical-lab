@@ -1,0 +1,2 @@
+﻿scope,n_rows,avg_validbet,max_bet23,avg_bet23,max_bet27,max_bet28,avg_bet28,max_bet32,max_bet15,avg_sum_comm,verdict_dimension
+bet23~27 占成 · bet28~32 退水 · 量纲实测,125649147,4807.2968,100.000000,95.999149,100.000000,1.050000,0.051914,1.000000,1.000000,460.365600,★ bet23~32 上限 ≤ 100 —— 判为**比率（百分点）**；κ 之算式须用 × validbet ÷ 100
