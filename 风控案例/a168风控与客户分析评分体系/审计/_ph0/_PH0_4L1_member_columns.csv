@@ -1,0 +1,88 @@
+﻿table_name,col_pos,column_name,data_type,column_comment
+ods_a168_member,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_member,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_member,3,mem001,varchar,source_type=int(11); 
+ods_a168_member,4,mem002,varchar,source_type=varchar(48); 
+ods_a168_member,5,mem003,varchar,source_type=varchar(65); 
+ods_a168_member,6,mem004,varchar,source_type=varchar(48); 
+ods_a168_member,7,mem005,varchar,source_type=timestamp; 
+ods_a168_member,8,mem006,varchar,source_type=int(11); 
+ods_a168_member,9,mem007,varchar,source_type=int(11); 
+ods_a168_member,10,mem008,varchar,source_type=int(11); 
+ods_a168_member,11,mem009,varchar,source_type=int(11); 
+ods_a168_member,12,mem010,varchar,source_type=int(11); 
+ods_a168_member,13,mem011,varchar,source_type=int(11); 
+ods_a168_member,14,mem012,varchar,source_type=int(11); 
+ods_a168_member,15,mem013,varchar,source_type=timestamp; 
+ods_a168_member,16,mem014,varchar,source_type=char(15); 
+ods_a168_member,17,mem015,varchar,source_type=int(11); login_error
+ods_a168_member,18,mem016,varchar,"source_type=enum(''Y'',''N''); enable"
+ods_a168_member,19,mem017,varchar,"source_type=enum(''Y'',''N''); canbet"
+ods_a168_member,20,mem018,varchar,"source_type=enum(''Y'',''N''); chg_pw"
+ods_a168_member,21,mem019,varchar,"source_type=enum(''Y'',''N''); is_test"
+ods_a168_member,22,mem020,varchar,"source_type=enum(''Y'',''N''); be_traded"
+ods_a168_member,23,mem021,varchar,source_type=int(11); 
+ods_a168_member,24,mem022,varchar,source_type=varchar(20); 電話
+ods_a168_member,25,mem022a,varchar,source_type=int(6); 電話簡碼
+ods_a168_member,26,mem023,varchar,source_type=tinyint(4); 
+ods_a168_member,27,mem024,varchar,source_type=int(11); mem_risk
+ods_a168_member,28,mem026,varchar,source_type=int(11); 
+ods_a168_member,29,mem028,varchar,source_type=varchar(20); 備註
+ods_a168_member,30,type,varchar,source_type=int(11); 0:現金;1:信用;2:電投
+ods_a168_member,31,currency,varchar,source_type=int(11); 幣別
+ods_a168_member,32,cash,varchar,"source_type=decimal(15,4); 現金"
+ods_a168_member,33,money,varchar,"source_type=decimal(10,4); 己出碼額度"
+ods_a168_member,34,lockmoney,varchar,"source_type=decimal(10,4); 鎖定金額"
+ods_a168_member,35,head,varchar,source_type=int(11); 頭像ID
+ods_a168_member,36,chips,varchar,source_type=varchar(500); 籌碼選擇
+ods_a168_member,37,follow1,varchar,source_type=varchar(1000); 注關會員
+ods_a168_member,38,follow2,varchar,source_type=varchar(3000); 關注荷官
+ods_a168_member,39,tip,varchar,"source_type=enum(''Y'',''N''); "
+ods_a168_member,40,red,varchar,"source_type=enum(''N'',''Y''); 紅包開關"
+ods_a168_member,41,wallet,varchar,"source_type=enum(''Y'',''N''); "
+ods_a168_member,42,opengame,varchar,source_type=varchar(255); 輸入要開啟的種類
+ods_a168_member,43,site,varchar,source_type=varchar(60); 
+ods_a168_member,44,kickperiod,varchar,source_type=int(3); 踢出局數
+ods_a168_member,45,identity,varchar,"source_type=int(11); 0:信用,1:api"
+ods_a168_member,46,singlebetprompt,varchar,"source_type=decimal(15,0); 單注金額告警"
+ods_a168_member,47,conwinprompt,varchar,source_type=int(3); 連贏局數告警
+ods_a168_member,48,winlossprompt,varchar,"source_type=enum(''0'',''1''); 最大可輸可贏提示"
+ods_a168_member,49,onlineprompt,varchar,"source_type=enum(''0'',''1''); 上線提示"
+ods_a168_member,50,source_db,varchar,来源库
+ods_a168_member,51,source_table,varchar,来源表
+ods_a168_member,52,ods_table_name,varchar,ODS表名
+ods_a168_member,53,sync_time,datetime,同步时间
+ods_a168_member_dtl,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_member_dtl,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_member_dtl,3,mem001,varchar,source_type=int(11); mid
+ods_a168_member_dtl,4,mem002,varchar,source_type=int(11); 類別
+ods_a168_member_dtl,5,mem003,varchar,"source_type=decimal(16,2); 退水"
+ods_a168_member_dtl,6,mem004,varchar,source_type=int(11); LV1ID
+ods_a168_member_dtl,7,mem005,varchar,source_type=int(11); LV2ID
+ods_a168_member_dtl,8,mem006,varchar,source_type=int(11); LV3ID
+ods_a168_member_dtl,9,mem007,varchar,source_type=int(11); LV4ID
+ods_a168_member_dtl,10,mem008,varchar,source_type=int(11); LV5ID
+ods_a168_member_dtl,11,mem009,varchar,source_type=int(11); 最大押分05
+ods_a168_member_dtl,12,mem010,varchar,source_type=int(11); 最大押分06
+ods_a168_member_dtl,13,mem011,varchar,source_type=int(11); 
+ods_a168_member_dtl,14,mem012,varchar,source_type=int(11); 最大可贏金額
+ods_a168_member_dtl,15,mem013,varchar,source_type=datetime; 可贏可輸起算時間點
+ods_a168_member_dtl,16,mem014,varchar,source_type=int(11); 最大可輸金額
+ods_a168_member_dtl,17,mem015,varchar,source_type=varchar(300); 新版限額
+ods_a168_member_dtl,18,mem016,varchar,"source_type=decimal(16,2); 電投退水"
+ods_a168_member_dtl,19,source_db,varchar,来源库
+ods_a168_member_dtl,20,source_table,varchar,来源表
+ods_a168_member_dtl,21,ods_table_name,varchar,ODS表名
+ods_a168_member_dtl,22,sync_time,datetime,同步时间
+ods_a168_member_url,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_member_url,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_member_url,3,mid,varchar,source_type=int(11); 會員編號
+ods_a168_member_url,4,account,varchar,source_type=varchar(48); 會員帳號
+ods_a168_member_url,5,url,varchar,source_type=varchar(255); 指定網址
+ods_a168_member_url,6,remark,varchar,source_type=varchar(255); 備註
+ods_a168_member_url,7,operator,varchar,source_type=varchar(25); 最後異動者
+ods_a168_member_url,8,modify_time,varchar,source_type=timestamp; 最後異動時間
+ods_a168_member_url,9,source_db,varchar,来源库
+ods_a168_member_url,10,source_table,varchar,来源表
+ods_a168_member_url,11,ods_table_name,varchar,ODS表名
+ods_a168_member_url,12,sync_time,datetime,同步时间

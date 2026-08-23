@@ -1,0 +1,130 @@
+﻿db_name,table_name,h_src,table_type,scope_db,scope_pattern,scope_scanned_at
+ods_mariadb_2b,ods_a168_aggregate_transaction,H-SRC-01 支付,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_payment_bank,H-SRC-01 支付,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_payment_method,H-SRC-01 支付,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_payment_order,H-SRC-01 支付,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_payment_platform,H-SRC-01 支付,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_payment_setting,H-SRC-01 支付,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_payment_type,H-SRC-01 支付,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_age_login,H-SRC-02 会话,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_age_sub_login,H-SRC-02 会话,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_agents_LoginPass,H-SRC-02 会话,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_aggregate_token,H-SRC-02 会话,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_control_login,H-SRC-02 会话,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_emp_login,H-SRC-02 会话,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_mem_login,H-SRC-02 会话,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_partner_bng_token,H-SRC-02 会话,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_bet_limit_default,H-SRC-03 会员状态变更,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_categoryLevel,H-SRC-03 会员状态变更,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_close_tip_list,H-SRC-03 会员状态变更,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_log_mem_change,H-SRC-03 会员状态变更,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_tablelimit,H-SRC-03 会员状态变更,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_tablelimit_third,H-SRC-03 会员状态变更,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_alarmMessage,H-SRC-04 客服工单,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_alertMessage,H-SRC-04 客服工单,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_wallet_feedbackerr,H-SRC-04 客服工单,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_wechat_url,H-SRC-04 客服工单,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_RedPacketSetup,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_RedPacketSetup_setting,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_RedPacket_No,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_RedPacket_Order,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_SMR_log,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_agent,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_agent_bak20250610,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_agent_dtl,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_agent_dtl_test,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_agent_elec,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_agent_partner_gamelist,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_agent_permissionrole,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_agent_sub,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_agent_test,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_aggregate_setting,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_aisetting,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_alert_ip_setting,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_apiurl,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_ban_bet_area,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_bet,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_bet01,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_bet02,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_bet_No,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_bet_partner,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_betchange_log,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_category,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_change_log,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_control,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_conversion,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_ctl_rto,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_currency,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_dailyreport,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_dailyreport2,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_dailyreport_member,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_dailyreport_table,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_dailyreport_usercount,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_employee,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_func_counter,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_No,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_callwebapi,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_demoipsetting,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_info,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_info_verify,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_log,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_parame,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_result,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_statistics,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_tip,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_transfer,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_game_type,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_in_out_m,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_in_out_m_chip,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_ipblacklist,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_iphistory,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_jackpot,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_keyserver_command,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_log_age_cash_change,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_log_realtimebet,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_member,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_member_category,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_member_click_counter,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_member_dtl,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_member_explosion_setting,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_member_odds,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_member_partner_account,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_member_partner_gamelist,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_member_url,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_news,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_odds_default,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_opengame_log,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_orderslist,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_partner_gamelist,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_partner_reportTime,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_partner_setting,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_partner_transation,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_partner_transation_log,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_partner_type,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_passiplist,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_permissionrole,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_permissions,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_permissionsPage,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_permissionsPageRoles,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_permissionsgroup,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_play_set,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_realtimebet,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_realtimelobby,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_realtimelog,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_risklist,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_roles,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_shuffle_gid,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_shuffle_info,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_site,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_sms_setting,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_stream,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_subagent_permissionrole,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_symbol,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_temp_id_list,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_tip,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_urllist,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_wallet_dtl,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_wallet_reporter,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_wallet_reporter_copy,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,ods_a168_white_list,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06
+ods_mariadb_2b,sync_checkpoint,（未命中五源）,BASE TABLE,ods_mariadb_2b,表名正则五族（见本条 CASE）,2026-08-23 08:56:06

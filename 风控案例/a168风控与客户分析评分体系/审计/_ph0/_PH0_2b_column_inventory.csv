@@ -1,0 +1,668 @@
+﻿table_name,col_pos,column_name,data_type,column_comment,name_style,col_family,fp_flag,scope_db,scope_pattern,scope_scanned_at
+ods_a168_RedPacket_Order,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,3,id,varchar,source_type=bigint(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,4,mid,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,5,gameid,varchar,source_type=int(11); 遊戲,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,6,currency,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,7,rate,varchar,"source_type=decimal(8,4); ",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,8,money,varchar,"source_type=decimal(16,4); 中獎金額",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,9,status,varchar,"source_type=enum(''Y'',''N''); Y:已領取,N:未領取",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,10,lv1percent,varchar,"source_type=decimal(16,4); ",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,11,lv2percent,varchar,"source_type=decimal(16,4); ",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,12,lv3percent,varchar,"source_type=decimal(16,4); ",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,13,lv4percent,varchar,"source_type=decimal(16,4); ",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,14,lv5percent,varchar,"source_type=decimal(16,4); ",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,15,addtime,varchar,source_type=datetime; gs寫單時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,16,receivetime,varchar,source_type=datetime; 領取時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,17,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,18,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,19,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_RedPacket_Order,20,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,3,sn,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,4,bet02,varchar,source_type=int(11); ,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,5,bet03,varchar,"source_type=decimal(12,0); ",★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,6,bet04,varchar,source_type=int(11); ,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,7,bet22,varchar,source_type=int(11); ,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,8,category,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,9,receivetime,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,10,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,11,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,12,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_SMR_log,13,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,3,alg001,varchar,source_type=int(11); age_id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,4,alg002,varchar,source_type=int(11); site,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,5,alg003,varchar,source_type=varchar(50); sid,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,6,alg004,varchar,source_type=timestamp; this_login,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,7,alg005,varchar,source_type=timestamp; last_login,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,8,alg006,varchar,source_type=text; ip,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,9,alg007,varchar,source_type=text; info,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,10,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,11,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,12,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_login,13,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,3,asl001,varchar,source_type=int(11); sub_id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,4,asl002,varchar,source_type=int(11); site,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,5,asl003,varchar,source_type=varchar(50); sid,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,6,asl004,varchar,source_type=datetime; this_login,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,7,asl005,varchar,source_type=datetime; last_login,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,8,asl006,varchar,source_type=text; ip,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,9,asl007,varchar,source_type=text; info,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,10,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,11,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,12,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_age_sub_login,13,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,4,aid,varchar,source_type=int(5); agent_id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,5,vendorId,varchar,source_type=varchar(255); lv5 代理商,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,6,signature,varchar,source_type=varchar(255); 密鑰,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,7,signature2,varchar,source_type=varchar(255); 客戶密鑰,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,8,password,varchar,source_type=varchar(255); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,9,addtime,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,10,url,varchar,source_type=varchar(255); 單一錢包回傳網址,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,11,skyname,varchar,source_type=varchar(255); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,12,type,varchar,"source_type=enum(''c'',''w''); c:一般,w:單一",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,13,lang,varchar,"source_type=tinyint(1); 0:中文 ,1:英文",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,14,betfeedback,varchar,"source_type=tinyint(1); 異常鎖定,0:N;1:Y",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,15,Gateway_url,varchar,source_type=varchar(1000); 正機白名單使用的url,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,16,whiteList,varchar,source_type=text; 白名單,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,17,operator,varchar,source_type=varchar(25); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,18,modify_time,varchar,source_type=timestamp; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,19,object,varchar,"source_type=int(3); 0:呼叫php,1:呼叫客戶",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,20,settle,varchar,source_type=int(3); 單一錢包結算,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,21,co,varchar,source_type=varchar(10); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,22,prefix_switch,varchar,"source_type=enum(''Y'',''N''); 前綴碼開關",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,23,openGame_url,varchar,source_type=varchar(255); 指定網址,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,24,subdomain,varchar,source_type=varchar(255); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,25,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,26,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,27,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_agents_LoginPass,28,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,3,code,varchar,source_type=varchar(12); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,4,mid,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,5,token,varchar,source_type=text; ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,6,create_at,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,7,update_at,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,8,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,9,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,10,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_token,11,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,4,code,varchar,source_type=varchar(12); 廠商代碼,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,5,mid,varchar,source_type=int(11); 會員 mid,普通列名,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,6,gid,varchar,source_type=int(6); 遊戲,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,7,game_no,varchar,source_type=varchar(32); 遊戲_期数_局号,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,8,action,varchar,"source_type=enum(''PointInout'',''TimeoutBetReturn''); 動作",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,9,deal_id,varchar,source_type=bigint(32); wm 交易单号,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,10,type,varchar,source_type=tinyint(1);  0:电子游戏结算 1:加点 2:扣点 3:重对加点 4:重对扣点 5:重新派彩,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,11,trade_id,varchar,source_type=varchar(128); 對方的交易id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,12,money,varchar,"source_type=decimal(16,4); 處理金額 (有正負值)",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,13,balance,varchar,"source_type=decimal(16,4); 對方餘額",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,14,status,varchar,"source_type=tinyint(1); 呼叫狀態 0:未處理,1:成功,2:失敗,3:回滾,4:處理中",普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,15,remark,varchar,source_type=varchar(255); 備註,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,16,ops_token,varchar,source_type=text; 廠商ops當下使用的token,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,17,create_at,varchar,source_type=datetime; 建立時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,18,update_at,varchar,source_type=datetime; 更新時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,19,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,20,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,21,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_aggregate_transaction,22,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,3,id,varchar,source_type=int(11); 流水號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,4,time,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,5,parentID,varchar,source_type=bigint(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,6,mid,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,7,type,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,8,content,varchar,source_type=text; ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,9,status,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,10,is_send,varchar,source_type=int(1); 發送 tg 0: 未發送 1:已發送,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,11,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,12,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,13,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alarmMessage,14,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,4,mid,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,5,message,varchar,source_type=text; ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,6,errorTime,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,7,unierrorTime,varchar,source_type=int(11); ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,8,operator,varchar,source_type=varchar(40); 操作者,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,9,status,varchar,source_type=tinyint(1); 0:未處理1:已處理,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,10,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,11,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,12,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alertMessage,13,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,3,id,varchar,source_type=int(8); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,4,ip,varchar,source_type=varchar(128); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,5,creator,varchar,source_type=varchar(8); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,6,addtime,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,7,remarks,varchar,source_type=varchar(1000); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,8,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,9,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,10,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_alert_ip_setting,11,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,4,gtype,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,5,set01,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,6,set02,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,7,set03,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,8,set04,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,9,set05,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,10,set06,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,11,set07,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,12,set08,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,13,set09,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,14,set10,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,15,set11,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,16,set12,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,17,set13,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,18,set14,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,19,status,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,20,sort,varchar,source_type=int(11); 排序,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,21,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,22,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,23,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_bet_limit_default,24,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,3,log_id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,4,operation_type,varchar,source_type=varchar(32); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,5,change_time,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,6,old_bet01,varchar,source_type=bigint(20); ,普通列名,★ 前后态（变更留痕指纹）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,7,new_bet01,varchar,source_type=bigint(20); ,普通列名,★ 前后态（变更留痕指纹）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,8,old_bet05,varchar,source_type=int(11); ,普通列名,★ 前后态（变更留痕指纹）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,9,new_bet05,varchar,source_type=int(11); ,普通列名,★ 前后态（变更留痕指纹）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,10,old_bet09,varchar,source_type=text; ,普通列名,★ 前后态（变更留痕指纹）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,11,new_bet09,varchar,source_type=text; ,普通列名,★ 前后态（变更留痕指纹）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,12,old_ip,varchar,source_type=text; ,普通列名,★ 前后态（变更留痕指纹）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,13,new_ip,varchar,source_type=text; ,普通列名,★ 前后态（变更留痕指纹）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,14,is_send,varchar,source_type=int(1); 是否已發送,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,15,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,16,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,17,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_betchange_log,18,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,3,lv_id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,4,level,varchar,source_type=int(11); 層級等級,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,5,name,varchar,source_type=varchar(20); 層級名稱,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,6,isDefalut,varchar,"source_type=enum(''Y'',''N''); 預設層級",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,7,status,varchar,source_type=int(11); 狀態,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,8,depositLimitMin,varchar,"source_type=decimal(16,4); 最低存款限額, 0為不限制",普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,9,depositLimitMax,varchar,"source_type=decimal(16,4); 最高存款限額, 0為不限制",普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,10,withdrawLimitMin,varchar,"source_type=decimal(16,4); 最低提款限額, 0為不限制",普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,11,withdrawLimitMax,varchar,"source_type=decimal(16,4); 最高提款限額, 0為不限制",普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,12,upgradeCondition,varchar,source_type=varchar(20); 晉級條件,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,13,keepCondition,varchar,source_type=varchar(20); 保級條件,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,14,build_time,varchar,source_type=timestamp; 建立時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,15,remark,varchar,source_type=varchar(20); 備註,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,16,op_level,varchar,source_type=int(11); 操作者層級,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,17,op_mid,varchar,source_type=int(11); 操作者編號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,18,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,19,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,20,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_categoryLevel,21,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,3,id,varchar,source_type=int(11); 序號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,4,function,varchar,source_type=varchar(30); 功能,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,5,content,varchar,source_type=varchar(500); 指令,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,6,lv,varchar,source_type=int(11); 操作者層級,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,7,operator,varchar,source_type=int(11); 操作者,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,8,optime,varchar,source_type=datetime; 操作時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,9,ip,varchar,source_type=varchar(255); 操作者ip,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,10,utp,varchar,source_type=varchar(1); 操作者utp,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,11,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,12,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,13,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_change_log,14,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_close_tip_list,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_close_tip_list,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_close_tip_list,3,game_user,varchar,source_type=varchar(30); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_close_tip_list,4,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_close_tip_list,5,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_close_tip_list,6,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_close_tip_list,7,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,3,clg001,varchar,source_type=int(11); ctl_id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,4,clg002,varchar,source_type=int(11); site,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,5,clg003,varchar,source_type=varchar(50); sid,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,6,clg004,varchar,source_type=timestamp; this_login,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,7,clg005,varchar,source_type=timestamp; last_login,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,8,clg006,varchar,source_type=char(15); ip,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,9,clg007,varchar,source_type=text; info,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,10,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,11,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,12,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_control_login,13,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,3,eid,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,4,sid,varchar,source_type=varchar(50); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,5,logintime,varchar,source_type=datetime; ,普通列名,会话,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,6,loginip,varchar,source_type=varchar(20); ,普通列名,会话,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,7,status,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,8,remark,varchar,source_type=varchar(50); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,9,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,10,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,11,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_emp_login,12,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,4,mid,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,5,user_agent,varchar,source_type=text; ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,6,web_address,varchar,source_type=text; ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,7,web_url,varchar,source_type=text; 遊戲網址,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,8,website_delay_time,varchar,source_type=int(11); ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,9,url_index,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,10,api_delay_time,varchar,source_type=int(11); ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,11,load_html_id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,12,load_html_time,varchar,source_type=int(11); ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,13,server_id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,14,server_delay_time,varchar,source_type=int(11); ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,15,video_type,varchar,source_type=varchar(5); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,16,video_delay_time,varchar,source_type=int(11); ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,17,addtime,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,18,ip,varchar,source_type=varchar(100); 登入IP,普通列名,会话,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,19,country_code,varchar,source_type=varchar(10); 國家代碼,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,20,region,varchar,source_type=varchar(30); 國家,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,21,city,varchar,source_type=varchar(30); 城市,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,22,ISP,varchar,source_type=varchar(100); 電信商,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,23,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,24,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,25,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_game_log,26,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,3,id,varchar,source_type=int(8); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,4,type,varchar,source_type=varchar(4); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,5,uid,varchar,source_type=varchar(20); ,普通列名,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,6,ulv,varchar,source_type=varchar(4); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,7,ip,varchar,source_type=varchar(16); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,8,datetime,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,9,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,10,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,11,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_iphistory,12,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,3,lacc01,varchar,source_type=int(11); ,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,4,lacc02,varchar,source_type=int(11); LV,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,5,lacc03,varchar,source_type=int(11); ID,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,6,op_utp,varchar,source_type=char(1); 操作者類型,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,7,lacc04,varchar,source_type=int(11); OPLV,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,8,lacc05,varchar,source_type=int(11); OPID,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,9,lacc06,varchar,"source_type=decimal(15,4); 異動金額",★ 编码式列名（语义须读 COLUMN_COMMENT）,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,10,lacc07,varchar,source_type=datetime; 操作時間,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,11,lacc08,varchar,source_type=varchar(20); 備註,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,12,lacc09,varchar,"source_type=decimal(15,4); 異動前金額",★ 编码式列名（语义须读 COLUMN_COMMENT）,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,13,lacc10,varchar,source_type=int(11); upid,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,14,lacc11,varchar,"source_type=decimal(15,4); 上層異動前金額",★ 编码式列名（语义须读 COLUMN_COMMENT）,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,15,pointtype,varchar,source_type=int(11); 0:現金;1:信用;,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,16,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,17,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,18,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_age_cash_change,19,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,3,lmc01,varchar,source_type=int(11); ,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,4,lmc02,varchar,source_type=int(11); ID,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,5,lmc03,varchar,source_type=int(11); LV,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,6,lmc04,varchar,"source_type=enum(''add'',''edit'',''changestatus''); 類別(新增，修改）",★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,7,lmc05,varchar,source_type=varchar(1000); 內容,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,8,lmc06,varchar,source_type=int(11); 操作者,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,9,lmc07,varchar,source_type=int(11); 操作者LV,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,10,lmc08,varchar,source_type=datetime; 異動時間,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,11,lmc09,varchar,source_type=varchar(1000); SQL,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,12,lmc10,varchar,source_type=varchar(20); IP,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,13,lmc11,varchar,source_type=varchar(1); 操做者utp,★ 编码式列名（语义须读 COLUMN_COMMENT）,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,14,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,15,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,16,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_mem_change,17,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,3,mid,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,4,gid,varchar,source_type=int(6); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,5,gameNo,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,6,gameNoRound,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,7,betTime,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,8,totalBetMoney,varchar,"source_type=decimal(16,4); ",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,9,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,10,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,11,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_log_realtimebet,12,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,3,mlg001,varchar,source_type=int(11); mem_id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,4,mlg002,varchar,source_type=int(11); site,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,5,mlg003,varchar,source_type=varchar(50); sid,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,6,mlg004,varchar,source_type=timestamp; this_login,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,7,mlg005,varchar,source_type=timestamp; last_login,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,8,mlg006,varchar,source_type=char(15); ip,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,9,mlg007,varchar,source_type=text; info,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,10,mlg008,varchar,source_type=tinyint(4); on_line,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,11,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,12,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,13,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_mem_login,14,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_opengame_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_opengame_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_opengame_log,3,aid,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_opengame_log,4,opengame,varchar,source_type=varchar(255); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_opengame_log,5,time,varchar,source_type=timestamp; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_opengame_log,6,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_opengame_log,7,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_opengame_log,8,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_opengame_log,9,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_orderslist,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_orderslist,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_orderslist,3,bet01,varchar,source_type=bigint(20); 注單編號,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_orderslist,4,op,varchar,source_type=int(11); 操作者(管理員),普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_orderslist,5,optime,varchar,source_type=datetime; 操作時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_orderslist,6,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_orderslist,7,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_orderslist,8,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_orderslist,9,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_bng_token,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_bng_token,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_bng_token,3,mid,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_bng_token,4,token,varchar,source_type=varchar(50); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_bng_token,5,version,varchar,source_type=int(11); balance version,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_bng_token,6,op_time,varchar,source_type=timestamp; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_bng_token,7,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_bng_token,8,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_bng_token,9,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_bng_token,10,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,4,action,varchar,"source_type=enum(''bet'',''settle'',''cancel'',''rollback'',''betSuccess'',''refund'',''rewardDeduct'',''bouns'',''free'',''tip''); 動作",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,5,agent_id,varchar,source_type=int(11); 代理 id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,6,mid,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,7,code,varchar,source_type=int(4); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,8,round_id,varchar,source_type=varchar(50); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,9,transId,varchar,source_type=varchar(100); 第三方交易流水號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,10,wallet_id,varchar,source_type=bigint(20); wallet_dtl 處理 id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,11,iom_id,varchar,source_type=bigint(20); in_out_m 處理 id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,12,requestDate,varchar,source_type=datetime; 第三方請求時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,13,money,varchar,"source_type=decimal(15,4); 金額",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,14,balance,varchar,"source_type=decimal(16,4); 交易前餘額",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,15,type,varchar,source_type=tinyint(1); 1:加點 2:扣點 3:重對加點 4:重對扣點 5:重新派彩  6: 和局 0: 無任何動作,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,16,status,varchar,"source_type=tinyint(1); 0:未處理,1:成功,2:失敗,3:回滾,4:處理中",普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,17,isFinish,varchar,"source_type=enum(''Y'',''N'',''X''); ",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,18,remark,varchar,source_type=varchar(255); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,19,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,20,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,21,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation,22,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation_log,3,trans_id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation_log,4,text,varchar,source_type=text; ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation_log,5,created_at,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation_log,6,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation_log,7,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation_log,8,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_partner_transation_log,9,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,4,currency,varchar,source_type=varchar(8); 幣別,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,5,code,varchar,source_type=int(11); 平台id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,6,bank_id,varchar,source_type=varchar(20); 銀行代碼,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,7,name,varchar,source_type=varchar(50); 名稱,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,8,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,9,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,10,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_bank,11,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,4,code,varchar,source_type=int(11); 平台id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,5,name,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,6,data,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,7,type,varchar,source_type=varchar(20); 支付類型,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,8,device,varchar,"source_type=enum(''web'',''mobile'',''all''); 裝置",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,9,status,varchar,source_type=int(1); 狀態,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,10,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,11,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,12,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_method,13,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,3,id,varchar,source_type=int(11); 流水號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,4,ps_id,varchar,source_type=int(6); 第三方支付設定,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,5,orderId,varchar,source_type=varchar(50); 訂單編號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,6,mid,varchar,source_type=int(20); 會員 mid,普通列名,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,7,orderTime,varchar,source_type=timestamp; 訂單時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,8,paymentOrderId,varchar,source_type=varchar(50); 第三方支付訂單編號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,9,currency,varchar,source_type=varchar(3); 幣別,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,10,amount,varchar,"source_type=decimal(16,4); 金額",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,11,real_amount,varchar,"source_type=decimal(16,4); 實際交易金額",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,12,fee,varchar,"source_type=decimal(16,4); 手續費",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,13,fee_tax,varchar,"source_type=decimal(16,2); 手續費(%)",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,14,status,varchar,"source_type=int(11); 0:未處理, 1:支付&加點成功, 2:支付成功;加點失敗, -1: 線上支付失敗, 999: 訂單處理中",普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,15,wallet_id,varchar,source_type=int(11); wallet_dtl 處理 id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,16,iom_id,varchar,source_type=int(11); in_out_m 處理 id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,17,cbtime,varchar,source_type=timestamp; 回call時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,18,ip,varchar,source_type=varchar(128); 會員 IP,普通列名,★ UID 候选键,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,19,remark,varchar,source_type=varchar(100); 備註,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,20,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,21,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,22,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_order,23,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,4,code,varchar,source_type=int(11); 代碼,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,5,name,varchar,source_type=varchar(20); 支付平台名稱,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,6,url,varchar,source_type=varchar(200); API網址,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,7,queryURL,varchar,source_type=varchar(200); 訂單查詢網址,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,8,return_url,varchar,source_type=varchar(200); 前端通知網址,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,9,notice_url,varchar,source_type=varchar(200); 異步通知網址,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,10,type,varchar,source_type=int(1); 類型 1:存 2:提,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,11,status,varchar,source_type=int(1); 啟停用,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,12,remark,varchar,source_type=varchar(20); 備註,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,13,build_time,varchar,source_type=timestamp; 建立時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,14,op_utp,varchar,source_type=varchar(1); 操作者utp,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,15,op_level,varchar,source_type=int(11); 操作者層級,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,16,op_mid,varchar,source_type=int(11); 操作者編號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,17,op_time,varchar,source_type=datetime; 操作時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,18,op_ip,varchar,source_type=varchar(128); 操作者ip,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,19,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,20,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,21,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_platform,22,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,4,code,varchar,source_type=int(11); 平台代碼,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,5,lv_id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,6,pm_id,varchar,source_type=int(11); payment_method id,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,7,name,varchar,source_type=varchar(20); 支付名稱,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,8,currency,varchar,source_type=varchar(8); 幣別,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,9,MerchantID,varchar,source_type=varchar(50); 商戶號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,10,MerchantKeyPub,varchar,source_type=text; 商戶公鑰,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,11,MerchantKey,varchar,source_type=text; 商戶密鑰,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,12,single_min,varchar,"source_type=decimal(16,2); 單筆最低金額",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,13,single_max,varchar,"source_type=decimal(16,2); 單筆最高金額",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,14,extra,varchar,source_type=text; 其他資料 (json),普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,15,status,varchar,source_type=int(1); 啟停用,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,16,remark,varchar,source_type=varchar(20); 備註,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,17,build_time,varchar,source_type=timestamp; 建立時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,18,op_utp,varchar,source_type=varchar(1); 操作utp,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,19,op_level,varchar,source_type=int(11); 操作者層級,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,20,op_mid,varchar,source_type=int(11); 操作者編號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,21,op_time,varchar,source_type=datetime; 操作時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,22,op_ip,varchar,source_type=varchar(128); 操作者ip,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,23,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,24,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,25,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_setting,26,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,3,type,varchar,source_type=varchar(10); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,4,cnname,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,5,twname,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,6,enname,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,7,inname,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,8,janame,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,9,koname,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,10,thname,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,11,viname,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,12,hiname,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,13,msname,varchar,source_type=varchar(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,14,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,15,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,16,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_payment_type,17,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,3,sn,varchar,source_type=int(5); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,4,gid,varchar,source_type=int(3); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,5,tableid,varchar,source_type=int(3); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,6,netgroupname,varchar,source_type=varchar(50); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,7,telgroupname,varchar,source_type=varchar(50); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,8,tablename,varchar,source_type=varchar(50); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,9,setvalue,varchar,source_type=int(25); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,10,alertvalue,varchar,source_type=int(25); 告警數值,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,11,minbet,varchar,source_type=int(11); 最小下注(電投用),普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,12,maxbet,varchar,source_type=int(11); 最大下注(電投用),普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,13,tieminbet,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,14,tiemaxbet,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,15,pairminbet,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,16,pairmaxbet,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,17,modifyname,varchar,source_type=varchar(25); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,18,modifydate,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,19,tabletype,varchar,source_type=int(3); 桌子類型,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,20,bettime,varchar,source_type=int(3); 下注時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,21,stinttime,varchar,source_type=int(3); 限制時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,22,status,varchar,"source_type=int(1); 状态.0暂停,1正常",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,23,status_lock,varchar,source_type=tinyint(1); 開關鎖,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,24,nettype,varchar,source_type=int(3); 0關1不可下2可下,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,25,teltype,varchar,source_type=int(3); 0關1不可下2可下,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,26,sort,varchar,source_type=int(3); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,27,sort2,varchar,source_type=int(3); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,28,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,29,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,30,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit,31,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,3,id,varchar,source_type=int(5); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,4,gid,varchar,source_type=int(3); 遊戲編號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,5,tableid,varchar,source_type=int(3); wm桌號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,6,name_third,varchar,source_type=varchar(32); 第三方桌台號/名稱,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,7,vendor,varchar,source_type=varchar(16); 廠商,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,8,tableid_third,varchar,source_type=varchar(32); 第三方桌號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,9,status,varchar,source_type=int(1); 第三方狀態,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,10,is_open,varchar,source_type=tinyint(1); 是否已開桌,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,11,stream_url,varchar,source_type=text; 串流網址,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,12,dealer_name,varchar,source_type=varchar(32); 荷官名字,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,13,dealer_image,varchar,source_type=text; 荷官圖片,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,14,create_at,varchar,source_type=datetime; 建立時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,15,update_at,varchar,source_type=datetime; 更新時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,16,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,17,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,18,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_tablelimit_third,19,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,3,id,varchar,source_type=bigint(20); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,4,user,varchar,source_type=varchar(30); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,5,requestDate,varchar,source_type=datetime; 我方請求時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,6,responseDate,varchar,source_type=timestamp; 對方回應時間,普通列名,★ 时间候选列,⚠ 疑似假阳性（response 非 responsible）,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,7,money,varchar,"source_type=decimal(15,4); 處理金錢",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,8,cash,varchar,"source_type=decimal(15,4); 當前金額",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,9,type,varchar,source_type=tinyint(1); 0:取餘額 1:加點 2:扣點,普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,10,game_detail,varchar,source_type=varchar(200); 遊戲伺服器註解,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,11,bet_detail,varchar,source_type=text; ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,12,detail,varchar,source_type=text; ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,13,status,varchar,source_type=tinyint(1); 0:未處理 1:成功 2:失敗  3.回滾,普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,14,feedback_id,varchar,source_type=int(11); ,普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,15,gtype,varchar,source_type=int(3); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,16,feedback_status,varchar,"source_type=tinyint(1); 0,未處理 1,成功 2,失敗",普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,17,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,18,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,19,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_dtl,20,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,4,dealid,varchar,source_type=bigint(20); 交易流水號,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,5,money,varchar,"source_type=decimal(12,4); ",普通列名,金额,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,6,type,varchar,source_type=int(1); 1:加點2:扣點,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,7,retry,varchar,source_type=int(1); 重試次數,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,8,errorCode,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,9,errorMessage,varchar,source_type=varchar(255); 錯誤訊息,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,10,wirteLogDate,varchar,source_type=datetime; ,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,11,success,varchar,"source_type=enum(''Y'',''N''); ",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,12,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,13,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,14,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_feedbackerr,15,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,3,id,varchar,source_type=int(11); 序號	,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,4,bet02,varchar,source_type=int(11); 遊戲類別,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,5,bet03,varchar,source_type=int(11); 期數,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,6,bet04,varchar,source_type=int(11); 局號,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,7,bet22,varchar,source_type=int(11); 代理,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,8,category,varchar,source_type=int(11); 類型,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,9,time,varchar,source_type=datetime; 紀錄時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,10,status,varchar,"source_type=enum(''Y'',''N'',''P'',''X''); 狀態 N:未處理,Y:已處理,P:處理中, X: 處理失敗",普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,11,reason,varchar,source_type=int(3); 原因,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,12,error_times,varchar,source_type=int(3); 錯誤次數,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,13,update_at,varchar,source_type=datetime; 更新時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,14,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,15,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,16,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter,17,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,3,id,varchar,source_type=int(11); 序號	,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,4,bet02,varchar,source_type=int(11); 遊戲類別,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,5,bet03,varchar,source_type=int(11); 期數,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,6,bet04,varchar,source_type=int(11); 局號,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,7,bet22,varchar,source_type=int(11); 代理,★ 编码式列名（语义须读 COLUMN_COMMENT）,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,8,category,varchar,source_type=int(11); 類型,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,9,time,varchar,source_type=datetime; 紀錄時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,10,status,varchar,"source_type=enum(''Y'',''N'',''P'',''X''); 狀態 N:未處理,Y:已處理,P:處理中, X: 處理失敗",普通列名,支付事件,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,11,reason,varchar,source_type=int(3); 原因,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,12,error_times,varchar,source_type=int(3); 錯誤次數,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,13,update_at,varchar,source_type=datetime; 更新時間,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,14,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,15,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,16,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wallet_reporter_copy,17,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wechat_url,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wechat_url,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wechat_url,3,id,varchar,source_type=int(11); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wechat_url,4,url,varchar,source_type=varchar(255); ,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wechat_url,5,status,varchar,"source_type=tinyint(1); 0:使用,1:禁用",普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wechat_url,6,usecount,varchar,source_type=int(11); 使用次數,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wechat_url,7,source_db,varchar,来源库,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wechat_url,8,source_table,varchar,来源表,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wechat_url,9,ods_table_name,varchar,ODS表名,普通列名,（未标记）,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36
+ods_a168_wechat_url,10,sync_time,datetime,同步时间,普通列名,★ 时间候选列,—,ods_mariadb_2b,v1.0.1 候选表全列输出（关键词只作标记不作过滤）,2026-08-23 09:06:36

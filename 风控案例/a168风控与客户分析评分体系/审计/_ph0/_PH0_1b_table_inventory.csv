@@ -1,0 +1,130 @@
+﻿table_name,h_src,has_uid,has_time,has_amount,n_cols,table_nature,scope_db,scope_pattern,scope_scanned_at
+ods_a168_aggregate_transaction,H-SRC-01 支付／资金,1,1,1,22,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_payment_order,H-SRC-01 支付／资金,1,1,1,23,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_RedPacket_Order,H-SRC-01 支付／资金,0,1,1,20,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_log_age_cash_change,H-SRC-01 支付／资金,0,1,1,19,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_orderslist,H-SRC-01 支付／资金,0,1,0,9,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_partner_transation,H-SRC-01 支付／资金,0,1,1,22,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_partner_transation_log,H-SRC-01 支付／资金,0,1,0,9,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_payment_bank,H-SRC-01 支付／资金,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_payment_method,H-SRC-01 支付／资金,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_payment_platform,H-SRC-01 支付／资金,0,1,0,22,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_payment_setting,H-SRC-01 支付／资金,0,1,1,26,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_payment_type,H-SRC-01 支付／资金,0,1,0,17,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_wallet_dtl,H-SRC-01 支付／资金,0,1,1,20,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_wallet_feedbackerr,H-SRC-01 支付／资金,0,1,1,15,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_wallet_reporter,H-SRC-01 支付／资金,0,1,0,17,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_wallet_reporter_copy,H-SRC-01 支付／资金,0,1,0,17,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_age_login,H-SRC-02 会话／登录,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_age_sub_login,H-SRC-02 会话／登录,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_agents_LoginPass,H-SRC-02 会话／登录,0,1,1,28,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_aggregate_token,H-SRC-02 会话／登录,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_control_login,H-SRC-02 会话／登录,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_emp_login,H-SRC-02 会话／登录,0,1,0,12,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_mem_login,H-SRC-02 会话／登录,0,1,0,14,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_partner_bng_token,H-SRC-02 会话／登录,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_log_mem_change,H-SRC-03 会员状态变更,1,1,0,17,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_bet_limit_default,H-SRC-03 会员状态变更,0,1,0,24,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_categoryLevel,H-SRC-03 会员状态变更,0,1,1,21,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_close_tip_list,H-SRC-03 会员状态变更,0,1,0,7,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_tablelimit,H-SRC-03 会员状态变更,0,1,0,31,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_tablelimit_third,H-SRC-03 会员状态变更,0,1,0,19,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_alarmMessage,H-SRC-04 客服工单／消息,0,1,0,14,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_alertMessage,H-SRC-04 客服工单／消息,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_alert_ip_setting,H-SRC-04 客服工单／消息,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_wechat_url,H-SRC-04 客服工单／消息,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_iphistory,H-SRC-06 日志／变更留痕,1,1,0,12,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_SMR_log,H-SRC-06 日志／变更留痕,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_betchange_log,H-SRC-06 日志／变更留痕,0,1,0,18,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_change_log,H-SRC-06 日志／变更留痕,0,1,0,14,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_log,H-SRC-06 日志／变更留痕,0,1,0,26,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_log_realtimebet,H-SRC-06 日志／变更留痕,0,1,1,12,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_opengame_log,H-SRC-06 日志／变更留痕,0,1,0,9,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_RedPacketSetup,（未命中六源）,1,1,1,26,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_agent,（未命中六源）,1,1,1,51,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_agent_bak20250610,（未命中六源）,1,1,1,51,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_agent_test,（未命中六源）,1,1,1,49,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_bet01,（未命中六源）,1,1,1,49,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_bet02,（未命中六源）,1,1,1,58,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_dailyreport,（未命中六源）,1,1,1,34,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_dailyreport2,（未命中六源）,1,1,1,35,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_dailyreport_member,（未命中六源）,1,1,1,35,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_member,（未命中六源）,1,1,1,53,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_member_dtl,（未命中六源）,1,1,1,22,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_sms_setting,（未命中六源）,1,1,1,19,★ 事务表候选（三列俱备）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_bet_partner,（未命中六源）,1,1,0,15,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_dailyreport_usercount,（未命中六源）,1,1,0,12,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_employee,（未命中六源）,1,1,0,24,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_member_category,（未命中六源）,1,1,0,13,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_member_partner_account,（未命中六源）,1,1,0,12,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_member_partner_gamelist,（未命中六源）,1,1,0,11,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_member_url,（未命中六源）,1,1,0,12,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_passiplist,（未命中六源）,1,1,0,10,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_permissions,（未命中六源）,1,1,0,16,事件表候选（无金额）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_RedPacketSetup_setting,（未命中六源）,0,1,1,16,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_RedPacket_No,（未命中六源）,0,1,0,7,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_agent_dtl,（未命中六源）,0,1,0,22,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_agent_dtl_test,（未命中六源）,0,1,0,22,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_agent_elec,（未命中六源）,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_agent_partner_gamelist,（未命中六源）,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_agent_permissionrole,（未命中六源）,0,1,0,15,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_agent_sub,（未命中六源）,0,1,0,22,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_aggregate_setting,（未命中六源）,0,1,0,14,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_aisetting,（未命中六源）,0,1,0,9,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_apiurl,（未命中六源）,0,1,0,9,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_ban_bet_area,（未命中六源）,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_bet,（未命中六源）,0,1,0,60,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_bet_No,（未命中六源）,0,1,0,7,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_category,（未命中六源）,0,1,1,33,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_control,（未命中六源）,0,1,0,19,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_conversion,（未命中六源）,0,1,1,21,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_ctl_rto,（未命中六源）,0,1,0,9,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_currency,（未命中六源）,0,1,0,14,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_dailyreport_table,（未命中六源）,0,1,1,23,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_func_counter,（未命中六源）,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_No,（未命中六源）,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_callwebapi,（未命中六源）,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_demoipsetting,（未命中六源）,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_info,（未命中六源）,0,1,1,23,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_info_verify,（未命中六源）,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_parame,（未命中六源）,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_result,（未命中六源）,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_statistics,（未命中六源）,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_tip,（未命中六源）,0,1,1,8,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_transfer,（未命中六源）,0,1,0,12,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_game_type,（未命中六源）,0,1,0,28,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_in_out_m,（未命中六源）,0,1,0,16,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_in_out_m_chip,（未命中六源）,0,1,0,16,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_ipblacklist,（未命中六源）,0,1,0,12,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_jackpot,（未命中六源）,0,1,0,17,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_keyserver_command,（未命中六源）,0,1,0,12,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_member_click_counter,（未命中六源）,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_member_explosion_setting,（未命中六源）,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_member_odds,（未命中六源）,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_news,（未命中六源）,0,1,0,14,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_odds_default,（未命中六源）,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_partner_gamelist,（未命中六源）,0,1,0,37,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_partner_reportTime,（未命中六源）,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_partner_setting,（未命中六源）,0,1,0,15,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_partner_type,（未命中六源）,0,1,0,29,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_permissionrole,（未命中六源）,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_permissionsPage,（未命中六源）,0,1,0,12,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_permissionsPageRoles,（未命中六源）,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_permissionsgroup,（未命中六源）,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_play_set,（未命中六源）,0,1,0,18,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_realtimebet,（未命中六源）,0,1,1,18,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_realtimelobby,（未命中六源）,0,1,0,12,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_realtimelog,（未命中六源）,0,1,1,15,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_risklist,（未命中六源）,0,1,0,9,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_roles,（未命中六源）,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_shuffle_gid,（未命中六源）,0,1,0,8,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_shuffle_info,（未命中六源）,0,1,0,34,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_site,（未命中六源）,0,1,0,8,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_stream,（未命中六源）,0,1,0,9,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_subagent_permissionrole,（未命中六源）,0,1,0,15,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_symbol,（未命中六源）,0,1,0,11,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_temp_id_list,（未命中六源）,0,1,0,7,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_tip,（未命中六源）,0,1,0,10,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_urllist,（未命中六源）,0,1,0,23,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+ods_a168_white_list,（未命中六源）,0,1,0,15,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05
+sync_checkpoint,（未命中六源）,0,1,0,13,无从判（须逐表验货）,ods_mariadb_2b,v1.0.1 六族表名正则 ＋ 三列性质判别（含编码式列名 betNN／memNNN／ageNNN／lmcNN）,2026-08-23 09:06:05

@@ -1,0 +1,4 @@
+﻿lmc04_category,n_events,rg_self_exclusion,rg_cooling_off,rg_responsible,biz_limit,biz_freeze,biz_disable,biz_block,amb_exclude_any,n_in_win
+edit,499607,0,0,0,0,0,535,0,0,4784
+add,107839,0,1,0,0,0,0,0,0,1772
+changestatus,79572,0,0,0,0,0,0,0,0,2151

@@ -1,0 +1,4 @@
+﻿lmc04_category,n_events,n_target_id,n_operator,dt_min,dt_max,n_in_win,avg_len_content,avg_len_sql,n_content_hit_mem01617,n_sql_hit_mem01617,n_hit_rg_semantics
+edit,499607,136985,16841,2017-07-25,2026-08-22,4784,38.32,152.73,42,0,535
+add,107839,90075,10110,2020-03-19,2026-08-22,1772,23.29,488.23,0,44110,1
+changestatus,79572,30208,4638,2017-08-10,2026-08-22,2151,18.29,124.26,54635,65047,0
