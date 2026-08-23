@@ -1,0 +1,2 @@
+﻿__source_pk,dt,id,agent_id,status,start_time,end_time,total_money_updating,total_money,single_money_from,single_money_to,single_interval,single_available_times,setting,duration,need_valid,need_valid_percent,rules,black_list,utp,uid,update_time,source_db,source_table,ods_table_name,sync_time
+c4ca4238a0b923820dcc509a6f75849b,2021-12-29,1,0,0,2021-12-01 00:00:00,2021-12-02 00:00:00,0,0,0,0,0,0,"101,102",0,0,0,,,C,179,2021-12-29 15:56:36,a168,RedPacketSetup,ods_a168_RedPacketSetup,2026-05-19 19:04:41

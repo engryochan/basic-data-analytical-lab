@@ -1,0 +1,7 @@
+﻿__source_pk,dt,id,time,gameID,tableID,protocol,data,source_db,source_table,ods_table_name,sync_time
+73c7f51cc11fcfe48b44cf5e412fe1e4,2026-05-02,18936,2026-05-02 04:28:55,101,913,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-05-19 18:57:01
+2979158b9c1e72755a8961f03e3580f5,2026-06-01,19047,2026-06-01 11:09:32,101,0,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-06-02 07:15:00
+ad7b25e2374b423547e6783add6d7428,2026-06-01,19048,2026-06-01 11:13:52,102,0,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-06-02 07:15:00
+609ac774d3f0a0c93c19040f2c6eb105,2026-05-01,18934,2026-05-01 20:02:35,101,902,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-05-19 18:57:01
+e90acf987b0389430374a954671dc4bf,2026-05-01,18935,2026-05-01 20:17:09,101,911,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-05-19 18:57:01
+ae9402b067df450afb7e5e9cbeeb77ea,2026-04-28,18906,2026-04-28 00:07:12,101,913,ReloadHistory,,a168,keyserver_command,ods_a168_keyserver_command,2026-05-19 18:57:01

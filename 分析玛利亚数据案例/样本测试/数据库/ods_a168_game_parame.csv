@@ -1,0 +1,7 @@
+﻿__source_pk,dt,gpm001,gpm002,gpm003,gpm004,source_db,source_table,ods_table_name,sync_time
+c81e728d9d4c2f636f067f89cc14862c,2026-07-23,2,receiptswitch,0,收款帳號設定 0:不開放，1:開放,a168,game_parame,ods_a168_game_parame,2026-07-23 04:31:32
+e4da3b7fbbce2345d7772b0674a318d5,2026-07-23,5,addNotificationswitch,1,新增會員通知設定 0:不開放，1:開放,a168,game_parame,ods_a168_game_parame,2026-07-23 04:31:32
+eccbc87e4b5ce2fe28308fd9f2a7baf3,2026-07-23,3,quotaswitch,1,上下分設定 0:不開放，1:開放,a168,game_parame,ods_a168_game_parame,2026-07-23 04:31:32
+a87ff679a2f3e71d9181a67b7542122c,2026-07-23,4,notificationswitch,0,通知帳號設定 0:不開放，1:開放,a168,game_parame,ods_a168_game_parame,2026-07-23 04:31:32
+c4ca4238a0b923820dcc509a6f75849b,2026-07-23,1,APIrateswitch,0,修改API佔成設定 0:不開放，1:開放,a168,game_parame,ods_a168_game_parame,2026-07-23 04:31:32
+1679091c5a880faf6fb5e6087eb1b2dc,2026-07-23,6,Creditrateswitch,0,修改信用佔成設定 0:不開放，1:開放,a168,game_parame,ods_a168_game_parame,2026-07-23 04:31:32

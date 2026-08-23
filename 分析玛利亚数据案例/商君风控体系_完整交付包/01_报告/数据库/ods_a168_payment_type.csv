@@ -1,0 +1,8 @@
+﻿__source_pk,dt,type,cnname,twname,enname,inname,janame,koname,thname,viname,hiname,msname,source_db,source_table,ods_table_name,sync_time
+bd5af1f610a12434c9128e4a399cef8a,2026-07-23,bank,网银转帐,網銀轉帳,BANK PAY,BANK PAY,BANK PAY,BANK PAY,BANK PAY,BANK PAY,BANK PAY,BANK PAY,a168,payment_type,ods_a168_payment_type,2026-07-23 04:30:55
+855a3b1b5f04a16bb093201a1e8c4910,2026-07-23,wechat,微信支付,微信支付,WECHAT PAY,WECHAT PAY,WECHAT PAY,WECHAT PAY,WECHAT PAY,WECHAT PAY,WECHAT PAY,WECHAT PAY,a168,payment_type,ods_a168_payment_type,2026-07-23 04:30:55
+1df3746a4728276afdc24f828186f73a,2026-07-23,quick,快捷支付,快捷支付,QUICK PAY,QUICK PAY,QUICK PAY,QUICK PAY,QUICK PAY,QUICK PAY,QUICK PAY,QUICK PAY,a168,payment_type,ods_a168_payment_type,2026-07-23 04:30:55
+aa252f7bcbb4b8379004aa0c7cf76c10,2026-07-23,union,银联支付,銀聯支付,UNION Pay,UNION Pay,UNION Pay,UNION Pay,UNION Pay,UNION Pay,UNION Pay,UNION Pay,a168,payment_type,ods_a168_payment_type,2026-07-23 04:30:55
+fa42b816950b79e3c969c637657845ad,2026-07-23,alipay,支付宝支付,支付寶支付,ALIPAY,ALIPAY,ALIPAY,ALIPAY,ALIPAY,ALIPAY,ALIPAY,ALIPAY,a168,payment_type,ods_a168_payment_type,2026-07-23 04:30:55
+099b3b060154898840f0ebdfb46ec78f,2026-07-23,qq,QQ,QQ,QQ PAY,QQ PAY,QQ PAY,QQ PAY,QQ PAY,QQ PAY,QQ PAY,QQ PAY,a168,payment_type,ods_a168_payment_type,2026-07-23 04:30:55
+c03e47ed985f03328e4313171bb0c95a,2026-07-23,jindong,京东支付,京東支付,JINDONG PAY,JINDONG PAY,JINDONG PAY,JINDONG PAY,JINDONG PAY,JINDONG PAY,JINDONG PAY,JINDONG PAY,a168,payment_type,ods_a168_payment_type,2026-07-23 04:30:55

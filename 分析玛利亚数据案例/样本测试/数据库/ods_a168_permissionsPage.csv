@@ -1,0 +1,4 @@
+﻿__source_pk,dt,id,page,pageName,element,elementName,status,source_db,source_table,ods_table_name,sync_time
+c4ca4238a0b923820dcc509a6f75849b,2026-07-23,1,gstage_managerSerch.php,期数管理,betBtn,注单,Y,a168,permissionsPage,ods_a168_permissionsPage,2026-07-23 04:32:08
+eccbc87e4b5ce2fe28308fd9f2a7baf3,2026-07-23,3,UserAdd.php,用戶列表,SyncLimit,同步限額,Y,a168,permissionsPage,ods_a168_permissionsPage,2026-07-23 04:32:08
+c81e728d9d4c2f636f067f89cc14862c,2026-07-23,2,gstage_managerSerch.php,期数管理,modifyResultBtn,重新对奖,Y,a168,permissionsPage,ods_a168_permissionsPage,2026-07-23 04:32:08

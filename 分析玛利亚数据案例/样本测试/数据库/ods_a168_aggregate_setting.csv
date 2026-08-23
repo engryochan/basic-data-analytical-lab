@@ -1,0 +1,39 @@
+﻿__source_pk,dt,id,code,currency,agent_id,status,type,data,remark,source_db,source_table,ods_table_name,sync_time
+1c383cd30b7c298ab50293adfecb7b18,2026-07-23,35,titan,20,0,1,vendorId,elitebetsgdapi,代理帳號 (SGD),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+6364d3f0f495b6ab9dcf8d3b5c6e0b01,2026-07-23,32,titan,26,0,1,vendorId,elitebetmmkkapi,代理帳號 (MMKK),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+6512bd43d9caa6e02c990b0a82652dca,2026-07-23,11,ops,18,0,1,vendorId,opskrwapi,代理帳號 (KRW),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+8f14e45fceea167a5a36dedd4bea2543,2026-07-23,7,ops,13,0,1,vendorId,opsthbapi,代理帳號 (THB),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+a5771bce93e200c36f7cd9dfd0e5deaa,2026-07-23,38,titan,41,0,1,vendorId,elitebetusdtapi,代理帳號 (USDT),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+a87ff679a2f3e71d9181a67b7542122c,2026-07-23,4,ops,0,0,1,secret,xqdHiEAU9bw2aH7A7eYq,加密用 secret,a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+c4ca4238a0b923820dcc509a6f75849b,2026-07-23,1,ops,0,0,1,url,https://gamehubadapter-ky.ob.games,客戶API網址,a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+34173cb38f07f89ddbebc2ac9128303f,2026-07-23,30,titan,17,0,1,vendorId,elitebetidrapi,代理帳號 (IDR),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+6ea9ab1baa0efb9e19094440c317e21b,2026-07-23,29,titan,14,0,1,vendorId,elitebethkdapi,代理帳號 (HKD),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+c74d97b01eae257e44aa9d5bade97baf,2026-07-23,16,ops,29,0,1,vendorId,opseurapi,代理帳號 (EUR),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+c9f0f895fb98ab9159f51fd0297e236d,2026-07-23,8,ops,15,0,1,vendorId,opsjpyapi,代理帳號 (JPY),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+e4da3b7fbbce2345d7772b0674a318d5,2026-07-23,5,ops,1,0,1,vendorId,opscnyapi,代理帳號 (CNY),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+eccbc87e4b5ce2fe28308fd9f2a7baf3,2026-07-23,3,ops,0,0,1,key,wm,加密用 key,a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+1ff1de774005f8da13f42943881c655f,2026-07-23,24,titan,0,0,1,secret,1eb1fa4e915e30a24c48cdf26043425c,加密用 secret,a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+37693cfc748049e45d87b8c7d8b9aacd,2026-07-23,23,titan,0,0,1,wm_url,https://tiwb-618.wmapi99.com/api/wallet/Gateway.php,WM單一錢包API網址,a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+aab3238922bcc25a6f606eb525ffdc56,2026-07-23,14,ops,27,0,1,vendorId,opsphpapi,代理帳號 (PHP),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+c20ad4d76fe97759aa27a0c99bff6710,2026-07-23,12,ops,23,0,1,vendorId,opsvndapi,代理帳號 (VND),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+c81e728d9d4c2f636f067f89cc14862c,2026-07-23,2,ops,0,0,1,wm_url,https://opwb-642.wmapi99.com/api/wallet/Gateway.php,WM單一錢包API網址,a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+e369853df766fa44e1ed0ff613f563bd,2026-07-23,34,titan,27,0,1,vendorId,elitebetphpapi,代理帳號 (PHP),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+02e74f10e0327ad868d138f2b4fdd6f0,2026-07-23,27,titan,1,0,1,vendorId,elitebetcnyapi,代理帳號 (CNY),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+a5bfc9e07964f8dddeb95fc584cd965d,2026-07-23,37,titan,4,0,1,vendorId,elitebetusdapi,代理帳號 (USD),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+b6d767d2f8ed5d21a44b0e5886680cb9,2026-07-23,22,titan,0,0,1,url,https://product.elitehubzcallback.com/api/c/REVERSE/WMCA,客戶API網址,a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+182be0c5cdcd5072bb1864cdee4d3d6e,2026-07-23,33,titan,16,0,1,vendorId,elitebetmyrapi,代理帳號 (MYR),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+33e75ff09dd601bbe69f351039152189,2026-07-23,28,titan,29,0,1,vendorId,elitebeteurapi,代理帳號 (EUR),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+45c48cce2e2d7fbdea1afc51c7c6ad26,2026-07-23,9,ops,16,0,1,vendorId,opsmyrapi,代理帳號 (MYR),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+c16a5320fa475530d9583c34fd356ef5,2026-07-23,31,titan,25,0,1,vendorId,elitebetmmkapi,代理帳號 (MMK),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+c51ce410c124a10e0db5e4b97fc2af39,2026-07-23,13,ops,25,0,1,vendorId,opsmmkapi,代理帳號 (MMK),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+d3d9446802a44259755d38e6d163e820,2026-07-23,10,ops,17,0,1,vendorId,opsidrapi,代理帳號 (IDR),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+d645920e395fedad7bbbed0eca3fe2e0,2026-07-23,40,titan,24,0,1,vendorId,elitebetvndkapi,代理帳號 (VNDK),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+1679091c5a880faf6fb5e6087eb1b2dc,2026-07-23,6,ops,4,0,1,vendorId,opsusdapi,代理帳號 (USD),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+19ca14e7ea6328a42e0eb13d585e4c22,2026-07-23,36,titan,13,0,1,vendorId,elitebetthbapi,代理帳號 (THB),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+8e296a067a37563370ded05f5a3bf3ec,2026-07-23,25,titan,0,0,1,providerCode,WMCA,平台識別碼,a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+9bf31c7ff062936a96d3c8bd1f8f2ff3,2026-07-23,15,ops,28,0,1,vendorId,opsinrapi,代理帳號 (INR),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+1f0e3dad99908345f7439f8ffabdffc4,2026-07-23,19,ops,43,0,1,vendorId,opsbrlapi,代理帳號 (BRL),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+4e732ced3463d06de0ca9a15b6153677,2026-07-23,26,titan,22,0,1,vendorId,elitebetaudapi,代理帳號 (AUD),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+6f4922f45568161a8cdf4ad2299f6d23,2026-07-23,18,ops,41,0,1,vendorId,opsusdtapi,代理帳號 (USDT),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+70efdf2ec9b086079795c442636b55fb,2026-07-23,17,ops,39,0,1,vendorId,opsclpapi,代理帳號 (CLP),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30
+d67d8ab4f4c10bf22aa353e27879133c,2026-07-23,39,titan,23,0,1,vendorId,elitebetvndapi,代理帳號 (VND),a168,aggregate_setting,ods_a168_aggregate_setting,2026-07-23 04:18:30

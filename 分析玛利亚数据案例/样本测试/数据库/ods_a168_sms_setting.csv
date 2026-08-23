@@ -1,0 +1,2 @@
+﻿__source_pk,dt,id,name,code,username,password,apikey,content,length,format,expireTime,limitTime,noticeNumber,noticeBalance,source_db,source_table,ods_table_name,sync_time
+c4ca4238a0b923820dcc509a6f75849b,2026-07-23,1,sms.to,smsto,__STARROCKS_NULL__,__STARROCKS_NULL__,5b2a80d531ceef1b9a34e015f66580cd,Your verify code is {code},6,3,600,0,'+886989899891,0.01,a168,sms_setting,ods_a168_sms_setting,2026-07-23 04:33:21

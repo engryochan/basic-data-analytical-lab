@@ -1,0 +1,23 @@
+﻿__source_pk,dt,id,permissionid,status,lv1,lv2,lv3,lv4,lv5,lastmodifytime,source_db,source_table,ods_table_name,sync_time
+c81e728d9d4c2f636f067f89cc14862c,2017-07-16,2,7,1,\\0,\\0,\\0,\\0,\\0,2017-07-16 20:29:57,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-19 18:53:03
+45c48cce2e2d7fbdea1afc51c7c6ad26,2017-07-16,9,18,1,\\0,\\0,\\0,\\0,\\0,2017-07-16 20:29:57,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-19 18:53:03
+6f4922f45568161a8cdf4ad2299f6d23,2020-03-28,18,44,0,\\0,\\0,\\0,\\0,\\0,2020-03-28 22:30:53,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+c74d97b01eae257e44aa9d5bade97baf,2017-05-07,16,37,0,\\0,\\0,\\0,\\0,\\0,2017-05-07 22:18:12,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+1f0e3dad99908345f7439f8ffabdffc4,2019-11-15,19,45,0,\\0,\\0,\\0,\\0,\\0,2019-11-15 17:50:42,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+a87ff679a2f3e71d9181a67b7542122c,2020-05-11,4,19,1,\\0,\\0,\\0,\\0,\\0,2020-05-11 16:21:58,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-19 18:53:03
+b6d767d2f8ed5d21a44b0e5886680cb9,2021-02-21,22,73,0,\\0,\\0,\\0,\\0,\\0,2021-02-21 12:23:31,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+8e296a067a37563370ded05f5a3bf3ec,2026-05-20,25,53,1,\\0,\\0,\\0,\\0,\\0,__STARROCKS_NULL__,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+8f14e45fceea167a5a36dedd4bea2543,2017-07-16,7,11,1,\\0,\\0,\\0,\\0,\\0,2017-07-16 20:29:57,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-19 18:53:03
+1ff1de774005f8da13f42943881c655f,2025-03-25,24,80,0,\\0,\\0,\\0,\\0,\\0,2025-03-25 17:00:59,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+9bf31c7ff062936a96d3c8bd1f8f2ff3,2017-05-07,15,21,0,\\0,\\0,\\0,\\0,\\0,2017-05-07 22:18:12,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+1679091c5a880faf6fb5e6087eb1b2dc,2018-07-24,6,15,1,\\0,\\0,\\0,\\0,\\0,2018-07-24 13:34:57,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-19 18:53:03
+c51ce410c124a10e0db5e4b97fc2af39,2019-12-27,13,41,0,\\0,\\0,\\0,\\0,\\0,2019-12-27 18:40:38,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+6512bd43d9caa6e02c990b0a82652dca,2018-04-09,11,39,1,\\0,\\0,\\0,\\0,\\0,2018-04-09 15:14:01,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+c20ad4d76fe97759aa27a0c99bff6710,2017-05-07,12,6,0,\\0,\\0,\\0,\\0,\\0,2017-05-07 20:54:18,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+3c59dc048e8850243be8079a5c74d079,2017-07-16,21,50,1,\\0,\\0,\\0,\\0,\\0,2017-07-16 20:29:57,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+e4da3b7fbbce2345d7772b0674a318d5,2017-07-16,5,20,1,\\0,\\0,\\0,\\0,\\0,2017-07-16 20:29:57,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-19 18:53:03
+98f13708210194c475687be6106a3b84,2017-07-16,20,43,1,\\0,\\0,\\0,\\0,\\0,2017-07-16 20:29:57,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+37693cfc748049e45d87b8c7d8b9aacd,2019-11-15,23,61,1,\\0,\\0,\\0,\\0,\\0,2019-11-15 17:48:39,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+8e296a067a37563370ded05f5a3bf3ec,2026-05-19,25,53,1,\\0,\\0,\\0,\\0,\\0,__STARROCKS_NULL__,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-19 18:53:03
+4e732ced3463d06de0ca9a15b6153677,2025-03-25,26,134,1,\\0,\\0,\\0,\\0,\\0,2025-03-25 08:49:32,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-20 07:14:37
+c9f0f895fb98ab9159f51fd0297e236d,2020-03-01,8,12,1,\\0,\\0,\\0,\\0,\\0,2020-03-01 23:32:00,a168,subagent_permissionrole,ods_a168_subagent_permissionrole,2026-05-19 18:53:03

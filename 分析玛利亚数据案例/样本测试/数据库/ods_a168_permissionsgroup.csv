@@ -1,0 +1,11 @@
+﻿__source_pk,dt,id,name,status,displayname,ordered,lastmodifytime,icon,source_db,source_table,ods_table_name,sync_time
+8f14e45fceea167a5a36dedd4bea2543,2016-06-22,7,message,1,讯息管理,2,2016-06-22 11:38:45,fa-arrows-h,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19 18:56:54
+e4da3b7fbbce2345d7772b0674a318d5,2016-06-23,5,market,1,市场管理,3,2016-06-23 18:45:05,fa-building-o,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19 18:56:54
+eccbc87e4b5ce2fe28308fd9f2a7baf3,2016-06-17,3,game,1,游戏管理,4,2016-06-17 18:02:16,fa-arrows,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19 18:56:54
+c81e728d9d4c2f636f067f89cc14862c,2016-06-24,2,user,1,用户管理,1,2016-06-24 14:53:41,fa-beer,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19 18:56:54
+d3d9446802a44259755d38e6d163e820,2021-12-29,10,preferential,1,优惠管理,10,2021-12-29 15:24:14,fa-bell,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-20 07:15:17
+c9f0f895fb98ab9159f51fd0297e236d,2017-11-13,8,telmanage,1,电投管理,7,2017-11-13 15:02:57,fa-phone,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19 18:56:54
+45c48cce2e2d7fbdea1afc51c7c6ad26,2019-10-24,9,logmanage,1,日志管理,8,2019-10-24 17:50:45,fa-book,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19 18:56:54
+a87ff679a2f3e71d9181a67b7542122c,2016-06-23,4,money,1,财务管理,5,2016-06-23 18:51:31,fa-certificate,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19 18:56:54
+c4ca4238a0b923820dcc509a6f75849b,2019-10-24,1,system,1,系统管理,9,2019-10-24 17:29:23,fa-anchor,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19 18:56:54
+1679091c5a880faf6fb5e6087eb1b2dc,2016-06-23,6,moniter,1,风险控管,6,2016-06-23 18:51:31,fa-bolt,a168,permissionsgroup,ods_a168_permissionsgroup,2026-05-19 18:56:54
