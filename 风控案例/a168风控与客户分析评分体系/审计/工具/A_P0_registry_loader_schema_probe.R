@@ -17,6 +17,8 @@ suppressPackageStartupMessages({
   library(yaml); library(data.table)
 })
 
+setwd("C:/Users/PCCPPPCCC/Documents/GitHub/basic-data-analytical-lab/风控案例/a168风控与客户分析评分体系")
+
 ## ── 0 · 定位（依五命名空间：Execution = 函数/、Specification = 规范/）──────
 LOADER <- "函数/registry_loader.R"
 YAML_C <- "规范/registry_risk_typology_v1.5.0.yaml"
