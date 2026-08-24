@@ -1,0 +1,2761 @@
+---
+title: "风险会员判据"
+subtitle: "靴尾投注篇"
+author: "Ryo（雷欧）"
+date: "2026-08-18"
+lang: zh-CN
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-expand: 3
+    number-sections: true
+    # v1.2.46 规格光复：v1.2.43 之轻装降格系 error 1455（页面文件 0 MB）权宜，
+    # 病根既除（8192 MB 已设并实证渲染通过），恢复原始单文件自包含标准。
+    # 若某机内嵌总装仍超内存余量，渲染.bat 第二级自动降轻装并回显，无须改档。
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看代码"
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+---
+
+# 引言：设置
+
+```{r}
+#| label: 设置
+#| echo: true
+#| message: false
+## ════════════════════════════════════════════════════════════════════════
+## 全档软代码总闸：本净化版仅使用雷欧／R01 数据；一切数值渲染时现算。
+## 外部绝对局号模型及其数据源已从本报告完全隔离。
+## ════════════════════════════════════════════════════════════════════════
+suppressPackageStartupMessages(library(data.table))
+.dir <- "数据库"
+.pp <- c(
+  ryo_led = file.path(.dir, "P11_雷欧尾段投注总帐.csv"),
+  ryo_mem = {
+    .cand <- file.path(.dir, c("P11_雷欧尾段投注模型会员名单.csv", "R01_late_shoe.csv"))
+    ## v1.2.48 根因斧正：此处原名 `.hit`，与 @sec-adv-test 之线索队列 `.hit` 同名异义，
+    ## 致 adv-queue 之 exists(".hit") 恒真而 nrow(字符向量) 为 NULL →「参数长度为零」。
+    ## 改名 `.hit_file`（文件命中），不与任何分析对象共名。禁复用 `.hit` 于本档他处。
+    .hit_file <- .cand[file.exists(.cand)]
+    if (length(.hit_file)) .hit_file[1L] else .cand[1L]
+  })
+.mm <- .pp[!file.exists(.pp)]
+if (length(.mm))
+  stop(sprintf("○ 待表：当前工作目录 %s 之下未找到 %s——不以静态文字冒充结果。",
+               getwd(), paste(basename(.mm), collapse = "、")))
+RYO_L <- fread(.pp["ryo_led"], encoding = "UTF-8")
+RYO_M <- fread(.pp["ryo_mem"], encoding = "UTF-8")
+
+stopifnot(
+  "雷欧总帐须含 scope_def 口径锁" = "scope_def" %chin% names(RYO_L) && nrow(RYO_L) == 2L,
+  "雷欧名单须含 uid 与 late_def" = all(c("uid", "late_def") %chin% names(RYO_M)),
+  "雷欧名单口径锁须单值" = length(unique(RYO_M$late_def)) == 1L
+)
+
+## ── 口径锁（v1.2.53 斧正：上移至此）───────────────────────────────────────
+## 病根：LATE_DEF 原只在 @sec-advantage 之 roi-lock-build 立，而 @sec-data-caliber
+##   之靴长桌族节位于其**上游**，就地引用即「找不到对象 'LATE_DEF'」（渲染实测中断）。
+##   此非局部缺失而是**依赖序倒置**：口径锁系全档最上游之契约，其定义位置必须先于
+##   一切引用者。故上移至「设置」——名单既已在此读入且已验 late_def 单值，
+##   此处正是其单一真相源。下游 chunk 一律取用，禁另处派生（禁二真相源）。
+## LATE_Q：相对靴位阈值由口径锁字面现场反解，全档禁另处硬写 0.80。
+LATE_DEF <- unique(RYO_M$late_def)
+LATE_Q   <- suppressWarnings(as.numeric(sub("^[^0-9.]*", "", LATE_DEF)))
+stopifnot(
+  "口径锁 late_def 须单值" = length(LATE_DEF) == 1L,
+  "口径锁须可反解出相对靴位阈值且落于 (0, 1)" =
+    is.finite(LATE_Q) && LATE_Q > 0 && LATE_Q < 1
+)
+
+.f   <- function(v, d = 2)
+  format(round(v, d), big.mark = ",", scientific = FALSE, nsmall = d, trim = TRUE)
+.i   <- function(v)
+  format(round(v, 0), big.mark = ",", scientific = FALSE, nsmall = 0, trim = TRUE)
+.pc  <- function(a, b, d = 4) sprintf(paste0("%.", d, "f%%"), a / b * 100)
+.hc  <- function(d, x) x %chin% names(d)
+
+.cL <- RYO_L[substr(scope_def, 1L, 1L) == "1"]
+.lE <- RYO_L[substr(scope_def, 1L, 1L) == "2"]
+
+stopifnot(
+  "雷欧总帐必须存在全量洁净域与雷欧域" = nrow(.cL) == 1L && nrow(.lE) == 1L,
+  "雷欧名单会员数须等于总帐" = nrow(RYO_M) == .lE$n_members,
+  "雷欧名单注单数须等于总帐" = sum(RYO_M$n_orders_all) == .lE$n_orders
+)
+
+.gap <- data.table(
+  项 = c("雷欧·本金", "雷欧·GGR"),
+  名单侧 = c(sum(RYO_M$stake_all), -sum(RYO_M$game_pnl_all)),
+  总帐侧 = c(.lE$stake_sum, .lE$ggr_sum))
+.gap[, 差额 := 名单侧 - 总帐侧]
+
+## ── 预注册常量（见数前锁定，禁事后调参）
+.alpha      <- 0.05        # 显著性水平 α（单点声明；大样本下须与四项行动扳机共破）
+PREREG_SEED <- 20260819L   # 自助法／置换检验种子（集中登记，禁二处另立）
+```
+```{r}
+#| label: 悬停术语引擎
+#| echo: true
+#| results: asis
+## ════════════════════════════════════════════════════════════════════════
+## 全档悬停术语库：鼠标停留即见定义／标准／口径／阈值。
+## 用法：tip("术语") 于表格单元或正文；kable 须 escape = FALSE。
+## 纪律：单一 cat() 注入样式；术语定义单一真相源于 .GL，禁二处另写。
+## ════════════════════════════════════════════════════════════════════════
+.GL <- c(
+
+  雷欧 = "雷欧（本金口径）〔曾用名：模型二·甲版〕＝R01 名单：判据 shoe_pos>=0.80 相对靴位、门槛≥100 单、本金口径；定位＝行为筛选器与特征层（候选特征非证据）",
+  洗码 = "valid_bet／洗码量：结算有效投注额（对押冲销后），退水计算之基数；ODS 等价列 bet41（比值 0.999994，引用级）",
+  退水 = "rebate：按洗码量比例返还之让利。契约档 0.8%~1.0%（洗码基数）；逐单候选字段 bet16（实测占洗码 0.0679%，与契约差约 12 倍，引用级）；正式主帐在月结",
+  返水 = "与「退水」同义之市场惯用语；本报告统一用「退水」，营销红利（bonus）另列，二者不得混同",
+  派彩 = "payout（bet14）：结算返还额，含本金返还；会员净盈亏 profit=(bet14−bet13)/bet11，不含退水（退水另记 bet16）",
+  hold率 = "hold% ＝ 平台毛利 ÷ 投注额（本金口径）或 ÷ 洗码（须标明分母）；本档全量本金口径引用值约 1.74%（引用级）",
+  GGR = "Gross Gaming Revenue 毛博彩收入 ＝ −Σ会员净盈亏；未扣退水、红利、税费",
+  NGR = "Net Gaming Revenue 净博彩收入 ＝ GGR − 退水 − 红利等；本项目判级 UNKNOWN——月结帐为权威来源，「GGR−bet16」仅口径示数禁改名",
+  late_share = "晚段注单占比 ＝ 晚段注单数 ÷ 总注单数（雷欧口径：shoe_pos>=0.80 为晚段）",
+
+  stake_ramp = "末段注额斜率 ＝ 晚段平均注额 ÷ 早段平均注额；>1 即靴末加注——行业监控「靴末下注模式突变」之量化对应",
+  shoe_pos = "相对靴位 ＝ 局号 ÷ 观测靴长（MAX(round_no) 代理，真靴长待权威表）",
+
+  AUC = "ROC 曲线下面积：随机抽一正一负样本，评分给正样本更高之概率。0.5＝随机；本档七档判读；0.5 不等于全无用——CI 跨 0.5 须查证；等价 Mann–Whitney U。定性锁：本档标签系内生净赢玩家，故一切 AUC 皆为 Outcome Association AUC（结果关联），不得读作 Risk Detection AUC（风险识别）",
+  OOS = "Out-of-Sample 样本外：本档「留出半」系同窗五五分，非真样本外（跨窗）；门禁因此结构性封顶 P1",
+  MCID = "最小实际重要差异：业务预定义之效应量门槛，门禁之锚；未定义前只行使否决不授确认级",
+  符号检验 = "Sign Test：对配对差值 D 只判正负方向、忽略大小；统计量服从 Binomial(n非零, 0.5)；答「方向层」之问",
+  Wilcoxon = "Wilcoxon 符号秩检验：对配对差值之绝对值排秩再结合符号；答「幅度层」之问；勿与 Wilson 区间混同",
+  Wilson下界 = "Wilson 95% 置信下界：二项比例之区间估计（z=1.959964 单侧 97.5%）；名单出数以下界替代点估计之两锁其一",
+  CVaR = "条件在险价值（期望短缺）：损失超过 VaR 分位后之条件均值。斧正在案：严格 CVaR 惯例先定义 Loss = −PnL 再于损失尾部计 ES；本档以会员净赢额右尾直接计算，正名为「会员净赢额 95% 尾部期望损失（Player-Win Tail Expected Shortfall）」，以免与金融风险团队之符号约定冲突",
+  VaR = "在险价值：损失分布之分位点（本档取 95%）",
+  Sharpe = "夏普比率＝超额收益均值÷收益波动；会员级甄别：真优势玩家高 Sharpe 而非高 ROI（须逐日序列，待 P12c）",
+  Sortino = "索提诺比率：仅罚下行波动之 Sharpe 变体；打水者近零波动之形态识别器（待 P12c）",
+  MDD = "最大回撤：累计盈亏曲线峰谷最大跌幅；追损型（Martingale）玩家指纹＝深回撤＋撤后加注（待 P12c）",
+  PCA = "主成分分析：线性降维；其前 k 成分重构＝平方误差最优线性自编码器；成分无业务语义禁作风险分",
+   自编码器 = "Autoencoder：以重构误差度量「不像正常人」之程度；本档用线性版（PCA 重构），阈值 P99.9 预注册",
+  Kmeans = "K-means 聚类：无监督分簇（k 预注册、nstart=10）；产出画像不产出处置",
+  收缩榜 = "暴露加权经验收缩（Empirical Shrinkage）：ROI 以精度权（∝n）向暴露加权全局均值收缩，先验强度＝订单数中位；小分母幸运儿逐出榜首。斧正在案：非严格经验贝叶斯——严格 EB 须估先验方差与观测方差得后验均值，此处未估，故不冠 Bayes 之名",
+  暴露加权经验收缩 = "Empirical Shrinkage：以暴露量（订单数）为精度权之收缩估计，压制小分母极端值；升级路线为层级贝叶斯／beta-binomial（P1）",
+  门禁 = "五项并报审计门禁：效应量＋95%CI＋p＋N＋OOS AUC；否决优先（血统／泄漏／CI 跨0／AUC<0.60／N<200），三级授级 P0/P1/P2",
+  P2 = "NOT CONFIRMED：任一否决项触发即落此级，不得下确认结论",
+  E0至E6 = "证据阶梯：E0 无证据→E6 铁证；仅 E5/E6 进人工复核，E1/E2 至多观察",
+  泄漏 = "数据泄漏：特征与标签同源（如以 roi_late 预测 pnl_all>0）——高分作废；门禁否决项之一",
+  结算完整性候选 = "roi 异常（如 |roi|>1）者先查结算语义九项（本金/红利/彩池/退水/冲正/重复/汇率/部分结算/调整），后查玩家；禁标「异常玩家」",
+  对押 = "自对冲（水打）：同局对边下注套取退水；洗码近零而盈亏照记；valid_bet=0 且多单者纯度 100%（引用级）。本报告用途：L-04 线索之判据，结算审计正菜",
+  靴 = "shoe：一次装入牌盒之整副牌组（常为八副），发完或至切牌即换靴洗牌。本报告用途：一切「早段／晚段」皆以靴为坐标系",
+  切牌 = "cut card：洗牌后插入牌堆之塑料牌，发牌至此即止——决定一靴实际可玩局数（渗透深度）。本报告用途：行业查证章之核心反制手段（前移切牌＝调浅渗透）",
+  渗透率 = "penetration：一靴实际发出牌量占整副之比。越深则牌堆构成越可知，优势窗口越大。本报告用途：行业实践之相对刻度——证「绝对局号系粗代理」",
+
+  观测靴长 = "MAX(round_no)：清洗后注单集内该靴之最大局号——系真实靴长之下偏代理（末数局无人下注即低估）。本报告用途：shoe_pos 之分母，已列 P0 待权威表",
+  本金 = "stake：会员实际投入之下注额（雷欧分母）。本报告用途：ROI 与 hold 之稳健分母——不因对押或洗码规则塌缩",
+
+  会员净盈亏 = "profit／game_pnl：会员视角之输赢（正＝会员赢＝平台付）；= (bet14−bet13)÷bet11，退水前口径。本报告用途：GGR＝其总和取负",
+  p值 = "p-value：在「无差异」假设为真时，观测到当前或更极端结果之概率——不是「假设为真的概率」。本报告用途：主检验之统计证据层；铁律 p<0.05 ≠ 商业显著",
+  置信区间 = "CI：以同法重复抽样，约 95% 之区间会盖住真值——回答「稳不稳」。本报告用途：效应量与 AUC 皆并报 95% CI；CI 跨 0 即门禁否决",
+  自助法 = "bootstrap：从样本中有放回重抽 B 次以估计统计量之波动，不设分布假设。本报告用途：配对中位差之 95% CI（B=1,000，种子 20260819 预注册）",
+  效应量 = "effect size：差异之实际大小（如配对中位差），与 p 值之「是否偶然」互补。本报告用途：门禁第一项，以 MCID 为锚",
+  中位数 = "median：排序居中之值，不受极端值绑架——比均值更抗巨鲸。本报告用途：配对差、收缩榜先验强度皆取中位",
+  留出半 = "holdout：同窗会员随机五五分，一半拟合一半评估——检验样本内稳定性，非真样本外。本报告用途：诚实模型 AUC 之评估集；门禁因此封顶 P1",
+  预注册 = "pre-registration：阈值、种子、协议于见数前锁定，防事后调参择优。本报告用途：P99.9 阈值、种子 20260819、复检协议皆预注册",
+  七闸 = "雷欧域之七道准入清洗：最新版本去重／测试线剔除／重对单剔除／一般单准入／数值守门三项／窗口过滤／汇率归一。本报告用途：步骤二洁净底集之定义",
+  bet16 = "ODS 逐单退水候选字段：实测占洗码 0.0679%（与契约档差约 12 倍）——退水主帐不在逐单层。本报告用途：派彩定谳章之核心证据（引用级）",
+  bet41 = "ODS 洗码基数字段：与洗码合计比值 0.999994——系基数非金额。本报告用途：ngr_by41 废弃之依据（引用级）",
+  OBSERVED = "证据三级之最高级：本档由交付件现算所得、可逐步复现之事实。禁由推断升格；升格须有证",
+  INFERRED = "证据三级之中级：由 OBSERVED 事实经合理推导而得，未经直接观测证实。正文须显式标注，禁与 OBSERVED 混列",
+  UNKNOWN = "证据三级之最低级：机制或成因未明。禁以推测填补——零行不是无异常，缺档不是无内容",
+  登记册 = "《风险类型 × 交付件 × 判据维度 × 证据裁定》登记册：数据资产（配置件），YAML 为单一真相源、CSV 为派生字典，由本档载入并施行门闸，缺档即停止渲染（铁律第九条）。它分类的是证据，不是用户",
+  门闸 = "评分管道引用未获准入之特征时，渲染直接失败并报出该特征所属类型、门禁等级与裁定理由",
+  门禁五档 = "FATAL 停止分析／BLOCK 禁入正式结论／CONDITIONAL 条件可用／ADVISORY 建议可用／NA 不适用",
+  准入评分 = "该类判据获准进入风险评分管道；未准入者至多进入画像，不得据以处置",
+  净赢玩家 = "内生标签：以自身盈亏为正与否所定之标签——与 ROI 类特征同源，用于自证倾向须声明",
+  打水 = "同「对押」之市井叫法：以自对冲套取退水；洗码照计而净盈亏近零。深入浅出：两边都押，输赢相抵，赚的是退水那一层。本报告用途：Sortino 近零波动指纹与 L-04 线索之所指",
+  荷官 = "dealer（eid）：主持牌局之发牌员；哨兵值 eid=-1 表未记录。深入浅出：赌桌上发牌的那个人。本报告用途：荷官—玩家串谋之实体轴；Z 检验粒度混淆之待修在案",
+  注单 = "bet：一笔下注记录（bet01 为单号），本档粒度之最小单位。深入浅出：一次下注就是一张单。本报告用途：一切门槛（n≥30／n≥100）皆以注单数计",
+  牌靴 = "同「靴」：装牌之牌盒。本报告用途：早段／晚段之坐标系",
+  彩池 = "jackpot：累积奖池派彩，独立于本金返还之外。深入浅出：中大奖那一笔额外的钱。本报告用途：结算完整性九项排查之一——abs(roi)>1 之候选成因",
+  冲正 = "reversal：错单撤销或反向记账。深入浅出：记错了再冲掉。本报告用途：结算完整性九项之一；先查账务再查玩家",
+  红利 = "bonus／营销红利：与洗码无关之促销赠额，与退水不同源。深入浅出：送的钱，不是返的钱。本报告用途：NGR 之扣项；禁与退水混同",
+  占成 = "share：代理线对某会员输赢之分成比例（agent_dtl.ag012 系荷官留成非平台留成，实证在案）。深入浅出：这个客人赢了亏了，代理分多少。本报告用途：奖惩侧推导之基础（引用级）",
+  代理线 = "agent line（bet18~bet22 五级）：会员之上级代理层级链。深入浅出：谁把这个客人带进来的，一层层往上。本报告用途：测试线剔除之五路 LEFT JOIN 判据；归因之组织轴",
+  限红 = "table limit：单注上下限。深入浅出：一把最多能押多少。本报告用途：行业反制手段之一；本档既证尾段无优势，故不建议因尾段收紧限红",
+  流水 = "turnover：投注总额之俗称（须标明系本金口径抑或洗码口径）。深入浅出：钱在桌上过了多少。本报告用途：口径必标——两口径不可互比",
+  VIP = "高价值会员分层：以价值轴（stake_all 分位）定序。深入浅出：贡献最大的那批客人。本报告用途：价值轴 × 风险轴处置矩阵之横轴；NGR 未落锁前禁定价",
+  AML = "反洗钱（Anti-Money Laundering）：识别资金异常流转之合规义务。深入浅出：防止赌场被拿来洗钱。本报告用途：合规类风险类目；本档不产出 AML 结论，仅标线索",
+  责任博彩 = "responsible gaming：对沉迷与失控之保护义务。深入浅出：客人输到不该再输时，平台有责任介入。本报告用途：深回撤一类之处置序——关怀先于风控",
+  阈值 = "threshold：判定之切点。深入浅出：过了这条线才算数。本报告用途：本档一切阈值皆待反解——禁写普适门槛，须由 Wilson 下界与最小洗码双锁并逐指标反解",
+  基线 = "baseline：比较之参照水平（随机基线、零假设基线、regime 条件基线）。深入浅出：不做任何事时本该是多少。本报告用途：AUC 之 0.5、安慰剂之经验零假设、P12a 之动态监控带",
+  分位 = "quantile／percentile：排序后某比例位置之值（P90＝第 90 百分位）。深入浅出：一百个人排队，第九十个人的值。本报告用途：价值轴分层、CVaR 尾部、分布实测之 P90／P99",
+  方差 = "variance：离散程度之平方度量（其平方根为标准差）。深入浅出：忽上忽下的程度。本报告用途：小分母 ROI 方差极大——收缩榜与最小暴露门槛之由来",
+  秩 = "rank：排序后之名次；非参数方法之基石。深入浅出：不看数值大小，只看排第几。本报告用途：AUC 秩法实现、Wilcoxon 符号秩、收缩榜排序",
+  MannWhitney = "Mann–Whitney U 检验：两独立样本之秩和检验，与 AUC 数学等价。深入浅出：把两群人混在一起排队，看谁普遍排前面。本报告用途：本档 AUC 之实现即其等价式",
+  二项检验 = "binom.test：以二项分布精确检验比例是否等于某值。深入浅出：抛硬币抛出这么多正面，正常吗。本报告用途：符号检验之实现（k 正／nz 非零，p=0.5）",
+  多重校正 = "multiple comparison correction（Bonferroni／BH FDR）：多次检验时抬高门槛以控假阳。深入浅出：抽奖抽一百次总会中一次，得把标准提高。本报告用途：门禁要求 p 一律多重校正后方可引用",
+  显著性水平 = "α：预先设定之犯第一类错误容忍度（本档 0.05）。深入浅出：愿意冒多大风险把噪声当真。本报告用途：单点声明；大样本下单用易被琐碎效应触发，故行动扳机须四项共破",
+  功效 = "power（1−β）：真有差异时能检出之概率。深入浅出：真有问题时，你的检验看不看得见。本报告用途：n_min 设计推导之输入；固定 N 门槛系工程护栏非功效推导",
+  样本量 = "N：参与检验之独立单位数。深入浅出：证据基础有多厚。本报告用途：门禁第四项；本档配对单位＝uid 会员级，非注单级",
+  n_min = "设计推导之最小样本量 ＝ f(MCID, 方差, 显著性水平, 功效)。深入浅出：要证明这么小的差异，至少得看多少人。本报告用途：与固定门槛取其严——固定数不能替代设计推导",
+  过拟合 = "overfitting：模型记住样本噪声而非规律，样本内高分样本外崩。深入浅出：背答案不等于会做题。本报告用途：真样本外（跨窗 w2）之所以为 P0 必要条件",
+  假阳性 = "false positive：把正常判成异常。深入浅出：冤枉好人。本报告用途：合取多证据压假阳之数学理由；误判率之主要成分",
+  召回率 = "recall／灵敏度：真异常中被抓到之比例。深入浅出：坏人里抓到几成。本报告用途：与精度权衡；价值轴前 10% 召回 75.6%（引用级）",
+  精度 = "precision：被判异常者中真为异常之比例。深入浅出：抓到的人里冤枉了几成。本报告用途：tail_share 之精度低于基准率——劣于随机之判据",
+  基准率 = "base rate：总体中阳性之自然比例。深入浅出：一百个人里本来就有几个是。本报告用途：任何筛选器之精度须与其比对；低于基准率即劣于随机",
+  提升度 = "lift：某组阳性率 ÷ 总体基准率。深入浅出：这一群里坏人浓度是平均的几倍。本报告用途：同桌聚集判据；价值轴前 0.1% 达 19.5×（引用级）",
+  Jaccard = "杰卡德相似度 ＝ 交集 ÷ 并集。深入浅出：两个人的活动圈重叠多少。本报告用途：同桌共现之判据维度之一",
+  混杂 = "confounding：第三因素同时影响处理与结果，致相关非因果。深入浅出：看似是它干的，其实另有其人。本报告用途：台桌／荷官／时段／靴长皆未控——本档只可言相关不可言因果",
+  随机对照 = "RCT：随机分配处理与对照以识别因果。深入浅出：抽签决定谁被处置，才知道处置有没有用。本报告用途：一切「能提升 X%」之宣称须待 Shadow／Pilot 与 RCT 方可确认",
+  DID = "双重差分：以处理组与对照组之前后差之差估计效应。深入浅出：两群人各自前后变了多少，再相减。本报告用途：处置账因果之设计（右截断于解封日）",
+  生存分析 = "survival analysis：以「事件何时发生」为对象之方法，可处理尚未发生者。深入浅出：不问会不会，问多久。本报告用途：P12b 标记时点与流失之估计",
+  删失 = "censoring（右删失）：观察结束时事件尚未发生，只知「至少活到此刻」。深入浅出：还没走的人不能算成已走。本报告用途：窗口截断误判为流失之防线；生存分析之必备旗标",
+  HMM = "隐马尔可夫模型：以不可观测之状态序列解释可观测序列。深入浅出：看得见天气，看不见季节，但季节在背后换。本报告用途：Regime 动态基线之候选方法",
+  Regime = "状态／体制：系统所处之阶段性状态（如高量能期与低量能期）。深入浅出：市场今天是哪一档脾气。本报告用途：P12a 两态高斯混合所判；监控带升级为「破本态之带方触发」",
+  高斯混合 = "GMM：以若干正态分布之加权和拟合数据，EM 算法求解。深入浅出：一堆数据其实是几群人混在一起。本报告用途：P12a 两态分解之实现",
+  EM算法 = "期望最大化：隐变量模型之迭代求解法（E 步补隐、M 步优化）。深入浅出：先猜谁属于哪群，再据此更新，反复至稳。本报告用途：高斯混合之解法",
+  逻辑回归 = "logistic regression：以对数几率线性建模二分类概率。深入浅出：把各种特征折算成「是坏人的可能性」。本报告用途：诚实模型与泄漏对照之双模",
+  聚类 = "clustering：无监督分群。深入浅出：不告诉答案，让数据自己分堆。本报告用途：K-means 四簇 × 重构误差交叉，产出画像不产出处置",
+  标准化 = "standardization（z-score）：减均值除标准差以统一量纲。深入浅出：把不同单位的指标换算成同一把尺。本报告用途：行为四维标准化后方可入 PCA 与聚类",
+  离群 = "outlier：显著偏离主体分布之观测。深入浅出：明显不合群的那几个。本报告用途：重构误差 P99.9 之所指；离群不等于违规，只作线索",
+  先验 = "prior：见数据之前对参数之信念。深入浅出：还没看这个人打多少把，先按大家的平均看待。本报告用途：收缩榜之先验强度＝订单数中位",
+  Hanley = "Hanley–McNeil：AUC 标准误之解析式，据以出 95% CI。深入浅出：算出这个 AUC 有多不稳。本报告用途：五项并报之 AUC 区间与「是否跨 0.5」判定",
+  中位差 = "配对差值之中位数（本档效应量）：晚段减早段之逐员差取中位。深入浅出：一人一个差值，取中间那个。本报告用途：门禁第一项之实测量；须与 MCID 比对方有意义",
+  符号秩 = "signed rank：差值绝对值之秩再附以原符号。深入浅出：既看谁大谁小，也看是赚是亏。本报告用途：Wilcoxon 之统计量构造",
+  MAD = "中位绝对离差：与中位之距离取中位，抗离群之离散度量。深入浅出：不被极端值带偏的波动。本报告用途：P12a 稳健带之半宽（中位 ± 3·MAD）",
+  ROC = "受试者工作特征曲线：以各阈值下真阳率对假阳率作图，其下面积即 AUC。深入浅出：把所有可能的切线都试一遍，画成一条曲线。本报告用途：AUC 之来源；本档只报面积不定切点",
+  L1a标签 = "外部风险标签之一档：来自平台风控处置记录，非本档现算——用于交叉验证行为维度之外部效度")
+## 别名表：同义异写共用单一真相源（定义不另写一份，只作指向）
+.GL[c("hold", "ROC曲线", "样本外AUC")] <- .GL[c("hold率", "ROC", "OOS")]
+## ── v1.2.52 增补 · 代号族（R／E／L／P）与靴长桌族术语 ─────────────────────
+## 纪律：此处只落**静态语义**，阈值一律不写死。各代号之实测阈值由「悬停阈值增补」
+## chunk 于渲染时以 Object.assign 覆写同名键注入（铁律第九条）。故此处以
+## 「阈值：见增补层现算」收尾，绝不在字典里硬写数字。
+.GL <- c(.GL, c(
+  风险等级 = "R 族代号（R0–R4）：以评分刻度 SCORE 之 ROI>0 子集分位定档之风险分级。深入浅出：把赢钱的人按赢的程度排队再切段。本报告用途：复核队列之排程依据；**非处罚等级**。阈值：见增补层现算",
+  R0 = "R0 无命中：评分刻度 ≤ 0 者，即本口径下未命中之会员（GGR 主体在此层）。深入浅出：没赢钱的人。本报告用途：限额撒向此层即自削流水；对应限额等级 L0。阈值：见增补层现算",
+  R1 = "R1 低：ROI>0 子集之 P0–P50 段。深入浅出：赢了，但赢得最不起眼的那一半。本报告用途：命中主体系方差，**禁降限额**；对应 L1。阈值：见增补层现算",
+  R2 = "R2 中：ROI>0 子集之 P50–P90 段。深入浅出：赢得比一半人多，但还没到尖端。本报告用途：加密复核而不动限额；对应 L1。阈值：见增补层现算",
+  R3 = "R3 高：ROI>0 子集之 P90–P99 段。深入浅出：前一成。本报告用途：**须跨窗持续性＋MCID 经济核算方可议 L2**，本档 BLOCKED。阈值：见增补层现算",
+  R4 = "R4 极高：ROI>0 子集之 ≥P99 段。深入浅出：前百分之一。本报告用途：同 R3，仍 BLOCKED；高等级而低暴露者是手气不是优势。阈值：见增补层现算",
+  暴露层 = "E 族代号（E1–E5）：以局数 n_all 之秩五分位切成之等量五层，度量「打了多少把」。深入浅出：牌桌上待得久不久。本报告用途：与风险等级双锁交叉——只有高等级∧高暴露方值得占用复核产能。阈值：见增补层现算",
+  E1 = "E1 局数最少：局数秩五分位之第一层（最低 20%）。深入浅出：只打了几把的人。本报告用途：此层之高 ROI 几为纯方差，禁单独据以升级。阈值：见增补层现算",
+  E2 = "E2：局数秩五分位之第二层（20%–40%）。本报告用途：暴露轴之低段，与风险等级交叉读。阈值：见增补层现算",
+  E3 = "E3：局数秩五分位之第三层（40%–60%）。本报告用途：暴露轴之中段。阈值：见增补层现算",
+  E4 = "E4：局数秩五分位之第四层（60%–80%）。本报告用途：暴露轴之高段。阈值：见增补层现算",
+  E5 = "E5 局数最多：局数秩五分位之第五层（最高 20%）。深入浅出：打得最多的那一成半。本报告用途：**唯有此层之高等级方具统计分量**，收缩 ROI 在此层最难被压回。阈值：见增补层现算",
+  限额等级 = "L 族代号（L0–L4）：限额幅度之处置等级，由「不动」至「护栏下限」。深入浅出：要不要压他的上限，压到哪。本报告用途：限额是成本不是工具，任何降档须先过经济核算。阈值：见增补层现算",
+  L0 = "L0 现状带（不动）：上限落点＝均注 P99，系统自动，无经济前置。深入浅出：维持原样。本报告用途：R0 层之默认归属。阈值：见增补层现算",
+  L1 = "L1 观察带：上限落点仍为均注 P99，**只加复核频次不降限额**。深入浅出：多看两眼，不动他的钱。本报告用途：R1／R2 之归属；本档可授权。阈值：见增补层现算",
+  L2 = "L2 收紧带：上限落点＝均注 P90，须风控主管＋运营会签，且期望净影响 > 0 并 ≥ MCID。深入浅出：真要压上限了。本报告用途：R3／R4 且跨窗持续者方议；本档 ⛔ BLOCKED（跨窗与 MCID 皆缺位）。阈值：见增补层现算",
+  L3 = "L3 常态带：上限落点＝均注 P50，须风控经理授权，并报避损与 GGR 损失两侧。深入浅出：压到中位数。本报告用途：L2 已施而复发或串谋对押实证者；本档 ⛔ BLOCKED。阈值：见增补层现算",
+  L4 = "L4 护栏下限（禁越）：上限落点＝均注 P0，即该层观测最低注额为硬底，须合规＋法务。深入浅出：再压就等于变相清退，改走停开授权。本报告用途：**禁越**；本档 ⛔ BLOCKED。阈值：见增补层现算",
+  分位记号 = "P 族代号（P0／P25／P50／P75／P90／P99／P100）：分布之百分位记号，Pq 谓有 q% 之观测不高于此值。深入浅出：排队站好，第几名的那个数。本报告用途：本档一切档位皆由分位反解，**不设普适常数门槛**；同一记号绑不同变量即不同值，读时须先看绑的是谁。阈值：见增补层现算",
+  P0 = "P0：最小值（0 百分位）。本报告用途：R1 档下界之绑定点；L4 护栏下限之落点。阈值：见增补层现算",
+  P25 = "P25：下四分位。本报告用途：三支 ROI 聚合分布之离散读数，不作档位。",
+  P50 = "P50：中位数。本报告用途：R1／R2 分界；L3 常态带上限落点；收缩先验强度亦取局数中位。阈值：见增补层现算",
+  P75 = "P75：上四分位。本报告用途：分布形状读数，不作档位。",
+  P90 = "P90：第 90 百分位。本报告用途：R2／R3 分界；L2 收紧带上限落点。最小样本量 n_min ＝ ⌈1/(1−0.90)⌉，由分位自身反解。阈值：见增补层现算",
+  P99 = "P99：第 99 百分位。本报告用途：R3／R4 分界；L0／L1 现状带上限落点。n_min ＝ ⌈1/(1−0.99)⌉。阈值：见增补层现算",
+  P100 = "P100：最大值。本报告用途：尾部极端读数；`|ROI| > 1` 之查账线索多出于此。",
+  桌族 = "table family：以靴长中位（p50_max_round）聚类之桌群，一族对应一套切牌规程。深入浅出：哪几张桌是同一套发牌规矩。本报告用途：跨桌可比性之前提——族不同则牌深口径不同，判级由「下偏代理」改「跨桌规程异质」",
+  切牌规程 = "cutting card procedure：一靴发至何处即停之约定（切牌位／渗透率）。深入浅出：一副牌打到哪儿就换。本报告用途：决定观测靴长之物理上限；四族并存即四套规程并存",
+  牌深 = "shoe depth：以张数计之靴内进度（≈ 局数 × 每局耗牌）。深入浅出：这靴牌已经用掉多少张。本报告用途：相对靴位跨桌可比，牌深跨桌**不可比**——同一相对位在长靴上多切若干张",
+  自归一化 = "self-normalisation：逐靴以自身观测靴长作分母，令位置量纲化为 0–1。深入浅出：不管这靴多长，一律换算成百分比。本报告用途：shoe_pos 之构造；故 late_share 在局数占比上跨桌可比",
+  观测上限 = "ceiling_observed ＝ 该桌所见之最大靴长（MAX(max_round)）。深入浅出：这张桌历史上最长的一靴。本报告用途：与 p99 之比若显著逾一，即靴号碰撞或跨日合并之强嫌疑",
+  单局靴 = "min_max_round 极小之靴（最大局号仅个位数）。深入浅出：一靴只打了几把就没了。本报告用途：几必为跨日边界、换荷官或开收台之截断，非真靴——须挂号后剔除或另计",
+  靴号碰撞 = "shoe_id collision：不同物理靴共用同一靴号，或跨日合并致一靴被拼长。深入浅出：两靴被当成一靴。本报告用途：观测靴长失真之主因；粒度验证之首要标的",
+  跨日边界 = "cross-day boundary：营业日切换处之靴被 dt 切断。深入浅出：过了零点，一靴被切成两半。本报告用途：单局靴与超长靴之共同来源",
+  显示上限截断 = "front-end row cap：查询无 LIMIT 而前端只呈前 N 行，致「行数」被误当成「总数」。深入浅出：屏幕只显示前几行，你以为就这么多。本报告用途：本档以每行携总数（CROSS JOIN 标量）当场对账，行数不符即显式失败",
+  相关系数 = "Pearson r：线性相关强度，取值 −1 至 +1。深入浅出：两件事是不是一起变大变小。本报告用途：靴长与投注密度之方向判读；**只判方向不判因果**，区间由自助法出",
+  加权均值 = "weighted mean：以权重（本档取靴数）加权之平均。深入浅出：靴多的桌说话声音大。本报告用途：跨桌均靴长与跨桌相关之权重口径；等权与加权可差甚远，须标明用哪种",
+  组间方差占比 = "η²（eta squared）＝ 组间平方和 ÷ 总平方和。深入浅出：差异有几成是「族与族之间」造成的。本报告用途：桌族异质之无阈值判据——以自助法区间是否越零定论，不设手写门槛",
+  corr_len_density = "桌内相关：该桌各靴之「靴长」与「靴内每局注数」之 Pearson r。深入浅出：这张桌上，牌局长的那些靴是不是人也多。本报告用途：分母低估假说之桌内检验",
+  bets_per_round = "每局注数 ＝ 该桌注单数 ÷ 该桌总局数。深入浅出：平均一局有多少人下注。本报告用途：投注密度之代理；跨桌与靴长之相关系分母低估假说之跨桌检验",
+  Tukey栅 = "Tukey fence：Q3 ＋ 1.5×IQR 为上栅、Q1 − 1.5×IQR 为下栅，箱线图之离群界。深入浅出：比大多数人高出一大截的那条线。本报告用途：异常挂号之判据来源——1.5 系统计学通行约定，非本档手写普适门槛，故不违「阈值须由数据反解」之律",
+  avg_gap = "均缺口 ＝ 逐靴（最大局号 − 实见局号种数）之均值。深入浅出：局号中间断了几格。本报告用途：观测稀疏度之度量；缺口大者其 MAX(round_no) 更可能低估真靴长"))
+## ── v1.2.55 增补 · 结构真相层与观测质量层术语 ─────────────────────────────
+## 纪律同前：只落静态语义，阈值不写死。
+.GL <- c(.GL, c(
+  结构真相层 = "structural truth layer：以（桌号, 靴号）双键为权威靴键之事实层，只出结构事实不出业务结论。深入浅出：先把「这把靴到底是哪一把、有多长、看全了没有」定死，再谈别的。本报告用途：会员行为层与经济层之共同上游；一件一职，禁跨件挪用",
+  防扇出 = "anti-fan-out：反连接名单先去重，免一行被联结成多行。深入浅出：名单里有重复，一张单就会被算成好几张。本报告用途：test_agents 之 DISTINCT——age001 若重复，五路左连接会令注单数虚增而无任何报错",
+  去重完整率 = "dedup_integrity_ratio ＝ 行数 ÷ 去重注单数。深入浅出：一张单是不是真的只算了一次。本报告用途：验收硬闸，恒为 1.000000；>1 即联结扇出或「注单号唯一标识版本链」之假设不成立。此假设不凭字段名断言，须当批实测",
+  观测覆盖率 = "round_coverage ＝ 观测局数 ÷ 观测靴长。深入浅出：这把靴该有的局，我们看见了几成。本报告用途：与靴长分离方能判数据质量——同为靴长 50，看见 50 局与看见 35 局是两种东西。含起始偏移，故须与内段覆盖率并读",
+  内段覆盖率 = "interior_coverage ＝ 观测局数 ÷ 实见局号跨距。深入浅出：从第一次看见到最后一次看见之间，有没有漏掉的局。本报告用途：剔除起始偏移后之纯中段完整度；局号自 5 起而中段无缺口者，观测覆盖率只 0.92 而内段覆盖率为 1.00——那是偏移不是缺口",
+  起始偏移 = "start_offset ＝ 实见首局号 − 1。深入浅出：这把靴从第几局起才有人下注。本报告用途：由覆盖率中拆出独立成列，免其与中段缺口混于一处",
+  边界靴 = "edge shoe：触及窗口首日或末日之靴。深入浅出：跨在时间窗边上的那把靴，尾巴被切掉了。本报告用途：dt 半开区间会切其尾段，故其观测靴长下偏、相对靴位上偏；窗界由数据现取而非写死日期",
+  靴键等价 = "shoe-key equivalence：单键（靴号）与双键（桌号, 靴号）是否同粒度。深入浅出：光看靴号够不够认出一把靴。本报告用途：以靴数差、跨桌率、每靴最大桌数三量在带自证；全部归零方可用单键。此系本窗口本口径之 OBSERVED 事实，换窗须重验，不外推为永久保证",
+  结构性相关 = "STRUCTURAL_CORRELATION：两变量因构造而耦合之相关（如以 X 为分母之 Y 对 X 求相关）。深入浅出：一个数除以另一个数，再拿去跟那个数比，本来就会像。本报告用途：比率型伪相关之标记（Pearson 1897）；标注一个坏估计量它仍是坏估计量，故须另出去耦式并两式并报",
+  去耦相关 = "de-coupled correlation：两变量皆取原始量、不共用分母之相关。深入浅出：两个数各算各的，再看它们像不像。本报告用途：靴长与注单数之相关取此式为主用；与结构性相关并报，令耦合分量之大小一望即知",
+  每靴注单数 = "bets_per_shoe ＝ 注单数 ÷ 靴数。深入浅出：平均一把靴有多少张单。本报告用途：去耦密度——分母不含靴长，故与靴长作相关时无比率伪相关之患",
+  观测局数 = "n_rounds_obs ＝ 实见局号种数。深入浅出：真正看见过的局有几局。本报告用途：一切**计数类**分母之正解；最大局号只配作位置归一化之分母，二者混用即总包 shoe_len 注释所警示之误用",
+  反截断标量 = "anti-truncation scalar：以叉乘令全域总量随每行到达之装置。深入浅出：每一行都带着「一共有多少」，屏幕只显示前几行也不怕。本报告用途：由一量（桌数）增为三量（桌／靴／注），只带行数只能对账行，带量方能对账量",
+  规章表 = "governance table：治理规则之登记表，其内容系契约而非数据派生。深入浅出：这是规矩，不是算出来的数。本报告用途：铁律第九条禁的是以静态文字冒充**数据结果**；规章自为真相源，故以静态表登记，且全行零省略——契约表截行即等于隐藏契约",
+  验收判据 = "acceptance gate：机检可判之放行条件，附失败处置等级。深入浅出：过不了这几条就整批退回，不许挑几行放行。本报告用途：凡须人眼判断者不入判据表——判据以可机检为准",
+  回灌 = "back-port：报告侧之强化草案回写入 SQL 总包并申报新 Release／Contract。深入浅出：报告里改好的 SQL 得写回总包，不然两边就不一样了。本报告用途：草案新增输出列即 schema_diff ≠ ∅，回灌须递增 Contract ID 并重算纯代码 MD5 与六元组；回灌前总包为唯一权威",
+  双录核对 = "double-entry check：同一口径以字面与数值二式并出，互为对证。深入浅出：一处写字、一处写数，两边对得上才算没写错。本报告用途：late_def 字面与 late_q 数值并出，字面护血统而数值供机检",
+  参数化口径锁 = "parameterised caliber lock：阈值只于参数层声明一次，其余各处一律引用。深入浅出：数字只写一遍，别处都去引它。本报告用途：0.80 原在判据式与口径锁字面两处各写一次，属二真相源，改其一而漏其二即静默漂移"))
+tip <- function(x) {
+  ## v1.2.41 字典化：span 只携术语键（data-k），释义不再逐处内嵌——释义单一真相源
+  ## 由 .GL 落到成品层之单份 JS 字典（本 chunk 末注入），悬停时现取；样式移交 CSS 类。
+  ## 每接钩点由约 130–250 字节缩至约 25 字节，处处接钩语义零退化。
+  k <- gsub("%", "率", gsub("[-–~ ]", "", x))
+  hit <- k %chin% names(.GL)
+  fifelse(hit, sprintf('<span data-k="%s">%s</span>', gsub('"', "&quot;", k), x), x)
+}
+tipv <- function(v) vapply(v, tip, "", USE.NAMES = FALSE)
+## v1.2.52 斧正（接钩静默落空）：.tipify 原以 tip(d) 接钩，而 tip() 会把**显示形**
+##   归一化回键（去连字符与空格、% → 率）。凡「显示形归一化后 ≠ 键」者，接钩当场落空：
+##   实测 .tp_disp 八条中六条落空（EM／α／binom.test／Hanley–McNeil／E0–E6／lift）——
+##   术语在册而正文无悬停。根因：键→显示形之映射是单向的，不可由显示形反推。
+##   斧正：接钩改为**直接以键成 span**，不再走 tip() 之反推。tip() 本身保留，
+##   正文 `r tip("词")` 之用法与语义一律不变。
+.tip_kd <- function(k, d)
+  sprintf('<span data-k="%s">%s</span>', gsub('"', "&quot;", k), d)
+## .tipify：对任意字串内所有在册术语自动接悬停（长词优先防子串截断；已含 <span
+## 者跳过防重复包裹；每串每词至多一次防满屏下划线）。桌表内外一体覆盖之引擎。
+.tp_keys <- names(.GL)[order(-nchar(names(.GL)))]
+.tp_disp <- c(hold率 = "hold%", MannWhitney = "Mann–Whitney", EM算法 = "EM",
+              显著性水平 = "α", 二项检验 = "binom.test",
+              Hanley = "Hanley–McNeil", E0至E6 = "E0–E6", 提升度 = "lift")
+## ══ 悬停接钩引擎（v1.2.33 通用化）══════════════════════════════════════
+## 三层护栏，缺一即成裸码（三者皆系渲染成品实测所得之教训）：
+##  ① 保护：既有 HTML 跨度、pandoc 括号跨度、行内代码、行内数学，一律先抽出寄存
+##     （占位 \002i\002），接钩毕原样归位——此前于反引号内接钩致 <code> 转义外泄。
+##  ② 占位：逐词先代占位 \001i\001（不含术语字面），全部匹配毕再一次性回填真标记，
+##     回填后不再扫描——此前直接写入 <span> 致 title 内之释义再被匹配，span 套 span。
+##  ③ 处处：同一词于一串出现数次者处处接钩（v1.2.36 由「至多一次」改；
+##     旧法致长段现算散文之第二次以后漏钩）；长词优先仍在，防子串截断。
+.tipify <- function(x) {
+  vapply(as.character(x), function(s) {
+    if (is.na(s) || !nzchar(s)) return(s)
+    store <- character(0L)
+    .prot <- function(s, rx) {
+      hits <- regmatches(s, gregexpr(rx, s, perl = TRUE))[[1L]]
+      for (h in hits) {
+        store[[length(store) + 1L]] <<- h
+        s <- sub(h, sprintf("\002%d\002", length(store)), s, fixed = TRUE)
+      }
+      s
+    }
+    s <- .prot(s, "<span[^>]*>.*?</span>")     # 既有悬停跨度（整块）
+    s <- .prot(s, "<[^>]*>")                   # 其余 HTML 标签
+    s <- .prot(s, "\\[[^]]*\\]\\{[^}]*\\}")  # pandoc 括号跨度 [词]{title=...}
+    s <- .prot(s, "`[^`]*`")                   # 行内代码
+    s <- .prot(s, "\\$[^$]*\\$")               # 行内数学
+    s <- .prot(s, "R[0-9]{2,}")                # §R01／R01_late_shoe：防 R0 键截断
+    s <- .prot(s, "L1a")                       # L1a 标签：防 L1 键截断
+    hold <- character(0L)
+    for (k in .tp_keys) {
+      d <- if (k %chin% names(.tp_disp)) .tp_disp[[k]] else k
+      if (grepl(d, s, fixed = TRUE)) {
+        hold <- c(hold, .tip_kd(k, d))
+        ## gsub 非 sub：同一词于一串中出现数次者**处处接钩**（v1.2.36）
+        s <- gsub(d, sprintf("\001%d\001", length(hold)), s, fixed = TRUE)
+      }
+    }
+    for (i in seq_along(hold))
+      s <- gsub(sprintf("\001%d\001", i), hold[i], s, fixed = TRUE)
+    for (i in seq_along(store))
+      s <- sub(sprintf("\002%d\002", i), store[i], s, fixed = TRUE)
+    s
+  }, "", USE.NAMES = FALSE)
+}
+tipall <- .tipify                                  # 别名：表格单元批量施用
+## .kb：长表滚动容器（SUPERSEDED · v1.2.44）——raw-HTML div 路径在 Quarto cell 输出
+## 管线内解析脆弱（arsenal 长表乱码实证），已由源码层原生 fenced div（.tbl-scroll 类）
+## 取代；定义留册作血统，禁新增调用。原注：呈表纪律 scroll-x/y 禁截列截行之落地件。
+## v1.2.40 重建在案：原定义随净化被删而调用仍在（arsenal_逐模审计，h = "520px"）。
+## h 给定即立纵向滚动视口——表体全行在册、只限视口高度，禁截行由此落实；横向滚动恒备。
+## 前后空行令 pandoc 于 div 内照常解析表格；单元接钩已由 kable 包装层施毕，此处不重复。
+.kb <- function(k, h = NULL) {
+  s  <- paste(as.character(k), collapse = "\n")
+  st <- if (is.null(h)) "overflow-x:auto"
+        else sprintf("max-height:%s;overflow-y:auto;overflow-x:auto", h)
+  knitr::asis_output(sprintf('<div style="%s">\n\n%s\n\n</div>', st, s))
+}
+## cat 覆写：本档正文多由 cat(sprintf(...)) 现算输出，前此未接钩（GGR、hold 等
+## 遗漏即出于此）。覆写后凡经 cat 之字符一律过 .tipify——保护层令既有标记、
+## 行内代码、数学、括号跨度原样通过，故对 .kb() 之表格串与 <style> 串皆安全。
+cat <- function(..., sep = " ", file = "", append = FALSE, fill = FALSE,
+                labels = NULL) {
+  a <- lapply(list(...), function(z) if (is.character(z)) .tipify(z) else z)
+  do.call(base::cat, c(a, list(sep = sep, file = file, append = append,
+                               fill = fill, labels = labels)))
+}
+## kable 包装：一切表格之字符单元与表题自动过 .tipify——桌表内之术语无须逐处手工接钩。
+## 数值列不动；已接钩者（含 <span）跳过；escape 默认 FALSE 以令悬停 HTML 生效。
+kable <- function(x, ..., escape = FALSE) {
+  if (is.data.frame(x)) {
+    x <- as.data.frame(x)
+    for (j in names(x)) if (is.character(x[[j]])) x[[j]] <- .tipify(x[[j]])
+    names(x) <- .tipify(names(x))
+  }
+  a <- list(...)
+  if (!is.null(a$caption)) a$caption <- .tipify(a$caption)
+  do.call(knitr::kable, c(list(x, escape = escape), a))
+}
+## 字典与脚本一律经 base::cat 直出——本档 cat 已被接钩覆写，若经覆写层，字典体内之
+## 术语键与释义将被 .tipify 反向接钩（span 注入 JS 字面量），JS 即毁。自噬防线，禁改。
+.js_esc <- function(x) {
+  x <- gsub("\\\\", "\\\\\\\\", x); x <- gsub('"', '\\\\"', x)
+  x <- gsub("\n", "\\\\n", x);  x <- gsub("\r", "", x)
+  gsub("</", "<\\\\/", x)
+}
+## v1.2.51 迁出：原此行尚挟 .cell-output-display{overflow-x:auto} 与
+## .tbl-scroll{max-height:520px;overflow:auto} 两条呈表规则——二者互相嵌套即
+## 「横条须滑到底方现」之病根。呈表规则整体迁往「呈表纪律」chunk（单一真相源），
+## 本行只留悬停跨度之样式，各司其职。
+base::cat('<style>span[data-k],span[title]{border-bottom:1px dotted #888;cursor:help}</style>\n')
+base::cat(sprintf('<script>window.GL={%s};document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("span[data-k]").forEach(function(e){var d=window.GL[e.getAttribute("data-k")];if(d){e.title=d;}});});</script>\n',
+  paste(sprintf('"%s":"%s"', .js_esc(names(.GL)), .js_esc(unname(unlist(.GL)))), collapse = ",")))
+base::cat(sprintf("<!-- 悬停术语库：%d 条在册（v1.2.41 字典化单点注入） -->\n", length(.GL)))
+.GL_N <- length(.GL)   # 条数供正文现算引用，禁写死
+```
+
+```{r}
+#| label: 呈表纪律
+#| echo: true
+#| results: asis
+## ════════════════════════════════════════════════════════════════════════
+## 全档呈表纪律：单点注入，三条契约，凡桌表一律受其管辖。
+##   C1 列名冻结：thead th 置 position:sticky; top:0。表在 .tbl-scroll 内者粘于容器
+##      顶缘，未加容器者粘于视口顶缘——故「每张桌表」皆冻结，无须逐处补围栏。
+##   C2 横条前置：每个横向可滚动容器之前插一条同步镜像横条 —— 页面刚载入、未作
+##      任何滑动时即可见，不必滑到底层才发现有横条。
+##   C3 常驻滚动条：overflow-x 取 scroll（非 auto），并覆写 macOS／iOS 叠加式滚动条
+##      之静止隐藏；同时解开嵌套滚动上下文（见下「病根」）。
+##
+## 病根（v1.2.51 根因斧正，非局部打补丁）：
+##   旧样式令 .tbl-scroll{max-height:520px;overflow:auto} 与
+##   .cell-output-display{overflow-x:auto} **同时成立且互相嵌套**。外层限高 520px，
+##   内层不限高 —— 横向滚动条归内层所有，绘于内层内容盒之底缘，即 520px 视口之下方，
+##   故须先把外层纵向滑到底才够得着。此即「滑到底层才看到 scroll-x」之机理。
+##   斧正：外层独占两轴，内层于外层之内一律 overflow:visible，嵌套滚动上下文消失。
+##
+## 纪律：本 chunk 一律走 base::cat 直出 —— 本档 cat 已被悬停引擎覆写，若经覆写层，
+##   CSS／JS 字面量将被 .tipify 反向接钩（span 注入），样式与脚本即毁。禁改。
+## ════════════════════════════════════════════════════════════════════════
+base::cat('<style>
+.tbl-scroll{max-height:520px;overflow-x:scroll;overflow-y:auto;scrollbar-gutter:stable;-webkit-overflow-scrolling:touch;border:1px solid #cbd5e1;border-radius:0 0 6px 6px}
+.tbl-scroll .cell-output-display{overflow:visible !important;max-height:none !important}
+.tbl-scroll .cell{overflow:visible !important}
+.cell-output-display{overflow-x:auto}
+.rq-xbar{overflow-x:scroll;overflow-y:hidden;height:16px;margin:0;border:1px solid #cbd5e1;border-bottom:0;border-radius:6px 6px 0 0;background:#f8fafc}
+.rq-xbar>div{height:1px}
+.tbl-scroll::-webkit-scrollbar,.cell-output-display::-webkit-scrollbar,.rq-xbar::-webkit-scrollbar{-webkit-appearance:none;height:12px;width:12px}
+.tbl-scroll::-webkit-scrollbar-track,.cell-output-display::-webkit-scrollbar-track,.rq-xbar::-webkit-scrollbar-track{background:#eef2f7;border-radius:6px}
+.tbl-scroll::-webkit-scrollbar-thumb,.cell-output-display::-webkit-scrollbar-thumb,.rq-xbar::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:6px;border:2px solid #eef2f7}
+.tbl-scroll::-webkit-scrollbar-thumb:hover,.cell-output-display::-webkit-scrollbar-thumb:hover,.rq-xbar::-webkit-scrollbar-thumb:hover{background:#64748b}
+.tbl-scroll,.cell-output-display,.rq-xbar{scrollbar-width:thin;scrollbar-color:#94a3b8 #eef2f7}
+.cell-output-display table,.tbl-scroll table{border-collapse:separate;border-spacing:0}
+.cell-output-display table thead th,.tbl-scroll table thead th{position:sticky;top:0;z-index:5;background:#f1f5f9;color:#0f172a;border-bottom:0 !important;box-shadow:inset 0 -2px 0 #94a3b8}
+.cell-output-display table caption,.tbl-scroll table caption{caption-side:top;text-align:left;font-size:.86rem;line-height:1.5;color:#334155;padding:.25rem 0 .45rem}
+tbody tr.rq-sep td{background:#e2e8f0 !important;color:#475569 !important;font-weight:700;text-align:center !important;letter-spacing:.18em}
+</style>
+')
+base::cat('<script>
+(function(){
+  function attach(el){
+    var cs = window.getComputedStyle(el).overflowX;
+    if (cs !== "auto" && cs !== "scroll") return;
+    var prev = el.previousElementSibling;
+    if (prev && prev.classList && prev.classList.contains("rq-xbar")) return;
+    if (!el.parentNode) return;
+    var bar = document.createElement("div");
+    bar.className = "rq-xbar";
+    var pad = document.createElement("div");
+    bar.appendChild(pad);
+    el.parentNode.insertBefore(bar, el);
+    function resize(){
+      var w = el.scrollWidth;
+      pad.style.width = w + "px";
+      bar.style.display = (w > el.clientWidth + 1) ? "block" : "none";
+    }
+    var lock = false;
+    bar.addEventListener("scroll", function(){ if(lock) return; lock=true; el.scrollLeft=bar.scrollLeft; lock=false; });
+    el.addEventListener("scroll", function(){ if(lock) return; lock=true; bar.scrollLeft=el.scrollLeft; lock=false; });
+    resize();
+    if (window.ResizeObserver){ var ro = new ResizeObserver(resize); ro.observe(el); }
+    window.addEventListener("resize", resize);
+    setTimeout(resize, 300); setTimeout(resize, 1500);
+  }
+  function mark(){
+    document.querySelectorAll("tbody tr").forEach(function(tr){
+      var c = tr.querySelector("td");
+      if (c && c.textContent.trim() === "---") tr.classList.add("rq-sep");
+    });
+  }
+  function init(){
+    mark();
+    document.querySelectorAll(".tbl-scroll, .cell-output-display").forEach(attach);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+})();
+</script>
+')
+base::cat("<!-- 呈表纪律 v1.2.51：C1 列名冻结｜C2 表首横条前置｜C3 滚动条常驻＋解嵌套 -->\n")
+```
+
+# 第一部分：十五类风险会员判据与裁决 {#sec-typology}
+
+::: {.callout-important}
+## 本章定位：本档只是十五类风险会员之一。
+:::
+
+```{r}
+#| label: registry-load
+#| echo: true
+source("函数/registry_loader.R")
+REG <- registry_load()          # 默认路径由 REGISTRY_PATHS 定，见 registry_loader.R
+n_type    <- uniqueN(REG$dict[axis == "R", type_id])
+n_crit    <- nrow(REG$dict)
+n_admit   <- uniqueN(REG$dict[admit_to_scoring == TRUE & axis == "R", type_id])
+n_blocker <- length(REG$meta$blockers)
+reg_ver   <- REG$meta$registry$version
+```
+
+## 一、登记册身份核验
+
+::: {.tbl-scroll}
+```{r}
+#| label: registry-identity
+#| echo: true
+kable(
+  REG$identity, align = c("l","r","r","l","l","l"), escape = FALSE,
+  caption = sprintf("登记册六元组身份锚定（v%s；模式=%s；数据行数 = 按LF计总行数 − 表头/结构行）",
+                    reg_ver, REG$mode)
+)
+```
+:::
+
+## 二、十五类风险会员判据
+
+每类均标注**证据裁定**——这是本节最重要的部分。原「九类」与「另补六类」已于`r tip("登记册")`
+合并为统一体例：补录六类不再是附注，而是与前九类同格登记、同受
+`r tip("门闸")` 管辖的正式条目。
+
+::: {.tbl-scroll}
+```{r}
+#| label: registry-typology-table
+#| echo: true
+.gate_icon <- c(FATAL = "🔴 FATAL", BLOCK = "🟠 BLOCK",
+                CONDITIONAL = "🟡 CONDITIONAL", ADVISORY = "🟢 ADVISORY", `NA` = "⚪ NA")
+tp <- REG$dict[axis == "R", .(
+        判据维度组合 = paste(criterion_column, collapse = " ＋ "),
+        搭配表 = {s <- unique(supporting_deliverables)
+                  s <- unlist(strsplit(s, "；")); s <- s[nzchar(s)]
+                  if (length(s)) paste(sub("\\.csv$", "", s), collapse = "·") else "—"}),
+      by = .(序 = type_id, 风险类型 = name_zh, 类别 = category,
+             主表 = sub("\\.csv$", "", primary_deliverable),
+             证据 = evidence_tier, 门禁 = gate, 严重度 = severity,
+             准入评分 = fifelse(admit_to_scoring, "✅", "—"),
+             准入画像 = fifelse(admit_to_profile, "✅", "—"),
+             阻断 = fifelse(nzchar(blockers), blockers, "—"))]
+tp[, 门禁 := .gate_icon[门禁]]
+setcolorder(tp, c("序","风险类型","类别","主表","搭配表","判据维度组合",
+                  "证据","门禁","严重度","准入评分","准入画像","阻断"))
+setorder(tp, 序)
+kable(
+  tp, align = "l", escape = FALSE,
+  caption = sprintf("十五类风险会员判据登记（登记册 v%s：%d 类 × %d 条判据维度；准入评分 %d 类；未闭阻断项 %d 项）",
+                    reg_ver, n_type, n_crit, n_admit, n_blocker)
+)
+```
+:::
+
+## 模型
+
+### 雷欧（尾段投注模型）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- §R01 · R01_late_shoe.csv · 雷欧（尾段投注模型）· 强化草案 v11.0.5-draft
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- 【血统告示｜先读此条】
+--   本块系 SQL 总包 §R01 之**强化草案**，尚未回灌总包。总包权威版为
+--   v11.0.3 / REL-0005 / C1（纯代码 MD5 ce768c35b8d7aeb5ac28079166a8c422）。
+--   本草案新增输出列 ⇒ schema_diff ≠ ∅ ⇒ 回灌时 Contract ID 须递增（C1 → C2），
+--   并重算纯代码 MD5 与六元组。**回灌之前总包为唯一权威**，本块只作报告侧待批草案，
+--   禁据以覆盖总包，亦禁以本块之数字覆盖既有 CSV（旧 CSV 仍属 C1 血统）。
+--
+-- 【契约保全】原 15 列逐字不改名、不改义、不改序：
+--   uid, n_orders_all, n_orders_late, late_def, late_share, shoe_pos_p50,
+--   stake_late_avg, stake_early_avg, stake_ramp, roi_late, roi_early,
+--   stake_late, game_pnl_late, stake_all, game_pnl_all
+--   新增列一律后置（观测质量层 D ＋ 诊断标量），下游按列名读取，故不破既有消费。
+--
+-- 【判据锁】相对靴位 shoe_pos >= params.late_q。late_q 全 SQL 只此一处声明。
+--   late_def 字面保持 'shoe_pos>=0.80' 原样以护血统；另出 late_q 数值列供**双录核对**。
+--
+-- 【本次强化｜逐条标注来源】〔升〕= 升级.txt 建议；〔核〕= 本轮核实所得；〔升·修〕= 建议经修正后采纳
+--   ① 〔升§十六〕test_agents 加 DISTINCT。age001 若在代理主档重复，五路 LEFT JOIN 会把
+--      一条注单扇成多行，COUNT(*) 随之膨胀而 n_orders_all 虚增。DISTINCT 令反连接恒 ≤1 行匹配。
+--      ★ 此为真缺陷，原文确有暴露面，非防御性冗余。
+--   ② 〔核〕bet39／bet03 加 TRIM 与非空闸。本库字段皆 varchar(65533)，'112' 与 ' 112' 不 TRIM
+--      即裂成两桌／两靴，靴键静默分裂而无任何报错。
+--   ③ 〔升§九〕〔核〕shoe_truth 同出 MAX／MIN／COUNT(DISTINCT)／COUNT(*)，令「靴长」与
+--      「观测完整度」分离：观测覆盖率、内段覆盖率、起始偏移由此可算。
+--      〔核·修正建议〕升级.txt 之 coverage = n_rounds / max_round 把「起始偏移」与
+--      「中段缺口」混于一处；本块拆为二：round_coverage（含偏移）与 interior_coverage（纯中段）。
+--   ④ 〔核〕0.80 参数化。原文在 CASE 与 late_def 字面两处各写一次，属二真相源。
+--   ⑤ 〔核〕加边界靴旗标 is_edge。dt 半开区间会把窗口两端之靴切尾，其 MAX(round_no) 偏小。
+--      窗界由数据现取（win CTE 之 MIN/MAX dt），不写死日期字面。
+--   ⑥ 〔升§十七〕加去重完整率 COUNT(*) ÷ COUNT(DISTINCT bet_id)，理想恒为 1.000000。
+--   ⑦ 〔升§十八〕〔核〕反截断与诊断标量随行（CROSS JOIN 一行 diag）。
+--   ⑧ 〔核〕ORDER BY 末加 uid 作决胜键，令导出为**全序**（原二键可并列 ⇒ 分页序不定）。
+--   ⑨ 〔核〕块注释（斜杠星号型）全改行注释（双连字号型）。铁律：SQL 只用行注释——
+--      分号与斜杠若落在块注释内会被前端误判为语句终止符，G11 块注释拓扑闸正为此而建。
+--   ⑩ 〔核〕HAVING COUNT(*) >= 100 改为外层 WHERE m.n_orders_all >= p.min_orders，
+--      令门槛与 late_q 同受 params 单点管辖，不再散落字面。
+--
+-- 【未纳入｜候裁定，不擅自扩权】
+--   〔升§十一〕金额经济层：§R01 本已出 stake／game_pnl 两侧，无缺口；validbet／bet16／
+--     bet41 属 §P11 总帐之列，跨件挪用会破两件之分工，故不并入。
+--   〔升§十三〕first_bet_time／last_bet_time：须启用 bet08，而本档明载「未施 bet08」；
+--     启用即改闸，属口径变更，须先裁定。
+--   〔升§十二 A/B/C/E 层〕Entry／Exit／Persistence／Economic 四层属**会员入场行为件**
+--     （总包 §P13）之扩权，非 §R01 之职。本块只落 D 层（观测质量），因 D 层是
+--     其余各层可信度之前提，不落即无从判其余各层可不可信。
+--   〔升§十四／§十九〕§PI-03 loss→rebet、§TL-11 treatment、pre/post Δ：本净化档血统限
+--     雷欧／R01，且 Treatment Ledger 明载 BLOCKED，不得在此虚构接口。
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- ▸ 导出：需要 —— 存为「数据库/R01_late_shoe.csv」（§R01 靴末段下注）。
+
+WITH params AS (                                                                                -- 公共表表达式：参数单点声明层——本 SQL 一切阈值只此一处
+  SELECT 0.80 AS late_q,                                                                        -- 取值表达式：相对靴位判据阈值，产出「late_q」（口径锁之数值真身）
+         100  AS min_orders                                                                     -- 取值表达式：雷欧域活跃度门槛，产出「min_orders」
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+test_agents AS (                                                                                -- 公共表表达式：公司测试线代理名单（§R01）
+  SELECT DISTINCT age001 AS agent_id                                                            -- 取列：★DISTINCT 防扇出——age001 若重复，五路左连接会把一注扇成多行
+  FROM ods_mariadb_2b.ods_a168_agent                                                            -- 取数来源：取自代理主档（五级代理线归属来源）
+  WHERE age022 = '1'                                                                            -- 过滤条件：测试线旗标（铁律④b）
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+ranked AS (                                                                                     -- 公共表表达式：同注单号保留最新版本（需求 §3.2）
+  SELECT b.bet01, b.updatetime, b.sync_time, b.dt, b.bet02,                                     -- 取列：起始取列子句，涉 bet02（游戏类别）、dt（营业日）
+         b.bet03, b.bet04, b.bet05, b.bet11, b.bet13,                                           -- 续行：涉 bet03（靴号）、bet04（局号）、bet05（会员号）、bet11（汇率）、bet13（下注额）
+         b.bet14, b.bet18, b.bet19, b.bet20, b.bet21,                                           -- 续行：涉 bet14（派彩金额）、bet18~bet21（一至四级代理线）
+         b.bet22, b.bet38, b.bet39, b.category,                                                 -- 续行：涉 bet22（五级代理线）、bet38（测试标识）、bet39（桌号）
+         ROW_NUMBER() OVER (                                                                    -- 行号窗口表达式：以行号窗口去重，免出重复行
+           PARTITION BY b.bet01                                                                 -- 窗口分区：按注单号分组开窗（★此假设须由 diag 之去重完整率实测，不凭字段名断言）
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                       -- 排序：三级降序取最新版本；导出必带排序，否则分页无稳定序（曾致 36.49% 重复行）
+  FROM ods_mariadb_2b.ods_a168_bet02 b                                                          -- 取数来源：注单明细表（★表名开关）
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                                            -- 过滤条件：限定全局窗（半开区间；两端之靴会被切尾，故下设 is_edge 旗标）
+    AND b.bet02 = '101'                                                                         -- 并列条件：限定百家乐
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+base AS (                                                                                       -- 公共表表达式：七闸清洗 ＋ 结构键规范化（§R01）
+  SELECT r.bet01 AS bet_id, r.bet05 AS member_id, r.dt,                                         -- 取列：产出「bet_id」「member_id」并透传营业日（边界靴判定之输入）
+         TRIM(r.bet03) AS shoe_id, TRIM(r.bet39) AS table_id,                                   -- 取值表达式：★TRIM 防键分裂——不去空白则 '112' 与 ' 112' 裂为两桌
+         CAST(NULLIF(TRIM(r.bet04),'') AS INT)           AS round_no,                           -- 取值表达式：去空白、空串归 NULL、显式转型，产出「round_no」（局号）
+         CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) AS fx,                                 -- 取值表达式：同上转型规则，产出「fx」（汇率）
+         CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)) AS stake_raw,                          -- 取值表达式：同上转型规则，产出「stake_raw」（原币下注额）
+         CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4)) AS payout_raw                          -- 取值表达式：同上转型规则，产出「payout_raw」（原币派彩额）
+  FROM ranked r                                                                                 -- 取数来源：中间结果集 ranked
+  LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18                                             -- 左连接：一级线对测试名单（StarRocks 不支持 EXISTS 配多列 IN，故用五路左连接）
+  LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19                                             -- 左连接：二级线对测试名单
+  LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20                                             -- 左连接：三级线对测试名单
+  LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21                                             -- 左连接：四级线对测试名单
+  LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22                                             -- 左连接：五级线对测试名单
+  WHERE r.rn = 1                                                                                -- 过滤条件：只留最新版本
+    AND r.category = '1'                                                                        -- 并列条件：一般注单准入
+    AND UPPER(TRIM(r.bet38)) = 'N'                                                              -- 并列条件：排除测试单
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0                                            -- 并列条件：会员号须为正整数
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0                                     -- 并列条件：汇率须为正（分母非零）
+    AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0                                               -- 并列条件：局号须为正
+    AND TRIM(r.bet03) <> '' AND TRIM(r.bet39) <> ''                                             -- 并列条件：★靴键与桌键非空——空键会聚成一个幻影靴／幻影桌
+    AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL           -- 并列条件：五级任一命中测试线即剔
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+win AS (                                                                                        -- 公共表表达式：窗界现取层——边界日由数据自证，不写死日期字面（§R01）
+  SELECT MIN(dt) AS dt_first, MAX(dt) AS dt_last FROM base                                      -- 聚合表达式：产出「dt_first」「dt_last」（实见首末营业日，可能窄于名义窗）
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+shoe_truth AS (                                                                                 -- 公共表表达式：★结构真相层——(table_id, shoe_id) 双键为权威靴键（§R01）
+  SELECT b.table_id, b.shoe_id,                                                                 -- 取列：双键。★注意：总包 §P13 以单键 bet03 分组，其等价性由 §P13 探针同批实测
+         MAX(b.round_no)             AS shoe_len_obs,                                           -- 计数表达式：★观测靴长代理＝最大局号，**非局数**；真靴长待权威表（P0 未解）
+         MIN(b.round_no)             AS first_round_obs,                                        -- 聚合表达式：实见首局号，产出「first_round_obs」（起始偏移 ＝ 其减一）
+         COUNT(DISTINCT b.round_no)  AS n_rounds_obs,                                           -- 计数表达式：★实见局号种数＝观测局数，与 shoe_len_obs 分离方能算覆盖率
+         COUNT(*)                    AS n_bets_shoe,                                            -- 计数表达式：靴内注单行数，产出「n_bets_shoe」
+         COUNT(DISTINCT b.dt)        AS n_dt_shoe,                                              -- 计数表达式：★该靴横跨之营业日数——跨零点续接最多跨 2 日，≥3 即必为靴号重用
+         MAX(CASE WHEN b.dt = w.dt_first OR b.dt = w.dt_last                                    -- 条件分支：★边界靴旗标——触窗口首末日者其尾段被半开区间切掉
+                  THEN 1 ELSE 0 END) AS is_edge                                                 -- 续行：产出「is_edge」（1 ＝ 该靴触窗界，其 shoe_len_obs 系下偏值）
+  FROM base b CROSS JOIN win w                                                                  -- 取数来源：中间结果集 base 叉乘窗界一行
+  GROUP BY b.table_id, b.shoe_id                                                                -- 分组：按双键靴
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+enriched AS (                                                                                   -- 公共表表达式：注单级挂靴长并判晚段（§R01）
+  SELECT b.bet_id, b.member_id, b.table_id, b.shoe_id, b.round_no,                              -- 取列：注单级键与局号
+         s.shoe_len_obs, s.first_round_obs, s.n_rounds_obs, s.n_dt_shoe, s.is_edge,             -- 续行：透传结构真相层之五量
+         b.round_no * 1.0 / NULLIF(s.shoe_len_obs,0)   AS shoe_pos,                             -- 取值表达式：★相对靴位＝局号 ÷ 观测靴长（逐靴自归一化），产出「shoe_pos」
+         b.stake_raw / b.fx                            AS stake,                                -- 取值表达式：本金口径＝原币下注额 ÷ 汇率，产出「stake」
+         (b.payout_raw - b.stake_raw) / b.fx           AS game_pnl,                             -- 取值表达式：会员净盈亏＝（派彩−下注）÷ 汇率，产出「game_pnl」（不含退水）
+         CASE WHEN b.round_no * 1.0 / NULLIF(s.shoe_len_obs,0) >= p.late_q                      -- 条件分支：★晚段判据取 params.late_q，不写死字面（B-01 斧正：定标基准逐靴现算）
+              THEN 1 ELSE 0 END                        AS is_late                               -- 续行：产出「is_late」（1 ＝ 该注落于靴末 (1−late_q) 之局位区间）
+  FROM base b                                                                                   -- 取数来源：中间结果集 base
+  JOIN shoe_truth s ON s.shoe_id = b.shoe_id AND s.table_id = b.table_id                        -- 内连接：以双键挂结构真相层
+  CROSS JOIN params p                                                                           -- 叉乘：参数层一行
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+mem_shoe AS (                                                                                   -- 公共表表达式：会员×靴 中间粒度——观测质量须在此粒度算方不被注单数加权（§R01）
+  SELECT member_id, table_id, shoe_id,                                                          -- 取列：会员×双键靴
+         MIN(shoe_len_obs) AS shoe_len_obs, MIN(n_rounds_obs) AS n_rounds_obs,                  -- 聚合表达式：靴属性透传（组内恒为单值，取 MIN 只为合法聚合）
+         MIN(first_round_obs) AS first_round_obs, MIN(is_edge) AS is_edge,                      -- 续行：靴属性透传
+         MIN(n_dt_shoe) AS n_dt_shoe                                                            -- 续行：靴属性透传
+  FROM enriched GROUP BY member_id, table_id, shoe_id                                           -- 分组：会员×靴
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+mem_bet AS (                                                                                    -- 公共表表达式：会员级 注单层聚合——原 15 列悉出于此（§R01）
+  SELECT member_id,                                                                             -- 取列：会员号为主键
+         COUNT(*)                                        AS n_orders_all,                       -- 计数表达式：产出「n_orders_all」（原契约列，定义不改）
+         COUNT(DISTINCT bet_id)                          AS n_orders_all_distinct,              -- 计数表达式：★新增——去重后注单数，与上者之比即去重完整率
+         SUM(is_late)                                    AS n_orders_late,                      -- 汇总表达式：产出「n_orders_late」
+         SUM(is_late) * 1.0 / COUNT(*)                   AS late_share,                         -- 汇总表达式：晚段注单占比，产出「late_share」（零偏好基准下期望 ≈ 1 − late_q）
+         PERCENTILE_APPROX(CASE WHEN is_late=1 THEN shoe_pos END, 0.5)                          -- 取近似分位数表达式：★近似算法，小 n 会员误差未量化，消费须配 n_shoes 闸
+                                                         AS shoe_pos_p50,                       -- 续行：产出「shoe_pos_p50」
+         SUM(CASE WHEN is_late=1 THEN stake END) / NULLIF(SUM(is_late),0)                       -- 汇总表达式：晚段平均注额
+                                                         AS stake_late_avg,                     -- 续行：产出「stake_late_avg」
+         SUM(CASE WHEN is_late=0 THEN stake END) / NULLIF(COUNT(*)-SUM(is_late),0)              -- 汇总表达式：早段平均注额
+                                                         AS stake_early_avg,                    -- 续行：产出「stake_early_avg」
+         (SUM(CASE WHEN is_late=1 THEN stake END) / NULLIF(SUM(is_late),0))                     -- 汇总表达式：注额斜率之分子（晚段均注）
+           / NULLIF(SUM(CASE WHEN is_late=0 THEN stake END)                                     -- 除法计算：注额斜率之分母（早段均注）
+                    / NULLIF(COUNT(*)-SUM(is_late),0), 0) AS stake_ramp,                        -- 续行：产出「stake_ramp」（>1 即靴末加注）
+         SUM(CASE WHEN is_late=1 THEN game_pnl END)                                             -- 汇总表达式：晚段净盈亏
+           / NULLIF(SUM(CASE WHEN is_late=1 THEN stake END),0) AS roi_late,                     -- 除法计算：★分母系分段本金，跨支比大小前须先同分母，产出「roi_late」
+         SUM(CASE WHEN is_late=0 THEN game_pnl END)                                             -- 汇总表达式：早段净盈亏
+           / NULLIF(SUM(CASE WHEN is_late=0 THEN stake END),0) AS roi_early,                    -- 除法计算：同上，产出「roi_early」
+         SUM(CASE WHEN is_late=1 THEN stake END)          AS stake_late,                        -- 汇总表达式：产出「stake_late」
+         SUM(CASE WHEN is_late=1 THEN game_pnl END)       AS game_pnl_late,                     -- 汇总表达式：产出「game_pnl_late」
+         SUM(stake)                                      AS stake_all,                          -- 汇总表达式：产出「stake_all」
+         SUM(game_pnl)                                   AS game_pnl_all                        -- 汇总表达式：产出「game_pnl_all」（正即会员赢；平台 GGR 系其取负）
+  FROM enriched GROUP BY member_id                                                              -- 分组：按会员
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+mem_qual AS (                                                                                   -- 公共表表达式：★新增 D 层——会员级观测质量（升级.txt §十之「可信度闸」）（§R01）
+  SELECT member_id,                                                                             -- 取列：会员号
+         COUNT(*)                                        AS n_shoes,                            -- 计数表达式：该会员所历之靴数（双键计），产出「n_shoes」
+         PERCENTILE_APPROX(n_rounds_obs * 1.0                                                   -- 取近似分位数表达式：观测覆盖率之中位——
+           / NULLIF(shoe_len_obs,0), 0.5)                AS round_coverage_p50,                 -- 续行：＝观测局数 ÷ 观测靴长，1.00 谓局号自 1 起连续无缺口
+         PERCENTILE_APPROX(n_rounds_obs * 1.0                                                   -- 取近似分位数表达式：内段覆盖率之中位——剔除起始偏移后之纯中段完整度
+           / NULLIF(shoe_len_obs - first_round_obs + 1,0), 0.5)                                 -- 续行：分母＝实见局号跨距，故与「几时开始被看见」无关
+                                                         AS interior_coverage_p50,              -- 续行：产出「interior_coverage_p50」
+         AVG(first_round_obs - 1)                        AS start_offset_avg,                   -- 聚合表达式：起始偏移均值＝首见局号减一，产出「start_offset_avg」
+         SUM(is_edge) * 1.0 / COUNT(*)                   AS edge_shoe_share,                    -- 汇总表达式：★触窗界之靴占比，其 shoe_len_obs 下偏，故 shoe_pos 上偏
+         MAX(n_dt_shoe)                                  AS max_n_dt_shoe                       -- 聚合表达式：★所历靴之最大跨日数；≥3 即该会员之样本含靴号重用嫌疑
+  FROM mem_shoe GROUP BY member_id                                                              -- 分组：按会员（以会员×靴为行，故不被注单数加权）
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+d1 AS (                                                                                         -- 公共表表达式：诊断标量之一——清洗后全量之规模与去重（§R01）
+  SELECT COUNT(*)                    AS n_rows_gated,                                           -- 计数表达式：清洗后注单行数
+         COUNT(DISTINCT bet_id)      AS n_bets_distinct_gated,                                  -- 计数表达式：清洗后去重注单数
+         COUNT(DISTINCT member_id)   AS n_members_clean,                                        -- 计数表达式：全量洁净域会员数
+         COUNT(DISTINCT table_id)    AS n_tables_total                                          -- 计数表达式：★反截断标量——总桌数随行到达，前端截断亦不失
+  FROM base                                                                                     -- 取数来源：中间结果集 base
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+d2 AS (                                                                                         -- 公共表表达式：诊断标量之二——雷欧域会员数（过门槛者）（§R01）
+  SELECT COUNT(*) AS n_members_ryo                                                              -- 计数表达式：产出「n_members_ryo」
+  FROM mem_bet m CROSS JOIN params p                                                            -- 取数来源：会员级聚合叉乘参数层
+  WHERE m.n_orders_all >= p.min_orders                                                          -- 过滤条件：活跃度门槛取自 params，不散落字面
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§R01）
+diag AS (                                                                                       -- 公共表表达式：诊断标量合并为一行，供 CROSS JOIN 随行（§R01）
+  SELECT d1.*, d2.*,                                                                            -- 取列：两组诊断标量
+         d1.n_rows_gated * 1.0 / NULLIF(d1.n_bets_distinct_gated,0)                             -- 除法计算：★去重完整率——理想恒为 1.000000；>1 即 JOIN 扇出或版本链假设不成立
+                                                         AS dedup_integrity_ratio               -- 续行：产出「dedup_integrity_ratio」
+  FROM d1 CROSS JOIN d2                                                                         -- 取数来源：两组标量叉乘
+)                                                                                               -- 续行：收束上方的子查询或函数括号（§R01）
+SELECT                                                                                          -- 取列：起始取列子句——原契约 15 列在前，新增列一律后置
+  m.member_id                        AS uid,                                                    -- 取值表达式：产出「uid」（原契约列）
+  m.n_orders_all,                                                                               -- 取列：原契约列
+  m.n_orders_late,                                                                              -- 取列：原契约列
+  'shoe_pos>=0.80'                   AS late_def,                                               -- 取值表达式：★口径锁字面保持原样以护血统，产出「late_def」
+  m.late_share,                                                                                 -- 取列：原契约列
+  m.shoe_pos_p50,                                                                               -- 取列：原契约列
+  m.stake_late_avg,                                                                             -- 取列：原契约列
+  m.stake_early_avg,                                                                            -- 取列：原契约列
+  m.stake_ramp,                                                                                 -- 取列：原契约列
+  m.roi_late,                                                                                   -- 取列：原契约列
+  m.roi_early,                                                                                  -- 取列：原契约列
+  m.stake_late,                                                                                 -- 取列：原契约列
+  m.game_pnl_late,                                                                              -- 取列：原契约列
+  m.stake_all,                                                                                  -- 取列：原契约列
+  m.game_pnl_all,                                                                               -- 取列：原契约列（以上 15 列即 C1 契约，逐字未改）
+  p.late_q,                                                                                     -- 取值表达式：★新增·参数层——口径锁之数值真身，供与 late_def 字面**双录核对**
+  q.n_shoes,                                                                                    -- 取列：★新增·D 层——所历靴数（观测质量之样本量）
+  m.n_orders_all_distinct,                                                                      -- 取列：★新增·D 层——去重后注单数
+  m.n_orders_all * 1.0 / NULLIF(m.n_orders_all_distinct,0)                                      -- 除法计算：★新增·D 层——会员级去重比，理想恒为 1
+                                     AS dedup_ratio_member,                                     -- 续行：产出「dedup_ratio_member」
+  q.round_coverage_p50,                                                                         -- 取列：★新增·D 层——观测覆盖率中位（含起始偏移）
+  q.interior_coverage_p50,                                                                      -- 取列：★新增·D 层——内段覆盖率中位（纯中段完整度）
+  q.start_offset_avg,                                                                           -- 取列：★新增·D 层——起始偏移均值
+  q.edge_shoe_share,                                                                            -- 取列：★新增·D 层——边界靴占比（其 shoe_pos 系上偏）
+  q.max_n_dt_shoe,                                                                              -- 取列：★新增·D 层——所历靴之最大跨日数（≥3 即靴号重用嫌疑）
+  d.n_rows_gated,                                                                               -- 取列：★新增·诊断标量——清洗后行数（随行，抗前端截断）
+  d.n_bets_distinct_gated,                                                                      -- 取列：★新增·诊断标量
+  d.dedup_integrity_ratio,                                                                      -- 取列：★新增·诊断标量——全域去重完整率
+  d.n_members_clean,                                                                            -- 取列：★新增·诊断标量——全量洁净域会员数
+  d.n_members_ryo,                                                                              -- 取列：★新增·诊断标量——雷欧域会员数（本档行数应与之全等）
+  d.n_tables_total,                                                                             -- 取列：★新增·诊断标量——总桌数
+  w.dt_first,                                                                                   -- 取列：★新增·诊断标量——实见首营业日（边界靴判定之基准）
+  w.dt_last                                                                                     -- 取列：★新增·诊断标量——实见末营业日
+FROM mem_bet m                                                                                  -- 取数来源：会员级注单层聚合
+JOIN mem_qual q ON q.member_id = m.member_id                                                    -- 内连接：挂会员级观测质量层
+CROSS JOIN params p                                                                             -- 叉乘：参数层一行
+CROSS JOIN diag   d                                                                             -- 叉乘：诊断标量一行
+CROSS JOIN win    w                                                                             -- 叉乘：窗界一行
+WHERE m.n_orders_all >= p.min_orders                                                            -- 过滤条件：★活跃度门槛取自 params（原为 HAVING 字面 100）
+ORDER BY m.late_share DESC, m.n_orders_late DESC, m.member_id                                   -- 排序：★末加 member_id 作决胜键，令导出为全序；禁 OFFSET 分页
+;
+
+-- 【故意不加之筛选｜原注保留】
+--   此处**故意不加** late_share >= 0.70 的门槛。报告需要「命中组 vs 对照组」之 hold% 对照
+--   方能作经济裁定（@sec-r01 之 r01-decision），只导命中组即无对照组。
+--   阈值筛选一律放在 R 侧，SQL 只负责给全量底料。若行数过大，改提 params.min_orders
+--   （如 100 → 300）以提高活跃度门槛，**而不是**加 late_share 条件。
+--
+-- 【运行成本告示】
+--   d1 含三个 COUNT(DISTINCT)，于窗内约 1.2 亿行注单上属重算子。若超时，
+--   允许将 d1／d2／diag 三个 CTE 与随行诊断列整体注掉另跑一次伴生查询，
+--   但此时 CSV 必须另附诊断行，且报告侧须显式登记「诊断与主体非同批」——
+--   禁以「跑不动」为由静默丢弃诊断（丢诊断即回到不可对账之旧态）。
+```
+
+根据运行以上代码，将输出储存为「数据库/P11_雷欧尾段投注模型会员名单.csv」（即整个框架中之 `R01_late_shoe.csv`）。
+
+::: {.callout-important}
+## 血统告示：本块系强化草案，总包为唯一权威
+
+上方 SQL 系 SQL 总包 §R01 之**强化草案**，尚未回灌总包。总包权威版为 v11.0.3 / REL-0005 / C1。
+本草案新增输出列 ⇒ `schema_diff ≠ ∅` ⇒ 回灌时 Contract ID 须递增（C1 → C2），
+并须重算纯代码 MD5 与六元组。**回灌之前，总包为唯一权威**；本块只作报告侧待批草案，
+既禁据以覆盖总包，亦禁以其数字覆盖既有 CSV（旧 CSV 仍属 C1 血统）。
+:::
+
+#### 查询解释：十层链路，逐层只做一件事
+
+链路为 `params → test_agents → ranked → base → win → shoe_truth → enriched → (mem_shoe · mem_bet · mem_qual) → (d1 · d2 · diag) → 输出`。
+逐层之职与「不做则如何」如下：
+
+**`params`（参数单点声明）**——`late_q = 0.80` 与 `min_orders = 100` 只此一处。
+原文把 `0.80` 写在 `CASE WHEN` 与 `late_def` 字面两处，属二真相源，改其一而漏其二即静默漂移。
+
+**`test_agents`（测试线名单·防扇出）**——`SELECT DISTINCT`。若 `age001` 于代理主档重复，
+下游五路 `LEFT JOIN` 会把一条注单扇成多行，`COUNT(*)` 随之膨胀而 `n_orders_all` 虚增。
+`DISTINCT` 令反连接恒为 ≤1 行匹配。此为真缺陷，非防御性冗余。
+
+**`ranked`（版本链去重）**——按 `bet01` 开窗、三级降序取最新版本。
+此层之假设是「`bet01` 唯一标识一条注单之版本链」；该假设**不以字段名断言**，
+由 `diag.dedup_integrity_ratio` 当批实测（理想恒为 `1.000000`）。
+
+**`base`（七闸清洗 ＋ 结构键规范化）**——七闸照旧；新增 `TRIM(bet03)`、`TRIM(bet39)`
+与二者之非空闸。本库字段皆 `varchar(65533)`，不去空白则 `'112'` 与 `' 112'` 裂为两桌，
+空键则聚成一个幻影桌，**两者皆无任何报错**。
+
+**`win`（窗界现取）**——首末营业日由数据自证（`MIN(dt)`／`MAX(dt)`），不写死日期字面。
+实见窗可能窄于名义窗，写死即错。
+
+**`shoe_truth`（结构真相层）**——`(table_id, shoe_id)` **双键**为权威靴键。
+同层出六量：`shoe_len_obs`（最大局号，**非局数**）、`first_round_obs`、`n_rounds_obs`（观测局数）、
+`n_bets_shoe`、`n_dt_shoe`、`is_edge`。「靴长」与「观测完整度」自此分离——
+`shoe_len_obs = 50` 而 `n_rounds_obs = 50` 与 `n_rounds_obs = 35` 是两种数据质量，旧写法看不出差别。
+
+**`enriched`（注单级挂靴长并判晚段）**——`shoe_pos = round_no ÷ shoe_len_obs` 逐靴自归一化；
+`is_late` 取 `params.late_q`，不写死字面。
+
+**`mem_shoe` / `mem_bet` / `mem_qual`（会员级双轨聚合）**——`mem_bet` 出原契约 15 列（注单层）；
+`mem_qual` 出观测质量层（会员×靴层）。**分两轨之理由**：覆盖率是靴之属性，
+若直接在注单层取分位，会被「注单多之靴」加权，得出的不是「这名会员所历之靴有多完整」，
+而是「这名会员下注最多的那些靴有多完整」——两者不是一回事。
+
+**`d1` / `d2` / `diag`（诊断标量）**——`CROSS JOIN` 一行随行。前端显示上限只截行不截列，
+故标量随行到达即可当场对账；只看行数则「显示行数」会被冒充成「总数」。
+
+**输出层**——原契约 15 列在前且逐字未改，新增列一律后置；`ORDER BY` 末加 `member_id`
+作决胜键，令导出为**全序**（原二键可并列，并列即分页序不定）。
+
+#### 输出指标标准
+
+::: {.tbl-scroll}
+```{r}
+#| label: r01-spec
+#| echo: true
+## 规章表（治理规则，非数据）——铁律第九条禁的是以静态文字冒充**数据结果**；
+## 契约与验收标准自为真相源，不由数据派生，故以静态规章表登记，且**全行零省略**
+## （契约表截行即等于隐藏契约）。同格先例：@sec-biz 之限额幅度等级 L0–L4 规章表。
+r01spec <- data.table(
+  列名 = c("uid","n_orders_all","n_orders_late","late_def","late_share","shoe_pos_p50",
+           "stake_late_avg","stake_early_avg","stake_ramp","roi_late","roi_early",
+           "stake_late","game_pnl_late","stake_all","game_pnl_all",
+           "late_q","n_shoes","n_orders_all_distinct","dedup_ratio_member",
+           "round_coverage_p50","interior_coverage_p50","start_offset_avg",
+           "edge_shoe_share","max_n_dt_shoe",
+           "n_rows_gated","n_bets_distinct_gated","dedup_integrity_ratio",
+           "n_members_clean","n_members_ryo","n_tables_total","dt_first","dt_last"),
+  层 = c(rep("C1 契约", 15L), "参数", rep("D 观测质量", 8L), rep("诊断标量", 8L)),
+  定义式 = c(
+    "`bet05`（会员号）", "`COUNT(*)`（清洗后注单行数）", "`SUM(is_late)`",
+    "口径锁字面，恒为 `shoe_pos>=0.80`", "`n_orders_late ÷ n_orders_all`",
+    "晚段 `shoe_pos` 之近似中位",
+    "晚段 `Σstake ÷ n_orders_late`", "早段 `Σstake ÷ (n_orders_all − n_orders_late)`",
+    "`stake_late_avg ÷ stake_early_avg`",
+    "晚段 `Σgame_pnl ÷ Σstake`", "早段 `Σgame_pnl ÷ Σstake`",
+    "晚段 `Σstake`", "晚段 `Σgame_pnl`", "全段 `Σstake`", "全段 `Σgame_pnl`",
+    "`params.late_q`，恒为 `0.80`",
+    "该会员所历之双键靴数", "`COUNT(DISTINCT bet_id)`",
+    "`n_orders_all ÷ n_orders_all_distinct`",
+    "`n_rounds_obs ÷ shoe_len_obs` 之近似中位（含起始偏移）",
+    "`n_rounds_obs ÷ (shoe_len_obs − first_round_obs + 1)` 之近似中位（纯中段）",
+    "`AVG(first_round_obs − 1)`",
+    "`Σis_edge ÷ n_shoes`", "`MAX(n_dt_shoe)`",
+    "全量洁净域清洗后行数", "同上去重后注单数",
+    "`n_rows_gated ÷ n_bets_distinct_gated`",
+    "全量洁净域会员数", "过 `min_orders` 门槛之会员数", "全量洁净域桌数",
+    "实见首营业日", "实见末营业日"),
+  粒度 = c(rep("uid", 15L), "全域常量",
+           "uid（经会员×靴）", "uid", "uid",
+           rep("uid（经会员×靴）", 5L), rep("全域常量", 8L)),
+  判级 = c("OBSERVED", "OBSERVED", "OBSERVED", "CONTRACT", "OBSERVED",
+           "OBSERVED·近似", rep("OBSERVED", 8L), "OBSERVED",
+           "CONTRACT", "OBSERVED", "OBSERVED", "OBSERVED",
+           "OBSERVED·近似", "OBSERVED·近似", "OBSERVED", "OBSERVED", "OBSERVED",
+           rep("OBSERVED", 8L)),
+  验收标准 = c(
+    "非空、正整数、全表唯一", "≥ `min_orders`", "0 ≤ 值 ≤ `n_orders_all`",
+    "单值；且其数值须与 `late_q` 全等（双录核对）", "0 ≤ 值 ≤ 1",
+    "≥ `late_q` 且 ≤ 1；否则 `is_late` 判定有误",
+    "> 0 或空（该会员无晚段注）", "> 0 或空", "> 0 或空",
+    "`|值| > 1` 即先入结算完整性九项排查", "同左",
+    "≥ 0", "无约束（可正可负）", "> 0", "无约束（可正可负）",
+    "恒为 `0.80`；与 `late_def` 不符即失败",
+    "≥ 1；消费分位类指标须另设下限（见验收判据 G-4）", "≤ `n_orders_all`",
+    "**恒为 1.000000**；> 1 即 JOIN 扇出或版本链假设不成立",
+    "0 < 值 ≤ 1；低值谓局号缺口大或起始偏移大", "0 < 值 ≤ 1；低值谓纯中段有缺口",
+    "≥ 0；显著大于 0 谓该会员多在靴中段才被看见",
+    "0 ≤ 值 ≤ 1；高值谓其 `shoe_pos` 系上偏",
+    "**≤ 2**；≥ 3 即该会员样本含靴号重用",
+    "> 0", "≤ `n_rows_gated`", "**恒为 1.000000**",
+    "> 0", "须与本档行数全等", "> 0", "非空", "非空且 ≥ `dt_first`"),
+  消费规则 = c(
+    "主键，可入 Registry", "可入", "可入", "口径锁，任何跨版本比较前须先比对此列",
+    "可入；**禁复活 T-03**——门禁 FATAL，分布可算不等于判据可用",
+    "可入；小 `n_shoes` 者近似误差未量化，须配 G-4 闸",
+    "可入", "可入", "可入；> 1 即靴末加注",
+    "可入；**分母系分段本金**，跨支比大小前须先同分母", "同左",
+    "可入", "可入", "可入", "可入",
+    "**非业务指标**，只作双录核对之用，禁入 Registry",
+    "**可信度闸之样本量**，禁单独作风险判据",
+    "只作诊断", "只作诊断；异常即整批退回重跑",
+    "**可信度闸**：低覆盖率者之 `shoe_pos_p50` 不可与高覆盖率者并列比较",
+    "同左；此列方为纯中段完整度", "只作诊断",
+    "**可信度闸**：边界靴占比高者其晚段占比系上偏",
+    "只作诊断；≥ 3 者须先走粒度验证，不入风控处置",
+    "只作对账", "只作对账", "只作对账", "只作对账",
+    "只作对账（行数自证）", "只作对账（反截断）", "只作对账", "只作对账"))
+r01spec[, 序 := .i(seq_len(.N))]; setcolorder(r01spec, "序")
+kable(r01spec, align = "l", escape = FALSE,
+  caption = sprintf(paste0("§R01 输出指标标准（%s 列 × %s 属性，**全行零省略**；",
+    "C1 契约 %s 列逐字未改，新增 %s 列；判级四值 OBSERVED／CONTRACT／INFERRED／UNKNOWN，",
+    "「·近似」谓由 `PERCENTILE_APPROX` 出，误差未量化）"),
+    .i(nrow(r01spec)), .i(ncol(r01spec)),
+    .i(sum(r01spec$层 == "C1 契约")), .i(sum(r01spec$层 != "C1 契约"))))
+```
+:::
+
+#### 验收判据：不过闸即整批退回，禁挑行放行
+
+::: {.tbl-scroll}
+```{r}
+#| label: r01-gate
+#| echo: true
+## 规章表（治理规则，非数据）。判据以**可机检**为准——凡须人眼判断者不入此表。
+r01gate <- data.table(
+  闸 = c("G-1 口径双录", "G-2 去重完整", "G-3 行数自证", "G-4 分位样本量",
+         "G-5 覆盖率下限", "G-6 边界靴", "G-7 靴号重用", "G-8 结算完整性",
+         "G-9 全序导出", "G-10 反截断"),
+  判据 = c(
+    "`late_def` 之数值 == `late_q`，且 `late_def` 全表单值",
+    "`dedup_integrity_ratio` == 1 且 `dedup_ratio_member` 全部 == 1",
+    "本档行数 == `n_members_ryo`",
+    "凡消费 `shoe_pos_p50` 者，其 `n_shoes` 须过 R 侧反解之下限",
+    "`round_coverage_p50` 与 `interior_coverage_p50` 之分布须现算披露",
+    "`edge_shoe_share` 之分布须现算披露",
+    "`max_n_dt_shoe` ≤ 2",
+    "`|roi_all|`／`|roi_late|`／`|roi_early|` 任一 > 1",
+    "`ORDER BY` 含 `member_id` 决胜键；导出禁用 `OFFSET`",
+    "诊断标量随行且非全 NULL"),
+  失败处置 = c(
+    "🔴 整批退回——口径锁漂移，一切下游数字作废",
+    "🔴 整批退回——先查 `test_agents` 是否漏 `DISTINCT`，再查 `bet01` 版本链假设",
+    "🔴 整批退回——门槛未生效或前端截断",
+    "🟠 该会员之分位列降为线索级，不入评分",
+    "🟡 低覆盖率组须单列，禁与高覆盖率组并列比较",
+    "🟡 高边界靴占比者之晚段读数标注上偏",
+    "🟠 该会员样本入粒度验证队列，**不入风控处置**",
+    "🟠 先入结算完整性九项排查，查账在先查人在后",
+    "🔴 重导——非全序即分页可重可漏（曾致 36.49% 重复行）",
+    "🔴 重导——无诊断即不可对账，回到旧态"),
+  依据 = c("本块 params 单点声明", "升级.txt §十六／§十七 ＋ 本轮核实",
+           "本块 d2", "本档 n_min ＝ ⌈1/(1−q)⌉ 反解律", "升级.txt §九／§十（经拆分修正）",
+           "本轮核实（窗界半开区间之切尾）", "本轮核实（跨零点最多 2 日）",
+           "@sec-roi-scale 之 `|ROI| > 1` 律", "本档禁 OFFSET 律",
+           "升级.txt §十八 ＋ 本轮核实"))
+r01gate[, 序 := .i(seq_len(.N))]; setcolorder(r01gate, "序")
+kable(r01gate, align = "l", escape = FALSE,
+  caption = sprintf(paste0("§R01 验收判据（%s 闸全列，零省略；",
+    "🔴 整批退回 %s 项、🟠 降级 %s 项、🟡 标注 %s 项；",
+    "凡须人眼判断者不入此表——判据以可机检为准）"),
+    .i(nrow(r01gate)),
+    .i(sum(grepl("^🔴", r01gate$失败处置))),
+    .i(sum(grepl("^🟠", r01gate$失败处置))),
+    .i(sum(grepl("^🟡", r01gate$失败处置)))))
+```
+:::
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+
+-- P11 · 雷欧域（§R01 原准入）与全量洁净两域十一项总帐
+-- 导出：存为「数据库/P11_雷欧尾段投注总帐.csv」
+-- 口径：CTE test_agents/ranked/base 逐字沿用 §R01 原文；雷欧域＝base 上 HAVING n>=100 之会员注单
+--       全量洁净＝同一 base 全量（§R01 六闸，未施 bet08，实测其筛除量为零）
+WITH test_agents AS (
+  SELECT age001 AS agent_id
+  FROM ods_mariadb_2b.ods_a168_agent
+  WHERE age022 = '1'
+),
+ranked AS (
+  SELECT b.bet01, b.bet03, b.bet04, b.bet05, b.bet11, b.bet13, b.bet14,
+         b.bet16, b.bet41, b.validbet,
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22, b.bet38, b.bet39, b.category,
+         ROW_NUMBER() OVER (
+           PARTITION BY b.bet01
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+),
+base AS (
+  SELECT CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT)        AS member_id,
+         r.bet18 AS a1, r.bet19 AS a2, r.bet20 AS a3,
+         r.bet21 AS a4, r.bet22 AS a5,
+         CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))            AS stake,
+         CAST(NULLIF(TRIM(r.validbet),'') AS DECIMAL(20,4))
+           / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))            AS vb,
+         (CAST(NULLIF(TRIM(r.bet14),'') AS DECIMAL(20,4))
+          - CAST(NULLIF(TRIM(r.bet13),'') AS DECIMAL(20,4)))
+           / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))            AS game_pnl,
+         COALESCE(CAST(NULLIF(TRIM(r.bet16),'') AS DECIMAL(20,4)), 0)
+           / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))            AS reb16,
+         COALESCE(CAST(NULLIF(TRIM(r.bet41),'') AS DECIMAL(20,4)), 0)
+           / CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8))            AS reb41
+  FROM ranked r
+  LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18
+  LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19
+  LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20
+  LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21
+  LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22
+  WHERE r.rn = 1
+    AND r.category = '1'
+    AND UPPER(TRIM(r.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(r.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(r.bet11),'') AS DECIMAL(20,8)) > 0
+    AND CAST(NULLIF(TRIM(r.bet04),'') AS INT) > 0
+    AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL
+),
+ryo_members AS (
+  SELECT member_id
+  FROM base
+  GROUP BY member_id
+  HAVING COUNT(*) >= 100
+),
+ryo AS (
+  SELECT '2_雷欧域（§R01 原准入 ∧ n>=100）' AS scope_def,
+         COUNT(*)                     AS n_orders,
+         COUNT(DISTINCT b.member_id)  AS n_members,
+         COUNT(DISTINCT b.a1) AS n_lv1, COUNT(DISTINCT b.a2) AS n_lv2,
+         COUNT(DISTINCT b.a3) AS n_lv3, COUNT(DISTINCT b.a4) AS n_lv4,
+         COUNT(DISTINCT b.a5) AS n_lv5,
+         SUM(b.stake) AS stake_sum, SUM(b.vb) AS validbet_sum,
+         -SUM(b.game_pnl) AS ggr_sum,
+         SUM(b.reb16) AS rebate16_sum, SUM(b.reb41) AS rebate41_sum
+  FROM base b
+  JOIN ryo_members m ON m.member_id = b.member_id
+),
+clean AS (
+  SELECT '1_全量洁净（§R01 六闸）' AS scope_def,
+         COUNT(*)                   AS n_orders,
+         COUNT(DISTINCT member_id)  AS n_members,
+         COUNT(DISTINCT a1) AS n_lv1, COUNT(DISTINCT a2) AS n_lv2,
+         COUNT(DISTINCT a3) AS n_lv3, COUNT(DISTINCT a4) AS n_lv4,
+         COUNT(DISTINCT a5) AS n_lv5,
+         SUM(stake) AS stake_sum, SUM(vb) AS validbet_sum,
+         -SUM(game_pnl) AS ggr_sum,
+         SUM(reb16) AS rebate16_sum, SUM(reb41) AS rebate41_sum
+  FROM base
+),
+both AS (
+  SELECT * FROM clean
+  UNION ALL
+  SELECT * FROM ryo
+)
+SELECT
+  b.scope_def,
+  b.n_orders,
+  ROUND(b.n_orders     * 100.0 / c.n_orders,     4)                AS n_orders_pct,
+  b.n_members,
+  ROUND(b.n_members    * 100.0 / c.n_members,    4)                AS n_members_pct,
+  b.n_lv1, b.n_lv2, b.n_lv3, b.n_lv4, b.n_lv5,
+  ROUND(b.stake_sum, 2)                                            AS stake_sum,
+  ROUND(b.stake_sum    * 100.0 / c.stake_sum,    4)                AS stake_pct,
+  ROUND(b.validbet_sum, 2)                                         AS validbet_sum,
+  ROUND(b.validbet_sum * 100.0 / c.validbet_sum, 4)                AS validbet_pct,
+  ROUND(b.ggr_sum, 2)                                              AS ggr_sum,
+  ROUND(b.ggr_sum      * 100.0 / c.ggr_sum,      4)                AS ggr_pct,
+  ROUND(b.rebate16_sum, 2)                                         AS rebate16_sum,
+  ROUND(b.rebate16_sum * 100.0 / NULLIF(c.rebate16_sum, 0), 4)     AS rebate16_pct,
+  ROUND(b.rebate41_sum, 2)                                         AS rebate41_sum,
+  ROUND(b.ggr_sum - b.rebate16_sum, 2)                             AS ngr_by16,
+  ROUND((b.ggr_sum - b.rebate16_sum) * 100.0
+        / NULLIF(c.ggr_sum - c.rebate16_sum, 0), 4)                AS ngr_by16_pct
+FROM both b
+CROSS JOIN clean c
+ORDER BY b.scope_def;
+```
+
+```{r}
+#| label: 读取数据表总账
+#| echo: true
+## 单域总帐：全量洁净｜雷欧（金额）｜雷欧（占比）
+## v1.2.48 斧正：① 增列「会员净收益率 ROI」一行（＝ −hold%，本金口径，净收益率尺度，
+##   持平＝0；系本档 μ₀ 之唯一真相源，@sec-advantage 由此反号取用，禁另处硬写）；
+##   ② 三条并行向量（.item／.key／.isInt）改为单一规格表 .SPEC——旧法增一行须三处同步，
+##   漏其一即错位，属结构性隐患；规格表为单一真相源，增行只改一处。
+##   ③ 表题项数由 nrow(led) 现算，杜绝「十一项／十二项」之类硬写自相矛盾。
+.SPEC <- data.table(
+  项 = c("总注单数", "总会员数", "总投注额（本金）", "总洗码", "总盈利（GGR）",
+         "总返水（`bet16` 口径）", "净盈利（GGR − `bet16`，示数）",
+         "会员净收益率 ROI（＝ GGR ÷ 本金 取负；净收益率尺度，持平＝0）",
+         "一线代理数", "二线代理数", "三线代理数", "四线代理数", "五线代理数"),
+  类 = c("int", "int", "money", "money", "money", "money", "money",
+         "roi", rep("agent", 5L)),
+  键 = c("n_orders", "n_members", "stake_sum", "validbet_sum", "ggr_sum",
+         "rebate16_sum", NA_character_, NA_character_,
+         "n_lv1", "n_lv2", "n_lv3", "n_lv4", "n_lv5"))
+
+## 取值：键在册者直取；净盈利与 ROI 二者为派生，逐一具名派生，禁以 NA 之位序猜义
+.val <- function(row, i) {
+  k <- .SPEC$键[i]
+  if (!is.na(k)) return(row[[k]])
+  if (.SPEC$类[i] == "roi") return(-(row$ggr_sum / row$stake_sum))   # 会员端 ROI ＝ −hold%
+  row$ggr_sum - row$rebate16_sum                                      # 净盈利（示数）
+}
+.fmt <- function(v, i) switch(.SPEC$类[i],
+  int = .i(v), agent = .i(v), roi = sprintf("%+.6f", v), .f(v))
+## 占比列之语义随类而异：代理数 distinct 不可加；ROI 系比率，比率之比无义，故改报 pp 差
+.rat <- function(a, b, i) switch(.SPEC$类[i],
+  agent = "—（distinct 不可加）",
+  roi   = sprintf("%+.4f pp（差，非占比）", (a - b) * 100),
+  .pc(a, b))
+
+led <- data.table(
+  聚合项 = .SPEC$项,
+  全量洁净 = vapply(seq_len(nrow(.SPEC)), function(i) .fmt(.val(.cL, i), i), ""),
+  `雷欧（金额）` = vapply(seq_len(nrow(.SPEC)), function(i) .fmt(.val(.lE, i), i), ""),
+  `雷欧（占比）` = vapply(seq_len(nrow(.SPEC)),
+                          function(i) .rat(.val(.lE, i), .val(.cL, i), i), ""))
+led[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(led, "序")
+kable(led, align = "r",
+  caption = sprintf(paste0("单域 %s 项总帐（%d 项全列，零省略；分母为全量洁净 %s 注单／",
+                           "%s 会员；ROI 行系净收益率尺度，负值即赌场优势）"),
+                    .i(nrow(led)), nrow(led), .i(.cL$n_orders), .i(.cL$n_members)))
+```
+
+```{r}
+#| label: 经济读数
+#| echo: true
+#| results: asis
+.hold <- function(r) r$ggr_sum / r$stake_sum * 100
+cat(sprintf(paste0(
+  "**经济读数（渲染时现算）**：雷欧域以 **%s** 名会员（占全量洁净 **%s**）承载本金 **%s**（%s）、",
+  "洗码 %s、GGR **%s**（%s）、`bet16` 退水 %s；其 hold **%.4f%%**，全量洁净 **%.4f%%**。\n\n"),
+  .i(.lE$n_members), .pc(.lE$n_members, .cL$n_members), .f(.lE$stake_sum),
+  .pc(.lE$stake_sum, .cL$stake_sum), .pc(.lE$validbet_sum, .cL$validbet_sum),
+  .f(.lE$ggr_sum), .pc(.lE$ggr_sum, .cL$ggr_sum),
+  .pc(.lE$rebate16_sum, .cL$rebate16_sum), .hold(.lE), .hold(.cL)))
+if (.hc(RYO_M, "roi_late") && .hc(RYO_M, "roi_early") &&
+    .hc(RYO_M, "stake_late") && .hc(RYO_M, "game_pnl_late")) {
+  .rl <- sum(RYO_M$game_pnl_late) / sum(RYO_M$stake_late) * 100
+  .d  <- RYO_M$roi_late - RYO_M$roi_early
+  cat(sprintf(paste0(
+    "**尾段有无优势（现算）**：雷欧域晚段加权 ROI **%.4f%%**；逐员「晚 − 早」ROI 中位差 **%+.4f**，",
+    "晚优于早者占 **%s**。这只是本窗口相关性读数，不是因果证明；若方向不稳定或 CI 跨 0，正向主张不得确认。\n\n"),
+    .rl, median(.d, na.rm = TRUE), .pc(sum(.d > 0, na.rm = TRUE), sum(!is.na(.d)))))
+} else {
+  cat("○ 待列：雷欧名单缺分段列，本节不臆造。\n\n")
+}
+
+cat(sprintf(paste0(
+  "**退水语义复验**：全量洁净 `bet41/validbet = %.6f`、雷欧域 `bet41/validbet = %.6f`；",
+  "该比值若接近 1，支持 `bet41` 更像退水计算基数而非退水金额。`bet16` 占洗码 **%s**；",
+  "故 `GGR − bet16` 只能作为口径示数，正式 NGR 仍以月结帐为权威，当前判级 **UNKNOWN**。\n"),
+  .cL$rebate41_sum / .cL$validbet_sum, .lE$rebate41_sum / .lE$validbet_sum,
+  .pc(.cL$rebate16_sum, .cL$validbet_sum, 4)))
+```
+
+# 数据口径 {#sec-data-caliber}
+
+::: {.callout-important}
+## 本章定位
+
+本净化版的数据血统只保留雷欧／R01。源表、交付件、指标与金额口径均须由当前在位文件直接支持。
+:::
+
+## 一、源数据（ODS 库表层）
+
+### 关键字段
+
+| 库表 | 字段 | 业务含义 | 商业用途 |
+|:--|:--|:--|:--|
+| `ods_a168_bet02` | `bet01` | 注单号 | 同单号最新版本去重主键 |
+| `ods_a168_bet02` | `bet02` | 游戏类别 | 恒限 `'101'`（百家乐） |
+| `ods_a168_bet02` | `bet03`／`bet04`／`bet39` | 靴号／局号／桌号 | 构造（靴、桌）内相对位置 |
+| `ods_a168_bet02` | `bet05` | 会员号 | R01 `uid` 来源 |
+| `ods_a168_bet02` | `bet08` | 下注时间 | 有效单准入；本报告不以秒级尾注为主线 |
+| `ods_a168_bet02` | `bet11` | 汇率 | 原币金额统一化除数 |
+| `ods_a168_bet02` | `bet13` | 下注金额 | `/ bet11` → 本金 `stake` |
+| `ods_a168_bet02` | `bet14` | 派彩金额 | `(bet14-bet13)/bet11` → `game_pnl` |
+| `ods_a168_bet02` | `bet16` | 逐单退水候选金额 | NGR 方向核算，不作为权威月结 NGR |
+| `ods_a168_bet02` | `bet38` | 测试标识 | `'N'` 方为真实注单 |
+| `ods_a168_bet02` | `category` | 注单类别 | `'1'` 一般注单 |
+| `ods_a168_agent` | `age001`／`age022` | 代理编号／测试线标志 | 五级测试线剔除 |
+
+### 核心指标
+
+| 指标 | 定义 | 用途 |
+|:--|:--|:--|
+| `stake` | `bet13 ÷ bet11` | R01 主本金口径 |
+| `game_pnl` | `(bet14−bet13) ÷ bet11` | 会员净盈亏 |
+| `shoe_pos` | `round_no ÷ MAX(round_no)`，按（靴、桌）计算 | R01 相对靴位坐标；明确属于观测靴长代理 |
+| `late_share` | 晚段注单数 ÷ 总注单数 | 主行为维度 |
+| `stake_ramp` | 晚段平均注额 ÷ 早段平均注额 | 金额结构维度 |
+| `roi_late`／`roi_early` | 各自时段 `game_pnl ÷ stake` | 晚早配对比较 |
+| `roi_all` | `game_pnl_all ÷ stake_all` | 整体经济表现 |
+| `hold%` | `GGR ÷ stake` | 平台经济口径 |
+
+
+### 三、靴长与桌族切牌规程实测 {#sec-shoe-family}
+
+::: {.callout-important}
+## 本节定位：把「判读」由静态文字改回现算
+
+此处上一版系一段外部粘贴之判读散文，相关系数、加权均靴长、桌数、四族靴长、
+乃至涉事桌号，一律**写死在正文**——既不可复现，亦不随数据更新，违铁律第九条。
+本节改为三段式：**探针 SQL 定列契约 → 现算读数 → 裁定由数据分支产生**。
+探针件缺位时，本节照登「○ 待表」，**不以静态文字冒充结果**。
+
+另立一条反截断铁律：**查询无 `LIMIT` 不等于结果无截断**。前端显示上限会把
+「显示行数」冒充成「总桌数」。故探针每行皆携总桌数标量，R 侧当场对账，
+不符即显式失败。
+:::
+
+#### 探针取数（列契约）
+
+```{sql, eval = FALSE}
+-- eval = FALSE
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- §P14 · P14_table_shoe_truth.csv · 桌级结构真相探针 · 强化版 v2
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- 【改号告示】原命名为 §P13，与 SQL 总包 v11.0.4 之 §P13「会员入场行为层」
+--   （导出 P13_personal_entry.csv）编号冲突。§号系交付件索引，一号双占即索引失效，
+--   与前番 P11 被两份总帐双占同类。故本块改号 §P14，导出件名同步改为
+--   「数据库/P14_table_shoe_truth.csv」。★改号候裁定，未经批准前两名并存者以本告示为准。
+--
+-- 【定位】结构真相层（structural truth layer）。本件不出业务结论，只出三样东西：
+--   ① 桌／靴／局之结构事实（靴长代理、观测局数、覆盖率、缺口、起始偏移）；
+--   ② 靴键等价之在带自证（单键 bet03 与双键 bet39+bet03 是否同粒度）；
+--   ③ 反截断与数据完整性诊断标量（随行到达，前端截断亦不失）。
+--   会员行为层（Entry／Exit／Persistence）与经济层（stake／GGR）不在本件，
+--   分别归 §P13 与 §R01／§P11——一件一职，禁跨件挪用。
+--
+-- 【本次强化｜逐条标注来源】〔升〕= 升级.txt 建议；〔核〕= 本轮核实所得；〔升·修〕= 建议经修正后采纳
+--   ① 〔升§十六〕test_agents 加 DISTINCT，防五路左连接扇出致 n_bets 膨胀。
+--   ② 〔核〕bet39／bet03 加 TRIM 与非空闸，防键分裂与幻影桌。
+--   ③ 〔升·修§九〕加覆盖率。升级.txt 建议 coverage = n_rounds ÷ max_round；
+--      〔核〕该式把「起始偏移」与「中段缺口」混于一处（局号自 5 起而无缺口者亦得 0.92）。
+--      故拆为二：round_coverage（含偏移，与建议同式，留作血统对照）
+--      与 interior_coverage（纯中段，分母改实见局号跨距），并另出 start_offset 独立成列。
+--   ④ 〔升·修§七〕相关系数之结构性耦合。升级.txt 指出 max_round × dens = n_bets 故耦合；
+--      〔核〕耦合之根因不在此恒等式（那只是协方差可算之便），而在 dens 之**分母即 X 本身**
+--      ——此系比率型伪相关（Pearson 1897），纵使 n_bets 与 max_round 独立，r 亦系统性偏负。
+--      故不止「标注 STRUCTURAL_CORRELATION」（标注一个坏估计量仍是坏估计量），而是三式并出：
+--        corr_len_dens_struct  ＝ corr(shoe_len_obs, n_bets ÷ shoe_len_obs)  ← 旧式，标注为结构性相关
+--        corr_len_bets         ＝ corr(shoe_len_obs, n_bets)                ← 去耦式，**主用**
+--        corr_len_rounds       ＝ corr(shoe_len_obs, n_rounds_obs)          ← 长度与覆盖度之关系
+--   ⑤ 〔升·修§六②〕bets_per_round 更名并分家。〔核〕旧式以 max_round 作分母，
+--      系「以最大局号充局数」——正是总包 §R01 shoe_len 注释所警示之误用。故出三式：
+--        bets_per_maxround ＝ Σn_bets ÷ Σshoe_len_obs   ← 旧式，留作血统对照
+--        bets_per_obsround ＝ Σn_bets ÷ Σn_rounds_obs   ← 正解（分母为观测局数）
+--        bets_per_shoe     ＝ Σn_bets ÷ n_shoes         ← 去耦密度（分母不含靴长）
+--   ⑥ 〔核〕加靴键等价在带自证：n_shoes_2key／n_shoes_1key／shoe_key_delta／
+--      pct_cross_table／max_tables_per_shoe。总包 §P13 以单键分组之安全性由此**同批自证**，
+--      不再依赖另一次查询之历史结论（§R01-0b 之 OBSERVED 事实不外推，换窗须重验）。
+--   ⑦ 〔核〕加靴号重用检测：n_dt_shoe。跨零点续接之靴最多横跨 2 个营业日，
+--      故 n_dt_shoe ≥ 3 者**必**为靴号重用——此闸恰好补上现有两项检验之盲区：
+--      max_tables_per_shoe = 1 看不见（同桌重用），pct_contiguous = 100% 亦看不见
+--      （局号接续编号正是其判为「连续」之依据）。桌 912 之 ceiling ≈ 1.86 × p99 由此可判。
+--   ⑧ 〔核〕加边界靴旗标 is_edge 与 pct_shoes_edge。窗界由数据现取，不写死日期字面。
+--   ⑨ 〔升§十八〕〔核〕NULL／异常诊断标量随行。〔核·修正〕升级.txt 所列 n_round_gt_ceiling
+--      不可实现——ceiling 系 MAX 派生，无值可逾之。改出 max_shoe_len_1dt（单日内最长靴），
+--      令 R 侧可与该桌 p99 比对，判「单日超长靴」（物理靴换而靴号未递增之通道）。
+--   ⑩ 〔升§八〕靴长列更名 shoe_len_obs 并入册为 OBSERVED PROXY，禁 Registry 直接建
+--      shoe_length = max_round 之等式。
+--   ⑪ 〔核〕反截断由一量增为三量：n_tables_total／n_shoes_total／n_bets_total。
+--      只带行数只能对账「行」，带量方能对账「量」。
+--   ⑫ 〔核〕ORDER BY 先按桌号数值序再按字面，免 varchar 字典序把 '1','112','2','31' 排乱。
+--
+-- 【天花板｜本件无法解决，须权威表 P0】
+--   shoe_len_obs ＝ MAX(round_no) 恒为**观测代理**，非真靴长。真靴长须副数与切牌位入册
+--   （权威表 P0）方可定。故一切「渗透率」「牌深」推算皆 INFERRED，不得升为 OBSERVED。
+-- ═══════════════════════════════════════════════════════════════════════════════════════
+-- ▸ 导出：需要 —— 存为「数据库/P14_table_shoe_truth.csv」。
+
+WITH test_agents AS (                                                                           -- 公共表表达式：公司测试线代理名单（§P14）
+  SELECT DISTINCT age001 AS agent_id                                                            -- 取列：★DISTINCT 防扇出——age001 若重复，五路左连接会把一注扇成多行
+  FROM ods_mariadb_2b.ods_a168_agent                                                            -- 取数来源：取自代理主档
+  WHERE age022 = '1'                                                                            -- 过滤条件：测试线旗标
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+ranked AS (                                                                                     -- 公共表表达式：同注单号保留最新版本（与 §R01 同闸同窗同游戏类别）
+  SELECT b.bet01, b.bet03, b.bet04, b.bet39, b.dt,                                              -- 取列：涉 bet03（靴号）、bet04（局号）、bet39（桌号）、dt（营业日）
+         b.bet18, b.bet19, b.bet20, b.bet21, b.bet22,                                           -- 续行：五级代理线
+         b.bet38, b.category,                                                                   -- 续行：测试标识与注单类别
+         ROW_NUMBER() OVER (                                                                    -- 行号窗口表达式：以行号窗口去重
+           PARTITION BY b.bet01                                                                 -- 窗口分区：按注单号（★此假设由 dedup_integrity_ratio 实测，不凭字段名断言）
+           ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC) AS rn                       -- 排序：三级降序取最新版本
+  FROM ods_mariadb_2b.ods_a168_bet02 b                                                          -- 取数来源：注单明细表
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'                                            -- 过滤条件：限定全局窗（半开区间）
+    AND b.bet02 = '101'                                                                         -- 并列条件：限定百家乐
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+raw AS (                                                                                        -- 公共表表达式：仅施去重与业务闸、**不施键非空闸**——留作 NULL 诊断之分母（§P14）
+  SELECT r.bet01 AS bet_id, r.dt,                                                               -- 取列：注单号与营业日
+         TRIM(r.bet39) AS table_id, TRIM(r.bet03) AS shoe_id,                                   -- 取值表达式：★TRIM 防键分裂
+         CAST(NULLIF(TRIM(r.bet04),'') AS INT) AS round_no                                      -- 取值表达式：去空白、空串归 NULL、显式转型，产出「round_no」
+  FROM ranked r                                                                                 -- 取数来源：中间结果集 ranked
+  LEFT JOIN test_agents t1 ON t1.agent_id = r.bet18                                             -- 左连接：一级线对测试名单
+  LEFT JOIN test_agents t2 ON t2.agent_id = r.bet19                                             -- 左连接：二级线对测试名单
+  LEFT JOIN test_agents t3 ON t3.agent_id = r.bet20                                             -- 左连接：三级线对测试名单
+  LEFT JOIN test_agents t4 ON t4.agent_id = r.bet21                                             -- 左连接：四级线对测试名单
+  LEFT JOIN test_agents t5 ON t5.agent_id = r.bet22                                             -- 左连接：五级线对测试名单
+  WHERE r.rn = 1                                                                                -- 过滤条件：只留最新版本
+    AND r.category = '1'                                                                        -- 并列条件：一般注单准入
+    AND UPPER(TRIM(r.bet38)) = 'N'                                                              -- 并列条件：排除测试单
+    AND COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,t4.agent_id,t5.agent_id) IS NULL           -- 并列条件：五级任一命中测试线即剔
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+gated AS (                                                                                      -- 公共表表达式：再施结构键闸——本层方为结构真相层之输入（§P14）
+  SELECT * FROM raw                                                                             -- 取列：承 raw 全列
+  WHERE table_id <> '' AND shoe_id <> '' AND round_no > 0                                       -- 过滤条件：★三键闸——空键会聚成幻影桌／幻影靴，非正局号亦须剔
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+win AS (                                                                                        -- 公共表表达式：窗界现取层——边界日由数据自证，不写死日期字面（§P14）
+  SELECT MIN(dt) AS dt_first, MAX(dt) AS dt_last FROM gated                                     -- 聚合表达式：产出「dt_first」「dt_last」
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+shoe AS (                                                                                       -- 公共表表达式：★结构真相层——(table_id, shoe_id) 双键为权威靴键（§P14）
+  SELECT g.table_id, g.shoe_id,                                                                 -- 取列：双键
+         MAX(g.round_no)            AS shoe_len_obs,                                            -- 计数表达式：★观测靴长代理＝最大局号，**非局数**；真靴长待权威表 P0
+         MIN(g.round_no)            AS first_round_obs,                                         -- 聚合表达式：实见首局号（起始偏移 ＝ 其减一）
+         COUNT(DISTINCT g.round_no) AS n_rounds_obs,                                            -- 计数表达式：★观测局数＝实见局号种数，与靴长分离方能算覆盖率
+         COUNT(*)                   AS n_bets,                                                  -- 计数表达式：靴内注单行数
+         COUNT(DISTINCT g.bet_id)   AS n_bets_distinct,                                         -- 计数表达式：靴内去重注单数（与上者之比即去重完整率）
+         COUNT(DISTINCT g.dt)       AS n_dt_shoe,                                               -- 计数表达式：★横跨营业日数——跨零点续接最多 2 日，≥3 必为靴号重用
+         MAX(CASE WHEN g.dt = w.dt_first OR g.dt = w.dt_last                                    -- 条件分支：★边界靴旗标
+                  THEN 1 ELSE 0 END) AS is_edge                                                 -- 续行：产出「is_edge」（1 ＝ 触窗界，其 shoe_len_obs 系下偏值）
+  FROM gated g CROSS JOIN win w                                                                 -- 取数来源：中间结果集 gated 叉乘窗界一行
+  GROUP BY g.table_id, g.shoe_id                                                                -- 分组：按双键靴
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+shoe1 AS (                                                                                      -- 公共表表达式：单键靴之同批对照——供靴键等价自证（§P14）
+  SELECT shoe_id, COUNT(DISTINCT table_id) AS n_tab_per_shoe                                    -- 计数表达式：每靴号所涉桌数；>1 即跨桌
+  FROM gated GROUP BY shoe_id                                                                   -- 分组：按单键靴号
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+tbl AS (                                                                                        -- 公共表表达式：桌级聚合——本件之主体输出（§P14）
+  SELECT table_id,                                                                              -- 取列：桌号为主键
+         COUNT(*)                        AS n_shoes,                                            -- 计数表达式：该桌靴数（双键计）
+         SUM(n_bets)                     AS n_bets,                                             -- 汇总表达式：该桌注单行数
+         SUM(n_bets_distinct)            AS n_bets_distinct,                                    -- 汇总表达式：该桌去重注单数
+         AVG(shoe_len_obs)               AS avg_shoe_len_obs,                                   -- 聚合表达式：★观测靴长均值（原名 avg_max_round，更名以杜绝当作局数）
+         PERCENTILE_APPROX(shoe_len_obs, 0.50) AS p50_shoe_len_obs,                             -- 取近似分位数表达式：靴长中位——桌族聚类之键（★近似算法）
+         PERCENTILE_APPROX(shoe_len_obs, 0.75) AS p75_shoe_len_obs,                             -- 取近似分位数表达式：靴长上四分位
+         PERCENTILE_APPROX(shoe_len_obs, 0.90) AS p90_shoe_len_obs,                             -- 取近似分位数表达式：靴长第 90 百分位
+         PERCENTILE_APPROX(shoe_len_obs, 0.99) AS p99_shoe_len_obs,                             -- 取近似分位数表达式：★小 n 桌之 p99 不可靠，消费须配 n_shoes 闸
+         MIN(shoe_len_obs)               AS min_shoe_len_obs,                                   -- 聚合表达式：该桌最短靴（截断靴之线索）
+         MAX(shoe_len_obs)               AS ceiling_observed,                                   -- 聚合表达式：★观测上限——与 p99 之比显著逾一即靴号重用或跨日合并嫌疑
+         AVG(n_rounds_obs)               AS avg_n_rounds_obs,                                   -- 聚合表达式：观测局数均值
+         SUM(n_rounds_obs)               AS sum_n_rounds_obs,                                   -- 汇总表达式：观测局数合计（正解密度之分母）
+         SUM(shoe_len_obs)               AS sum_shoe_len_obs,                                   -- 汇总表达式：靴长合计（旧式密度之分母，留作血统对照）
+         SUM(n_bets) * 1.0 / NULLIF(SUM(shoe_len_obs),0)                                        -- 除法计算：★旧式密度——以最大局号充局数，留作与历史数字对照之用
+                                         AS bets_per_maxround,                                  -- 续行：产出「bets_per_maxround」
+         SUM(n_bets) * 1.0 / NULLIF(SUM(n_rounds_obs),0)                                        -- 除法计算：★正解密度——分母为观测局数
+                                         AS bets_per_obsround,                                  -- 续行：产出「bets_per_obsround」
+         SUM(n_bets) * 1.0 / NULLIF(COUNT(*),0)                                                 -- 除法计算：★去耦密度——分母为靴数，不含靴长，故与靴长相关时无比率伪相关
+                                         AS bets_per_shoe,                                      -- 续行：产出「bets_per_shoe」
+         SUM(n_rounds_obs) * 1.0 / NULLIF(SUM(shoe_len_obs),0)                                  -- 除法计算：★观测覆盖率＝观测局数 ÷ 靴长（含起始偏移，与升级.txt 建议同式）
+                                         AS round_coverage,                                     -- 续行：产出「round_coverage」（1.00 谓局号自 1 起连续无缺口）
+         SUM(n_rounds_obs) * 1.0                                                                -- 除法计算：★内段覆盖率之分子
+           / NULLIF(SUM(shoe_len_obs - first_round_obs + 1),0)                                  -- 续行：分母＝实见局号跨距合计，故与「几时开始被看见」无关
+                                         AS interior_coverage,                                  -- 续行：产出「interior_coverage」（纯中段完整度）
+         AVG(first_round_obs - 1)        AS avg_start_offset,                                   -- 聚合表达式：★起始偏移均值——由覆盖率中拆出，独立成列
+         AVG(shoe_len_obs - n_rounds_obs) AS avg_gap_total,                                     -- 聚合表达式：总缺口均值（原 avg_gap，含起始偏移，留作血统对照）
+         AVG(shoe_len_obs - first_round_obs + 1 - n_rounds_obs)                                 -- 聚合表达式：★中段缺口均值——剔除起始偏移之纯内段缺口
+                                         AS avg_gap_interior,                                   -- 续行：产出「avg_gap_interior」
+         SUM(CASE WHEN n_rounds_obs = 1 THEN 1 ELSE 0 END) AS n_shoes_1round,                   -- 汇总表达式：单局靴数（跨日边界／换荷官／开收台之截断）
+         SUM(is_edge)                    AS n_shoes_edge,                                       -- 汇总表达式：触窗界之靴数
+         SUM(is_edge) * 1.0 / NULLIF(COUNT(*),0) AS pct_shoes_edge,                             -- 除法计算：触窗界之靴占比
+         MAX(n_dt_shoe)                  AS max_n_dt_shoe,                                      -- 聚合表达式：★该桌之最大跨日数；≥3 即该桌存在靴号重用
+         SUM(CASE WHEN n_dt_shoe >= 3 THEN 1 ELSE 0 END) AS n_shoes_dt_ge3,                     -- 汇总表达式：★跨 ≥3 日之靴数——靴号重用之直接计数
+         MAX(CASE WHEN n_dt_shoe = 1 THEN shoe_len_obs END) AS max_shoe_len_1dt,                -- 条件分支：★单日内最长靴——R 侧与 p99 比对即判「单日超长靴」
+         (AVG(shoe_len_obs * (n_bets * 1.0 / NULLIF(shoe_len_obs,0)))                           -- 除法计算：结构性相关之协方差分子（旧式，X 与 Y=n_bets÷X）
+            - AVG(shoe_len_obs) * AVG(n_bets * 1.0 / NULLIF(shoe_len_obs,0)))                   -- 续行：减去均值之积
+           / NULLIF(STDDEV_POP(shoe_len_obs)                                                    -- 除法计算：除以两标准差之积（总体矩，与 AVG 同族）
+                    * STDDEV_POP(n_bets * 1.0 / NULLIF(shoe_len_obs,0)), 0)                     -- 续行：★标注 STRUCTURAL_CORRELATION——比率型伪相关，禁作行为关联读
+                                         AS corr_len_dens_struct,                               -- 续行：产出「corr_len_dens_struct」
+         (AVG(shoe_len_obs * n_bets) - AVG(shoe_len_obs) * AVG(n_bets))                         -- 除法计算：★去耦相关之协方差分子——两变量皆原始量，无共用分母
+           / NULLIF(STDDEV_POP(shoe_len_obs) * STDDEV_POP(n_bets), 0)                           -- 续行：除以两标准差之积
+                                         AS corr_len_bets,                                      -- 续行：产出「corr_len_bets」（**主用**之桌内相关）
+         (AVG(shoe_len_obs * n_rounds_obs)                                                      -- 除法计算：长度与覆盖度之相关，协方差分子
+            - AVG(shoe_len_obs) * AVG(n_rounds_obs))                                            -- 续行：减去均值之积
+           / NULLIF(STDDEV_POP(shoe_len_obs) * STDDEV_POP(n_rounds_obs), 0)                     -- 续行：除以两标准差之积
+                                         AS corr_len_rounds                                     -- 续行：产出「corr_len_rounds」
+  FROM shoe                                                                                     -- 取数来源：结构真相层
+  GROUP BY table_id                                                                             -- 分组：按桌
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+k1 AS (                                                                                         -- 公共表表达式：靴键等价自证之一——双键与单键靴数（§P14）
+  SELECT COUNT(*) AS n_shoes_2key FROM shoe                                                     -- 计数表达式：双键靴数
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+k2 AS (                                                                                         -- 公共表表达式：靴键等价自证之二——单键靴数与跨桌率（§P14）
+  SELECT COUNT(*)                AS n_shoes_1key,                                               -- 计数表达式：单键靴数
+         MAX(n_tab_per_shoe)      AS max_tables_per_shoe,                                       -- 聚合表达式：★每靴最大桌数；＝1 即单键与双键同粒度
+         SUM(CASE WHEN n_tab_per_shoe > 1 THEN 1 ELSE 0 END) * 1.0                              -- 除法计算：跨桌靴之占比分子
+           / NULLIF(COUNT(*),0)   AS pct_cross_table                                            -- 续行：产出「pct_cross_table」（＝0 即无跨桌合并证据）
+  FROM shoe1                                                                                    -- 取数来源：单键靴对照层
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+nd AS (                                                                                         -- 公共表表达式：NULL 与异常值诊断——分母取未施键闸之 raw（§P14）
+  SELECT COUNT(*)                                             AS n_rows_raw,                    -- 计数表达式：业务闸后、键闸前之行数
+         COUNT(DISTINCT bet_id)                               AS n_bets_distinct_raw,           -- 计数表达式：同上去重
+         SUM(CASE WHEN table_id IS NULL OR table_id = '' THEN 1 ELSE 0 END)                     -- 汇总表达式：桌键空缺行数
+                                                              AS n_null_table,                  -- 续行：产出「n_null_table」
+         SUM(CASE WHEN shoe_id IS NULL OR shoe_id = '' THEN 1 ELSE 0 END)                       -- 汇总表达式：靴键空缺行数
+                                                              AS n_null_shoe,                   -- 续行：产出「n_null_shoe」
+         SUM(CASE WHEN round_no IS NULL THEN 1 ELSE 0 END)     AS n_null_round,                 -- 汇总表达式：局号空缺行数
+         SUM(CASE WHEN round_no <= 0 THEN 1 ELSE 0 END)        AS n_round_le0                   -- 汇总表达式：非正局号行数
+  FROM raw                                                                                      -- 取数来源：未施键闸之中间结果集
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+tot AS (                                                                                        -- 公共表表达式：★反截断三量——只带行数只能对账「行」，带量方能对账「量」（§P14）
+  SELECT COUNT(*)          AS n_tables_total,                                                   -- 计数表达式：总桌数
+         SUM(n_shoes)      AS n_shoes_total,                                                    -- 汇总表达式：总靴数（可与总包 §R01-0b 之全域靴数对账）
+         SUM(n_bets)       AS n_bets_total                                                      -- 汇总表达式：总注单行数
+  FROM tbl                                                                                      -- 取数来源：桌级聚合
+),                                                                                              -- 续行：收束上方的子查询或函数括号（§P14）
+diag AS (                                                                                       -- 公共表表达式：诊断标量合并为一行，供 CROSS JOIN 随行（§P14）
+  SELECT t.*, k1.*, k2.*, nd.*, w.*,                                                            -- 取列：五组标量
+         k1.n_shoes_2key - k2.n_shoes_1key AS shoe_key_delta,                                   -- 减法计算：★靴键等价之判据；＝0 即单键与双键同粒度（换窗须重验）
+         nd.n_rows_raw * 1.0 / NULLIF(nd.n_bets_distinct_raw,0)                                 -- 除法计算：★去重完整率——理想恒为 1.000000
+                                           AS dedup_integrity_ratio                             -- 续行：产出「dedup_integrity_ratio」
+  FROM tot t CROSS JOIN k1 CROSS JOIN k2 CROSS JOIN nd CROSS JOIN win w                         -- 取数来源：五组标量叉乘
+)                                                                                               -- 续行：收束上方的子查询或函数括号（§P14）
+SELECT t.*, d.*                                                                                 -- 取列：桌级主体 ＋ 诊断标量随行（每行皆携，前端截断亦不失）
+FROM tbl t CROSS JOIN diag d                                                                    -- 取数来源：桌级聚合叉乘诊断一行
+ORDER BY CAST(t.table_id AS BIGINT), t.table_id                                                 -- 排序：★先数值序再字面序——纯字面序会把 '1','112','2','31' 排乱；非数字桌号落末尾
+;
+
+-- 【运行成本告示】
+--   raw／gated 各含 COUNT(DISTINCT)，shoe 层再含两个 COUNT(DISTINCT)，于窗内约 1.2 亿行
+--   注单上属重算子。本件行数仅数十，成本一次摊清，故不建议拆分；若确需拆，
+--   诊断标量须另附并在报告侧显式登记「诊断与主体非同批」——禁静默丢弃诊断。
+--
+-- 【与总包 §R01-0b 之对账】
+--   n_shoes_total 应与总包 shoe_len 注释所载全域靴数全等；avg_shoe_len_obs 以靴数加权
+--   之均值应与其所载 avg max_round 全等。二者全等即证：
+--   ① 本件与总包同闸同窗（闸门差异不足以改变结果）；② 前端未截断（否则合计必小于全域）。
+--   不全等则须先查闸门差异，**禁**以「近似相等」放行。
+```
+
+::: {.callout-important}
+## 改号告示与定位
+
+**改号**：本探针原命名 §P13，与 SQL 总包 v11.0.4 之 §P13「会员入场行为层」（导出
+`P13_personal_entry.csv`）编号冲突。§号系交付件索引，一号双占即索引失效——与前番 P11
+被阿泽总帐与雷欧总帐双占同类。故本块改号 **§P14**，导出件改为
+`数据库/P14_table_shoe_truth.csv`。**改号候裁定**，未批准前以本告示为准。
+
+**定位**：结构真相层。本件不出业务结论，只出三样——① 桌／靴／局之结构事实；
+② 靴键等价之在带自证；③ 反截断与完整性诊断标量。会员行为层（Entry／Exit／Persistence）
+归总包 §P13，经济层（`stake`／`GGR`）归 §R01／§P11。**一件一职，禁跨件挪用。**
+:::
+
+#### 查询解释：分两道键闸，是本次强化之枢轴
+
+链路为 `test_agents → ranked → raw → gated → win → (shoe · shoe1) → tbl → (k1 · k2 · nd · tot · diag) → 输出`。
+
+**为何 `raw` 与 `gated` 分成两层**——这是全块最要紧的一处设计。`raw` 只施业务闸
+（去重、一般单、非测试单、五级测试线剔除），**不施结构键闸**；`gated` 才施
+`table_id <> '' AND shoe_id <> '' AND round_no > 0`。分两层之故：NULL 诊断之分母必须是
+「本可入册而被键闸剔掉」的那批，若在同一层顺手剔掉，被剔者即凭空消失，
+`n_null_table` 之类只能永远报 0——**诊断变成自证清白，毫无用处**。
+
+**`shoe`（结构真相层·双键）**——`(table_id, shoe_id)` 出七量。其中三组两两成对，
+用途各异，不可互代：
+
+| 对 | 两量 | 差别之所在 |
+|:--|:--|:--|
+| 长度 vs 计数 | `shoe_len_obs`（最大局号）／`n_rounds_obs`（观测局数） | 前者作**位置归一化**分母（`shoe_pos`），后者作**计数**分母（密度）。总包 §R01 之 `shoe_len` 注释警示者正是二者不可混用 |
+| 覆盖 vs 偏移 | `first_round_obs`／`n_rounds_obs` | 局号自 5 起而中段无缺口者，`n_rounds ÷ max_round` 亦只得 0.92 —— 那是**起始偏移**不是缺口。故拆 `interior_coverage` 与 `avg_start_offset` |
+| 续接 vs 重用 | `n_dt_shoe`／`is_edge` | 跨零点续接之靴最多横跨 **2** 个营业日；`n_dt_shoe ≥ 3` 者**必**为靴号重用。此闸恰补现有两项检验之盲区 |
+
+**`shoe1`（单键对照）**——按 `bet03` 单键分组，出每靴所涉桌数。与 `shoe` 同批，
+故 `k1`／`k2` 可当场算出 `shoe_key_delta`、`pct_cross_table`、`max_tables_per_shoe`：
+总包 §P13 以单键分组之安全性由此**同批自证**，不再依赖另一次查询之历史结论
+（§R01-0b 之 OBSERVED 事实明载不外推、换窗须重验）。
+
+**`tbl`（桌级聚合）**——三组同族异式并出，皆留在册：
+
+- 密度三式：`bets_per_maxround`（旧式，以最大局号充局数，留作血统对照）／
+  `bets_per_obsround`（正解，分母为观测局数）／`bets_per_shoe`（**去耦式**，分母为靴数）。
+- 覆盖二式：`round_coverage`（含起始偏移，与建议同式）／`interior_coverage`（纯中段）。
+- 相关三式：`corr_len_dens_struct`（旧式，标注为**结构性相关**）／
+  `corr_len_bets`（**去耦式，主用**）／`corr_len_rounds`（长度与覆盖度）。
+
+**为何相关系数须出三式**——旧式之 `dens = n_bets ÷ shoe_len_obs`，其**分母即解释变量本身**。
+此系比率型伪相关（Pearson 1897）：纵使 `n_bets` 与 `shoe_len_obs` 彼此独立，
+`corr` 亦系统性偏负。故不止于「标注 `STRUCTURAL_CORRELATION`」——
+**标注一个坏估计量，它仍是坏估计量**；须另出两变量皆原始量之去耦式，
+并以两式并报令读者自判耦合分量之大小。
+
+**`diag`（诊断标量随行）**——反截断由一量增为三量：`n_tables_total`／`n_shoes_total`／
+`n_bets_total`。只带行数只能对账「行」，带量方能对账「量」。
+
+**`ORDER BY`**——先 `CAST(table_id AS BIGINT)` 再字面。纯字面序会把
+`'1','112','2','31'` 排乱，直接影响首末行呈表取哪几行。
+
+#### 输出指标标准
+
+::: {.tbl-scroll}
+```{r}
+#| label: p14-spec
+#| echo: true
+## 规章表（治理规则，非数据）——契约与验收标准自为真相源，**全行零省略**。
+p14spec <- data.table(
+  列名 = c("table_id","n_shoes","n_bets","n_bets_distinct",
+           "avg_shoe_len_obs","p50_shoe_len_obs","p75_shoe_len_obs","p90_shoe_len_obs",
+           "p99_shoe_len_obs","min_shoe_len_obs","ceiling_observed",
+           "avg_n_rounds_obs","sum_n_rounds_obs","sum_shoe_len_obs",
+           "bets_per_maxround","bets_per_obsround","bets_per_shoe",
+           "round_coverage","interior_coverage","avg_start_offset",
+           "avg_gap_total","avg_gap_interior",
+           "n_shoes_1round","n_shoes_edge","pct_shoes_edge",
+           "max_n_dt_shoe","n_shoes_dt_ge3","max_shoe_len_1dt",
+           "corr_len_dens_struct","corr_len_bets","corr_len_rounds",
+           "n_tables_total","n_shoes_total","n_bets_total",
+           "n_shoes_2key","n_shoes_1key","shoe_key_delta",
+           "max_tables_per_shoe","pct_cross_table",
+           "n_rows_raw","n_bets_distinct_raw","dedup_integrity_ratio",
+           "n_null_table","n_null_shoe","n_null_round","n_round_le0",
+           "dt_first","dt_last"),
+  层 = c("键", rep("规模", 3L), rep("A 靴长分布", 7L), rep("B 计数分母", 3L),
+         rep("C 密度", 3L), rep("D 观测质量", 5L), rep("E 异常线索", 6L),
+         rep("F 相关", 3L), rep("G 反截断", 3L), rep("H 靴键等价", 5L),
+         rep("I 完整性诊断", 7L), rep("J 窗界", 2L)),
+  定义式 = c(
+    "`TRIM(bet39)`", "该桌双键靴数", "`Σn_bets`", "`Σn_bets_distinct`",
+    "`AVG(shoe_len_obs)`", "靴长近似 P50", "靴长近似 P75", "靴长近似 P90",
+    "靴长近似 P99", "`MIN(shoe_len_obs)`", "`MAX(shoe_len_obs)`",
+    "`AVG(n_rounds_obs)`", "`Σn_rounds_obs`", "`Σshoe_len_obs`",
+    "`Σn_bets ÷ Σshoe_len_obs`", "`Σn_bets ÷ Σn_rounds_obs`", "`Σn_bets ÷ n_shoes`",
+    "`Σn_rounds_obs ÷ Σshoe_len_obs`",
+    "`Σn_rounds_obs ÷ Σ(shoe_len_obs − first_round_obs + 1)`",
+    "`AVG(first_round_obs − 1)`",
+    "`AVG(shoe_len_obs − n_rounds_obs)`",
+    "`AVG(shoe_len_obs − first_round_obs + 1 − n_rounds_obs)`",
+    "`n_rounds_obs = 1` 之靴数", "`Σis_edge`", "`n_shoes_edge ÷ n_shoes`",
+    "`MAX(n_dt_shoe)`", "`n_dt_shoe ≥ 3` 之靴数", "`n_dt_shoe = 1` 者之最长靴",
+    "`corr(shoe_len_obs, n_bets ÷ shoe_len_obs)`",
+    "`corr(shoe_len_obs, n_bets)`", "`corr(shoe_len_obs, n_rounds_obs)`",
+    "全域桌数", "全域靴数", "全域注单行数",
+    "双键靴数", "单键靴数", "`n_shoes_2key − n_shoes_1key`",
+    "`MAX(每靴所涉桌数)`", "跨桌靴占比",
+    "键闸前行数", "键闸前去重注单数", "`n_rows_raw ÷ n_bets_distinct_raw`",
+    "桌键空缺行数", "靴键空缺行数", "局号空缺行数", "非正局号行数",
+    "实见首营业日", "实见末营业日"),
+  粒度 = c(rep("table_id", 31L), rep("全域常量", 17L)),
+  判级 = c("OBSERVED", rep("OBSERVED", 3L),
+           "OBSERVED·代理", rep("OBSERVED·代理·近似", 4L),
+           "OBSERVED·代理", "OBSERVED·代理",
+           rep("OBSERVED", 3L), rep("OBSERVED", 3L), rep("OBSERVED", 5L),
+           rep("OBSERVED", 6L),
+           "STRUCTURAL_CORRELATION", "OBSERVED", "OBSERVED",
+           rep("OBSERVED", 3L), rep("OBSERVED", 5L), rep("OBSERVED", 7L),
+           rep("OBSERVED", 2L)),
+  消费规则 = c(
+    "主键；须为非空、去空白后之字面", "分位类指标之样本量闸", "只作规模", "只作对账",
+    "**代理量**：禁建 `shoe_length = max_round` 之等式；只作位置归一化之分母",
+    "桌族聚类之键", "只作分布形状", "只作分布形状",
+    "**小 `n_shoes` 桌之 P99 不可靠**；`n_shoes < ⌈1/(1−0.99)⌉` 者须标注",
+    "截断靴之线索", "与 `p99` 之比显著逾一即靴号重用或跨日合并嫌疑",
+    "只作分布", "**计数类之正解分母**", "旧式分母，只作血统对照",
+    "**旧式**，只作与历史数字对照；禁作业务解释", "正解密度",
+    "**去耦密度**，与靴长作相关时用此列",
+    "与建议同式，含起始偏移，只作血统对照", "**纯中段完整度，主用**",
+    "只作诊断；显著大于 0 谓该桌多在中段才被看见",
+    "旧式，含起始偏移，只作血统对照", "**纯中段缺口，主用**",
+    "只作数据完整性线索，非风控处置", "只作诊断", "高值者其靴长系下偏",
+    "**≤ 2 方为正常**；≥ 3 即靴号重用", "靴号重用之直接计数",
+    "R 侧与该桌 `p99` 比对，判「单日超长靴」（物理靴换而靴号未递增之通道）",
+    "🔴 **禁作行为关联读**——比率型伪相关，只保留以与历史数字对照",
+    "**主用之桌内相关**（两变量皆原始量）", "长度与覆盖度之关系",
+    "反截断·对账「桌」", "反截断·对账「靴」（可与总包全域靴数对账）", "反截断·对账「注」",
+    "靴键等价之左项", "靴键等价之右项",
+    "**== 0 方可认单键与双键同粒度**；换窗须重验",
+    "**== 1 方可认无跨桌合并**", "**== 0 方可认无跨桌合并**",
+    "NULL 诊断之分母", "只作对账", "**恒为 1.000000**；> 1 即扇出或版本链假设不成立",
+    "> 0 即须查上游桌号缺失", "> 0 即须查上游靴号缺失",
+    "> 0 即须查上游局号缺失", "> 0 即须查局号语义",
+    "边界靴判定之基准", "同左"))
+p14spec[, 序 := .i(seq_len(.N))]; setcolorder(p14spec, "序")
+kable(p14spec, align = "l", escape = FALSE,
+  caption = sprintf(paste0("§P14 输出指标标准（%s 列 × %s 属性，**全行零省略**；",
+    "分十层 A–J；判级中「·代理」谓 OBSERVED PROXY（`MAX(round_no)` 非真靴长）、",
+    "「·近似」谓由 `PERCENTILE_APPROX` 出、`STRUCTURAL_CORRELATION` 谓比率型伪相关）"),
+    .i(nrow(p14spec)), .i(ncol(p14spec))))
+```
+:::
+
+#### 验收判据：先过闸，再谈判读
+
+::: {.tbl-scroll}
+```{r}
+#| label: p14-gate
+#| echo: true
+## 规章表（治理规则，非数据）。判据以**可机检**为准。
+p14gate <- data.table(
+  闸 = c("G-1 反截断对账", "G-2 去重完整", "G-3 键闸留痕", "G-4 靴键等价",
+         "G-5 靴号重用", "G-6 分位样本量", "G-7 覆盖率分层", "G-8 边界靴",
+         "G-9 相关系数取式", "G-10 全序导出", "G-11 外部不变量对账"),
+  判据 = c(
+    "本档行数 == `n_tables_total`；且 `Σn_shoes == n_shoes_total`、`Σn_bets == n_bets_total`",
+    "`dedup_integrity_ratio` == 1",
+    "`n_null_table` ＋ `n_null_shoe` ＋ `n_null_round` ＋ `n_round_le0` 须现算披露",
+    "`shoe_key_delta` == 0 且 `max_tables_per_shoe` == 1 且 `pct_cross_table` == 0",
+    "`n_shoes_dt_ge3` == 0 且 `max_n_dt_shoe` ≤ 2",
+    "凡消费 `p99_shoe_len_obs` 者，其 `n_shoes` 须 ≥ `⌈1/(1−0.99)⌉`",
+    "`round_coverage` 与 `interior_coverage` 之桌间分布须现算披露",
+    "`pct_shoes_edge` 须现算披露",
+    "凡作「靴长 × 密度」相关之判读，须取 `corr_len_bets`，并同时列出 `corr_len_dens_struct`",
+    "`ORDER BY` 含数值序 ＋ 字面序两级；导出禁用 `OFFSET`",
+    "`n_shoes_total` 与靴数加权 `avg_shoe_len_obs` 须与总包 §R01-0b 所载全域不变量全等"),
+  失败处置 = c(
+    "🔴 重导——行数或量不符即前端截断，一切跨桌裁定禁外推",
+    "🔴 整批退回——先查 `test_agents` 是否漏 `DISTINCT`",
+    "🟡 披露即可；> 0 者须另开上游工单，不阻本件",
+    "🟠 **停用总包 §P13 之单键分组**，改走双键；并撤回一切以单键靴数为据之结论",
+    "🟠 涉事桌入粒度验证队列；其 `ceiling_observed` 与 `p99` 之读数标注为不可信",
+    "🟠 该桌之 P99 降为线索级；`ceiling ÷ p99` 之挂号判据于该桌不适用",
+    "🟡 低覆盖率桌须单列；禁与高覆盖率桌并入同一桌族",
+    "🟡 高占比桌之靴长读数标注下偏",
+    "🔴 判读作废重做——单取旧式即比率型伪相关，结论不可辩护",
+    "🔴 重导——非全序即分页可重可漏",
+    "🔴 先查闸门差异，**禁**以「近似相等」放行"),
+  依据 = c("升级.txt §十八 ＋ 本轮核实（一量增三量）",
+           "升级.txt §十六／§十七", "升级.txt §十八（经 raw／gated 分层修正）",
+           "升级.txt §四／§五（改为在带自证）", "本轮核实（跨零点最多 2 日）",
+           "本档 n_min ＝ ⌈1/(1−q)⌉ 反解律", "升级.txt §九（经拆分修正）",
+           "本轮核实（窗界半开区间之切尾）",
+           "升级.txt §七（经根因修正：Pearson 1897 比率型伪相关）",
+           "本档禁 OFFSET 律", "总包 §R01-0b 之 OBSERVED 不变量"))
+p14gate[, 序 := .i(seq_len(.N))]; setcolorder(p14gate, "序")
+kable(p14gate, align = "l", escape = FALSE,
+  caption = sprintf(paste0("§P14 验收判据（%s 闸全列，零省略；",
+    "🔴 整批退回 %s 项、🟠 降级 %s 项、🟡 披露 %s 项；",
+    "G-4／G-5 二闸系本次新立——前者令总包单键假设同批自证，后者补上现有两项碰撞检验之盲区）"),
+    .i(nrow(p14gate)),
+    .i(sum(grepl("^🔴", p14gate$失败处置))),
+    .i(sum(grepl("^🟠", p14gate$失败处置))),
+    .i(sum(grepl("^🟡", p14gate$失败处置)))))
+```
+:::
+
+::: {.callout-warning}
+## 天花板：本件解决不了什么
+
+`shoe_len_obs = MAX(round_no)` 恒为**观测代理**，非真靴长。真靴长须副数与切牌位入册
+（权威表 P0）方可定。故一切「渗透率」「牌深」推算皆 INFERRED，不得升为 OBSERVED。
+
+由此，「分母低估假说」须拆成两支，本件只能否掉一支：
+
+- **H_rel（低估幅度跨桌不同）**——可由本件之桌间比较检验。
+- **H_abs（全域同向低估）**——**本件盲视**。跨桌比较对同向偏移天然无感；
+  须待权威表 P0 或独立之副数／切牌位口径方可检验。
+
+同理，靴号重用之两条通道本件只能堵一条：`n_dt_shoe ≥ 3` 可判「同桌隔日重号」；
+「物理靴换而靴号未递增且局号接续编号」一条，须以 `max_shoe_len_1dt` 与该桌 `p99` 比对
+取得线索，但**确证仍待权威表 P0**。
+:::
+
+#### 现算读数与裁定
+
+```{r}
+#| label: shoe-family-probe
+#| echo: true
+#| results: asis
+## ══════════════════════════════════════════════════════════════════════════
+## 一切数字现算，裁定由数据分支产生——本 chunk 内不写任何结论性数字。
+## 预注册常量（见数前锁定，禁事后调参；与 .alpha／PREREG_SEED 同格登记）：
+CARDS_PER_ROUND <- 4.94        # 判级 INFERRED：百家乐每局平均耗牌之通用估计（牌深换算专用）
+CLAIM_SHOE_LEN  <- c(70, 80)   # 受检之**外部主张**（非本档阈值）：「一靴 70–80 局」
+PREREG_BOOT     <- 2000L       # 自助法重抽次数（区间估计，替代手写显著性门槛）
+## 判据一律无手写普适常数：方向之判以自助法区间是否越零，异常之判以 Tukey 栅。
+## ══════════════════════════════════════════════════════════════════════════
+
+## 口径锁取自「设置」chunk 之单一真相源（v1.2.53：原就地由 LATE_DEF 反解，
+## 而本节位于 roi-lock-build 之上游，故「找不到对象」；已将锁上移，此处只取用）
+stopifnot("须先由「设置」chunk 立 LATE_DEF／LATE_Q 口径锁" =
+            exists("LATE_Q") && is.finite(LATE_Q) && exists("LATE_DEF"))
+.LQ <- LATE_Q
+
+.wcor <- function(x, y, w) {
+  ok <- is.finite(x) & is.finite(y) & is.finite(w) & w > 0
+  if (sum(ok) < 3L) return(NA_real_)
+  x <- x[ok]; y <- y[ok]; w <- w[ok] / sum(w[ok])
+  mx <- sum(w * x); my <- sum(w * y)
+  sx <- sqrt(sum(w * (x - mx)^2)); sy <- sqrt(sum(w * (y - my)^2))
+  if (sx <= 0 || sy <= 0) NA_real_ else sum(w * (x - mx) * (y - my)) / (sx * sy)
+}
+.eta2 <- function(x, g, w) {
+  ok <- is.finite(x) & is.finite(w) & w > 0 & !is.na(g)
+  if (sum(ok) < 3L) return(NA_real_)
+  x <- x[ok]; g <- as.character(g[ok]); w <- w[ok]
+  gm  <- sum(w * x) / sum(w)
+  sst <- sum(w * (x - gm)^2)
+  ssb <- sum(vapply(split(seq_along(x), g), function(i)
+           sum(w[i]) * (sum(w[i] * x[i]) / sum(w[i]) - gm)^2, 0))
+  if (sst <= 0) NA_real_ else ssb / sst
+}
+.fence <- function(v) { v <- v[is.finite(v)]
+  if (length(v) < 4L) return(c(NA_real_, NA_real_))
+  q <- stats::quantile(v, c(.25, .75), names = FALSE); iq <- q[2] - q[1]
+  c(q[1] - 1.5 * iq, q[2] + 1.5 * iq) }          # Tukey 栅（统计学通行约定）
+.ht6 <- function(d, k = 6L) {
+  n  <- nrow(d)
+  ix <- if (n <= 2L * k) seq_len(n) else c(seq_len(k), seq.int(n - k + 1L, n))
+  o  <- d[ix]
+  o[, 序 := paste0(.i(ix), ":")]
+  if (n > 2L * k) {
+    s <- as.data.table(as.list(setNames(rep("", ncol(o)), names(o))))
+    set(s, 1L, "序", "`---`")          # set() 而非 [[<- ：免 selfref 失效之告警
+    o <- rbindlist(list(o[seq_len(k)], s, o[(k + 1L):nrow(o)]))
+  }
+  setcolorder(o, "序")
+  o[]
+}
+
+.pcand <- file.path(.dir, c("P13_桌级靴长密度探针.csv", "P13_桌级靴长探针.csv"))
+.phit  <- .pcand[file.exists(.pcand)]
+
+if (!length(.phit)) {
+  cat(sprintf(paste0(
+    "○ **待表**：当前工作目录 `%s` 之下未见探针件（候选：%s）。",
+    "本节一切读数与裁定**悉数悬空**，不以静态文字冒充结果——",
+    "上一版之相关系数、加权均靴长、四族靴长与涉事桌号，已随本次斧正一并撤出正文。",
+    "请先运行上方探针 SQL 并按列契约导出，再渲染本档。\n\n"),
+    getwd(), paste(sprintf("`%s`", basename(.pcand)), collapse = "、")))
+} else {
+  TB0 <- fread(.phit[1], encoding = "UTF-8")
+  .NEED <- list(
+    table_id         = c("table_id", "桌号", "bet39"),
+    n_shoes          = c("n_shoes", "靴数"),
+    n_bets           = c("n_bets", "注单数"),
+    avg_max_round    = c("avg_max_round", "均靴长"),
+    p50_max_round    = c("p50_max_round", "p50"),
+    p99_max_round    = c("p99_max_round", "p99"),
+    min_max_round    = c("min_max_round", "min"),
+    ceiling_observed = c("ceiling_observed", "ceiling"),
+    bets_per_round   = c("bets_per_round", "每局注数"),
+    avg_gap          = c("avg_gap", "均gap"),
+    corr_len_density = c("corr_len_density"),
+    n_tables_total   = c("n_tables_total", "总桌数"))
+  .res  <- vapply(.NEED, function(a) { h <- a[a %chin% names(TB0)]
+                    if (length(h)) h[1L] else NA_character_ }, "")
+  .must <- c("table_id", "n_shoes", "avg_max_round", "p50_max_round", "bets_per_round")
+  .lack <- names(.res)[is.na(.res)]
+  stopifnot("探针件缺必需列，不以 NA 静默通过" = !any(.must %chin% .lack))
+  .ok <- names(.res)[!is.na(.res)]
+  sel_cols <- unname(.res[.ok])
+  TB  <- TB0[, ..sel_cols]; setnames(TB, sel_cols, .ok)
+  for (.cn in setdiff(.ok, "table_id")) set(TB, j = .cn, value = as.numeric(TB[[.cn]]))
+  TB[, table_id := as.character(table_id)]
+  .has <- function(z) z %chin% names(TB)
+
+  ## ── 判读〇 · 反截断对账（先立此闸，后续裁定之效力范围由它定）────────────
+  .n_row <- nrow(TB)
+  .n_tot <- if (.has("n_tables_total")) max(TB$n_tables_total, na.rm = TRUE) else NA_real_
+  .trunc <- is.finite(.n_tot) && .n_row < .n_tot
+  cat(sprintf(paste0(
+    "**判读〇·行数对账（现算）**：探针件到手 **%s** 行；每行所携总桌数标量 **%s**。%s\n\n"),
+    .i(.n_row), if (is.finite(.n_tot)) .i(.n_tot) else "○ 待列（无 `n_tables_total`）",
+    if (!is.finite(.n_tot))
+      paste0("**无法对账**——探针件未携总桌数，故「本档共 ", .i(.n_row),
+             "桌」这一句**不得写入结论**；显示上限截断之嫌疑不能排除。")
+    else if (.trunc)
+      sprintf(paste0("🔴 **截断确认**：到手行数少于总桌数 **%s** 桌（缺 %.4f%%）。",
+             "以下一切跨桌裁定**降为样本级，禁外推至全平台**；须去前端显示上限后重导。"),
+             .i(.n_tot - .n_row), (.n_tot - .n_row) / .n_tot * 100)
+    else "✅ **未截断**：到手行数等于总桌数，跨桌裁定之外推范围成立。"))
+  if (length(.lack))
+    cat(sprintf("○ **待列**：探针件缺 %s，凡依赖该列之判读一律照登「待列」，不以邻列顶替。\n\n",
+                paste(sprintf("`%s`", .lack), collapse = "、")))
+
+  ## ── 判读一 · 分母低估假说（靴长被低估致 shoe_pos 失真？）────────────────
+  .wc <- .wcor(TB$bets_per_round, TB$avg_max_round, TB$n_shoes)
+  set.seed(PREREG_SEED)
+  .bs <- replicate(PREREG_BOOT, { ii <- sample.int(.n_row, replace = TRUE)
+           .wcor(TB$bets_per_round[ii], TB$avg_max_round[ii], TB$n_shoes[ii]) })
+  .ci <- stats::quantile(.bs, c(.025, .975), na.rm = TRUE, names = FALSE)
+  .v1 <- if (!is.finite(.wc)) "○ 不可判（方差为零或桌数不足）" else
+         if (is.finite(.ci[2]) && .ci[2] < 0) "**证否**——方向与假说相反：密度越高，靴反而越短" else
+         if (is.finite(.ci[1]) && .ci[1] > 0) "**未证否**——方向与假说一致，须续查" else
+         "○ 不可判——自助法区间越零，方向不稳"
+  .k  <- min(4L, .n_row)
+  .dn <- TB[order(-bets_per_round)][seq_len(.k)]
+  .sp <- TB[order( bets_per_round)][seq_len(.k)]
+  cat(sprintf(paste0(
+    "**判读一·分母低估假说（现算）**：跨桌以靴数加权之相关系数 corr(每局注数, 均靴长) ＝ **%+.4f**，",
+    "自助法 %s 次重抽之 95%% 区间 **[%+.4f, %+.4f]** → 裁定：%s。",
+    "%s最密 %s 桌每局注数 **%.2f–%.2f**、均靴长 **%.2f–%.2f**；",
+    "最稀 %s 桌每局注数 **%.2f–%.2f**、均靴长 **%.2f–%.2f**。",
+    "**只判方向不判因果**——混杂未控，此系相关读数。\n\n"),
+    .wc, .i(PREREG_BOOT), .ci[1], .ci[2], .v1,
+    if (.has("corr_len_density"))
+      sprintf("桌内相关 corr_len_density 落于 **[%+.4f, %+.4f]**（%s 桌全览）；",
+              min(TB$corr_len_density, na.rm = TRUE), max(TB$corr_len_density, na.rm = TRUE),
+              .i(.n_row))
+    else "桌内相关 ○ 待列；",
+    .i(.k), min(.dn$bets_per_round), max(.dn$bets_per_round),
+    min(.dn$avg_max_round), max(.dn$avg_max_round),
+    .i(.k), min(.sp$bets_per_round), max(.sp$bets_per_round),
+    min(.sp$avg_max_round), max(.sp$avg_max_round)))
+
+  ## ── 判读二 · 受检外部主张「一靴 70–80 局」────────────────────────────────
+  .wlen <- sum(TB$avg_max_round * TB$n_shoes) / sum(TB$n_shoes)
+  .p99h <- if (.has("p99_max_round")) max(TB$p99_max_round, na.rm = TRUE) else NA_real_
+  .ceih <- if (.has("ceiling_observed")) max(TB$ceiling_observed, na.rm = TRUE) else NA_real_
+  .v2 <- if (is.finite(.p99h) && .p99h < CLAIM_SHOE_LEN[1])
+           sprintf("**证否**——全域 p99 之最高者 %.2f 局，尚不及主张下限 %s 局", .p99h, .i(CLAIM_SHOE_LEN[1]))
+         else if (.wlen >= CLAIM_SHOE_LEN[1] && .wlen <= CLAIM_SHOE_LEN[2])
+           "**未证否**——加权均靴长落于主张区间内"
+         else sprintf("**部分不符**——加权均靴长 %.2f 局在主张区间 %s–%s 之外，但 p99 未证否",
+                      .wlen, .i(CLAIM_SHOE_LEN[1]), .i(CLAIM_SHOE_LEN[2]))
+  .sr <- .LQ * range(TB$avg_max_round)
+  cat(sprintf(paste0(
+    "**判读二·受检主张「一靴 %s–%s 局」（现算）**：靴数加权均靴长 **%.2f** 局；",
+    "跨桌 p99 上界 **%s**、观测上限（ceiling）上界 **%s** → 裁定：%s。",
+    "故相对靴位 `%s` 之起始局落于 **第 %.1f–%.1f 局**（＝ %.2f × 各桌均靴长），",
+    "名实相符，非「尚在靴之中段便称靴尾」之误置。",
+    "**声明**：%s–%s 局系受检之外部主张，非本档阈值；本档阈值只有相对靴位 `%s` 一个。\n\n"),
+    .i(CLAIM_SHOE_LEN[1]), .i(CLAIM_SHOE_LEN[2]), .wlen,
+    if (is.finite(.p99h)) sprintf("%.2f", .p99h) else "○ 待列",
+    if (is.finite(.ceih)) sprintf("%.2f", .ceih) else "○ 待列",
+    .v2, LATE_DEF, .sr[1], .sr[2], .LQ,
+    .i(CLAIM_SHOE_LEN[1]), .i(CLAIM_SHOE_LEN[2]), LATE_DEF))
+
+  ## ── 判读三 · 桌族异质（以组间方差占比与自助法区间判，无手写门槛）────────
+  FAM <- TB[, .(桌数 = .N, 靴数 = sum(n_shoes),
+                均靴长 = sum(avg_max_round * n_shoes) / sum(n_shoes),
+                每局注数 = if (.has("n_bets")) sum(n_bets) / sum(avg_max_round * n_shoes) else NA_real_,
+                均缺口 = if (.has("avg_gap")) sum(avg_gap * n_shoes) / sum(n_shoes) else NA_real_,
+                桌号例 = paste(head(sort(table_id), 6L), collapse = "·")),
+            by = .(p50 = p50_max_round)][order(-p50)]
+  FAM[, `相对靴位起始局` := .LQ * 均靴长]
+  .eta <- .eta2(TB$avg_max_round, TB$p50_max_round, TB$n_shoes)
+  set.seed(PREREG_SEED)
+  .eb  <- replicate(PREREG_BOOT, { ii <- sample.int(.n_row, replace = TRUE)
+            .eta2(TB$avg_max_round[ii], TB$p50_max_round[ii], TB$n_shoes[ii]) })
+  .eci <- stats::quantile(.eb, c(.025, .975), na.rm = TRUE, names = FALSE)
+  .het <- is.finite(.eci[1]) && .eci[1] > 0 && nrow(FAM) >= 2L
+  .dr  <- .LQ * (max(FAM$均靴长) - min(FAM$均靴长))
+  print(kable(FAM[, .(序 = .i(seq_len(.N)), 族 = paste0("p50=", .i(p50)),
+      桌数 = .i(桌数), 靴数 = .i(靴数), 均靴长 = sprintf("%.2f", 均靴长),
+      `相对靴位起始局` = sprintf("%.1f", `相对靴位起始局`),
+      每局注数 = fifelse(is.finite(每局注数), sprintf("%.2f", 每局注数), "○ 待列"),
+      均缺口 = fifelse(is.finite(均缺口), sprintf("%.2f", 均缺口), "○ 待列"),
+      桌号例 = 桌号例)],
+    align = "r", escape = FALSE,
+    caption = sprintf(paste0("桌族切牌规程实测（按 p50 靴长聚族；%s 族 × %s 列全列，零省略；",
+      "覆盖 %s 桌、%s 靴；相对靴位起始局 ＝ %.2f × 该族均靴长）"),
+      .i(nrow(FAM)), .i(ncol(FAM) + 1L), .i(sum(FAM$桌数)), .i(sum(FAM$靴数)), .LQ)))
+  cat(sprintf(paste0(
+    "\n\n**判读三·桌族异质（现算）**：靴长之组间方差占比 η² ＝ **%.4f**，",
+    "自助法 95%% 区间 **[%.4f, %.4f]** → %s。",
+    "共 **%s** 套切牌规程并存。相对靴位系自归一化之相对量，故 late_share 在**局数占比**上跨桌可比；",
+    "换算成牌深则**不可比**——同一个 `%s`，最长族比最短族多切约 **%.2f** 局、",
+    "约 **%.1f** 张牌（每局耗牌 %.2f 张，判级 INFERRED，系换算假设非实测）。",
+    "**故坐标系判级应由「下偏代理」改为「跨桌规程异质」——性质不同，处置亦不同。**\n\n"),
+    .eta, .eci[1], .eci[2],
+    if (.het) "**异质成立**（区间下界大于零）" else "○ **不可判**（区间越零或族数不足）",
+    .i(nrow(FAM)), LATE_DEF, .dr, .dr * CARDS_PER_ROUND, CARDS_PER_ROUND))
+
+  ## ── 判读四 · 异常挂号（判据全走 Tukey 栅，不点名写死桌号）────────────────
+  TB[, `:=`(ceil_ratio = if (.has("ceiling_observed") && .has("p99_max_round"))
+                           ceiling_observed / pmax(p99_max_round, 1) else NA_real_,
+            short_ratio = if (.has("min_max_round"))
+                           min_max_round / pmax(p50_max_round, 1) else NA_real_)]
+  .fc <- .fence(TB$ceil_ratio); .fs <- .fence(TB$short_ratio); .fn <- .fence(TB$n_shoes)
+  .sgn <- if (.has("corr_len_density")) sign(stats::median(TB$corr_len_density, na.rm = TRUE)) else NA_real_
+  ## `&` 非短路：列缺位时若写在同一表达式内，sign(corr_len_density) 仍会被求值而报错。
+  ## 故 C 类先以外层 if 守门，预算成全长逻辑向量再入 fifelse。
+  .isoC <- rep(FALSE, .n_row)
+  if (.has("corr_len_density") && is.finite(.sgn) && is.finite(.fn[1]))
+    .isoC <- TB$n_shoes < .fn[1] & is.finite(TB$corr_len_density) &
+             sign(TB$corr_len_density) != .sgn
+  TB[, 挂号 := fifelse(is.finite(ceil_ratio) & is.finite(.fc[2]) & ceil_ratio > .fc[2],
+        "A 观测上限异常（靴号碰撞／跨日合并嫌疑）",
+      fifelse(is.finite(short_ratio) & is.finite(.fs[1]) & short_ratio < .fs[1],
+        "B 截断靴（单局靴：跨日边界／换荷官／开收台）",
+      fifelse(.isoC, "C 形态孤立桌（须单列，禁与他桌混算）", "")))]
+  FLAG <- TB[nzchar(挂号)][order(挂号, table_id)]
+  if (!nrow(FLAG)) {
+    cat(paste0("**判读四·异常挂号（现算）**：本次探针**零桌触栅**。",
+      "**零行不等于无异常**——仅谓在 Tukey 栅之下、本探针之列契约与本窗口内未见触发。\n\n"))
+  } else {
+    print(kable(FLAG[, .(序 = .i(seq_len(.N)), 桌号 = table_id, 挂号,
+        靴数 = .i(n_shoes), 均靴长 = sprintf("%.2f", avg_max_round),
+        p50 = .i(p50_max_round),
+        p99 = if (.has("p99_max_round")) .i(p99_max_round) else "○ 待列",
+        ceiling = if (.has("ceiling_observed")) .i(ceiling_observed) else "○ 待列",
+        `ceiling／p99` = fifelse(is.finite(ceil_ratio), sprintf("%.2f×", ceil_ratio), "○ 待列"),
+        `min／p50` = fifelse(is.finite(short_ratio), sprintf("%.2f×", short_ratio), "○ 待列"),
+        桌内相关 = if (.has("corr_len_density")) sprintf("%+.4f", corr_len_density) else "○ 待列")],
+      align = "r", escape = FALSE,
+      caption = sprintf(paste0("异常挂号（%s 桌触栅／共 %s 桌，占 %.4f%%；",
+        "判据全走 Tukey 栅：上栅 %s、下栅 %s、靴数下栅 %s，无手写普适门槛；",
+        "**挂号系数据完整性线索，非风控处置**）"),
+        .i(nrow(FLAG)), .i(.n_row), nrow(FLAG) / .n_row * 100,
+        fifelse(is.finite(.fc[2]), sprintf("%.3f", .fc[2]), "○ 不可定"),
+        fifelse(is.finite(.fs[1]), sprintf("%.3f", .fs[1]), "○ 不可定"),
+        fifelse(is.finite(.fn[1]), .i(.fn[1]), "○ 不可定"))))
+    cat(sprintf(paste0("\n\n**判读四·异常挂号（现算）**：**%s** 桌触栅，占 **%.4f%%**；",
+      "A 类 %s 桌、B 类 %s 桌、C 类 %s 桌。三类皆属**结算与粒度完整性**问题，",
+      "**先走查账序与粒度验证，不入风控处置**。\n\n"),
+      .i(nrow(FLAG)), nrow(FLAG) / .n_row * 100,
+      .i(sum(substr(FLAG$挂号, 1L, 1L) == "A")),
+      .i(sum(substr(FLAG$挂号, 1L, 1L) == "B")),
+      .i(sum(substr(FLAG$挂号, 1L, 1L) == "C"))))
+  }
+
+  ## ── 桌级明细（呈表纪律：前 6 ／ 后 6，列名冻结，横条前置）────────────────
+  DSP <- TB[order(table_id), .(桌号 = table_id, 靴数 = .i(n_shoes),
+      均靴长 = sprintf("%.2f", avg_max_round), p50 = .i(p50_max_round),
+      p99 = if (.has("p99_max_round")) .i(p99_max_round) else "○ 待列",
+      min = if (.has("min_max_round")) .i(min_max_round) else "○ 待列",
+      ceiling = if (.has("ceiling_observed")) .i(ceiling_observed) else "○ 待列",
+      每局注数 = sprintf("%.2f", bets_per_round),
+      均缺口 = if (.has("avg_gap")) sprintf("%.2f", avg_gap) else "○ 待列",
+      桌内相关 = if (.has("corr_len_density")) sprintf("%+.4f", corr_len_density) else "○ 待列",
+      `相对靴位起始局` = sprintf("%.1f", .LQ * avg_max_round))]
+  .omt <- max(nrow(DSP) - 12L, 0L)
+  base::cat("\n\n::: {.tbl-scroll}\n\n")
+  base::cat(paste(as.character(kable(.ht6(DSP), align = "r", escape = FALSE,
+    caption = sprintf(paste0("桌级靴长密度明细（全表 %s 行 × %s 列；按「前 6 ／ 后 6」呈 %s 行，",
+      "省略 %s 行、占 %.4f%%；序号系全表实际行号，中段 `---` 即省略段）"),
+      .i(nrow(DSP)), .i(ncol(DSP) + 1L), .i(min(nrow(DSP), 12L)),
+      .i(.omt), .omt / max(nrow(DSP), 1L) * 100))), collapse = "\n"))
+  base::cat("\n\n:::\n\n")
+}
+```
+
+## 二、交付件身份核验
+
+::: {.tbl-scroll}
+```{r}
+#| label: caliber-head-tail
+#| echo: true
+.ht_show <- function(dt, k = 3L) {
+  n <- nrow(dt)
+  chr <- dt[, lapply(.SD, function(x)
+    if (is.numeric(x)) format(x, scientific = FALSE, trim = TRUE, big.mark = ",") else as.character(x))]
+  if (n <= 2L*k) {
+    out <- copy(chr); out[, 行号 := paste0(format(seq_len(n)), ":")]
+  } else {
+    sepr <- as.data.table(setNames(as.list(rep("---", ncol(chr))), names(chr)))
+    out <- rbindlist(list(chr[1:k], sepr, chr[(n-k+1L):n]))
+    out[, 行号 := c(paste0(1:k, ":"), "---",
+                    paste0(format((n-k+1L):n, big.mark = ",", trim = TRUE), ":"))]
+  }
+  setcolorder(out, "行号"); out[]
+}
+kable(.ht_show(RYO_M), align = "r", escape = FALSE,
+      caption = sprintf("雷欧名单首末行（总行数 %s，总列数 %s）",
+                        .i(nrow(RYO_M)), .i(ncol(RYO_M))))
+```
+:::
+
+### 分析级核心指标
+
+| 指标 | 定义 | 商业用途 |
+|:--|:--|:--|
+| `diff` | `roi_late − roi_early` | 主检验效应量 |
+| 域占比 | R01 域 ÷ 全量洁净 | 规模与经济重要性 |
+| `hold%` 差 | R01 hold − 全量 hold | 经济判读 |
+| `AUC` | 行为维度对内生标签的秩法面积 | 特征去留，不能冒充因果 |
+| 名单／总帐尾差 | 名单合计 − 总帐合计 | 数据血统校验 |
+
+# 优势玩家判据 {#sec-advantage}
+
+::: {.callout-important}
+## 任务口径
+
+本档之任务是**判断风险会员**。赌场非慈善机构，风控之目的正是识别并处置令平台长期
+净损者——此定位正当，不予软化。然「判断风险会员」之判据对象须先正名：
+
+**风险 ≠ 盈利。** 要抓的不是「赢了的人」，是**「赢得无法以运气解释的人」**。二者之
+差别不是措辞而是量级——本章第二节以本档数据现算：以 `ROI > 0` 为判据，其命中人数、
+纯方差下之期望人数与提升度**全部渲染时现算入表**，代价一望即知。
+
+**四层判据，缺一层即降为线索级，不得升为处罚依据**：L1 口径与零假设 → L2 统计排除方差
+→ L3 跨窗持续性 → L4 机理与经济。本章产出**恒为线索级复核队列，非处罚名单**。
+:::
+
+## 〇、ROI 尺度锁 {#sec-roi-scale}
+
+::: {.callout-important}
+## 尺度与口径，一次锁死（本章冻结，全档适用）
+
+| 项 | 锁定值 | 违者后果 |
+|:--|:--|:--|
+| **尺度** | `ROI` ＝ **净收益率**，持平 ＝ `0`（非回报倍数 `roi_rate = 1 + ROI`） | 量级差逾百倍 |
+| **分母** | **本金口径** `stake`；洗码口径另计，**两者不可互比** | 口径污染，名单全废 |
+| **零假设** | $\mu_0 = -\mathrm{hold\%}$，由域级总帐**反号现算** | 「跑赢 0」≠「跑赢赌场」 |
+| **`\|ROI\| > 1`** | 谓净盈亏逾其分母 → **先入结算完整性九项排查** | 查账在先、查人在后 |
+
+**两口径并报，禁互代**：**暴露加权 ROI**（`Σ净盈亏 ÷ Σ本金`，**钱**说了算）答「平台赚了多少」；
+**逐员等权分布**（会员级 ROI 之均值与分位，**人**说了算）答「会员长什么样」。
+二者数值可差甚远——这不是矛盾，是两个问题。
+:::
+
+```{r}
+#| label: roi-lock-build
+#| echo: true
+## ══════════════════════════════════════════════════════════════════════════
+## 三支 ROI（全量／靴前／靴后）之构建。本 chunk 只建对象、不出表；表在其后各节。
+## v1.2.50 斧正：① 原 chunk 无 label，且以绝对路径 fread 另载一份名单——与「设置」
+##   chunk 之 RYO_M 并行成二真相源。改为**优先复用 RYO_M**，缺位方回退读档；
+##   ② 原以 print(data.table) 直出裸表，改走本档 kable 包装（悬停接钩＋滚动容器）。
+## ══════════════════════════════════════════════════════════════════════════
+M <- if (exists("RYO_M")) RYO_M else
+       fread(file.path("数据库", "R01_late_shoe.csv"), encoding = "UTF-8")
+## v1.2.53 斧正：LATE_DEF 已由「设置」chunk 立为单一真相源，此处**不再重定义**，
+##   改为同一性核验——两处派生即两个真相源，日后必有一处漂移。
+##   若单独运行本 chunk（「设置」未跑）则回退自立，但随即仍受同一性核验管辖。
+.ld <- unique(M$late_def)
+stopifnot("口径锁 late_def 须单值" = length(.ld) == 1L)
+if (!exists("LATE_DEF")) { LATE_DEF <- .ld; LATE_Q <- as.numeric(sub("^[^0-9.]*", "", .ld)) }
+stopifnot("口径锁须与「设置」之 LATE_DEF 全等（禁二真相源）" = identical(.ld, LATE_DEF))
+
+D <- M[, .(uid = as.character(uid),
+           n_all   = as.numeric(n_orders_all),
+           n_late  = as.numeric(n_orders_late),
+           stk_all = as.numeric(stake_all),
+           pnl_all = as.numeric(game_pnl_all),
+           stk_lat = as.numeric(stake_late),
+           pnl_lat = as.numeric(game_pnl_late))]
+D <- D[is.finite(n_all) & is.finite(stk_all) & is.finite(pnl_all) & n_all > 0 & stk_all > 0]
+D[, `:=`(n_early   = n_all - n_late,
+         stk_early = stk_all - stk_lat,               # 早段本金 ＝ 全段 − 晚段
+         pnl_early = pnl_all - pnl_lat,
+         avg_bet   = stk_all / n_all)]                # 会员级均注（逐注刻度之代理）
+## 三支 ROI：全段为派生，早／晚段用自身分段分母；分母非正者归 NA，禁零除
+D[, `:=`(roi_all   = fifelse(stk_all   > 0, pnl_all   / stk_all,   NA_real_),
+         roi_early = fifelse(stk_early > 0, pnl_early / stk_early, NA_real_),
+         roi_late  = fifelse(stk_lat   > 0, pnl_lat   / stk_lat,   NA_real_))]
+
+## ── 工具：分位护栏（禁普适门槛，由 n ≥ ⌈1/(1−q)⌉ 反解）、Wilson 下界 ──────
+if (!exists(".qmin"))
+  .qmin <- function(q) as.integer(ceiling(1 / (1 - min(q, 0.999999))))
+.qsafe <- function(v, q) { v <- v[is.finite(v)]
+  if (length(v) < .qmin(q)) NA_real_ else stats::quantile(v, q, names = FALSE) }
+.wlo <- function(k, n, z = 1.959964) { if (n <= 0L) return(NA_real_); p <- k / n
+  (p + z^2/(2*n) - z*sqrt(p*(1-p)/n + z^2/(4*n^2))) / (1 + z^2/n) }
+.sg <- function(v, d = 6) fifelse(is.finite(v), sprintf(paste0("%+.", d, "f"), v), "—")
+.qd <- function(v, q) { x <- .qsafe(v, q)
+  if (is.na(x)) sprintf("○ n 不足（须 ≥ %s）", .i(.qmin(q))) else sprintf("%+.4f", x) }
+
+## 三支之规格表：单一真相源，增支只改此处
+SPEC <- data.table(
+  段   = c("全量（全段）", "靴前（早段）", "靴后（晚段）"),
+  roi  = c("roi_all", "roi_early", "roi_late"),
+  stk  = c("stk_all", "stk_early", "stk_lat"),
+  pnl  = c("pnl_all", "pnl_early", "pnl_lat"),
+  n    = c("n_all",   "n_early",   "n_late"),
+  来源 = c("**派生** `game_pnl_all ÷ stake_all`", "**派生** 全段 − 晚段", "名单在列"))
+
+## μ₀ ＝ −hold%（全段暴露加权，反号）；σ̂ 矩估计（会员级残差反解逐注级标度）
+mu0  <- sum(D$pnl_all) / sum(D$stk_all)
+sig2 <- sum((D$pnl_all - mu0 * D$stk_all)^2) / sum(D$stk_all^2 / D$n_all)
+D[, se_all := sqrt(sig2) / sqrt(n_all)]
+## 收缩 ROI：以暴露量为精度权向 μ₀ 收缩——撑得住收缩的才叫优势，撑不住的叫手气
+k_prior <- stats::median(D$n_all)
+D[, roi_shrunk := (n_all * roi_all + k_prior * mu0) / (n_all + k_prior)]
+```
+
+### 一、三支 ROI 之聚合分布（**不投影 `uid`**）
+
+::: {.tbl-scroll}
+```{r}
+#| label: roi-lock-agg
+#| echo: true
+AGG <- rbindlist(lapply(seq_len(nrow(SPEC)), function(i) {
+  v  <- D[[SPEC$roi[i]]]; vv <- v[is.finite(v)]
+  sk <- sum(D[[SPEC$stk[i]]], na.rm = TRUE); pl <- sum(D[[SPEC$pnl[i]]], na.rm = TRUE)
+  k  <- sum(vv > 0); n <- length(vv)
+  mu <- if (n) mean(vv) else NA_real_; s <- if (n > 1L) stats::sd(vv) else NA_real_
+  data.table(
+    段 = SPEC$段[i], 分母口径 = sprintf("`%s`", SPEC$stk[i]), 列来源 = SPEC$来源[i],
+    n有效 = .i(n), 剔除 = .i(sum(!is.finite(v))),
+    注单数 = .i(sum(D[[SPEC$n[i]]], na.rm = TRUE)),
+    本金合计 = .f(sk), 净盈亏合计 = .f(pl), `平台 GGR` = .f(-pl),
+    `暴露加权 ROI` = .sg(if (sk > 0) pl / sk else NA_real_),
+    `平台 hold%` = if (sk > 0) sprintf("%+.4f%%", -pl / sk * 100) else "—",
+    等权均值 = .sg(mu), 标准差 = fifelse(is.finite(s), sprintf("%.4f", s), "—"),
+    `变异系数 CV` = if (is.finite(s) && is.finite(mu) && mu != 0)
+                     sprintf("%.2f", abs(s / mu)) else "—",
+    `P0 最小` = if (n) sprintf("%+.4f", min(vv)) else "—",
+    P25 = .qd(vv, .25), `P50 中位` = .qd(vv, .50), P75 = .qd(vv, .75),
+    P90 = .qd(vv, .90), P99 = .qd(vv, .99),
+    `P100 最大` = if (n) sprintf("%+.4f", max(vv)) else "—",
+    `ROI > 0 人数` = .i(k),
+    `ROI > 0 占比` = if (n) sprintf("%.4f%%", k / n * 100) else "—",
+    `其 Wilson 95% 下界` = if (n) sprintf("%.4f%%", .wlo(k, n) * 100) else "—",
+    `绝对 ROI > 1 计数` = .i(sum(abs(vv) > 1)))
+}))
+AGG[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(AGG, "序")
+kable(AGG, align = "r", escape = FALSE,
+  caption = sprintf(paste0("三支 ROI 之聚合分布（%s 行 × %s 列全列在册，零省略；",
+    "**不投影 `uid`**；会员母数 %s；口径锁 `%s`；净收益率尺度，持平 ＝ 0）"),
+    .i(nrow(AGG)), .i(ncol(AGG)), .i(nrow(D)), LATE_DEF))
+```
+:::
+
+### 二、`ROI > 0` 之代价：观测命中 vs 纯方差期望
+
+::: {.tbl-scroll}
+```{r}
+#| label: roi-lock-hit
+#| echo: true
+HIT <- rbindlist(lapply(seq_len(nrow(SPEC)), function(i) {
+  v <- D[[SPEC$roi[i]]]; ok <- is.finite(v); n <- sum(ok)
+  obs <- sum(v[ok] > 0)
+  exp <- sum(stats::pnorm((0 - mu0) / D$se_all[ok], lower.tail = FALSE))  # H₀ 下期望
+  data.table(段 = SPEC$段[i], n有效 = n, 观测命中 = obs,
+             占会员 = obs / n, 期望命中 = exp,
+             超额 = obs - exp, 提升度 = obs / pmax(exp, .Machine$double.eps))
+}))
+kable(HIT[, .(序 = format(seq_len(.N), big.mark = ","), 段,
+              n有效 = .i(n有效), 观测命中 = .i(观测命中),
+              占会员 = sprintf("%.4f%%", 占会员 * 100),
+              `纯方差期望命中` = .f(期望命中, 1), 超额人数 = .f(超额, 1),
+              提升度 = sprintf("%.2f", 提升度))],
+  align = "r", escape = FALSE,
+  caption = sprintf(paste0("`ROI > 0` 判据之代价实测（%s 行全列，零省略；",
+    "期望命中系 H₀（μ₀ ＝ %+.6f）下逐员概率求和；**提升度趋近 1 即等同抽签**）"),
+    .i(nrow(HIT)), mu0))
+```
+:::
+
+### 三、风险等级：以 `ROI > 0` 子集之 P0／P50／P90／P99 定档
+
+```{r}
+#| label: roi-lock-grade
+#| echo: true
+#| results: asis
+## 评分刻度可选：靴后单支（默认）／全段／三支取大；改此一处即全章随动
+SCORE <- "roi_late"
+D[, roi_max := pmax(roi_all, roi_early, roi_late, na.rm = TRUE)]
+D[, score := get(SCORE)]
+
+vpos <- D[is.finite(score) & score > 0, score]
+BRK  <- c(P0 = .qsafe(vpos, 0), P50 = .qsafe(vpos, .50),
+          P90 = .qsafe(vpos, .90), P99 = .qsafe(vpos, .99))
+brk  <- sort(unique(BRK[is.finite(BRK)]))   # 分位不足或重复者自动收敛档数，禁伪造档位
+LAB  <- c("R1 低（P0–P50）", "R2 中（P50–P90）", "R3 高（P90–P99）", "R4 极高（≥ P99）")
+lab  <- LAB[seq_along(brk)]
+D[, 风险等级 := "R0 无命中（ROI ≤ 0）"]
+D[is.finite(score) & score > 0,
+  风险等级 := lab[findInterval(score, brk, rightmost.closed = TRUE, left.open = FALSE)]]
+D[, 风险等级 := factor(风险等级, levels = c("R0 无命中（ROI ≤ 0）", lab))]
+
+qq <- data.table(
+  序 = format(seq_along(BRK), big.mark = ","),
+  分位 = names(BRK),
+  `最小样本量 n_min ＝ ⌈1/(1−q)⌉` = .i(vapply(c(0, .5, .9, .99), .qmin, 1L)),
+  `本档 ROI > 0 子集 n` = .i(rep(length(vpos), length(BRK))),
+  切点值 = fifelse(is.finite(BRK), sprintf("%+.6f", BRK), "○ n 不足，档位不可定"),
+  对应等级 = c(lab, rep("—", length(BRK) - length(lab)))[seq_along(BRK)])
+print(kable(qq, align = "r", escape = FALSE,
+  caption = sprintf(paste0("风险等级切点之反解（%s 行全列，零省略；评分刻度 ＝ `%s`；",
+    "**不设普适 n≥30 之类门槛**，最小样本量由分位本身反解）"),
+    .i(nrow(qq)), SCORE)))
+cat(sprintf(paste0("\n\n**分档读数（现算）**：`%s > 0` 者 **%s** 人，可定档位 **%s** 个，",
+  "故实分 **%s** 档（R0 之外）。**分位不足者照登「○ n 不足」，绝不硬凑档位**。\n\n"),
+  SCORE, .i(length(vpos)), .i(length(brk)), .i(length(lab))))
+```
+
+### 四、等级 × 暴露层双锁交叉
+
+::: {.tbl-scroll}
+```{r}
+#| label: roi-lock-cross
+#| echo: true
+## 只有「高等级 ∧ 高暴露」方值得占用复核产能——高等级而局数少者，是手气不是优势
+D[, 暴露层 := cut(data.table::frank(n_all, ties.method = "first") / .N,
+                  c(0, .2, .4, .6, .8, 1), include.lowest = TRUE,
+                  labels = c("E1 局数最少", "E2", "E3", "E4", "E5 局数最多"))]
+cx <- dcast(D, 风险等级 ~ 暴露层, fun.aggregate = length, value.var = "uid")
+cx <- cx[, lapply(.SD, function(z) if (is.numeric(z)) .i(z) else as.character(z))]
+cx[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(cx, "序")
+kable(cx, align = "r", escape = FALSE,
+  caption = sprintf(paste0("风险等级 × 暴露层会员数交叉（%s 行 × %s 列全列，零省略；",
+    "暴露层系局数秩五分位，等量五层）"), .i(nrow(cx)), .i(ncol(cx))))
+```
+:::
+
+### 六、代号阈值登记与悬停增补 {#sec-code-threshold}
+
+::: {.tbl-scroll}
+```{r}
+#| label: 悬停阈值增补
+#| echo: true
+#| results: asis
+## ══════════════════════════════════════════════════════════════════════════
+## 代号阈值之现算注入。R／E／L 三族代号皆携阈值，P 族系分位记号（绑变量方有值）。
+## 纪律：静态语义之单一真相源仍在 .GL；此处只补其**阈值切面**，以 Object.assign
+##   覆写同名键——不另写定义，不在字典里硬写数字（铁律第九条）。
+## 时点：须置于 roi-lock-grade（R 档切点 brk／lab）与 roi-lock-cross（暴露层）之后，
+##   否则对象未生。JS 于 body 内联执行，早于 DOMContentLoaded，故 title 绑定不误。
+## 落空防线：凡阈值不可定者照登「○ n 不足，档位不可定」，禁以邻档值顶替。
+## ══════════════════════════════════════════════════════════════════════════
+.f6 <- function(v) fifelse(is.finite(v), sprintf("%+.6f", v), "○ n 不足，档位不可定")
+
+## ── R 族：档位由 brk 定，实测区间与人数由 D 现算 ──────────────────────────
+.Rlab  <- levels(D$风险等级)
+.Rcode <- paste0("R", seq_along(.Rlab) - 1L)
+.Rthr  <- character(length(.Rlab))
+.Rthr[1L] <- sprintf("`%s` ≤ 0（无命中）", SCORE)
+## v1.2.53a 斧正：原 for 体未加花括号，其内之 if/else 又跨行——R 解析器于深度 0 处
+##   遇换行即断句，`else` 遂无所依附，报「意外的 else」。此系**书写形式**之硬约束，
+##   非逻辑错：凡跨行 if/else 必置于 { } 或 ( ) 之内。已加双层花括号，杜绝再犯。
+for (.i2 in seq_along(brk)) {
+  .Rthr[.i2 + 1L] <- if (.i2 < length(brk)) {
+    sprintf("%s ≤ `%s` < %s", .f6(brk[.i2]), SCORE, .f6(brk[.i2 + 1L]))
+  } else {
+    sprintf("`%s` ≥ %s", SCORE, .f6(brk[.i2]))
+  }
+}
+## v1.2.53a 斧正：原用 setkey ＋ .Robs[z] 之键查找——而 data.table 之**未命中键
+##   返回「一行 NA」而非「零行」**（nomatch = NA 为默认），故空档之人数会显作 "NA"
+##   而非 "0"。改以显式条件取行，并把「实测区间」与「人数」预算成与 .Rlab 同序之
+##   向量，一次算清；亦免去后文 .THR[族 == …][.j] 之二次回查（既脆弱又冗）。
+.Robs <- D[, .(n = .N,
+               lo = suppressWarnings(min(score[is.finite(score)])),
+               hi = suppressWarnings(max(score[is.finite(score)]))),
+           by = .(等级 = as.character(风险等级))]
+.Rn  <- vapply(.Rlab, function(z) { r <- .Robs[等级 == z]
+          if (nrow(r)) as.integer(r$n[1L]) else 0L }, 0L)
+.Rrg <- vapply(.Rlab, function(z) { r <- .Robs[等级 == z]
+          if (!nrow(r) || !is.finite(r$lo[1L])) "—"
+          else sprintf("[%s, %s]", .f6(r$lo[1L]), .f6(r$hi[1L])) }, "")
+
+## ── E 族：暴露层之实测局数区间（秩五分位，等量五层）──────────────────────
+.Eobs <- D[, .(n = .N, lo = min(n_all), hi = max(n_all)), by = 暴露层][order(暴露层)]
+.Ecode <- sub("^(E[0-9]+).*$", "\\1", as.character(.Eobs$暴露层))
+
+## ── L 族：上限落点＝均注 avg_bet 之分位；规章绑定单一真相源在此 ───────────
+.Lspec <- data.table(
+  code = c("L0", "L1", "L2", "L3", "L4"),
+  q    = c(.99,  .99,  .90,  .50,  .00),
+  名   = c("现状带（不动）", "观察带（不动＋加密复核）", "收紧带", "常态带", "护栏下限（禁越）"),
+  性质 = c("可授权", "可授权", "⛔ BLOCKED", "⛔ BLOCKED", "⛔ BLOCKED"))   # 规章（治理规则，非数据）
+.Lspec[, 上限 := vapply(q, function(z) .qsafe(D$avg_bet, z), 0)]
+.Lspec[, n_min := vapply(q, .qmin, 1L)]
+
+## ── P 族：分位记号本身无固定值，须绑变量；本档两处绑定并列 ────────────────
+.Pq <- c(P0 = .00, P25 = .25, P50 = .50, P75 = .75, P90 = .90, P99 = .99, P100 = 1)
+## P0 与 P100 系**精确次序统计量**（最小、最大），不需 n_min ＝ ⌈1/(1−q)⌉ 之反解护栏；
+## 若一律套 .qsafe，则 q = 1 要求 n ≥ 1,000,000，P100 必被误登「○ n 不足」——
+## 那是护栏误伤，不是证据不足。故 P0／P100 直取 min／max，其余仍受 .qsafe 管辖。
+.qx <- function(v, q) { v <- v[is.finite(v)]
+  if (!length(v)) NA_real_ else if (q <= 0) min(v) else if (q >= 1) max(v) else .qsafe(v, q) }
+.Pscore <- vapply(.Pq, function(z) .qx(D[is.finite(score) & score > 0, score], z), 0)
+.Pbet   <- vapply(.Pq, function(z) .qx(D$avg_bet, z), 0)
+
+## ── 阈值登记表（在档可见，不只藏于悬停）──────────────────────────────────
+.THR <- rbindlist(list(
+  data.table(族 = "R 风险等级", 代号 = .Rcode, 名称 = .Rlab,
+             `绑定变量` = sprintf("`%s`", SCORE), `阈值（现算）` = .Rthr,
+             `实测区间` = unname(.Rrg), 人数 = .i(unname(.Rn)),
+             性质 = "复核队列排程，非处罚等级"),
+  data.table(族 = "E 暴露层", 代号 = .Ecode, 名称 = as.character(.Eobs$暴露层),
+             `绑定变量` = "`n_all`（局数）",
+             `阈值（现算）` = sprintf("局数 ∈ [%s, %s]（秩五分位第 %s 层）",
+                                      .i(.Eobs$lo), .i(.Eobs$hi), seq_len(nrow(.Eobs))),
+             `实测区间` = sprintf("[%s, %s]", .i(.Eobs$lo), .i(.Eobs$hi)),
+             人数 = .i(.Eobs$n),
+             性质 = "统计分量之轴，单独不成判据"),
+  data.table(族 = "L 限额等级", 代号 = .Lspec$code, 名称 = .Lspec$名,
+             `绑定变量` = "`avg_bet`（会员级均注）",
+             `阈值（现算）` = sprintf("上限落点 ＝ 均注 P%s ＝ %s（n_min ＝ %s）",
+                                      .i(.Lspec$q * 100),
+                                      fifelse(is.finite(.Lspec$上限), .f(.Lspec$上限),
+                                              "○ n 不足，档位不可定"), .i(.Lspec$n_min)),
+             `实测区间` = "—（规章档位，非数据分层）",
+             人数 = "—",
+             性质 = .Lspec$性质),
+  data.table(族 = "P 分位记号", 代号 = names(.Pq), 名称 = sprintf("第 %s 百分位", .i(.Pq * 100)),
+             `绑定变量` = sprintf("`%s` ／ `avg_bet` 两处并列", SCORE),
+             `阈值（现算）` = sprintf("绑 `%s`：%s ｜ 绑 `avg_bet`：%s", SCORE,
+                                      .f6(.Pscore),
+                                      fifelse(is.finite(.Pbet), .f(.Pbet), "○ n 不足")),
+             `实测区间` = "—（记号本身无区间）",
+             人数 = "—",
+             性质 = "同一记号绑不同变量即不同值，读时先看绑的是谁")))
+.THR[, 序 := .i(seq_len(.N))]; setcolorder(.THR, "序")
+print(kable(.THR, align = "l", escape = FALSE,
+  caption = sprintf(paste0("代号阈值登记（%s 行 × %s 列全列，零省略；R／E／L／P 四族共 %s 个代号；",
+    "一切阈值渲染时现算，字典内不写死；不可定者照登「○ n 不足」）"),
+    .i(nrow(.THR)), .i(ncol(.THR)), .i(nrow(.THR)))))
+
+## ── 悬停增补注入：以键为准直取 .GL 静态语义，缀以本档实测阈值 ─────────────
+.aug <- character(0L)
+.addk <- function(k, extra) {
+  b <- if (k %chin% names(.GL)) sub("阈值：见增补层现算$", "", .GL[[k]]) else ""
+  .aug[[k]] <<- paste0(b, "**本档实测阈值（渲染时现算）：", extra, "**")
+}
+for (.j in seq_along(.Rcode))
+  .addk(.Rcode[.j], sprintf("%s；本档该档 %s 人，实测 %s",
+        .Rthr[.j], .i(.Rn[.j]), .Rrg[.j]))
+for (.j in seq_along(.Ecode))
+  .addk(.Ecode[.j], sprintf("局数 ∈ [%s, %s]，%s 人（秩五分位第 %s 层）",
+        .i(.Eobs$lo[.j]), .i(.Eobs$hi[.j]), .i(.Eobs$n[.j]), .j))
+for (.j in seq_len(nrow(.Lspec)))
+  .addk(.Lspec$code[.j], sprintf("上限落点 ＝ 均注 P%s ＝ %s（n_min ＝ %s）",
+        .i(.Lspec$q[.j] * 100),
+        fifelse(is.finite(.Lspec$上限[.j]), .f(.Lspec$上限[.j]), "○ n 不足，档位不可定"),
+        .i(.Lspec$n_min[.j])))
+for (.j in seq_along(.Pq))
+  .addk(names(.Pq)[.j], sprintf("绑 `%s` ＝ %s ｜ 绑 `avg_bet` ＝ %s", SCORE,
+        .f6(.Pscore[.j]), fifelse(is.finite(.Pbet[.j]), .f(.Pbet[.j]), "○ n 不足")))
+.addk("风险等级", sprintf("评分刻度 `%s`；切点由 ROI>0 子集之 P0／P50／P90／P99 反解，实分 %s 档（R0 之外）",
+                          SCORE, .i(length(brk))))
+.addk("暴露层", sprintf("局数 `n_all` 之秩五分位，等量 %s 层；全域局数中位 %s",
+                        .i(nrow(.Eobs)), .i(stats::median(D$n_all))))
+## 档数由规章表现算，禁硬写（铁律第九条）
+.addk("限额等级", sprintf("上限落点绑 `avg_bet` 分位；本档可授权 %s 档、BLOCKED %s 档",
+                          .i(sum(.Lspec$性质 == "可授权")),
+                          .i(sum(.Lspec$性质 != "可授权"))))
+.addk("分位记号", sprintf("本档两处绑定：R 档绑 `%s`、L 档绑 `avg_bet`；同记号异变量即异值", SCORE))
+
+## 字典注入一律 base::cat 直出——经覆写之 cat 会把 JS 字面量反向接钩，脚本即毁
+base::cat(sprintf('<script>window.GL=Object.assign(window.GL||{},{%s});</script>\n',
+  paste(sprintf('"%s":"%s"', .js_esc(names(.aug)), .js_esc(unname(.aug))), collapse = ",")))
+base::cat(sprintf("<!-- 悬停阈值增补：%d 键覆写（R %d ＋ E %d ＋ L %d ＋ P %d ＋ 族名 4） -->\n",
+  length(.aug), length(.Rcode), length(.Ecode), nrow(.Lspec), length(.Pq)))
+cat(sprintf(paste0("\n\n**阈值可核（现算）**：本表 %s 个代号之阈值全部由数据反解，",
+  "字典内零硬写；鼠标停留于正文任一代号即见其**语义＋本档实测阈值**。",
+  "凡分位所需最小样本量 n_min ＝ ⌈1/(1−q)⌉ 不足者，照登「○ n 不足，档位不可定」，",
+  "**绝不以邻档值顶替**。\n\n"), .i(nrow(.THR))))
+```
+:::
+
+### 五、铁律留痕
+
+```{r}
+#| label: roi-lock-trace
+#| echo: true
+tr <- data.table(
+  项 = c("口径锁 `late_def`", "评分刻度 `SCORE`", "μ₀（＝ −hold%，非 0）",
+         "σ̂（逐注级标度，反解）", "收缩先验强度 k",
+         "`ROI > 0` 全段提升度", "本分级之性质", "处置授权"),
+  值 = c(sprintf("`%s`", LATE_DEF), sprintf("`%s`", SCORE),
+         sprintf("%+.6f", mu0), sprintf("%.6f（判级 INFERRED）", sqrt(sig2)),
+         .i(k_prior),
+         sprintf("%.2f —— 趋近 1 即命中主体系方差，非风险",
+                 HIT[段 == "全量（全段）", 提升度]),
+         "**复核队列**，非处罚名单",
+         "⛔ 须另过跨窗持续性、机理归因与 MCID 经济核算"))
+tr[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(tr, "序")
+kable(tr, align = "l", escape = FALSE,
+  caption = sprintf("ROI 尺度锁之铁律留痕（%s 项全列，零省略）", .i(nrow(tr))))
+```
+
+::: {.callout-warning}
+## 三条读表禁令（永久生效）
+
+**其一·分母效应**：`roi_late` 与 `roi_early` 之分母系**分段本金**，恒小于全段，
+故其 P99 与最大值天然更极端——**这是分母小，不是优势大**。跨支比大小前须先同分母。
+
+**其二·禁复活 T-03**：本章一切读数**不得据以复活 `late_share`**。
+该判据门禁 FATAL、已现算证伪；分布可算不等于判据可用。
+
+**其三·零行不等于无风险**：某档零人只谓本口径、本窗口、本检定力之下未命中，
+不谓「本平台无优势玩家」。
+:::
+
+# 商业方案：等级损益总账与可落实处置 {#sec-biz}
+
+::: {.callout-important}
+## 本章定位：赌场不是慈善机构——**正因如此，限额是成本不是工具**
+
+平台收入 ＝ `hold%` × 流水。**任何限额动作都是主动削减流水，即主动削减 GGR。**
+故限额之正当性不能由「他赢了」推出，只能由「他赢得无法以运气解释」推出。
+
+本章出四件：① **等级损益总账**——各等级会员**挣了多少、平台从他们身上挣了多少、各占多少**；
+② **限额幅度等级 L0–L4** 之标准与口径；③ **限额经济核算**——动手到底值不值；
+④ **90 天可落实路线图**与结论。
+:::
+
+## 一、等级损益总账：谁挣了钱，挣了多少，占多少
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-tier-pnl
+#| echo: true
+#| results: asis
+## 「挣了多少」两侧并报，禁只报一侧：
+##   会员侧 = Σ game_pnl（正即会员赢）；平台侧 GGR = −Σ game_pnl（正即平台赢）。
+##   二者互为反号——只报一侧即诱导误读。
+TIER <- D[, .(会员数 = .N,
+              注单数 = sum(n_all),
+              本金 = sum(stk_all),
+              会员净盈亏 = sum(pnl_all),
+              平台GGR = -sum(pnl_all),
+              均注中位 = stats::median(avg_bet),
+              局数中位 = stats::median(n_all),
+              实测ROI = sum(pnl_all) / sum(stk_all),
+              收缩ROI = stats::weighted.mean(roi_shrunk, n_all),
+              绝对ROI逾1 = sum(abs(roi_all) > 1, na.rm = TRUE)),
+          by = 风险等级][order(风险等级)]
+.tot_stk <- sum(D$stk_all); .tot_ggr <- -sum(D$pnl_all); .tot_n <- nrow(D)
+## GGR 占比之分母取**全域 GGR 绝对值**，负值层照登负占比——负号即「平台在此层是净付」
+TIER[, `:=`(会员占比 = 会员数 / .tot_n * 100,
+            本金占比 = 本金 / .tot_stk * 100,
+            GGR占比  = 平台GGR / .tot_ggr * 100,
+            hold = 平台GGR / 本金 * 100,
+            人均GGR = 平台GGR / 会员数)]
+shw <- TIER[, .(序 = format(seq_len(.N), big.mark = ","), 风险等级,
+    会员数 = .i(会员数), `会员占比` = sprintf("%.4f%%", 会员占比),
+    注单数 = .i(注单数), 局数中位 = .i(局数中位),
+    本金 = .f(本金), `本金占比` = sprintf("%.4f%%", 本金占比),
+    `会员净盈亏（会员挣）` = .f(会员净盈亏),
+    `平台 GGR（平台挣）` = .f(平台GGR),
+    `GGR 占比` = sprintf("%+.4f%%", GGR占比),
+    `hold%` = sprintf("%+.4f%%", hold),
+    `人均 GGR` = .f(人均GGR),
+    均注中位 = .f(均注中位),
+    `实测 ROI` = sprintf("%+.6f", 实测ROI),
+    `收缩 ROI（前瞻）` = sprintf("%+.6f", 收缩ROI),
+    `绝对 ROI > 1` = .i(绝对ROI逾1))]
+print(kable(shw, align = "r", escape = FALSE,
+  caption = sprintf(paste0("风险等级损益总账（%s 行 × %s 列全列，零省略；",
+    "会员侧与平台侧互为反号并报；分母为全域本金 %s ／ 全域 GGR %s）"),
+    .i(nrow(shw)), .i(ncol(shw)), .f(.tot_stk), .f(.tot_ggr))))
+
+.r0 <- TIER[风险等级 == "R0 无命中（ROI ≤ 0）"]
+.rp <- TIER[风险等级 != "R0 无命中（ROI ≤ 0）"]
+cat(sprintf(paste0(
+  "\n\n**集中度读数（渲染时现算）**：R0 无命中层以 **%s** 名会员（占 **%.4f%%**）",
+  "承载本金 **%.4f%%**、贡献 GGR **%s**（占 **%+.4f%%**）；",
+  "全体命中层（R1 以上）共 **%s** 名（占 **%.4f%%**），本金占 **%.4f%%**，",
+  "其平台 GGR 合计 **%s**（占 **%+.4f%%**）。\n\n",
+  "**行家读法**：GGR 之绝大部分来自**没有任何风险命中**的会员。",
+  "把限额撒向该层，削的是自己的账；命中层纵然全数封停，",
+  "所能「避损」之上限亦不过其 GGR 之负值部分——",
+  "**风险是稀疏的，成本却是全域的**，这就是判据必须收敛而非放宽的账面理由。\n\n"),
+  .i(.r0$会员数), .r0$会员占比, .r0$本金占比, .f(.r0$平台GGR), .r0$GGR占比,
+  .i(sum(.rp$会员数)), sum(.rp$会员占比), sum(.rp$本金占比),
+  .f(sum(.rp$平台GGR)), sum(.rp$GGR占比)))
+```
+:::
+
+## 二、限额幅度等级 L0–L4：标准与口径
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-limit-grade
+#| echo: true
+## 规章表（治理规则，非数据）——铁律第九条禁的是以静态文字冒充数据结果，规章自为真相源
+lv <- data.table(
+  等级 = c("L0", "L1", "L2", "L3", "L4"),
+  名称 = c("现状带（不动）", "观察带（不动＋加密复核）", "收紧带", "常态带", "护栏下限（禁越）"),
+  上限落点 = c("均注 P99", "均注 P99（只加复核频次）", "均注 P90", "均注 P50", "均注 P0"),
+  对应风险等级 = c("R0", "R1（命中主体系方差，**禁降限额**）", "R3／R4 且跨窗持续",
+                   "L2 已施而复发，或串谋／对押实证", "禁越——改走停开授权"),
+  刻度口径 = c(rep("会员级均注分位（判级 INFERRED；逐注分位待表）", 4L), "该层观测最低注额为硬底"),
+  分母口径 = rep("本金口径 `stake` ＝ `bet13 ÷ bet11`，**非洗码**", 5L),
+  币别口径 = rep("原币经 `bet11` 汇率归一，非 CNY", 5L),
+  授权层 = c("系统自动", "分析侧／风控专员", "风控主管 ＋ 运营会签", "风控经理", "合规 ＋ 法务"),
+  经济前置 = c("无", "无", "期望净影响 > 0 且 ≥ MCID", "同 L2，并报避损与 GGR 损失", "不适用"),
+  本档可授权 = c("✅", "✅", "⛔ BLOCKED（跨窗与 MCID 皆缺位）", "⛔ BLOCKED", "⛔ BLOCKED"))
+lv[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(lv, "序")
+kable(lv, align = "l", escape = FALSE,
+  caption = sprintf("限额幅度等级 L0–L4：等级 × 标准 × 口径（%s 级全列，零省略）", .i(nrow(lv))))
+```
+:::
+
+::: {.callout-warning}
+## 合规强制线：唯一豁免经济核算之通道
+
+**AML、未成年、自我排除三线直上停开，不受本章任何「限额净收益为负」之裁定所阻。**
+合规不是一门生意，是一张牌照。本档不产出 AML 结论（判级 UNKNOWN），仅确立该通道之优先级。
+:::
+
+## 三、限额经济核算：动手到底值不值
+
+::: {.callout-note}
+## 核算式（一行看懂）
+
+上限压至档位 $c$ 者，被削本金 $\Delta\mathrm{stake}_i = n_i \times \max(0,\ \overline{b}_i - c)$，
+平台**期望净影响** $\Delta\Pi_i = \hat{\mu}_i \times \Delta\mathrm{stake}_i$，
+其中 $\hat{\mu}_i$ 为**收缩后**之前瞻 ROI。符号一望即知：
+$\hat{\mu}_i > 0$（会员长期赢平台）→ 削其注额即**避损**；
+$\hat{\mu}_i < 0$（绝大多数）→ 削其注额即**自残**。
+处置成本（MCID）尚未计入，故此系**毛额**，真实净收益只会更低。
+:::
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-limit-econ
+#| echo: true
+#| results: asis
+.caps <- c(`L3 常态带 P50` = .50, `L2 收紧带 P90` = .90, `L0／L1 现状带 P99` = .99)
+econ <- rbindlist(lapply(names(.caps), function(nm) {
+  q <- .caps[[nm]]
+  rbindlist(lapply(levels(D$风险等级), function(rk) {
+    s <- D[风险等级 == rk]; if (!nrow(s)) return(NULL)
+    cap <- .qsafe(s$avg_bet, q)
+    if (!is.finite(cap))
+      return(data.table(限额等级档 = nm, 风险等级 = rk, 上限 = NA_real_,
+                        削减本金 = NA_real_, 削减占比 = NA_real_,
+                        期望净影响 = NA_real_, 裁定 = "○ n 不足，档位不可定"))
+    d  <- s$n_all * pmax(0, s$avg_bet - cap)
+    dp <- sum(s$roi_shrunk * d)
+    data.table(限额等级档 = nm, 风险等级 = rk, 上限 = cap,
+               削减本金 = sum(d), 削减占比 = sum(d) / sum(s$stk_all) * 100,
+               期望净影响 = dp,
+               裁定 = fifelse(dp > 0, "✅ 避损为正", "🔴 自残——不予授权"))
+  }))
+}))
+print(kable(econ[, .(序 = format(seq_len(.N), big.mark = ","), 限额等级档, 风险等级,
+    上限 = fifelse(is.na(上限), "○ 待定", .f(上限)),
+    削减本金 = fifelse(is.na(削减本金), "○ 待定", .f(削减本金)),
+    `削减占该层本金` = fifelse(is.na(削减占比), "○ 待定", sprintf("%.4f%%", 削减占比)),
+    `期望净影响（毛）` = fifelse(is.na(期望净影响), "○ 待定",
+      fifelse(期望净影响 > 0, paste0("+", .f(期望净影响)), .f(期望净影响))),
+    裁定)],
+  align = "r", escape = FALSE,
+  caption = sprintf(paste0("限额等级之经济核算（%s 行全列，零省略；",
+    "净影响 ＝ Σ 收缩 ROI × 被削本金；**正即避损、负即自残**）"), .i(nrow(econ)))))
+
+.neg <- econ[is.finite(期望净影响) & 期望净影响 < 0]
+.pos <- econ[is.finite(期望净影响) & 期望净影响 > 0]
+cat(sprintf(paste0(
+  "\n\n**经济裁定（现算）**：%s 个（限额档 × 风险层）组合中，**%s 个为负**（自残）、",
+  "**%s 个为正**（避损）；负值合计 **%s**，正值合计 **%s**。\n\n",
+  "**限额之净收益不取决于「他赢没赢」，只取决于 $\\hat{\\mu}_i$ 之符号。**",
+  "而 $\\hat{\\mu}_i$ 之全域加权均值即 μ₀ ＝ **%+.6f**——是负的。",
+  "**故「普遍收紧限额」在数学上必然为负收益方案，无一例外。**",
+  "唯一正收益之路是精准：只对收缩后仍为正、且过跨窗持续性者升 L2。\n\n"),
+  .i(nrow(econ[is.finite(期望净影响)])), .i(nrow(.neg)), .i(nrow(.pos)),
+  .f(sum(.neg$期望净影响)), .f(sum(.pos$期望净影响)), mu0))
+```
+:::
+
+## 四、明细：复核队列与逐员处置（非处罚名单）
+
+```{r}
+#| label: biz-detail
+#| echo: true
+#| results: asis
+## ══════════════════════════════════════════════════════════════════════════
+## v1.2.51 斧正（呈表粒度）：本节原以**单表**直出全队列，表题曰「全行在册，零省略」。
+##   改为**按风险等级分表**，每表只呈「前 6 ／ 后 6」行粒度：
+##     ① 序号取**该等级内之实际行号**（data.table 打印式：1:…6:、`---`、N-5:…N:），
+##        禁相对序号；中段以 `---` 分隔行显式标注省略段之所在。
+##     ② 省略行数与占比**逐表现算**披露于表题（铁律第九条：禁写死）。
+##     ③ 底层对象 DET 全量在册**未删行**——省略系呈表粒度，非证据截断，二者不得混同。
+##     ④ 某等级零人者**照登零行告示**，不静默跳过（零行不等于无风险）。
+##   列名冻结、表首横条前置、滚动条常驻三契约由「呈表纪律」chunk 统一施加，此处不重复。
+##   围栏：每等级各出一条 `::: {.tbl-scroll}`（pandoc 围栏，非 raw-HTML div），
+##   故 .kb 之封存状态不受影响，亦不复活其被证伪之 raw-div 路径。
+## ══════════════════════════════════════════════════════════════════════════
+MASK <- TRUE      # 脱敏开关：默认 TRUE；风控作业导出方可置 FALSE，须附授权单号
+.mk <- function(u) if (!MASK) u else {
+  n <- nchar(u); fifelse(n <= 4L, paste0(substr(u, 1L, 1L), strrep("*", pmax(n - 1L, 0L))),
+    paste0(substr(u, 1L, 2L), strrep("*", n - 4L), substr(u, n - 1L, n))) }
+.lvmap <- c(`R0 无命中（ROI ≤ 0）` = "L0 现状带",
+            `R1 低（P0–P50）` = "L1 观察带（禁降限额）",
+            `R2 中（P50–P90）` = "L1 观察带（加密复核）",
+            `R3 高（P90–P99）` = "L2 收紧带（BLOCKED：待跨窗＋MCID）",
+            `R4 极高（≥ P99）` = "L2 收紧带（BLOCKED：待跨窗＋MCID）")
+.FIRST <- 6L; .LAST <- 6L        # 呈表粒度（见数前锁定，禁按结果调参）
+DET <- D[风险等级 != "R0 无命中（ROI ≤ 0）"][order(-score, -stk_all)]
+.hit_lv <- setdiff(levels(D$风险等级), "R0 无命中（ROI ≤ 0）")
+
+## 逐等级取行之列规格：单一真相源，改列只改此处
+.detrow <- function(s, ix) s[ix, .(
+  序 = paste0(.i(ix), ":"),
+  uid = .mk(uid), 风险等级 = as.character(风险等级), 暴露层 = as.character(暴露层),
+  限额等级 = unname(.lvmap[as.character(风险等级)]),
+  局数 = .i(n_all), 晚段局数 = .i(n_late),
+  本金 = .f(stk_all), 均注 = .f(avg_bet),
+  `会员净盈亏（会员挣）` = .f(pnl_all), `平台 GGR（平台挣）` = .f(-pnl_all),
+  roi_all = .sg(roi_all, 4), roi_early = .sg(roi_early, 4),
+  roi_late = .sg(roi_late, 4), `收缩 ROI` = .sg(roi_shrunk),
+  结算完整性 = fifelse(abs(roi_all) > 1 | abs(roi_late) > 1 | abs(roi_early) > 1,
+                       "⚠️ 是 → 先查账", "否"),
+  风控授权 = "复核队列（非处罚）")]
+
+if (!nrow(DET)) {
+  cat(paste0("**零行照登**：本窗口无 `ROI > 0` 之命中。**零行不等于无风险**",
+             "——仅谓本口径、本窗口、本检定力之下未命中。\n\n"))
+} else {
+  cat(sprintf(paste0(
+    "**本节呈表粒度（现算）**：全队列 **%s** 人，按风险等级分 **%s** 张桌表；",
+    "每表只呈「前 %s ／ 后 %s」行，序号系**该等级内之实际行号**（按 `%s` 降序），",
+    "中段 `---` 即省略段之所在。底层对象 `DET` 全量 **%s** 行在册、**未删行**——",
+    "**省略是呈表粒度，不是证据截断**；逐表之省略行数与占比见各表表题。\n\n"),
+    .i(nrow(DET)), .i(length(.hit_lv)), .FIRST, .LAST, SCORE, .i(nrow(DET))))
+
+  for (lv in .hit_lv) {
+    g  <- DET[as.character(风险等级) == lv]
+    Ng <- nrow(g)
+    if (!Ng) {
+      cat(sprintf(paste0("**%s：零行照登**（该等级本窗口 **0** 人）。**零行不等于无风险**",
+        "——仅谓本口径、本窗口、本检定力之下该档未命中。\n\n"), lv))
+      next
+    }
+    ix  <- if (Ng <= .FIRST + .LAST) seq_len(Ng) else
+             c(seq_len(.FIRST), seq.int(Ng - .LAST + 1L, Ng))
+    o   <- .detrow(g, ix)
+    omt <- Ng - length(ix)
+    if (omt > 0L) {
+      sep <- as.data.table(as.list(setNames(rep("", ncol(o)), names(o))))
+      sep[[1L]] <- "`---`"          # 反引号：避开 pandoc smart 将 --- 转为破折号
+      o <- rbindlist(list(o[seq_len(.FIRST)], sep, o[(.FIRST + 1L):nrow(o)]))
+    }
+    cap <- sprintf(paste0(
+      "复核队列明细 · %s（该等级全表 **%s** 行 × **%s** 列；本表呈「前 %s ／ 后 %s」共 **%s** 行，",
+      "省略 **%s** 行、占 **%.4f%%**%s；序号系该等级内之实际行号，按 `%s` 降序；",
+      "uid %s；**复核队列非处罚名单**，处置须另过门禁与 E0–E6 阶梯）"),
+      lv, .i(Ng), .i(ncol(o)), .FIRST, .LAST, .i(length(ix)),
+      .i(omt), omt / Ng * 100,
+      if (omt == 0L) "（该等级不足 13 行，未省略任何行）" else "",
+      SCORE, if (MASK) "已脱敏" else "未脱敏（风控作业导出）")
+    base::cat("\n\n::: {.tbl-scroll}\n\n")
+    base::cat(paste(as.character(kable(o, align = "r", escape = FALSE, caption = cap)),
+                    collapse = "\n"))
+    base::cat("\n\n:::\n\n")
+  }
+
+  cat(sprintf(paste0("\n\n**队列经济量**：本队列 **%s** 人，本金 **%s**（占全域 **%.4f%%**），",
+    "平台 GGR **%s**（占全域 **%+.4f%%**）；其中结算完整性候选 **%s** 人，",
+    "**先走查账序，不入风控处置**。\n\n"),
+    .i(nrow(DET)), .f(sum(DET$stk_all)), sum(DET$stk_all) / .tot_stk * 100,
+    .f(-sum(DET$pnl_all)), -sum(DET$pnl_all) / .tot_ggr * 100,
+    .i(sum(abs(DET$roi_all) > 1 | abs(DET$roi_late) > 1 | abs(DET$roi_early) > 1,
+           na.rm = TRUE))))
+}
+```
+
+## 五、可落实路线图：90 天，四件事
+
+::: {.tbl-scroll}
+```{r}
+#| label: biz-roadmap
+#| echo: true
+rm_ <- data.table(
+  期 = c("T+0～T+14", "T+0～T+14", "T+15～T+45", "T+15～T+45",
+         "T+46～T+75", "T+46～T+75", "T+76～T+90", "T+76～T+90"),
+  动作 = c(
+    "交付跨窗件 `R01_late_shoe_w2.csv`（同口径锁 `late_def`）",
+    "名单增列逐员洗码额与逐员注额分位（`bet_p0/p50/p90/p99`）",
+    "跨窗持续性检验：本窗 R3／R4 于 w2 是否延续",
+    "结算完整性九项排查：清空「绝对 ROI > 1」候选",
+    "业务方预注册 MCID（年化避损口径）＋ 处置成本单价",
+    "Shadow 运行：只记录不触达，量测误判率与复核工时",
+    "对**跨窗延续 ∧ 经济核算为正**者试行 L2（P90），样本内小规模",
+    "并行对照组（不处置）以估 DID 效应，右截断于解封日"),
+  交付件 = c("CSV（同口径锁）", "CSV（逐员）", "跨窗对照表", "查账结论表",
+             "MCID 备案单", "Shadow 日志", "L2 工单 ＋ 回执", "DID 估计表"),
+  验收判据 = c("行数／MD5／口径锁三核对", "列在位且非全 NA",
+               "延续率与 Wilson 下界并报", "候选清零或转账务工单",
+               "MCID 数值 ＋ 口径书面锁定", "误判率 ＜ 预注册上限",
+               "期望净影响 > 0 且 ≥ MCID", "CI 不跨 0 方可扩量"),
+  当前判级 = c("BLOCKED", "BLOCKED", "BLOCKED（待①）", "可即办",
+               "BLOCKED（待业务方）", "可即办", "BLOCKED（待①③⑤）", "BLOCKED（待⑦）"),
+  负责侧 = c("数据侧", "数据侧", "分析侧", "账务侧",
+             "业务侧", "风控侧", "风控 ＋ 运营", "分析侧"))
+rm_[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(rm_, "序")
+kable(rm_, align = "l", escape = FALSE,
+  caption = sprintf(paste0("90 天可落实路线图（%s 项全列，零省略；",
+    "「可即办」者今日即可开工，BLOCKED 者附前置依赖，禁写「已完成」）"), .i(nrow(rm_))))
+```
+:::
+
+::: {.callout-tip}
+## 今日即可落地之两件（不待任何解锁）
+
+**其一·查账序先跑**：「绝对 ROI > 1」之候选**与风控无关**，属结算完整性问题——
+本金／红利／彩池／退水／冲正／重复／汇率／部分结算／调整九项逐一排查。
+这件事零前置、零争议，且清完之后风控队列会明显变干净。
+
+**其二·价值轴一次建设两处复用**：`stake_all` 分位所出之分层表，
+**营销侧用于 VIP 经营、风控侧用于复核排程**——同一张表，两个部门。
+这是本档诸章实测之外最直接的一条落地价值，无须等待任何交付件。
+:::
+
+## 六、结论
+
+::: {.callout-important}
+## 七条结论，逐条可由本章现算表复现
+
+**其一·钱在 R0，风险在 R3／R4，二者几乎不重叠。** 等级损益总账现算显示，
+GGR 之绝大部分来自零风险命中之会员。**普遍收紧限额＝主动削减自己的账。**
+
+**其二·限额之净收益只看 $\hat{\mu}_i$ 之符号，与「他赢没赢」无关。**
+$\hat{\mu}_i$ 之全域加权均值恒等于 μ₀ ＝ −hold%，是负的——
+**「全面限额」在数学上必然为负收益方案。** 唯一正路是精准。
+
+**其三·必须用收缩 ROI，不能用实测 ROI。** 实测是回望含运气的，限额影响的是未来流水。
+**能撑住收缩的才叫优势，撑不住的叫手气。**
+
+**其四·`ROI > 0` 不是判据，是抽签。** 第二节之提升度一栏即其代价——
+趋近 1 者，命中名单主体系方差；据以处罚、封禁或降级者，为 🔴 FATAL。
+
+**其五·靴后 ROI 之尾部极端源于分母小，不是优势大。** 且 `late_share` 属 T-03、
+门禁 FATAL——**任何以「靴末加注」为由收紧限红之工单，一律退回。**
+
+**其六·合规不是生意。** AML、未成年、自我排除三线直上停开，
+不受本章任何经济裁定所阻。
+
+**其七·瓶颈是数据不是方法。** 跨窗持续性、机理归因、MCID 成本锚三者皆 BLOCKED，
+故本章一切处置**恒为建议**，无一可径转工单。四件解锁（跨窗件、逐员洗码额、
+逐员注额分位、预注册 MCID）齐备，建议方可升为可执行处置；缺一，只作经营分层之用。
+:::
+
+```{r}
+#| label: biz-conclusion-live
+#| echo: true
+#| results: asis
+cat(sprintf(paste0(
+  "**结论之数字底座（渲染时现算，随数据自动更新）**：会员 **%s** 名、注单 **%s** 笔、",
+  "本金 **%s**、平台 GGR **%s**、域内 hold **%+.4f%%**、μ₀ **%+.6f**；",
+  "风险分档 **%s** 档（R0 之外），复核队列 **%s** 人（占 **%.4f%%**）；",
+  "限额经济核算 **%s** 组合，自残 **%s** 组、避损 **%s** 组。\n"),
+  .i(nrow(D)), .i(sum(D$n_all)), .f(.tot_stk), .f(.tot_ggr),
+  .tot_ggr / .tot_stk * 100, mu0,
+  .i(length(lab)), .i(sum(D$风险等级 != "R0 无命中（ROI ≤ 0）")),
+  mean(D$风险等级 != "R0 无命中（ROI ≤ 0）") * 100,
+  .i(nrow(econ[is.finite(期望净影响)])),
+  .i(nrow(econ[is.finite(期望净影响) & 期望净影响 < 0])),
+  .i(nrow(econ[is.finite(期望净影响) & 期望净影响 > 0]))))
+```
