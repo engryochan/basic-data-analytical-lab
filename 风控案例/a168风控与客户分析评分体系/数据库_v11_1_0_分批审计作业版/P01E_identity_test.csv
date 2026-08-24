@@ -1,0 +1,3 @@
+﻿hypothesis,n,exact_match_n,exact_match_rate,abs_err_p50,abs_err_p95,abs_err_p99,abs_err_max,audit_rn,batch_id
+H16: bet17 = bet14 - bet13 + bet16,125654711,125654711,1.0000000,0.0,0.0,0.0,0.0000,1,1
+H41: bet17 = bet14 - bet13 + bet41,125654711,9552205,0.0760195,50.0,1000.0,20000.31640625,100000000.0000,2,1

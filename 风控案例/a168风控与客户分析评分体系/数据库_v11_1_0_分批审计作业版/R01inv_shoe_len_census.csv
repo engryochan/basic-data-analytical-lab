@@ -1,0 +1,2 @@
+﻿n_tables,n_shoes,mean_len,sd_len,p0,p01,p25,p50,p75,p90,p99,p100,n_len_ge_70,n_len_le_5,pct_with_gap,avg_gap,corr_cross_table,round_at_080_shortest,round_at_080_longest,audit_rn,batch_id
+30,126449,49.1869,5.7225,1,17.0,48.0,50.0,52.0,54.0,58.0,110,1,376,31.7013,1.3529,-0.600417,37.57,44.44,1,1

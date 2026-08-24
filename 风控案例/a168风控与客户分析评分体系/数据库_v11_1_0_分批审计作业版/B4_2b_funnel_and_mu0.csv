@@ -1,0 +1,2 @@
+﻿n_raw,n_g1,n_g2,n_g3,n_g4,n_g5,n_g6,n_g7,n_g8,n_lv1,n_lv2,n_lv3,n_lv4,n_lv5,n_any_test,mu0_global_dirty_ew_pct,mu0_global_clean_ew_pct,contamination_pp,n_groups,mu0_min_pct,mu0_max_pct,abs_min,abs_max,n_near_zero,spread_ratio,verdict_spread,audit_rn,batch_id
+125654711,124731833,124726293,124725280,124713543,124713543,124713543,124713512,124713505,11739,1247,1247,1247,1247,11739,-1.742716,-1.742715,0.00000114,16,-20.648383,-1.236177,1.236177,20.648383,0,16.7034,✅ spread_ratio 可读（★ 系诊断排序器，不单独裁 S1；分层必要性须并读 abs_min／abs_max／组样本量）,1,1
