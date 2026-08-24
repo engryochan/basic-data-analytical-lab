@@ -1,0 +1,69 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
+<title>十五类风险会员 ＋ 一类风控专员 · 指标口径矩阵 v1.0.0</title><style>
+:root{--ink:#12232e;--pap:#fbfaf7;--line:#d8d2c4;--acc:#8c1c13}
+*{box-sizing:border-box}body{margin:0;background:var(--pap);color:var(--ink);
+font-family:"Iowan Old Style","Songti SC","Source Han Serif SC",Georgia,serif;font-size:14px}
+header{padding:22px 26px 14px;border-bottom:3px double var(--line)}
+h1{margin:0 0 6px;font-size:20px}.sub{font-size:12.5px;line-height:1.9;color:#4a5568}.sub b{color:var(--acc)}
+.bar{padding:10px 26px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--line);
+position:sticky;top:0;background:var(--pap);z-index:20}
+input{font:inherit;padding:6px 9px;border:1px solid var(--line);background:#fff;width:280px}
+.count{font-size:12px;color:#4a5568;margin-left:auto}
+.wrap{overflow:auto;max-height:calc(100vh - 300px);margin:0 14px 14px;border:1px solid var(--line);background:#fff}
+table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+th,td{padding:9px 11px;border-bottom:1px solid #ece7db;vertical-align:top;text-align:left;max-width:330px}
+thead th{position:sticky;top:0;background:#f2eee4;z-index:10;cursor:pointer;white-space:nowrap;
+border-bottom:2px solid var(--line);font-size:12.5px}
+td.k{font-weight:700;white-space:nowrap;position:sticky;left:0;background:#fbfaf7;
+border-right:1px solid var(--line);z-index:5;color:var(--acc)}
+td.nm{font-weight:600;white-space:nowrap;position:sticky;left:58px;background:#fbfaf7;
+border-right:1px solid var(--line);z-index:5}
+thead th:nth-child(1){position:sticky;left:0;z-index:15}thead th:nth-child(2){position:sticky;left:58px;z-index:15}
+tr:hover td{background:#fdfcf8}tr:hover td.k,tr:hover td.nm{background:#f6f2e8}
+footer{padding:12px 26px 26px;font-size:12.5px;color:#4a5568;border-top:1px solid var(--line);line-height:1.95}
+footer b{color:var(--acc)}code{font-family:Consolas,Menlo,monospace;font-size:12px}
+</style></head><body>
+<header><h1>十五类风险会员 ＋ 一类风控专员 · 指标口径矩阵 v1.0.0</h1>
+<div class="sub">a168 · 立于 2026-08-24 · 应军令状：<b>务必提高业绩，赏罚分明</b><br>
+本表共 <b>16</b> 行 × <b>10</b> 列；<b>省略 0 行（0.00%）、省略 0 列（0.00%）</b>——全表在此，横纵皆可卷。<br>
+<b>★ 核心原则：每一类各有各的口径。</b>同桌之 ramp 是「同桌均注÷独坐均注」，追损之 ramp 是「负局后÷正局后」，
+风控专员之 ramp 是「近月标注量÷全期日均」——<b>同名而异义，绝不可用一块通用经济块敷衍</b>。<br>
+十六类系<b>自 SQL 总包内实证抽出</b>（词汇命中：代理线 1,498 · 退水 608 · 投注形态 521 · 荷官 510 · 处置 495 · 风控专员 158 …），非杜撰。
+</div></header>
+<div class="bar"><input id="q" placeholder="搜寻类名／指标／交付件…"><span class="count" id="c"></span></div>
+<div class="wrap"><table><thead><tr><th data-k="类号">类号</th><th data-k="类名">类名</th><th data-k="定义">定义</th><th data-k="avg 定义">avg 定义</th><th data-k="rate 定义">rate 定义</th><th data-k="roi 定义">roi 定义</th><th data-k="ramp 定义">ramp 定义</th><th data-k="现有交付件">现有交付件</th><th data-k="判读（商业）">判读（商业）</th><th data-k="处置建议">处置建议</th></tr></thead><tbody id="b"></tbody></table></div>
+<footer>
+<b>★ VIP／会员等级 —— 一处必须据实上报的硬缺口 ★</b><br>
+机检全档：<code>level</code> 7 处、<code>grade</code> 1 处、<code>tier</code> 1 处，且<b>全部出现在行 6,511 之「列名探针」内</b>
+（<code>column_name LIKE '%level%' OR '%grade%' OR '%tier%'</code>）——即本包<b>尚在找</b>这个字段，从未实用。
+故<b>VIP 等级目前无数据来源在册</b>，我不杜撰一个。两条路并行：<br>
+　① <b>立即可用</b>：以窗内 <code>stake</code>／<code>validbet</code> 之分位数分层（P50／P80／P95／P99）成 T1–T5 五档
+—— <b>由数据定，非硬编码</b>，合铁律第九条，且跨表可比；<br>
+　② <b>根治</b>：跑行 6,511 之列名探针，於 <code>ods_a168_member</code> / <code>member_dtl</code> 找出真等级列，
+落实後改挂真值，并於 §D00 登记其五元键。<br><br>
+<b>★ 四类指标之通则（各类之特化见表内）★</b><br>
+<b>avg</b> 答「下多大」——规模，无方向。｜<b>rate</b> 答「平台赚几成」——<code>hold_rate</code> 为业绩之直接口径。<br>
+<b>roi</b> 答「谁在赢」——会员净回报率，<b>平衡点 0；&gt; 0 即会员赚、平台亏</b>。｜
+<b>ramp</b> 答「在不在加注」——<b>升级前兆</b>，各类之分母不同，此即口径特化之关键。<br><br>
+<b>★ 风险 ≠ 盈利（铁律）★</b> 大规模 ＋ roi 微负 = 优质客源，<b>误伤即损业绩</b>；
+大规模 ＋ roi 正 ＋ ramp 高 = 所欲识之对象。<b>二者不可互代。</b><br>
+<b>★ 禁硬编码 ★</b> 全矩阵不设任何阈值；切点一律由窗内分位秩定（<code>PERCENT_RANK</code>），随数据走。<br>
+<b>★ 一处诚实的边界 ★</b> M03 尾段投注之假说已於四项独立检验中被<b>证伪</b>（T-03 FATAL），
+故其指标只作分层基线与收入集中度之用，<b>禁入任何评分与处置</b>；此表列出其口径，是为可比，非为复活该假说。
+</footer>
+<script>
+const D=[{"类号": "M01", "类名": "同桌团伙", "定义": "同一物理局反复共坐之会员对/团", "avg 定义": "avg_stake_same 同桌局均注 ｜ avg_stake_solo 独坐局均注", "rate 定义": "same_rate 同桌局占比 ｜ hold_rate_same 平台于同桌局之持有率", "roi 定义": "roi_same = 同桌局净输赢 ÷ 同桌局本金", "ramp 定义": "ramp_same = avg_stake_same ÷ avg_stake_solo　★同桌即加注者，「碰巧」之解释即难成立", "现有交付件": "R02_same_table / R02e", "判读（商业）": "同桌 ＋ 加注 ＋ 平台净付 三者同高 → 团伙", "处置建议": "限桌、拆台、降额"}, {"类号": "M02", "类名": "对冲对打", "定义": "同局互压庄闲，以退水/佣金套利", "avg 定义": "avg_stake_hedge 对冲局均注 ｜ avg_stake_free 非对冲局均注", "rate 定义": "hedge_rate 对冲局占比 ｜ hold_rate_hedge（对冲成功时趋近 0，即平台白做）", "roi 定义": "roi_hedge = 对冲局净输赢 ÷ 对冲局本金　★成功对冲者 roi 近 0 而退水为正 → 净薅", "ramp 定义": "ramp_hedge = avg_stake_hedge ÷ avg_stake_free", "现有交付件": "C06_hedge_pairs / C06d / T03_arbitrage", "判读（商业）": "hold_rate_hedge ≈ 0 且 rebate 为正 → 纯套利", "处置建议": "停退水、封对、并案"}, {"类号": "M03", "类名": "尾段投注", "定义": "靴尾局位下重注（shoe_pos ≥ 0.80）", "avg 定义": "avg_stake_late 尾段均注 ｜ avg_stake_early 前段均注", "rate 定义": "late_share 尾段注单占比 ｜ hold_rate_late", "roi 定义": "roi_gap_late = roi_late − roi_early　★正值即尾段确有优势", "ramp 定义": "ramp_late = avg_stake_late ÷ avg_stake_early　★靴尾加注为算牌之典型形态", "现有交付件": "R01_late_shoe / R01_late_shoe_w2 / P13", "判读（商业）": "T-03 已判 FATAL；本类只作分层基线，禁入评分", "处置建议": "观察；不得据此处置"}, {"类号": "M04", "类名": "IP 聚集", "定义": "多会员共用 IP／同网段协同", "avg 定义": "avg_stake_per_ip 该 IP 每注均额 ｜ avg_stake_per_member", "rate 定义": "member_per_ip ｜ ip_concentration 首位 IP 注单占比 ｜ hold_rate_ip", "roi 定义": "roi_ip = 该 IP 全体会员合计净输赢 ÷ 合计本金", "ramp 定义": "ramp_ip = 近 30 日该 IP 均注 ÷ 全窗均注", "现有交付件": "I_ip_player / I_ip_agg / C01_ip_chain / C08_subnet_*", "判读（商业）": "IP 聚集 ＋ roi 正 ＋ ramp 高 → 工作室", "处置建议": "并案、限 IP、KYC 复核"}, {"类号": "M05", "类名": "退水套利·刷流水", "定义": "以高洗码倍数换退水，游戏输赢近零", "avg 定义": "avg_validbet 每注均洗码量 ｜ avg_stake", "rate 定义": "★turnover_multiple = 洗码量 ÷ 本金（核心）｜ rebate_rate = 退水 ÷ 洗码量", "roi 定义": "roi_ex_rebate = (净输赢 − 退水) ÷ 本金　★扣退水后仍为正者，方为真赢家；近零者即纯薅退水", "ramp 定义": "ramp_turnover = 近 30 日洗码倍数 ÷ 全窗洗码倍数", "现有交付件": "VB_* 族 / R_rebate_dist / E02_segment_econ", "判读（商业）": "turnover 高 ＋ roi_ex_rebate ≈ 0 ＋ rebate 大 → 刷流水", "处置建议": "调退水档、设洗码上限"}, {"类号": "M06", "类名": "代理线异常", "定义": "某代理线整体令平台净损／测试线混入", "avg 定义": "avg_stake_per_member_in_line", "rate 定义": "line_hold_rate ｜ test_line_flag（age022='1'）｜ member_per_line", "roi 定义": "roi_line = 该线全体净输赢 ÷ 本金", "ramp 定义": "ramp_line = 近 30 日线上本金 ÷ 全窗日均", "现有交付件": "S03_agent_score / A_anchor", "判读（商业）": "线级 roi 正且规模大 → 代理线级风险，非单会员", "处置建议": "约谈代理、调佣金"}, {"类号": "M07", "类名": "荷官关联", "定义": "某会员於特定荷官处显著获利", "avg 定义": "avg_stake_at_dealer ｜ avg_stake_elsewhere", "rate 定义": "dealer_concentration 该荷官占该会员注单比 ｜ hold_rate_at_dealer", "roi 定义": "roi_gap_dealer = roi_at_dealer − roi_elsewhere　★正且显著 → 须查串通", "ramp 定义": "ramp_dealer = avg_stake_at_dealer ÷ avg_stake_elsewhere", "现有交付件": "R03_player_dealer / R03b / S02_dealer_score", "判读（商业）": "roi_gap 正 ＋ 集中度高 ＋ 加注 → 内外勾结嫌疑", "处置建议": "换班、录像复核、并案"}, {"类号": "M08", "类名": "入场时点", "定义": "择时入场（靴中/靴尾切入）", "avg 定义": "avg_stake_by_entry_band 各入场带均注", "rate 定义": "mid_shoe_entry_rate 非首局入场占比 ｜ hold_rate_by_band", "roi 定义": "roi_by_entry_band = 各入场带之净回报率", "ramp 定义": "ramp_entry = 入场后首三局均注 ÷ 其后均注　★切入即重注者，择时嫌疑", "现有交付件": "P13_personal_entry / R01-cov", "判读（商业）": "入场带 roi 单调 → 择时有效，须并 M03 同看", "处置建议": "观察；样本足量方可处置"}, {"类号": "M09", "类名": "处置·限额规避", "定义": "被限额后改道、化名、分散续投", "avg 定义": "avg_stake_pre / avg_stake_post（处置前后）", "rate 定义": "resume_rate 处置后回归率 ｜ hold_rate_pre / hold_rate_post", "roi 定义": "★roi_delta = roi_post − roi_pre　★处置效果之直接度量（MCID 之锚）", "ramp 定义": "ramp_post = avg_stake_post ÷ avg_stake_pre　★>1 即处置后反弹加注 = 处置失效", "现有交付件": "TL08 / TL10 / TL11 / TL14 / PI01 / PI02", "判读（商业）": "ramp_post > 1 且 roi_delta ≥ 0 → 该处置无效，须升级", "处置建议": "升级处置、关联账户并封"}, {"类号": "M10", "类名": "责任博彩", "定义": "自我排除/冷静期之前后行为", "avg 定义": "avg_stake_pre_rg 申请前均注", "rate 定义": "rg_event_rate ｜ hold_rate_pre_rg", "roi 定义": "roi_pre_rg（申请前净回报率）", "ramp 定义": "ramp_pre_rg = 申请前 7 日均注 ÷ 其前 30 日均注　★急剧加注 = 失控信号", "现有交付件": "PH0_8r1 / PH0_8r2 / _PH0_4b", "判读（商业）": "此类以**保护**为先，非以挣钱为先；ramp 高即须主动干预", "处置建议": "主动联系、强制冷静"}, {"类号": "M11", "类名": "异常告警", "定义": "alarmMessage 十五类告警之落地率", "avg 定义": "avg_stake_at_alarm 告警时点均注", "rate 定义": "alarm_rate 告警注单占比 ｜ hold_rate_alarm ｜ **告警准确率**（须外部标签）", "roi 定义": "roi_gap_alarm = roi_alarm − roi_clean", "ramp 定义": "ramp_alarm = 告警前后均注之比", "现有交付件": "Z11_sentinel_impact / L_label_dist", "判读（商业）": "告警若无 roi_gap，即告警规则无判别力，须重订", "处置建议": "调告警阈值（由分位定）"}, {"类号": "M12", "类名": "资金轨迹", "定义": "存提与投注之背离", "avg 定义": "avg_deposit ｜ avg_withdraw ｜ avg_stake_per_deposit", "rate 定义": "★withdraw_to_stake_rate = 提款 ÷ 本金 ｜ churn = 本金 ÷ 存款", "roi 定义": "roi_cash = (提款 − 存款) ÷ 存款　★净取现率，最贴近平台真实失血", "ramp 定义": "ramp_deposit = 近 30 日存款 ÷ 全窗日均", "现有交付件": "_PH0_4w2 / wallet_dtl 族", "判读（商业）": "churn 低而 roi_cash 高 → 疑洗钱或套现，非博彩", "处置建议": "AML 上报、KYC 加严"}, {"类号": "M13", "类名": "复投循环", "定义": "负局后加注追损／正局后收手", "avg 定义": "avg_stake_after_loss ｜ avg_stake_after_win", "rate 定义": "reinvest_rate 连续投注率 ｜ hold_rate_after_loss", "roi 定义": "roi_after_loss（追损段之净回报率）", "ramp 定义": "★ramp_after_loss = 负局后均注 ÷ 正局后均注　★追损倍率，此类最锋利之判据", "现有交付件": "PI03_reinvest_loop", "判读（商业）": "ramp_after_loss 高 → 若 roi 亦正，即系统性追损获利；若 roi 负，属成瘾风险", "处置建议": "分流：获利者限额／成瘾者干预"}, {"类号": "M14", "类名": "投注形态", "定义": "庄闲偏态、和局、特殊玩法之滥用", "avg 定义": "avg_stake_by_side 各玩法均注", "rate 定义": "push_rate 和局率 ｜ side_skew 庄闲偏度 ｜ hold_rate_by_side", "roi 定义": "roi_by_side = 各玩法之净回报率　★某玩法 roi 长期为正 → 该玩法赔付设定有误", "ramp 定义": "ramp_by_side = 该玩法近 30 日均注 ÷ 全窗均注", "现有交付件": "DX04 / DX05 / QSB_02c / B4_5b", "判读（商业）": "某玩法 roi 正且规模大 → **产品侧须改赔付**，非会员之过", "处置建议": "调赔付、限注"}, {"类号": "M15", "类名": "活跃·生命周期", "定义": "高频/短命/沉睡再起之节律", "avg 定义": "avg_stake_per_active_day 活跃日均本金", "rate 定义": "active_rate = 活跃日 ÷ 跨度日 ｜ hold_rate_lifetime", "roi 定义": "roi_lifetime = 全期净输赢 ÷ 全期本金", "ramp 定义": "ramp_recent = 近 30 日日均本金 ÷ 全期日均本金　★沉睡再起且加注者，须复核", "现有交付件": "S05_member_month_panel / P_player_month / P12b", "判读（商业）": "ramp_recent 高 ＋ roi 正 → 可能换人操作或工作室复用账号", "处置建议": "KYC 复核、设备指纹"}, {"类号": "R01", "类名": "风控专员（赏罚分明）", "定义": "标注/处置之产出与实效", "avg 定义": "avg_labels_per_day 日均标注量 ｜ avg_cases_per_day 日均处置件数", "rate 定义": "★precision_rate = 其标注对象事后实测确为高风险者占比 ｜ coverage_rate = 其覆盖之风险敞口占比", "roi 定义": "★roi_analyst = 其标注/处置为平台挽回之净额 ÷ 其产出量（无工时数据时以标注量为分母）", "ramp 定义": "ramp_output = 近 30 日标注量 ÷ 全期日均　★骤降即须查；骤升须查是否灌水", "现有交付件": "S04_analyst_score / EV01 / EV02 / TL10", "判读（商业）": "高产而低准 = 灌水；低产而高准 = 精兵；二维并读方可赏罚", "处置建议": "绩效挂钩、样本复核"}],COLS=["类号", "类名", "定义", "avg 定义", "rate 定义", "roi 定义", "ramp 定义", "现有交付件", "判读（商业）", "处置建议"];
+const tb=document.getElementById('b'),q=document.getElementById('q'),c=document.getElementById('c');
+let sk='类号',sd=1;
+const esc=t=>String(t).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
+function draw(){
+ const kw=q.value.trim().toLowerCase();
+ let r=D.filter(x=>!kw||COLS.some(k=>String(x[k]).toLowerCase().includes(kw)));
+ r.sort((a,b)=>String(a[sk]).localeCompare(String(b[sk]),'zh')*sd);
+ tb.innerHTML=r.map(x=>'<tr>'+COLS.map((k,i)=>
+   `<td class="${i===0?'k':(i===1?'nm':'')}">${esc(x[k])}</td>`).join('')+'</tr>').join('');
+ c.textContent=`显示 ${r.length} / ${D.length} 类`+(r.length<D.length?`（筛选隐藏 ${D.length-r.length}，非截断）`:'（全表在此）');
+}
+document.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;sd=(sk===k)?-sd:1;sk=k;draw()});
+q.oninput=draw;draw();
+</script></body></html>
