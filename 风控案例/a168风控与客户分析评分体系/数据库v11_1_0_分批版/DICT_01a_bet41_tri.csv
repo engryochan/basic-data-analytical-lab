@@ -1,0 +1,2 @@
+﻿scope,n_rows,sum_stake,sum_validbet,sum_bet41,sum_bet16,r41_vb,r16_vb,r_vb_stake,avg_bet15_pct,n_41_eq_vb,n_41_eq_16,pct_41_eq_vb,verdict_bet41,rn
+bet41 × bet16 × validbet 三方比对（category=1 · 过基础闸）,125648133,676911569948.81,604032297697.17,604030067049.17,17960696.13,0.99999631,0.00002973,0.89233561,0.040442,125647210,9546322,99.999265,★ bet41 ÷ validbet ≈ 1 —— bet41 系有效投注之同义列，字典「下注退水金額」措辞歧义,1
