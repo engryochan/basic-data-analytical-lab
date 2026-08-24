@@ -1,0 +1,78 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
+<title>规范 · 分批取数校对标准 v1.0.0</title><style>
+:root{--ink:#12232e;--pap:#fbfaf7;--line:#d8d2c4;--acc:#8c1c13}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pap);color:var(--ink);font-family:"Iowan Old Style","Songti SC","Source Han Serif SC",Georgia,serif;font-size:14px}
+header{padding:22px 26px 14px;border-bottom:3px double var(--line)}
+h1{margin:0 0 6px;font-size:20px} .sub{font-size:12.5px;line-height:1.85;color:#4a5568} .sub b{color:var(--acc)}
+.bar{padding:10px 26px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--pap);z-index:20}
+input,select{font:inherit;padding:6px 9px;border:1px solid var(--line);background:#fff;border-radius:2px} input{width:250px}
+.count{font-size:12px;color:#4a5568;margin-left:auto}
+.wrap{overflow:auto;max-height:calc(100vh - 300px);margin:0 14px 14px;border:1px solid var(--line);background:#fff}
+table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%}
+th,td{padding:8px 10px;border-bottom:1px solid #ece7db;vertical-align:top;text-align:left;max-width:340px}
+thead th{position:sticky;top:0;background:#f2eee4;z-index:10;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--line);font-size:12.5px}
+td.g{font-weight:600;white-space:nowrap;position:sticky;left:0;background:#fbfaf7;border-right:1px solid var(--line);z-index:5}
+thead th:nth-child(1){position:sticky;left:0;z-index:15}
+tr:hover td{background:#fdfcf8} tr:hover td.g{background:#f6f2e8}
+.tag{display:inline-block;padding:1px 7px;border-radius:2px;font-size:11px;white-space:nowrap;border:1px solid}
+.PASS{background:#e8f5e9;color:#1b5e20;border-color:#b7d9ba}
+.PEND{background:#fff5e0;color:#8a6100;border-color:#e8d5a8}
+.NA{background:#f0eee9;color:#6b6459;border-color:#ddd7cb}
+footer{padding:12px 26px 24px;font-size:12.5px;color:#4a5568;border-top:1px solid var(--line);line-height:1.9}
+footer b{color:var(--acc)} code{font-family:Consolas,Menlo,monospace;font-size:12px}
+</style></head><body>
+<header><h1>规范 · 分批取数校对标准 v1.0.0</h1>
+<div class="sub">
+a168 · 立于 2026-08-24 · 适用于 <b>分批作业版</b> 与 <b>原版审计版</b> 之全部取数作业<br>
+本表共 <b>27</b> 行 × <b>9</b> 列；<b>省略 0 行（0.00%）、省略 0 列（0.00%）</b>——全表在此，横纵皆可卷，无截断。<br>
+<b>★ 首要前提：SQL 不会提示任何东西。</b>audit_rn 只留证，不报警；「查」这个动作须由闸来做，且须有人去跑。
+</div></header>
+<div class="bar">
+<input id="q" placeholder="搜寻闸号／闸名／判据…">
+<select id="s"><option value="">全部阶段</option></select>
+<select id="v"><option value="">全部现状</option><option value="PASS">已 PASS</option><option value="PENDING">待跑</option></select>
+<span class="count" id="cnt"></span></div>
+<div class="wrap"><table id="t"><thead><tr><th data-k="阶段">阶段</th><th data-k="闸号">闸号</th><th data-k="闸名">闸名</th><th data-k="判据">判据</th><th data-k="通过条件">通过条件</th><th data-k="容差">容差</th><th data-k="谁跑">谁跑</th><th data-k="失败之害">失败之害</th><th data-k="现状">现状</th></tr></thead><tbody id="b"></tbody></table></div>
+<footer>
+<b>容差之定</b>：计数类必须<b>精确相等</b>（容差 0）；金额类已 ROUND 至 4 位，容差 <code>1e-4</code>（只防浮点尾数，不容真差）；比率类已 ROUND 至 8 位，容差 <code>1e-8</code>；字串类<b>逐字相等</b>。<br>
+<b>判词四态</b>：PASS ／ FAIL ／ SKIPPED（闸未跑，须书明其限）／ CONDITIONAL（跑了但前置未足，读数不得入结论）。<b>SKIPPED 不等于 PASS</b>。<br>
+<b>证据级</b>：凡「机检所得」为 OBSERVED；凡「由定义推得」为 INFERRED（如 Gate 1 之原版侧）；二者须分书，不得混称「已验」。<br>
+<b>铁律</b>：静态 PASS ≠ 数据实测 PASS。结构闸全过，只证「形制无误」；须过 G4 方可书「结果一致」。
+
+<b>★★★ 本体系目前<u>捕不到</u>之五类失误（诚实列出，不得以「二十七闸全过」掩之）★★★</b><br>
+<b>一 · 内层口径本身有误</b>：audit 体系只管「取数过程有无丢失」，不管「这条 SQL 该不该这么写」。
+内层若把 <code>bet41</code> 当退水、把 <code>DATE(bet08)</code> 当营业日，二十七闸照样全绿。此类须由 §D00／§D01 与 L1~L9 骨架另管。<br>
+<b>二 · 源数据在批次之间变动</b>：七批分七次执行，若期间 ODS 有回灌或重同步（本项目有 2026-05-19 单日全量重同步之先例），
+则各批所据非同一快照。<b>唯 T_true 前后复验可察，且只能察总量变化</b>；若增减恰好相抵，无从察觉。<br>
+<b>三 · 内含 LIMIT 之二件</b>（<code>_P12b-pre.csv</code>、<code>PH0_8r1_rg_case.csv</code>）：该 LIMIT 系查询自身之截断。
+分批版忠实复制之，故<b>闸可全过而数据不全</b>——audit_rn 只证「切片之间无缝」，证不了「被截断者本该在内」。<br>
+<b>四 · 未套壳之七件</b>（<code>Z07_probe_bet02</code>、<code>Z08_roundkey_integrity</code>、<code>V_table_counts</code>、
+<code>P0C02_标签口径</code>、<code>TL11c_population_reconcile</code>、<code>P02A_lmc_samples</code>、<code>PH0_8r2_rg_crosstable</code>）：
+投影有列无别名，无 audit_rn，故 G2／G3 全数 NOT_APPLICABLE，只能靠 T_true 一次导全。<br>
+<b>五 · 值层损坏恰好保持名次</b>：G3-4 之名次自洽可察绝大多数值损坏，然若某行之改动恰不影响其在全序键下之名次
+（如仅改一个不入排序键之列——本包排序键含全部输出列，故此情形已极罕），仍可能漏过。G4-2 交叉项与 G4-3 分块对账为其补网。<br>
+<br>
+<b>★ 结论</b>：二十七闸所证者是「<b>分批只是物理切片，未改变 observation set</b>」；
+它<b>不证</b>「这份数据是对的」。后者须由口径审计与 L1~L9 骨架另行担保。二者不可互代。
+</footer>
+<script>
+const D=[{"阶段": "0 施工前", "闸号": "G0-1", "闸名": "版本身份", "判据": "所用两档之六元组（字节/行/MD5/行尾/编码/末尾换行）与备案比对", "通过条件": "六项全同", "容差": "精确", "谁跑": "人/机", "失败之害": "停手，先确认用的是不是同一份档", "现状": "PASS 2026-08-24"}, {"阶段": "0 施工前", "闸号": "G0-2", "闸名": "锁一 · 排序键逐字一致", "判据": "分批版与原版审计版之 ROW_NUMBER() OVER (ORDER BY …) 逐件比对", "通过条件": "122/122 逐字全同", "容差": "逐字", "谁跑": "机", "失败之害": "二版 audit_rn 同号却指向不同观测值，即假一致，须重出", "现状": "PASS 122/122"}, {"阶段": "0 施工前", "闸号": "G0-3", "闸名": "锁二 · 排序元组唯一", "判据": "COUNT(*) 与 COUNT(DISTINCT ordering_tuple) 比对；粒度键唯一者可以键代之", "通过条件": "两数相等", "容差": "精确", "谁跑": "机", "失败之害": "并列未破，audit_rn 不可复现，须补尾键", "现状": "PASS（I_ip_player n_keys=n_rows=696,403）"}, {"阶段": "0 施工前", "闸号": "G0-4", "闸名": "内层未动", "判据": "分批版/审计版之内层，与总包本体逐行比对", "通过条件": "逐字全同（仅剥末尾 ORDER BY 与分号）", "容差": "逐字", "谁跑": "机", "失败之害": "内层一动即非同一查询，全部对账作废", "现状": "PASS（差异 0 行触及内层）"}, {"阶段": "1 定批", "闸号": "G1-1", "闸名": "T_true 已实测", "判据": "跑 SELECT COUNT(*) FROM ( 内层 ) x 并留档", "通过条件": "有读数且已登记", "容差": "—", "谁跑": "人", "失败之害": "批数无从定，禁止开跑", "现状": "I_ip_player PASS；余 128 件未跑"}, {"阶段": "1 定批", "闸号": "G1-2", "闸名": "批数正确", "判据": "批数 = CEIL(T_true / 100000)", "通过条件": "与实跑批数相符", "容差": "精确", "谁跑": "人", "失败之害": "多跑必得空集（如 §K01 第 3 批），白耗算力", "现状": "—"}, {"阶段": "1 定批", "闸号": "G1-3", "闸名": "免分批判定", "判据": "T_true ≤ 100000 者一律一次导全", "通过条件": "不套切片", "容差": "—", "谁跑": "人", "失败之害": "徒增七倍算力，且多一次出错机会", "现状": "—"}, {"阶段": "1 定批", "闸号": "G1-4", "闸名": "红旗件裁定", "判据": "语句内已含 LIMIT 者 2 件；投影有列无别名者 7 件", "通过条件": "此 9 件须先裁定处置", "容差": "—", "谁跑": "人", "失败之害": "LIMIT 件所分之批只是截断结果之片段，非全量——**闸全过而数据不全**", "现状": "PENDING"}, {"阶段": "2 逐批取数", "闸号": "G2-1", "闸名": "阶梯两数同进", "判据": "上界 − 下界 = 100000；下界 = 上一批之上界", "通过条件": "恒成立", "容差": "精确", "谁跑": "人", "失败之害": "如 rn>100000 AND rn<=100000，自相矛盾恒为假，返回空集", "现状": "已立警示于每件"}, {"阶段": "2 逐批取数", "闸号": "G2-2", "闸名": "批内无重复", "判据": "COUNT(*) = COUNT(DISTINCT audit_rn)", "通过条件": "两数相等", "容差": "精确", "谁跑": "人/R", "失败之害": "该批作废，重取", "现状": "—"}, {"阶段": "2 逐批取数", "闸号": "G2-3", "闸名": "与上批接合", "判据": "MIN(audit_rn) = (k−1)×100000 + 1", "通过条件": "精确相等", "容差": "精确", "谁跑": "人/R", "失败之害": "批边界错位，该批与上批之间有缺口或交叠", "现状": "—"}, {"阶段": "2 逐批取数", "闸号": "G2-4", "闸名": "批内无缺口", "判据": "MAX(audit_rn) = MIN(audit_rn) + COUNT(*) − 1", "通过条件": "精确相等", "容差": "精确", "谁跑": "人/R", "失败之害": "批内有跳号，导出途中丢行", "现状": "—"}, {"阶段": "2 逐批取数", "闸号": "G2-5", "闸名": "batch_id 自洽", "判据": "batch_id = FLOOR((audit_rn−1)/100000) + 1 逐行复算", "通过条件": "0 行不符", "容差": "精确", "谁跑": "R", "失败之害": "batch_id 与 audit_rn 不配，说明壳被改过", "现状": "—"}, {"阶段": "2 逐批取数", "闸号": "G2-6", "闸名": "末批判定", "判据": "返回 < 100000 行即末批；返回 0 行表示已越界", "通过条件": "与 T_true 相符", "容差": "精确", "谁跑": "人", "失败之害": "返 0 行不是错误，是已跑过头——回查 T_true", "现状": "§K01 实例"}, {"阶段": "3 合批", "闸号": "G3-1", "闸名": "合批行数", "判据": "合并档行数 = T_true", "通过条件": "精确相等", "容差": "精确", "谁跑": "R", "失败之害": "总量不符，必有丢失或重出", "现状": "PASS 696,403"}, {"阶段": "3 合批", "闸号": "G3-2", "闸名": "序号并集完整", "判据": "audit_rn 之并集 = 1 … T_true", "通过条件": "缺号 0 且重号 0", "容差": "精确", "谁跑": "R", "失败之害": "**先生所忧之遗漏与重叠，此闸专司之**", "现状": "PASS 缺 0 重 0"}, {"阶段": "3 合批", "闸号": "G3-3", "闸名": "业务键唯一", "判据": "COUNT(DISTINCT 粒度键) = 行数", "通过条件": "精确相等", "容差": "精确", "谁跑": "R", "失败之害": "与 GROUP BY 语义相悖，须回查内层", "现状": "PASS 696,403"}, {"阶段": "3 合批", "闸号": "G3-4", "闸名": "名次自洽", "判据": "自合并档按声明全序键重算名次，与 audit_rn 逐行比对", "通过条件": "0 行不符", "容差": "精确", "谁跑": "R", "失败之害": "某行字段值若在传输中被改，其重算名次几必移位——此闸可察值层损坏", "现状": "PASS 0/696,403"}, {"阶段": "4 跨版对账", "闸号": "G4-1", "闸名": "八项指纹", "判据": "行数/键数/六项列级合计，原版侧库内算 ↔ 分批侧 R 侧算", "通过条件": "八项全同", "容差": "计数 0；金额 1e-4；比率 1e-8", "谁跑": "人+R", "失败之害": "须跑一次导全做双向反连以定位差异行", "现状": "PASS 8/8"}, {"阶段": "4 跨版对账", "闸号": "G4-2", "闸名": "交叉项三数", "判据": "Σ(ROUND(a,n)×10^n × b) 精确整数，两侧比对", "通过条件": "三数全同", "容差": "精确整数", "谁跑": "人+R", "失败之害": "可察『两行互换其值』此类保合计之差异", "现状": "PENDING"}, {"阶段": "4 跨版对账", "闸号": "G4-3", "闸名": "分块逐块对账", "判据": "块大小 10；每块比行数、rn 界、键界、四项合计", "通过条件": "69,641 块 × 9 列全同", "容差": "计数 0；金额 1e-4", "谁跑": "人+R", "失败之害": "差异定位至 10 行之内，并可指出属第几批", "现状": "PENDING"}, {"阶段": "4 跨版对账", "闸号": "G4-4", "闸名": "键界一致", "判据": "MIN/MAX(粒度键) 两侧比对", "通过条件": "逐字相等", "容差": "逐字", "谁跑": "R", "失败之害": "结果集之首尾不同，必有边界丢失", "现状": "已备（KEY_MIN/KEY_MAX 已读回）"}, {"阶段": "5 交付", "闸号": "G5-1", "闸名": "删列前置条件", "判据": "D 级 PASS 方可删 audit_rn 与 batch_id", "通过条件": "G4 全 PASS", "容差": "—", "谁跑": "人", "失败之害": "**次序不可颠倒**：一删，遗漏与重叠即再无从查起", "现状": "闸文已立"}, {"阶段": "5 交付", "闸号": "G5-2", "闸名": "列数复原", "判据": "删后列数 = 总包本体原版列数", "通过条件": "精确相等", "容差": "精确", "谁跑": "R", "失败之害": "多一列即破表头契约，下游 registry 读表必错", "现状": "—"}, {"阶段": "5 交付", "闸号": "G5-3", "闸名": "旧档归档", "判据": "七批原档（含 audit_rn）加 _superseded 后缀，禁删", "通过条件": "已归档", "容差": "—", "谁跑": "人", "失败之害": "其 audit_rn 是本次完整性之唯一物证", "现状": "W-S 已登记我方曾违此条"}, {"阶段": "5 交付", "闸号": "G5-4", "闸名": "六元组重登", "判据": "交付档之六元组现算并登记", "通过条件": "已登记", "容差": "—", "谁跑": "人/机", "失败之害": "锚值随内容走；内容一动而锚未改，其锚即刻成伪证", "现状": "—"}, {"阶段": "6 入册", "闸号": "G6-1", "闸名": "入 Registry 前置", "判据": "上述二十五闸全 PASS", "通过条件": "无 FAIL、无未裁之 SKIPPED", "容差": "—", "谁跑": "人", "失败之害": "Registry 不得以未验之数据建册", "现状": "PENDING"}]; const COLS=["阶段", "闸号", "闸名", "判据", "通过条件", "容差", "谁跑", "失败之害", "现状"];
+const tb=document.getElementById('b'),q=document.getElementById('q'),s=document.getElementById('s'),v=document.getElementById('v'),cnt=document.getElementById('cnt');
+[...new Set(D.map(r=>r['阶段']))].forEach(x=>{const o=document.createElement('option');o.value=x;o.textContent=x;s.appendChild(o)});
+let sk='闸号',sd=1;
+const esc=t=>String(t).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]);
+function cls(x){return x.includes('PASS')?'PASS':(x.includes('PENDING')||x.includes('未跑'))?'PEND':'NA'}
+function draw(){
+ const kw=q.value.trim().toLowerCase(),st=s.value,vv=v.value;
+ let r=D.filter(x=>(!st||x['阶段']===st)&&(!vv||(vv==='PASS'?x['现状'].includes('PASS'):!x['现状'].includes('PASS')))
+   &&(!kw||COLS.some(c=>String(x[c]).toLowerCase().includes(kw))));
+ r.sort((a,b)=>String(a[sk]).localeCompare(String(b[sk]),'zh')*sd);
+ tb.innerHTML=r.map(x=>'<tr>'+COLS.map((c,i)=>{
+   if(c==='现状') return `<td><span class="tag ${cls(x[c])}">${esc(x[c])}</span></td>`;
+   return `<td class="${i===0?'g':''}">${esc(x[c])}</td>`}).join('')+'</tr>').join('');
+ cnt.textContent=`显示 ${r.length} / ${D.length} 闸`+(r.length<D.length?`（筛选隐藏 ${D.length-r.length}，非截断）`:'（全表在此）');
+}
+document.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;sd=(sk===k)?-sd:1;sk=k;draw()});
+q.oninput=draw;s.onchange=draw;v.onchange=draw;draw();
+</script></body></html>
