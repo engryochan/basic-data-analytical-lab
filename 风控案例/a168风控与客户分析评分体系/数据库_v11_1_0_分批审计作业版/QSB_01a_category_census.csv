@@ -1,3 +1,0 @@
-﻿category_value,n_rows,pct_of_total,n_members,n_dates,min_dt,max_dt,n_bet09,n_b14_null,n_b14_zero,n_b14_pos,n_pnl_zero,n_pnl_house_win,n_pnl_player_win,n_vb_zero,n_b41_zero,stake_sum,payout_sum,validbet_sum,n_rebet_flag,n_commission,shape_hint,audit_rn,batch_id
-1,125649147,99.99557200,723498,139,2026-03-21,2026-08-06,23,0,73119845,52529302,8642791,73119845,43886511,9545677,9546641,676914511000.81,663425594031.68,604032736752.17,2,8,◐ 输赢两向俱备 —— 常态结算单之候选,1,1
-2,5564,0.00442800,521,139,2026-03-21,2026-08-06,1,0,5564,0,0,5564,0,5564,5564,472187.40,0.00,0.00,1,1,★ 派彩恒零 —— 单向扣款之候选（同 Tip_1_ 形态）,2,1

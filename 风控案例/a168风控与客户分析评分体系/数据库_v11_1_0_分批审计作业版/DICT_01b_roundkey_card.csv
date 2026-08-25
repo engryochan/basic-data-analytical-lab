@@ -1,2 +1,0 @@
-﻿scope,n_rows,nd_bet03,nd_bet04,nd_bet39,nd_bet40,min_bet04,max_bet04,min_bet39,max_bet39,nd_round_key,nd_shoe_table,avg_bets_per_round,verdict_key,audit_rn,batch_id
-bet03／bet04／bet39 基数实测,125649147,123359,70,30,12,1,110,1,913,6048725,123359,20.7728,★ bet39 基数小（桌号）· bet04 上限数十（局内序号）—— 与字典及 canonical 一致,1,1
