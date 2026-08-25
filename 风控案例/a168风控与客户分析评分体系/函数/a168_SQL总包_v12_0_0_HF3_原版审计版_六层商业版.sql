@@ -258,6 +258,37 @@
 --     典型学：M06 代理线　分区：recent（s.x_rec = 1）　连接：q.`ip`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
 -- ── 原版审计版：六层商业指标 ＋ audit_rn（不切片，一次导全）──
+-- ══════════════════════════════════════════════════════════════════════════════
+-- §Z-00 · 会话参数（承 v11.1.0 §Z-00 · 每个 Superset 会话开跑前逐条单跑一次）
+-- ══════════════════════════════════════════════════════════════════════════════
+-- ▸ 导出：不需要 —— 会话参数设置，无结果集
+-- ▸ 执行纪律（v11.1.0 三次实测失败之教训，原样承继）：
+--   【一】每一行 SET 皆是独立语句，务请一行一跑，看到 OK 再跑下一行。
+--        切勿整段一次提交 —— Superset 语句切分遇注释内分号可能切出残片。
+--   【二】跑前先按 Esc 或点空白处，确保没有任何高亮选区。
+--        「有选中就只跑选中那一段」，一次误触拖选即跑出半句。
+--        实测教训：报 Unexpected input 'enable_spill' 者，病不在 SQL，在选区。
+--   【三】若报「Unknown system variable」→ 本版不支持，径行跳过，不影响正确性。
+--        若报「syntax error / Unexpected input」→ 是选区或切分之误，重按【一】【二】。
+--   【四】新会话须重跑本段（会话级参数不跨会话）。
+--
+-- ★ HF3 新增说明：enable_spill 是 2026-08-25 两次 OOM 的直接对策
+--   #010 C08_subnet_all · #078 S03_agent_score 皆报
+--     Memory of process exceed limit ... Used: 107,095,273,592 / Limit: 107,092,346,019
+--   但请注意：溢写只让它【跑得完】，不让它【跑得对】——
+--   这两件的根因是 FROM q CROSS JOIN x_agg（x_agg 为会员级，约 16 万行），
+--   笛卡尔积行数 = |q| × 16 万。溢写后仍是天量无意义行。见本包 §CROSS-JOIN 警示。
+
+SET SESSION query_timeout = 259200;
+SET enable_spill = true;
+SET spill_mode = 'auto';
+SET cbo_cte_reuse = true;
+SET cbo_cte_reuse_rate = 1.0;
+SET enable_pipeline_engine = true;
+SET pipeline_dop = 0;
+SET enable_global_runtime_filter = true;
+-- ══════════════════════════════════════════════════════════════════════════════
+
 SELECT w.*,
        ROW_NUMBER() OVER (ORDER BY w.`net_margin` ASC, w.`roi` DESC, w.`ip`, w.`n_orders`, w.`n_member`, w.`first_dt`, w.`last_dt`) AS audit_rn
 FROM (
