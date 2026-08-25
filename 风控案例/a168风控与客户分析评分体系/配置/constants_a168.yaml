@@ -1,0 +1,90 @@
+# ─────────────────────────────────────────────────────────────
+# constants_a168.yaml  ——  C09 常数白名单 · CANONICAL SOURCE
+# 版本 v0.1.0 · REL-0006 / C2 / v12.0.1
+# 一源两视图：本 YAML 为唯一真源；CSV 仅为导出视图，禁止反向写入。
+#   constants_a168.yaml  ──┬── constants_a168_view.csv   (audit/export)
+#                          └── SQL / R validation
+# 十字段 schema（缺一不可）：
+#   constant_id value unit scope source derivation
+#   data_derived production_allowed reason owner
+# production_allowed 三值：TRUE / FALSE / CONDITIONAL
+# ─────────────────────────────────────────────────────────────
+schema_version: "0.1.0"
+canonical: true
+export_view: "constants_a168_view.csv"
+constants:
+  - constant_id: C-001
+    value: "0.30"
+    unit: ratio
+    scope: "stake_ramp 分母（近期时窗在全窗中的时间占比）"
+    source: "v12.0.0 六层后缀 · 原版审计版 129 处 / 分批作业版 258 处"
+    derivation: "无 —— 硬写"
+    data_derived: false
+    production_allowed: false
+    reason: >
+      D3 判死。若原意为时间权重，真值 = recent_days / total_days
+      = 30 / 139 = 0.215827…（窗口 2026-03-21 … 2026-08-06 共 139 日；
+      近期段 2026-07-08 … 2026-08-06 共 30 日）。用 0.30 使该指标
+      系统性压至真值的 0.7194 倍。须改为渲染期现算，并同时输出
+      recent_days / total_days / recent_time_share 三列以便审计看到分母。
+    owner: REDTEAM
+  - constant_id: C-002
+    value: "'2026-07-08'"
+    unit: date
+    scope: "x_rec 近期时窗起点（x_bs CTE）"
+    source: "v12.0.0 · 129 / 258 处"
+    derivation: "无 —— 硬写"
+    data_derived: false
+    production_allowed: false
+    reason: >
+      D3 判死。应现算 DATE_SUB(<窗口末日>, 29)。窗口一变，此死数即失效，
+      且与 C-001 的分子分母将同时错位。
+    owner: REDTEAM
+  - constant_id: C-003
+    value: "0.80"
+    unit: ratio
+    scope: "shoe_pos 尾段切点（R01 族）"
+    source: "v12.0.0 · 386 / 772 处"
+    derivation: "生产候选，非数据反解"
+    data_derived: false
+    production_allowed: false
+    reason: >
+      T-03 FATAL。尾段假说已由四项独立检验证伪（符号检验 p=0.7591、
+      Wilcoxon p=0.8087、九分档 hold% 扫描零命中、外部 L1a 标签 AUC=0.3828
+      且方向反转）。本常数仅作【证伪档案实验常数】保留，禁作生产阈值；
+      ranking / scoring / trigger / enforcement 四禁不因 v12.0.1 松动。
+    owner: REDTEAM
+  - constant_id: C-004
+    value: "30"
+    unit: count
+    scope: "roi_denominator_status 薄暴露守卫 n_bets < 30"
+    source: "v12.0.0 · 520 / 1040 处"
+    derivation: "待反解 n_min = f(p0, α, 半宽 h, 单双侧, 簇内相关 ρ, 设计效应)"
+    data_derived: unknown
+    production_allowed: conditional
+    reason: >
+      须给统计反解依据。百家乐 ROI 具赔付不对称、注额异质、玩家异质、
+      序列相关、桌/荷官效应、佣金结构与重尾（净赢 CV 可达 8 量级），
+      1/√n 仅为零效应 i.i.d. 下的一阶方差基线，不适用；须用经验 Var(ROI|n)，
+      并以 n_eff = n / (1 + (m−1)ρ) 校正。
+    owner: 待指派
+  - constant_id: C-005
+    value: "100"
+    unit: count
+    scope: "q 侧 HAVING COUNT(*) >= 100 入池门槛"
+    source: "v12.0.0 · 16 / 32 处"
+    derivation: "待反解"
+    data_derived: unknown
+    production_allowed: conditional
+    reason: "同 C-004；且此门槛直接决定样本母体，须与该估计量的 MDE 一致。"
+    owner: 待指派
+  - constant_id: C-006
+    value: "100000"
+    unit: rows
+    scope: "分批阶梯批量（分批作业版）"
+    source: "v12.0.0 · 129 处"
+    derivation: "工程参数（Superset 单次导出上限）"
+    data_derived: n/a
+    production_allowed: true
+    reason: "非统计阈值，属工程参数。实测 129 处阶梯步长零错（C07 PASS）。"
+    owner: 工程

@@ -1,0 +1,9 @@
+﻿n,module,join_key,q_expr,x_key,x_key_源列,判定
+5,B4_5b_tip_nature.csv,bet09_value,TRIM(bet09),s.x_product,b.bet09,
+16,DICT_01d_bet_latency.csv,table_id,TRIM(bet39),s.x_table,b.bet39,
+56,PI04_member_5d_profile.csv,member_id,mid,s.x_member,b.bet05,
+59,QSB_01c_cat1_contamination.csv,bet09_value,TRIM(bet09),s.x_product,b.bet09,
+64,R01_late_shoe.csv,uid,member_id,s.x_member,b.bet05,
+65,R01_late_shoe_w2.csv,uid,member_id,s.x_member,b.bet05,
+79,S04_analyst_score.csv,entity_id,"COALESCE(NULLIF(TRIM(creator), ''), '未署名')",s.x_member,b.bet05,
+98,T_table_span.csv,table_id,gi011,s.x_table,b.bet39,

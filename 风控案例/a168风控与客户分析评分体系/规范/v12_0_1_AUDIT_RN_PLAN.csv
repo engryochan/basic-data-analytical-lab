@@ -1,0 +1,130 @@
+﻿n,module,grain_code,uniqueness,uniqueness_note,tiebreak,tiebreak_reason
+1,A_anchor.csv,G01,PROVABLE,顶层 GROUP BY g.ip,bet01,原始注单主键（事实稳定主键）
+2,B01_bt_panel.csv,G02,PROVABLE,"顶层 GROUP BY member_id, bet_date",bet01,原始注单主键（事实稳定主键）
+3,B01_bt_panel_delta.csv,G02,PROVABLE,"顶层 GROUP BY member_id, bet_date",bet01,原始注单主键（事实稳定主键）
+4,B4_2b_funnel_and_mu0.csv,G03,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+5,B4_5b_tip_nature.csv,G04,PROVABLE,顶层 GROUP BY TRIM(bet09),CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+6,B_online_base.csv,G05,PROVABLE,"顶层 GROUP BY table_id, sec_elapsed",bet01,原始注单主键（事实稳定主键）
+7,C01_ip_chain.csv,G06,PROVABLE,顶层 GROUP BY bet_ip,bet01,原始注单主键（事实稳定主键）
+8,C06_hedge_pairs.csv,G07,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+9,C06d_hedge_pairs_dated.csv,G08,PROVABLE,"顶层 GROUP BY a.bet_ip, a.member_id, b.member_id",bet01,原始注单主键（事实稳定主键）
+10,C08_subnet_all.csv,G09,PROVABLE,顶层 GROUP BY 1,bet01,原始注单主键（事实稳定主键）
+11,C08_subnet_sparse.csv,G09,PROVABLE,顶层 GROUP BY 1,bet01,原始注单主键（事实稳定主键）
+12,D03S_daily_roi_diff.csv,G10,PROVABLE,顶层 GROUP BY bet_date,bet01,原始注单主键（事实稳定主键）
+13,DICT_01a_bet41_tri.csv,G11,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+14,DICT_01b_roundkey_card.csv,G12,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+15,DICT_01c_dimension.csv,G13,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+16,DICT_01d_bet_latency.csv,G14,PROVABLE,顶层 GROUP BY TRIM(bet39),CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+17,DX04_bet09_profile.csv,G15,PROVABLE,顶层 GROUP BY bet_side,bet01,原始注单主键（事实稳定主键）
+18,DX05_product_panorama.csv,G16,PROVABLE,顶层 GROUP BY product_code,bet01,原始注单主键（事实稳定主键）
+19,E02_segment_econ.csv,G17,PROVABLE,"顶层 GROUP BY m.rebate_rate_bkt, m.vb_q",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+20,EV01_disposal_events.csv,G18,NOT_PROVABLE,无顶层 GROUP BY,event_id,事件键
+21,EV02_member_disposal.csv,G19,NOT_PROVABLE,无顶层 GROUP BY,event_id,事件键
+22,I_ip_agg.csv,G06,PROVABLE,顶层 GROUP BY bet_ip,bet01,原始注单主键（事实稳定主键）
+23,I_ip_player.csv,G20,PROVABLE,"顶层 GROUP BY b.bet_ip, b.member_id",bet01,原始注单主键（事实稳定主键）
+24,K01_risk_feature_matrix.csv,G21,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+25,K01b_seed_goldip.csv,G22,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+26,K01b_seed_manual.csv,G22,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+27,K01c_seed_dated.csv,G23,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+28,L_label_dist.csv,G24,PROVABLE,"顶层 GROUP BY risk, orders",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+29,P01A_crosstab.csv,G25,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+30,P01B_diff_ratio.csv,G26,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+31,P01C_split_by_dim.csv,G27,PROVABLE,"顶层 GROUP BY DATE_TRUNC('month', dt), TRIM(bet09), TR",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+32,P01D_vs_validbet.csv,G28,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+33,P01E_identity_test.csv,G29,NOT_PROVABLE,顶层 UNION：同 grain 可出多行,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+34,P02A_lmc_samples.csv,G00,NOT_PROVABLE,顶层 UNION：同 grain 可出多行,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+35,P02B_changestatus_patterns.csv,G30,PROVABLE,"顶层 GROUP BY SUBSTRING(TRIM(lmc05), 1, 40)",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+36,P02C_key_check.csv,G31,PROVABLE,顶层 GROUP BY l.lmc03,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+37,P02D_events_in_window.csv,G32,PROVABLE,"顶层 GROUP BY lmc04, lmc03",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+38,P0C02_标签口径.csv,G33,NOT_PROVABLE,顶层 UNION：同 grain 可出多行,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+39,P0C03_标记次数分布.csv,G00,PROVABLE,顶层 GROUP BY 标记次数,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+40,P0C04_同日泄漏检验.csv,G34,PROVABLE,"顶层 GROUP BY d0.mem, d0.mark_day",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+41,P0C05_标记时点定位.csv,G34,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+42,P0C06_LabelB骨架.csv,G35,PROVABLE,"顶层 GROUP BY a.mem, a.anchor_day",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+43,P0C09_安慰剂检验.csv,G36,PROVABLE,"顶层 GROUP BY a.mem, a.d, a.注单数, a.洗码量",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+44,P11_阿泽尾段投注总帐.csv,G37,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+45,P11_阿泽尾段投注模型会员名单.csv,G38,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+46,P11_雷欧尾段投注总帐.csv,G37,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+47,P12a_platform_daily.csv,G39,PROVABLE,顶层 GROUP BY dt,bet01,原始注单主键（事实稳定主键）
+48,P12b_member_events.csv,G40,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+49,P12c_member_daily_pnl.csv,G41,PROVABLE,"顶层 GROUP BY g.uid, g.dt",bet01,原始注单主键（事实稳定主键）
+50,P13_personal_entry.csv,G42,PROVABLE,顶层 GROUP BY uid,bet01,原始注单主键（事实稳定主键）
+51,PH0_8r1_rg_case.csv,G43,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+52,PH0_8r2_rg_crosstable.csv,G44,NOT_PROVABLE,顶层 UNION：同 grain 可出多行,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+53,PI01_treatment_delta_member.csv,G45,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+54,PI02_treatment_delta_platform.csv,G46,PROVABLE,"顶层 GROUP BY grp, phase",bet01,原始注单主键（事实稳定主键）
+55,PI03_reinvest_loop.csv,G47,PROVABLE,顶层 GROUP BY outcome,bet01,原始注单主键（事实稳定主键）
+56,PI04_member_5d_profile.csv,G48,PROVABLE,顶层 GROUP BY mid,bet01,原始注单主键（事实稳定主键）
+57,P_player_month.csv,G49,PROVABLE,"顶层 GROUP BY member_id, DATE_TRUNC('month', bet_date)",bet01,原始注单主键（事实稳定主键）
+58,QSB_01a_category_census.csv,G50,PROVABLE,"顶层 GROUP BY COALESCE(NULLIF(TRIM(category), ''), '(空",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+59,QSB_01c_cat1_contamination.csv,G04,PROVABLE,顶层 GROUP BY TRIM(bet09),CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+60,QSB_02a_lowcard_fields.csv,G51,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+61,QSB_02b2_lowcard_five_gates.csv,G52,NOT_PROVABLE,顶层 UNION：同 grain 可出多行,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+62,QSB_02b_state_cross.csv,G53,NOT_PROVABLE,顶层 UNION：同 grain 可出多行,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+63,QSB_02c_push_by_family.csv,G54,PROVABLE,"顶层 GROUP BY CASE WHEN TRIM(bet09) IN ('Banker', 'Pla",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+64,R01_late_shoe.csv,G55,PROVABLE,顶层 GROUP BY member_id,bet01,原始注单主键（事实稳定主键）
+65,R01_late_shoe_w2.csv,G55,PROVABLE,顶层 GROUP BY member_id,bet01,原始注单主键（事实稳定主键）
+66,R01anm_shoe_anomaly.csv,G56,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+67,R01chk_shoe_len_by_table.csv,G57,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+68,R01inv_shoe_len_census.csv,G58,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+69,R02_same_table.csv,G59,NOT_PROVABLE,无顶层 GROUP BY,round_key,局键（deterministic record id）
+70,R03_player_dealer.csv,G60,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+71,R03b_player_dealer_daily.csv,G61,PROVABLE,"顶层 GROUP BY p.bet_date, p.member_id, p.dealer_id, p.",bet01,原始注单主键（事实稳定主键）
+72,R03chk_settlement_form.csv,G62,PROVABLE,顶层 GROUP BY UPPER(TRIM(bet_side)),bet01,原始注单主键（事实稳定主键）
+73,R03inv_pair_census.csv,G63,PROVABLE,"顶层 GROUP BY 1, 2",bet01,原始注单主键（事实稳定主键）
+74,R_rebate_dist.csv,G64,PROVABLE,顶层 GROUP BY mem003,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+75,S01_player_score.csv,G55,PROVABLE,顶层 GROUP BY b.member_id,bet01,原始注单主键（事实稳定主键）
+76,S02_dealer_score.csv,G65,PROVABLE,顶层 GROUP BY b.dealer_id,bet01,原始注单主键（事实稳定主键）
+77,S02b_dealer_pace.csv,G65,PROVABLE,顶层 GROUP BY d.dealer_id,bet01,原始注单主键（事实稳定主键）
+78,S03_agent_score.csv,G66,PROVABLE,顶层 GROUP BY b.lv3,bet01,原始注单主键（事实稳定主键）
+79,S04_analyst_score.csv,G67,PROVABLE,"顶层 GROUP BY COALESCE(NULLIF(TRIM(creator), ''), '未署名",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+80,S05_member_month_panel.csv,G02,PROVABLE,"顶层 GROUP BY b.member_id, DATE_TRUNC('month', b.bet_d",bet01,原始注单主键（事实稳定主键）
+81,S_player_tail.csv,G55,PROVABLE,顶层 GROUP BY member_id,bet01,原始注单主键（事实稳定主键）
+82,S_second_dist.csv,G68,PROVABLE,顶层 GROUP BY table_id,bet01,原始注单主键（事实稳定主键）
+83,T02_daily_roi.csv,G02,PROVABLE,"顶层 GROUP BY o.member_id, o.bet_date",bet01,原始注单主键（事实稳定主键）
+84,T03_arbitrage.csv,G55,PROVABLE,顶层 GROUP BY member_id,bet01,原始注单主键（事实稳定主键）
+85,TL00_table_inventory.csv,G69,PROVABLE,顶层 GROUP BY c.TABLE_NAME,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+86,TL02_config_change.csv,G00,PROVABLE,顶层 GROUP BY 变更列,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+87,TL03_pseudo_treatment.csv,G70,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+88,TL03b_pseudo_treatment.csv,G71,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+89,TL04_log_schema.csv,G72,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+90,TL06_log_mem_change.csv,G39,PROVABLE,顶层 GROUP BY dt,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+91,TL07_mem_change_shape.csv,G09,PROVABLE,顶层 GROUP BY 1,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+92,TL08_treatment_events.csv,G73,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+93,TL09_member_schema.csv,G74,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+94,TL10_treatment_ledger.csv,G73,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+95,TL11_treatment_episode.csv,G75,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+96,TL11c_population_reconcile.csv,G76,NOT_PROVABLE,顶层 UNION：同 grain 可出多行,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+97,TL14_limit_treatment.csv,G73,NOT_PROVABLE,无顶层 GROUP BY,ev_key,事件键
+98,T_table_span.csv,G77,PROVABLE,顶层 GROUP BY gi011,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+99,VB_00_validbet_contract.csv,G78,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+100,VB_00b_zero_five_rates.csv,G79,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+101,VB_41_identity_global.csv,G80,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+102,VB_41b_identity_strata.csv,G81,PROVABLE,"顶层 GROUP BY TRIM(bet09), TRIM(commission)",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+103,VB_41b_identity_strata_v18b.csv,G82,PROVABLE,"顶层 GROUP BY g, comm",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+104,VB_41c1_964_detail.csv,G83,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+105,VB_41c2_concentration.csv,G84,PROVABLE,顶层 GROUP BY t.grp,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+106,VB_41c2_concentration_v2.csv,G85,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+107,V_ipmatch.csv,G86,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+108,V_recon.csv,G87,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+109,V_table_counts.csv,G00,NOT_PROVABLE,顶层 UNION：同 grain 可出多行,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+110,X_combo.csv,G63,PROVABLE,"顶层 GROUP BY 1,2",bet01,原始注单主键（事实稳定主键）
+111,Z01_table_inventory.csv,G00,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+112,Z02_excluded_tables.csv,G00,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+113,Z03_column_dictionary.csv,G00,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+114,Z04_name_collision.csv,G88,PROVABLE,顶层 GROUP BY COLUMN_NAME,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+115,Z05_missing_typehint.csv,G00,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+116,Z06_generated_probe_sql.csv,G00,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+117,Z07_probe_bet02.csv,G89,NOT_PROVABLE,顶层 UNION：同 grain 可出多行,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+118,Z08_roundkey_integrity.csv,G00,NOT_PROVABLE,无顶层 GROUP BY,round_key,局键（deterministic record id）
+119,Z09_time_axis_recon.csv,G90,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+120,Z11_sentinel_impact.csv,G91,NOT_PROVABLE,无顶层 GROUP BY,round_key,局键（deterministic record id）
+121,Z14_zero_month_diagnosis.csv,G92,NOT_PROVABLE,无顶层 GROUP BY,bet01,原始注单主键（事实稳定主键）
+122,_P12b-pre.csv,G93,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+123,_PH0_1b_table_inventory.csv,G94,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+124,_PH0_2b_column_inventory.csv,G95,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+125,_PH0_3_lmc_category.csv,G96,PROVABLE,"顶层 GROUP BY COALESCE(NULLIF(TRIM(lmc04), ''), '（空）')",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+126,_PH0_4L1_member_columns.csv,G95,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+127,_PH0_4b_rg_keyword.csv,G96,PROVABLE,"顶层 GROUP BY COALESCE(NULLIF(TRIM(lmc04), ''), '（空）')",CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+128,_PH0_4w2_balance_points.csv,G97,NOT_PROVABLE,无顶层 GROUP BY,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）
+129,_PH0_6b_member_daily.csv,G39,PROVABLE,顶层 GROUP BY dt,CANONICAL_FACT_HASH,无现成稳定主键 → 须构造 canonical fact hash（禁 RAND/时间/物理序）

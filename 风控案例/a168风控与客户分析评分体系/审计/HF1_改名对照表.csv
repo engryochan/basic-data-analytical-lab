@@ -1,0 +1,162 @@
+﻿模块,语句号,原列名,HF1列名,类型
+A_anchor.csv,1,ramp_recent,ramp_recent_vs_prior,ramp 正名
+A_anchor.csv,1,ramp_recent,ramp_recent_vs_all,ramp 正名
+B01_bt_panel.csv,2,stake,stake_xagg,歧义修复(_xagg)
+B01_bt_panel.csv,2,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+B01_bt_panel.csv,2,ramp_recent,ramp_recent_vs_prior,ramp 正名
+B01_bt_panel.csv,2,ramp_recent,ramp_recent_vs_all,ramp 正名
+B01_bt_panel_delta.csv,3,stake,stake_xagg,歧义修复(_xagg)
+B01_bt_panel_delta.csv,3,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+B01_bt_panel_delta.csv,3,ramp_recent,ramp_recent_vs_prior,ramp 正名
+B01_bt_panel_delta.csv,3,ramp_recent,ramp_recent_vs_all,ramp 正名
+B_online_base.csv,6,valid_bet,valid_bet_xagg,歧义修复(_xagg)
+B_online_base.csv,6,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+B_online_base.csv,6,ramp_recent,ramp_recent_vs_prior,ramp 正名
+B_online_base.csv,6,ramp_recent,ramp_recent_vs_all,ramp 正名
+C01_ip_chain.csv,7,stake,stake_xagg,歧义修复(_xagg)
+C01_ip_chain.csv,7,ramp_recent,ramp_recent_vs_prior,ramp 正名
+C01_ip_chain.csv,7,ramp_recent,ramp_recent_vs_all,ramp 正名
+C08_subnet_all.csv,10,stake,stake_xagg,歧义修复(_xagg)
+C08_subnet_all.csv,10,valid_bet,valid_bet_xagg,歧义修复(_xagg)
+C08_subnet_all.csv,10,ramp_recent,ramp_recent_vs_prior,ramp 正名
+C08_subnet_all.csv,10,ramp_recent,ramp_recent_vs_all,ramp 正名
+C08_subnet_sparse.csv,11,valid_bet,valid_bet_xagg,歧义修复(_xagg)
+C08_subnet_sparse.csv,11,ramp_recent,ramp_recent_vs_prior,ramp 正名
+C08_subnet_sparse.csv,11,ramp_recent,ramp_recent_vs_all,ramp 正名
+D03S_daily_roi_diff.csv,12,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+D03S_daily_roi_diff.csv,12,ramp_recent,ramp_recent_vs_prior,ramp 正名
+D03S_daily_roi_diff.csv,12,ramp_recent,ramp_recent_vs_all,ramp 正名
+DICT_01b_roundkey_card.csv,14,ramp_recent,ramp_recent_vs_prior,ramp 正名
+DICT_01b_roundkey_card.csv,14,ramp_recent,ramp_recent_vs_all,ramp 正名
+DICT_01c_dimension.csv,15,ramp_recent,ramp_recent_vs_prior,ramp 正名
+DICT_01c_dimension.csv,15,ramp_recent,ramp_recent_vs_all,ramp 正名
+DICT_01d_bet_latency.csv,16,ramp_recent,ramp_recent_vs_prior,ramp 正名
+DICT_01d_bet_latency.csv,16,ramp_recent,ramp_recent_vs_all,ramp 正名
+I_ip_agg.csv,22,stake,stake_xagg,歧义修复(_xagg)
+I_ip_agg.csv,22,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+I_ip_agg.csv,22,ramp_recent,ramp_recent_vs_prior,ramp 正名
+I_ip_agg.csv,22,ramp_recent,ramp_recent_vs_all,ramp 正名
+I_ip_player.csv,23,ramp_recent,ramp_recent_vs_prior,ramp 正名
+I_ip_player.csv,23,ramp_recent,ramp_recent_vs_all,ramp 正名
+K01_risk_feature_matrix.csv,24,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+K01b_seed_goldip.csv,25,ramp_recent,ramp_recent_vs_prior,ramp 正名
+K01b_seed_goldip.csv,25,ramp_recent,ramp_recent_vs_all,ramp 正名
+K01c_seed_dated.csv,27,ramp_recent,ramp_recent_vs_prior,ramp 正名
+K01c_seed_dated.csv,27,ramp_recent,ramp_recent_vs_all,ramp 正名
+P0C02_标签口径.csv,38,ramp_recent,ramp_recent_vs_prior,ramp 正名
+P0C02_标签口径.csv,38,ramp_recent,ramp_recent_vs_all,ramp 正名
+P0C03_标记次数分布.csv,39,ramp_recent,ramp_recent_vs_prior,ramp 正名
+P0C03_标记次数分布.csv,39,ramp_recent,ramp_recent_vs_all,ramp 正名
+P0C05_标记时点定位.csv,41,ramp_recent,ramp_recent_vs_prior,ramp 正名
+P0C05_标记时点定位.csv,41,ramp_recent,ramp_recent_vs_all,ramp 正名
+P11_阿泽尾段投注模型会员名单.csv,45,valid_bet,valid_bet_xagg,歧义修复(_xagg)
+P11_阿泽尾段投注模型会员名单.csv,45,profit,profit_xagg,歧义修复(_xagg)
+P11_阿泽尾段投注模型会员名单.csv,45,roi,roi_xagg,歧义修复(_xagg)
+P12a_platform_daily.csv,47,ramp_recent,ramp_recent_vs_prior,ramp 正名
+P12a_platform_daily.csv,47,ramp_recent,ramp_recent_vs_all,ramp 正名
+P12b_member_events.csv,48,active_days,active_days_xagg,歧义修复(_xagg)
+P12b_member_events.csv,48,span_days,span_days_xagg,歧义修复(_xagg)
+P12c_member_daily_pnl.csv,49,ramp_recent,ramp_recent_vs_prior,ramp 正名
+P12c_member_daily_pnl.csv,49,ramp_recent,ramp_recent_vs_all,ramp 正名
+PI01_treatment_delta_member.csv,53,roi_post,roi_post_xagg,歧义修复(_xagg)
+PI02_treatment_delta_platform.csv,54,n_bets,n_bets_xagg,歧义修复(_xagg)
+PI02_treatment_delta_platform.csv,54,roi,roi_xagg,歧义修复(_xagg)
+PI04_member_5d_profile.csv,56,n_bets,n_bets_xagg,歧义修复(_xagg)
+PI04_member_5d_profile.csv,56,roi,roi_xagg,歧义修复(_xagg)
+PI04_member_5d_profile.csv,56,span_days,span_days_xagg,歧义修复(_xagg)
+PI04_member_5d_profile.csv,56,ramp_recent,ramp_recent_vs_prior,ramp 正名
+PI04_member_5d_profile.csv,56,ramp_recent,ramp_recent_vs_all,ramp 正名
+P_player_month.csv,57,valid_bet,valid_bet_xagg,歧义修复(_xagg)
+P_player_month.csv,57,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+P_player_month.csv,57,roi,roi_xagg,歧义修复(_xagg)
+P_player_month.csv,57,ramp_recent,ramp_recent_vs_prior,ramp 正名
+P_player_month.csv,57,ramp_recent,ramp_recent_vs_all,ramp 正名
+R01_late_shoe.csv,64,roi_late,roi_late_xagg,歧义修复(_xagg)
+R01_late_shoe.csv,64,stake_ramp,stake_ramp_xagg,歧义修复(_xagg)
+R01_late_shoe_w2.csv,65,roi_late,roi_late_xagg,歧义修复(_xagg)
+R01_late_shoe_w2.csv,65,stake_ramp,stake_ramp_xagg,歧义修复(_xagg)
+R01anm_shoe_anomaly.csv,66,n_bets,n_bets_xagg,歧义修复(_xagg)
+R03_player_dealer.csv,70,n_bets,n_bets_xagg,歧义修复(_xagg)
+R03_player_dealer.csv,70,ramp_recent,ramp_recent_vs_prior,ramp 正名
+R03_player_dealer.csv,70,ramp_recent,ramp_recent_vs_all,ramp 正名
+R03b_player_dealer_daily.csv,71,ramp_recent,ramp_recent_vs_prior,ramp 正名
+R03b_player_dealer_daily.csv,71,ramp_recent,ramp_recent_vs_all,ramp 正名
+R03chk_settlement_form.csv,72,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+R03chk_settlement_form.csv,72,ramp_recent,ramp_recent_vs_prior,ramp 正名
+R03chk_settlement_form.csv,72,ramp_recent,ramp_recent_vs_all,ramp 正名
+R03inv_pair_census.csv,73,ramp_recent,ramp_recent_vs_prior,ramp 正名
+R03inv_pair_census.csv,73,ramp_recent,ramp_recent_vs_all,ramp 正名
+S01_player_score.csv,75,ramp_recent,ramp_recent_vs_prior,ramp 正名
+S01_player_score.csv,75,ramp_recent,ramp_recent_vs_all,ramp 正名
+S02_dealer_score.csv,76,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+S02_dealer_score.csv,76,ramp_recent,ramp_recent_vs_prior,ramp 正名
+S02_dealer_score.csv,76,ramp_recent,ramp_recent_vs_all,ramp 正名
+S02b_dealer_pace.csv,77,ramp_recent,ramp_recent_vs_prior,ramp 正名
+S02b_dealer_pace.csv,77,ramp_recent,ramp_recent_vs_all,ramp 正名
+S03_agent_score.csv,78,ramp_recent,ramp_recent_vs_prior,ramp 正名
+S03_agent_score.csv,78,ramp_recent,ramp_recent_vs_all,ramp 正名
+S04_analyst_score.csv,79,ramp_recent,ramp_recent_vs_prior,ramp 正名
+S04_analyst_score.csv,79,ramp_recent,ramp_recent_vs_all,ramp 正名
+S05_member_month_panel.csv,80,ramp_recent,ramp_recent_vs_prior,ramp 正名
+S05_member_month_panel.csv,80,ramp_recent,ramp_recent_vs_all,ramp 正名
+S_player_tail.csv,81,ramp_recent,ramp_recent_vs_prior,ramp 正名
+S_player_tail.csv,81,ramp_recent,ramp_recent_vs_all,ramp 正名
+S_second_dist.csv,82,ramp_recent,ramp_recent_vs_prior,ramp 正名
+S_second_dist.csv,82,ramp_recent,ramp_recent_vs_all,ramp 正名
+T02_daily_roi.csv,83,stake,stake_xagg,歧义修复(_xagg)
+T02_daily_roi.csv,83,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+T02_daily_roi.csv,83,ramp_recent,ramp_recent_vs_prior,ramp 正名
+T02_daily_roi.csv,83,ramp_recent,ramp_recent_vs_all,ramp 正名
+T03_arbitrage.csv,84,stake,stake_xagg,歧义修复(_xagg)
+T03_arbitrage.csv,84,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+TL00_table_inventory.csv,85,ramp_recent,ramp_recent_vs_prior,ramp 正名
+TL00_table_inventory.csv,85,ramp_recent,ramp_recent_vs_all,ramp 正名
+TL04_log_schema.csv,89,ramp_recent,ramp_recent_vs_prior,ramp 正名
+TL04_log_schema.csv,89,ramp_recent,ramp_recent_vs_all,ramp 正名
+TL06_log_mem_change.csv,90,ramp_recent,ramp_recent_vs_prior,ramp 正名
+TL06_log_mem_change.csv,90,ramp_recent,ramp_recent_vs_all,ramp 正名
+TL09_member_schema.csv,93,ramp_recent,ramp_recent_vs_prior,ramp 正名
+TL09_member_schema.csv,93,ramp_recent,ramp_recent_vs_all,ramp 正名
+T_table_span.csv,98,n_rounds,n_rounds_xagg,歧义修复(_xagg)
+T_table_span.csv,98,ramp_recent,ramp_recent_vs_prior,ramp 正名
+T_table_span.csv,98,ramp_recent,ramp_recent_vs_all,ramp 正名
+V_ipmatch.csv,107,ramp_recent,ramp_recent_vs_prior,ramp 正名
+V_ipmatch.csv,107,ramp_recent,ramp_recent_vs_all,ramp 正名
+V_recon.csv,108,ramp_recent,ramp_recent_vs_prior,ramp 正名
+V_recon.csv,108,ramp_recent,ramp_recent_vs_all,ramp 正名
+V_table_counts.csv,109,ramp_recent,ramp_recent_vs_prior,ramp 正名
+V_table_counts.csv,109,ramp_recent,ramp_recent_vs_all,ramp 正名
+X_combo.csv,110,valid_bet,valid_bet_xagg,歧义修复(_xagg)
+X_combo.csv,110,roi,roi_xagg,歧义修复(_xagg)
+X_combo.csv,110,ramp_recent,ramp_recent_vs_prior,ramp 正名
+X_combo.csv,110,ramp_recent,ramp_recent_vs_all,ramp 正名
+Z01_table_inventory.csv,111,ramp_recent,ramp_recent_vs_prior,ramp 正名
+Z01_table_inventory.csv,111,ramp_recent,ramp_recent_vs_all,ramp 正名
+Z02_excluded_tables.csv,112,ramp_recent,ramp_recent_vs_prior,ramp 正名
+Z02_excluded_tables.csv,112,ramp_recent,ramp_recent_vs_all,ramp 正名
+Z03_column_dictionary.csv,113,ramp_recent,ramp_recent_vs_prior,ramp 正名
+Z03_column_dictionary.csv,113,ramp_recent,ramp_recent_vs_all,ramp 正名
+Z04_name_collision.csv,114,ramp_recent,ramp_recent_vs_prior,ramp 正名
+Z04_name_collision.csv,114,ramp_recent,ramp_recent_vs_all,ramp 正名
+Z05_missing_typehint.csv,115,ramp_recent,ramp_recent_vs_prior,ramp 正名
+Z05_missing_typehint.csv,115,ramp_recent,ramp_recent_vs_all,ramp 正名
+Z06_generated_probe_sql.csv,116,ramp_recent,ramp_recent_vs_prior,ramp 正名
+Z06_generated_probe_sql.csv,116,ramp_recent,ramp_recent_vs_all,ramp 正名
+Z07_probe_bet02.csv,117,ramp_recent,ramp_recent_vs_prior,ramp 正名
+Z07_probe_bet02.csv,117,ramp_recent,ramp_recent_vs_all,ramp 正名
+Z08_roundkey_integrity.csv,118,ramp_recent,ramp_recent_vs_prior,ramp 正名
+Z08_roundkey_integrity.csv,118,ramp_recent,ramp_recent_vs_all,ramp 正名
+Z09_time_axis_recon.csv,119,ramp_recent,ramp_recent_vs_prior,ramp 正名
+Z09_time_axis_recon.csv,119,ramp_recent,ramp_recent_vs_all,ramp 正名
+Z14_zero_month_diagnosis.csv,121,ramp_recent,ramp_recent_vs_prior,ramp 正名
+Z14_zero_month_diagnosis.csv,121,ramp_recent,ramp_recent_vs_all,ramp 正名
+_PH0_1b_table_inventory.csv,123,ramp_recent,ramp_recent_vs_prior,ramp 正名
+_PH0_1b_table_inventory.csv,123,ramp_recent,ramp_recent_vs_all,ramp 正名
+_PH0_2b_column_inventory.csv,124,ramp_recent,ramp_recent_vs_prior,ramp 正名
+_PH0_2b_column_inventory.csv,124,ramp_recent,ramp_recent_vs_all,ramp 正名
+_PH0_4L1_member_columns.csv,126,ramp_recent,ramp_recent_vs_prior,ramp 正名
+_PH0_4L1_member_columns.csv,126,ramp_recent,ramp_recent_vs_all,ramp 正名
+_PH0_4w2_balance_points.csv,128,ramp_recent,ramp_recent_vs_prior,ramp 正名
+_PH0_4w2_balance_points.csv,128,ramp_recent,ramp_recent_vs_all,ramp 正名
+_PH0_6b_member_daily.csv,129,ramp_recent,ramp_recent_vs_prior,ramp 正名
+_PH0_6b_member_daily.csv,129,ramp_recent,ramp_recent_vs_all,ramp 正名

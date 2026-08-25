@@ -1,0 +1,26 @@
+﻿n,module,grain_code,grain,T1_真需全窗benchmark,T2_xwin单行,T3_非实体粒度,T4_参与商业解释,T5_无更优方案,建议
+4,B4_2b_funnel_and_mu0.csv,G03,n_raw × n_g1 × n_g2,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+10,C08_subnet_all.csv,G09,1,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+11,C08_subnet_sparse.csv,G09,1,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+19,E02_segment_econ.csv,G17,rebate_rate_bkt × vb_q,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+29,P01A_crosstab.csv,G25,n_rows × bet16_null × bet16_zero,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+30,P01B_diff_ratio.csv,G26,n × diff_min × diff_p50,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+31,P01C_split_by_dim.csv,G27,DATE_TRUNCmonthdt × TRIMbet09 × TRIMcommission × TRIMbet10,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+32,P01D_vs_validbet.csv,G28,n × comparable_n × plausible_n,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+33,P01E_identity_test.csv,G29,hypothesis × n × exact_match_n,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+44,P11_阿泽尾段投注总帐.csv,G37,scope_def × n_orders × n_orders_pct,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+46,P11_雷欧尾段投注总帐.csv,G37,scope_def × n_orders × n_orders_pct,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+52,PH0_8r2_rg_crosstable.csv,G44,src × n_rows × n_rg_true,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+54,PI02_treatment_delta_platform.csv,G46,grp × phase,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+55,PI03_reinvest_loop.csv,G47,outcome,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+68,R01inv_shoe_len_census.csv,G58,n_tables × n_shoes × mean_len,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+73,R03inv_pair_census.csv,G63,1 × 2,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+74,R_rebate_dist.csv,G64,mem003,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+78,S03_agent_score.csv,G66,lv3,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+85,TL00_table_inventory.csv,G69,TABLE_NAME,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A→B（撤除）
+86,TL02_config_change.csv,G00,(单行/无 GROUP BY),【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A→B（撤除）
+101,VB_41_identity_global.csv,G80,test × n_rows × n_both_null,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+105,VB_41c2_concentration.csv,G84,grp,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）
+106,VB_41c2_concentration_v2.csv,G85,grp × n_rows × n_members,【待业务裁定】,待建后静态可证,FAIL：q 粒度已含实体键（grp × n_rows × n_members），全窗基线非其事实来源,【待业务裁定】,存在 xagg 方案,A→xup（降为上层基线）
+108,V_recon.csv,G87,n_matched_round × mae_turnover × mae_rebate,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A→B（撤除）
+110,X_combo.csv,G63,1 × 2,【待业务裁定】,待建后静态可证,PASS：q 粒度非实体级,【待业务裁定】,无明显 xagg 方案,A 维持（待 T1/T4 裁定）

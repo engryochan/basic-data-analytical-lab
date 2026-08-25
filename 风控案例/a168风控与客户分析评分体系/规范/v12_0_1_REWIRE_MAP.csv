@@ -1,0 +1,130 @@
+﻿n,module,join,join_key,x_key,part,grain_code,grain,grain_src,action,classification
+1,A_anchor.csv,LEFT,ip,ip,recent,G01,ip,GROUPBY,—,1:1 粒度一致（仅改名）
+2,B01_bt_panel.csv,LEFT,member_id,member,recent,G02,member_id × bet_date,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+3,B01_bt_panel_delta.csv,LEFT,member_id,member,recent,G02,member_id × bet_date,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+4,B4_2b_funnel_and_mu0.csv,CROSS,,member,freecomm,G03,n_raw × n_g1 × n_g2,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+5,B4_5b_tip_nature.csv,LEFT,bet09_value,product,freecomm,G04,TRIMbet09,GROUPBY,P0-1?,1:1 但连接键与粒度键异名（须人工确认别名映射）
+6,B_online_base.csv,LEFT,table_id,table,recent,G05,table_id × sec_elapsed,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+7,C01_ip_chain.csv,LEFT,bet_ip,ip,recent,G06,bet_ip,GROUPBY,—,1:1 粒度一致（仅改名）
+8,C06_hedge_pairs.csv,LEFT,bet_ip,ip,hedge,G07,bet_ip × m_a × m_b,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+9,C06d_hedge_pairs_dated.csv,LEFT,bet_ip,ip,hedge,G08,bet_ip × member_id × member_id,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+10,C08_subnet_all.csv,CROSS,,member,recent,G09,1,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+11,C08_subnet_sparse.csv,CROSS,,member,recent,G09,1,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+12,D03S_daily_roi_diff.csv,LEFT,bet_date,date,recent,G10,bet_date,GROUPBY,—,1:1 粒度一致（仅改名）
+13,DICT_01a_bet41_tri.csv,CROSS,,member,hiturn,G11,scope × n_rows × sum_stake,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+14,DICT_01b_roundkey_card.csv,CROSS,,member,recent,G12,scope × n_rows × nd_bet03,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+15,DICT_01c_dimension.csv,CROSS,,member,recent,G13,scope × n_rows × avg_validbet,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+16,DICT_01d_bet_latency.csv,LEFT,table_id,table,recent,G14,TRIMbet39,GROUPBY,P0-1?,1:1 但连接键与粒度键异名（须人工确认别名映射）
+17,DX04_bet09_profile.csv,LEFT,bet_side,product,freecomm,G15,bet_side,GROUPBY,—,1:1 粒度一致（仅改名）
+18,DX05_product_panorama.csv,LEFT,product_code,product,freecomm,G16,product_code,GROUPBY,—,1:1 粒度一致（仅改名）
+19,E02_segment_econ.csv,CROSS,,member,hiturn,G17,rebate_rate_bkt × vb_q,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+20,EV01_disposal_events.csv,LEFT,event_date,date,post,G18,event_id × event_time × event_date,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+21,EV02_member_disposal.csv,LEFT,event_date,date,post,G19,event_id × event_date × event_time,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+22,I_ip_agg.csv,LEFT,bet_ip,ip,recent,G06,bet_ip,GROUPBY,—,1:1 粒度一致（仅改名）
+23,I_ip_player.csv,LEFT,member_id,member,recent,G20,bet_ip × member_id,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+24,K01_risk_feature_matrix.csv,LEFT,member_id,member,alarm,G21,member_id × is_seed × n_rounds,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+25,K01b_seed_goldip.csv,LEFT,member_id,member,recent,G22,member_id × seed_src,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+26,K01b_seed_manual.csv,LEFT,member_id,member,alarm,G22,member_id × seed_src,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+27,K01c_seed_dated.csv,LEFT,seed_ip,ip,recent,G23,seed_id × seed_ip × creator,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+28,L_label_dist.csv,CROSS,,member,alarm,G24,risk × orders,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+29,P01A_crosstab.csv,CROSS,,member,hiturn,G25,n_rows × bet16_null × bet16_zero,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+30,P01B_diff_ratio.csv,CROSS,,member,hiturn,G26,n × diff_min × diff_p50,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+31,P01C_split_by_dim.csv,CROSS,,member,hiturn,G27,DATE_TRUNCmonthdt × TRIMbet09 × TRIMcommission × TRIMbet10,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+32,P01D_vs_validbet.csv,CROSS,,member,hiturn,G28,n × comparable_n × plausible_n,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+33,P01E_identity_test.csv,CROSS,,member,hiturn,G29,hypothesis × n × exact_match_n,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+34,P02A_lmc_samples.csv,CROSS,,member,post,G00,,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+35,P02B_changestatus_patterns.csv,CROSS,,member,post,G30,SUBSTRINGTRIMlmc05140,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+36,P02C_key_check.csv,CROSS,,member,post,G31,lmc03,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+37,P02D_events_in_window.csv,CROSS,,member,post,G32,lmc04 × lmc03,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+38,P0C02_标签口径.csv,CROSS,,member,recent,G33,_ × _,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+39,P0C03_标记次数分布.csv,CROSS,,member,recent,G00,,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+40,P0C04_同日泄漏检验.csv,CROSS,,member,hiturn,G34,mem × mark_day,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+41,P0C05_标记时点定位.csv,CROSS,,member,recent,G34,mem × mark_day,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+42,P0C06_LabelB骨架.csv,CROSS,,member,hedge,G35,mem × anchor_day,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+43,P0C09_安慰剂检验.csv,CROSS,,member,hiturn,G36,mem × d,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+44,P11_阿泽尾段投注总帐.csv,CROSS,,member,late,G37,scope_def × n_orders × n_orders_pct,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+45,P11_阿泽尾段投注模型会员名单.csv,LEFT,player_id,member,late,G38,player_id × total_orders × late_orders,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+46,P11_雷欧尾段投注总帐.csv,CROSS,,member,late,G37,scope_def × n_orders × n_orders_pct,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+47,P12a_platform_daily.csv,LEFT,dt,date,recent,G39,dt,GROUPBY,—,1:1 粒度一致（仅改名）
+48,P12b_member_events.csv,LEFT,uid,member,post,G40,uid × first_dt × last_dt,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+49,P12c_member_daily_pnl.csv,LEFT,uid,member,recent,G41,uid × dt,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+50,P13_personal_entry.csv,LEFT,uid,member,late,G42,uid,GROUPBY,—,1:1 粒度一致（仅改名）
+51,PH0_8r1_rg_case.csv,LEFT,target_id,member,pre_rg,G43,dt_day × category × target_id,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+52,PH0_8r2_rg_crosstable.csv,CROSS,,member,pre_rg,G44,src × n_rows × n_rg_true,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+53,PI01_treatment_delta_member.csv,LEFT,member_id,member,post,G45,member_id × treat_time × treat_field,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+54,PI02_treatment_delta_platform.csv,CROSS,,member,post,G46,grp × phase,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+55,PI03_reinvest_loop.csv,CROSS,,member,loss,G47,outcome,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+56,PI04_member_5d_profile.csv,LEFT,member_id,member,recent,G48,mid,GROUPBY,P0-1?,1:1 但连接键与粒度键异名（须人工确认别名映射）
+57,P_player_month.csv,LEFT,member_id,member,recent,G49,member_id × DATE_TRUNCmonthbet_date,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+58,QSB_01a_category_census.csv,CROSS,,member,freecomm,G50,COALESCENULLIFTRIMcategory,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+59,QSB_01c_cat1_contamination.csv,LEFT,bet09_value,product,freecomm,G04,TRIMbet09,GROUPBY,P0-1?,1:1 但连接键与粒度键异名（须人工确认别名映射）
+60,QSB_02a_lowcard_fields.csv,CROSS,,member,freecomm,G51,scope × n_rows × nd_bet04,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+61,QSB_02b2_lowcard_five_gates.csv,CROSS,,member,freecomm,G52,COALESCENULLIFTRIMbet31,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+62,QSB_02b_state_cross.csv,CROSS,,member,freecomm,G53,COALESCENULLIFTRIMbet40,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+63,QSB_02c_push_by_family.csv,CROSS,,member,freecomm,G54,CASEWHENTRIMbet09INBankerPlayerTHENF1_WHENTRIMbet09TieTHENF2_WHENTRIMbet09INBPairPPairAnyPairPerfectPairTHENF3_WHENTRIMbet09INBankerNaturalPlayerNaturalTHENF4_WHENTRIMbet09INBankerDragonBonusPlayerDragonBonusTHENF5_WHENTRIMbet09INSuper6Lucky7SuperLucky7THENF6_WHENTRIMbet09INBigSmallTHENF7_ELSEF8_END,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+64,R01_late_shoe.csv,LEFT,uid,member,late,G55,member_id,GROUPBY,P0-1?,1:1 但连接键与粒度键异名（须人工确认别名映射）
+65,R01_late_shoe_w2.csv,LEFT,uid,member,late,G55,member_id,GROUPBY,P0-1?,1:1 但连接键与粒度键异名（须人工确认别名映射）
+66,R01anm_shoe_anomaly.csv,LEFT,table_id,table,late,G56,dt × table_id × shoe_id,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+67,R01chk_shoe_len_by_table.csv,LEFT,table_id,table,late,G57,table_id × table_flag × n_shoes,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+68,R01inv_shoe_len_census.csv,CROSS,,member,late,G58,n_tables × n_shoes × mean_len,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+69,R02_same_table.csv,LEFT,uid1,member,same,G59,uid1 × uid2 × n_same_orders,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+70,R03_player_dealer.csv,LEFT,uid,member,recent,G60,uid × dealer_id × is_sentinel_dealer,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+71,R03b_player_dealer_daily.csv,LEFT,uid,member,recent,G61,bet_date × member_id × dealer_id × is_sentinel_dealer,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+72,R03chk_settlement_form.csv,LEFT,bet_side,product,recent,G62,UPPERTRIMbet_side,GROUPBY,—,1:1 粒度一致（仅改名）
+73,R03inv_pair_census.csv,CROSS,,member,recent,G63,1 × 2,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+74,R_rebate_dist.csv,CROSS,,member,hiturn,G64,mem003,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+75,S01_player_score.csv,LEFT,member_id,member,recent,G55,member_id,GROUPBY,—,1:1 粒度一致（仅改名）
+76,S02_dealer_score.csv,LEFT,dealer_id,dealer,recent,G65,dealer_id,GROUPBY,—,1:1 粒度一致（仅改名）
+77,S02b_dealer_pace.csv,LEFT,dealer_id,dealer,recent,G65,dealer_id,GROUPBY,—,1:1 粒度一致（仅改名）
+78,S03_agent_score.csv,CROSS,,member,recent,G66,lv3,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+79,S04_analyst_score.csv,LEFT,entity_id,member,recent,G67,COALESCENULLIFTRIMcreator,GROUPBY,P0-1?,1:1 但连接键与粒度键异名（须人工确认别名映射）
+80,S05_member_month_panel.csv,LEFT,member_id,member,recent,G02,member_id × bet_date,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+81,S_player_tail.csv,LEFT,member_id,member,recent,G55,member_id,GROUPBY,—,1:1 粒度一致（仅改名）
+82,S_second_dist.csv,LEFT,table_id,table,recent,G68,table_id,GROUPBY,—,1:1 粒度一致（仅改名）
+83,T02_daily_roi.csv,LEFT,member_id,member,recent,G02,member_id × bet_date,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+84,T03_arbitrage.csv,LEFT,member_id,member,hedge,G55,member_id,GROUPBY,—,1:1 粒度一致（仅改名）
+85,TL00_table_inventory.csv,CROSS,,member,recent,G69,TABLE_NAME,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+86,TL02_config_change.csv,CROSS,,member,post,G00,,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+87,TL03_pseudo_treatment.csv,LEFT,member_id,member,post,G70,member_id × change_date × action_type,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+88,TL03b_pseudo_treatment.csv,LEFT,member_id,member,post,G71,member_id × cate × prev_date,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+89,TL04_log_schema.csv,CROSS,,member,recent,G72,TABLE_NAME × ORDINAL_POSITION × COLUMN_NAME,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+90,TL06_log_mem_change.csv,LEFT,dt,date,recent,G39,dt,GROUPBY,—,1:1 粒度一致（仅改名）
+91,TL07_mem_change_shape.csv,CROSS,,member,post,G09,1,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+92,TL08_treatment_events.csv,LEFT,member_id,member,post,G73,member_id × action_date × action_time,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+93,TL09_member_schema.csv,CROSS,,member,recent,G74,ORDINAL_POSITION × COLUMN_NAME × DATA_TYPE,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+94,TL10_treatment_ledger.csv,LEFT,member_id,member,post,G73,member_id × action_date × action_time,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+95,TL11_treatment_episode.csv,LEFT,member_id,member,post,G75,member_id × field_name × business_field,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+96,TL11c_population_reconcile.csv,CROSS,,member,post,G76,lvl × level_name × n_all,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+97,TL14_limit_treatment.csv,LEFT,member_id,member,post,G73,member_id × action_date × action_time,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+98,T_table_span.csv,LEFT,table_id,table,recent,G77,gi011,GROUPBY,P0-1?,1:1 但连接键与粒度键异名（须人工确认别名映射）
+99,VB_00_validbet_contract.csv,CROSS,,member,hiturn,G78,scope × n_rows × n_vb_null,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+100,VB_00b_zero_five_rates.csv,CROSS,,member,hiturn,G79,scope × n_base_rows × n_active_member,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+101,VB_41_identity_global.csv,CROSS,,member,hiturn,G80,test × n_rows × n_both_null,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+102,VB_41b_identity_strata.csv,LEFT,bet09_value,product,hiturn,G81,TRIMbet09 × TRIMcommission,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+103,VB_41b_identity_strata_v18b.csv,LEFT,bet09_value,product,hiturn,G82,g × comm,GROUPBY,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+104,VB_41c1_964_detail.csv,LEFT,member_id,member,hiturn,G83,grp × bet01 × member_id,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+105,VB_41c2_concentration.csv,CROSS,,member,hiturn,G84,grp,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+106,VB_41c2_concentration_v2.csv,CROSS,,member,hiturn,G85,grp × n_rows × n_members,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+107,V_ipmatch.csv,LEFT,ip,ip,recent,G86,ip × n_member_log × country,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+108,V_recon.csv,CROSS,,member,recent,G87,n_matched_round × mae_turnover × mae_rebate,INFER,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+109,V_table_counts.csv,CROSS,,member,recent,G00,,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+110,X_combo.csv,CROSS,,member,recent,G63,1 × 2,GROUPBY,P0-0,A（疑有全窗基线语义 → 建议建 x_win 单行）
+111,Z01_table_inventory.csv,CROSS,,member,recent,G00,,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+112,Z02_excluded_tables.csv,CROSS,,member,recent,G00,,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+113,Z03_column_dictionary.csv,CROSS,,member,recent,G00,,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+114,Z04_name_collision.csv,CROSS,,member,recent,G88,COLUMN_NAME,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+115,Z05_missing_typehint.csv,CROSS,,member,recent,G00,,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+116,Z06_generated_probe_sql.csv,CROSS,,member,recent,G00,,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+117,Z07_probe_bet02.csv,CROSS,,member,recent,G89,3,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+118,Z08_roundkey_integrity.csv,CROSS,,member,recent,G00,,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+119,Z09_time_axis_recon.csv,CROSS,,member,recent,G90,dt × dt,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+120,Z11_sentinel_impact.csv,CROSS,,member,post,G91,_ × _ × _,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+121,Z14_zero_month_diagnosis.csv,LEFT,member_id,member,recent,G92,member_id × bet_month × zero_kind,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+122,_P12b-pre.csv,LEFT,member_id,member,post,G93,member_id × action × content,INFER,P0-1,N:1 粒度错配（须按本件 grain 重聚合）
+123,_PH0_1b_table_inventory.csv,CROSS,,member,recent,G94,table_name × h_src × has_uid,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+124,_PH0_2b_column_inventory.csv,CROSS,,member,recent,G95,table_name × col_pos × column_name,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+125,_PH0_3_lmc_category.csv,CROSS,,member,pre_rg,G96,COALESCENULLIFTRIMlmc04,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+126,_PH0_4L1_member_columns.csv,CROSS,,member,recent,G95,table_name × col_pos × column_name,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+127,_PH0_4b_rg_keyword.csv,CROSS,,member,pre_rg,G96,COALESCENULLIFTRIMlmc04,GROUPBY,P0-0,B（无商业语义 → 建议撤除六层后缀）
+128,_PH0_4w2_balance_points.csv,CROSS,,member,recent,G97,dt_slice × n_user_active × n_pts_total,INFER,P0-0,B（无商业语义 → 建议撤除六层后缀）
+129,_PH0_6b_member_daily.csv,LEFT,dt_day,date,recent,G39,dt,GROUPBY,—,1:1 粒度一致（仅改名）

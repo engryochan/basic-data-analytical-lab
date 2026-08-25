@@ -1,0 +1,99 @@
+﻿grain_code,grain_expression,grain_columns,grain_semantics,source_scope,uniqueness_rule,parent_grain,child_grain,allowed_join_type
+G00,类别 × 取样端 × 異動時間,ALL,全窗单行常数基线,ods_a168_bet02 窗内 canonical_base,顶层 UNION：同 grain 可出多行,,,CROSS JOIN only (xwin)
+G01,g.ip,ip,本件业务粒度：ip,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY g.ip,,G86,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G02,member_id × bet_date,member_id × bet_date,本件业务粒度：member_id × bet_date,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY member_id, bet_date","G10,G55",G61,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G03,n_raw × n_g1 × n_g2,n_raw × n_g1 × n_g2,本件业务粒度：n_raw × n_g1 × n_g2,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G04,TRIM(bet09),TRIMbet09,本件业务粒度：TRIMbet09,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY TRIM(bet09),,"G27,G81",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G05,table_id × sec_elapsed,table_id × sec_elapsed,本件业务粒度：table_id × sec_elapsed,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY table_id, sec_elapsed",G68,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G06,bet_ip,bet_ip,本件业务粒度：bet_ip,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY bet_ip,,"G07,G08,G20",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G07,bet_ip × m_a × m_b,bet_ip × m_a × m_b,本件业务粒度：bet_ip × m_a × m_b,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G06,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G08,a.bet_ip × a.member_id × b.member_id,bet_ip × member_id × member_id,本件业务粒度：bet_ip × member_id × member_id,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY a.bet_ip, a.member_id, b.member_id","G06,G55",,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G09,1,1,本件业务粒度：1,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY 1,,G63,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G10,bet_date,bet_date,本件业务粒度：bet_date,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY bet_date,,"G02,G61",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G11,scope × n_rows × sum_stake,scope × n_rows × sum_stake,本件业务粒度：scope × n_rows × sum_stake,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G12,scope × n_rows × nd_bet03,scope × n_rows × nd_bet03,本件业务粒度：scope × n_rows × nd_bet03,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G13,scope × n_rows × avg_validbet,scope × n_rows × avg_validbet,本件业务粒度：scope × n_rows × avg_validbet,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G14,TRIM(bet39),TRIMbet39,本件业务粒度：TRIMbet39,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY TRIM(bet39),,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G15,bet_side,bet_side,本件业务粒度：bet_side,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY bet_side,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G16,product_code,product_code,本件业务粒度：product_code,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY product_code,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G17,m.rebate_rate_bkt × m.vb_q,rebate_rate_bkt × vb_q,本件业务粒度：rebate_rate_bkt × vb_q,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY m.rebate_rate_bkt, m.vb_q",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G18,event_id × event_time × event_date,event_id × event_time × event_date,本件业务粒度：event_id × event_time × event_date,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G19,event_id × event_date × event_time,event_id × event_date × event_time,本件业务粒度：event_id × event_date × event_time,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G20,b.bet_ip × b.member_id,bet_ip × member_id,本件业务粒度：bet_ip × member_id,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY b.bet_ip, b.member_id","G06,G55",,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G21,member_id × is_seed × n_rounds,member_id × is_seed × n_rounds,本件业务粒度：member_id × is_seed × n_rounds,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G55,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G22,member_id × seed_src,member_id × seed_src,本件业务粒度：member_id × seed_src,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G55,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G23,seed_id × seed_ip × creator,seed_id × seed_ip × creator,本件业务粒度：seed_id × seed_ip × creator,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G24,risk × orders,risk × orders,本件业务粒度：risk × orders,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY risk, orders",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G25,n_rows × bet16_null × bet16_zero,n_rows × bet16_null × bet16_zero,本件业务粒度：n_rows × bet16_null × bet16_zero,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G26,n × diff_min × diff_p50,n × diff_min × diff_p50,本件业务粒度：n × diff_min × diff_p50,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G27,"DATE_TRUNC('month', dt) × TRIM(bet09) × TRIM(commission) × TRIM(bet10)",DATE_TRUNCmonthdt × TRIMbet09 × TRIMcommission × TRIMbet10,本件业务粒度：DATE_TRUNCmonthdt × TRIMbet09 × TRIMcommission × TRIMbet10,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY DATE_TRUNC('month', dt), TRIM(bet09), TR","G04,G81",,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G28,n × comparable_n × plausible_n,n × comparable_n × plausible_n,本件业务粒度：n × comparable_n × plausible_n,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G29,hypothesis × n × exact_match_n,hypothesis × n × exact_match_n,本件业务粒度：hypothesis × n × exact_match_n,ods_a168_bet02 窗内 canonical_base,顶层 UNION：同 grain 可出多行,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G30,"SUBSTRING(TRIM(lmc05), 1, 40)",SUBSTRINGTRIMlmc05140,本件业务粒度：SUBSTRINGTRIMlmc05140,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY SUBSTRING(TRIM(lmc05), 1, 40)",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G31,l.lmc03,lmc03,本件业务粒度：lmc03,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY l.lmc03,,G32,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G32,lmc04 × lmc03,lmc04 × lmc03,本件业务粒度：lmc04 × lmc03,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY lmc04, lmc03",G31,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G33,产品口径 × 正例观测数_会员日 × 正例会员数_去重,_ × _,本件业务粒度：_ × _,ods_a168_bet02 窗内 canonical_base,顶层 UNION：同 grain 可出多行,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G34,d0.mem × d0.mark_day,mem × mark_day,本件业务粒度：mem × mark_day,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY d0.mem, d0.mark_day",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G35,a.mem × a.anchor_day,mem × anchor_day,本件业务粒度：mem × anchor_day,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY a.mem, a.anchor_day",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G36,a.mem × a.d × a.注单数 × a.洗码量,mem × d,本件业务粒度：mem × d,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY a.mem, a.d, a.注单数, a.洗码量",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G37,scope_def × n_orders × n_orders_pct,scope_def × n_orders × n_orders_pct,本件业务粒度：scope_def × n_orders × n_orders_pct,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G38,player_id × total_orders × late_orders,player_id × total_orders × late_orders,本件业务粒度：player_id × total_orders × late_orders,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G39,dt,dt,本件业务粒度：dt,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY dt,,"G41,G56",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G40,uid × first_dt × last_dt,uid × first_dt × last_dt,本件业务粒度：uid × first_dt × last_dt,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G42,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G41,g.uid × g.dt,uid × dt,本件业务粒度：uid × dt,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY g.uid, g.dt","G39,G42,G90",,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G42,uid,uid,本件业务粒度：uid,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY uid,,"G40,G41,G60",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G43,dt_day × category × target_id,dt_day × category × target_id,本件业务粒度：dt_day × category × target_id,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G44,src × n_rows × n_rg_true,src × n_rows × n_rg_true,本件业务粒度：src × n_rows × n_rg_true,ods_a168_bet02 窗内 canonical_base,顶层 UNION：同 grain 可出多行,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G45,member_id × treat_time × treat_field,member_id × treat_time × treat_field,本件业务粒度：member_id × treat_time × treat_field,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G55,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G46,grp × phase,grp × phase,本件业务粒度：grp × phase,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY grp, phase",G84,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G47,outcome,outcome,本件业务粒度：outcome,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY outcome,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G48,mid,mid,本件业务粒度：mid,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY mid,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G49,"member_id × DATE_TRUNC('month', bet_date)",member_id × DATE_TRUNCmonthbet_date,本件业务粒度：member_id × DATE_TRUNCmonthbet_date,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY member_id, DATE_TRUNC('month', bet_date)",G55,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G50,"COALESCE(NULLIF(TRIM(category), ''), '(空值或空串)')",COALESCENULLIFTRIMcategory,本件业务粒度：COALESCENULLIFTRIMcategory,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY COALESCE(NULLIF(TRIM(category), ''), '(空",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G51,scope × n_rows × nd_bet04,scope × n_rows × nd_bet04,本件业务粒度：scope × n_rows × nd_bet04,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G52,"COALESCE(NULLIF(TRIM(bet31), ''), '(空)')",COALESCENULLIFTRIMbet31,本件业务粒度：COALESCENULLIFTRIMbet31,ods_a168_bet02 窗内 canonical_base,顶层 UNION：同 grain 可出多行,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G53,"COALESCE(NULLIF(TRIM(bet40), ''), '(空)')",COALESCENULLIFTRIMbet40,本件业务粒度：COALESCENULLIFTRIMbet40,ods_a168_bet02 窗内 canonical_base,顶层 UNION：同 grain 可出多行,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G54,"CASE WHEN TRIM(bet09) IN ('Banker', 'Player') THEN 'F1_庄闲主注' WHEN TRIM(bet09) = 'Tie' THEN 'F2_和局' WHEN TRIM(bet09) IN ('BPair', 'PPair', 'AnyPair', 'PerfectPair') THEN 'F3_对子族' WHEN TRIM(bet09) IN ('BankerNatural', 'PlayerNatural') THEN 'F4_例牌族' WHEN TRIM(bet09) IN ('BankerDragonBonus', 'PlayerDragonBonus') THEN 'F5_龙宝族' WHEN TRIM(bet09) IN ('Super6', 'Lucky7', 'SuperLucky7') THEN 'F6_幸运族' WHEN TRIM(bet09) IN ('Big', 'Small') THEN 'F7_大小' ELSE 'F8_其他与新上线' END",CASEWHENTRIMbet09INBankerPlayerTHENF1_WHENTRIMbet09TieTHENF2_WHENTRIMbet09INBPairPPairAnyPairPerfectPairTHENF3_WHENTRIMbet09INBankerNaturalPlayerNaturalTHENF4_WHENTRIMbet09INBankerDragonBonusPlayerDragonBonusTHENF5_WHENTRIMbet09INSuper6Lucky7SuperLucky7THENF6_WHENTRIMbet09INBigSmallTHENF7_ELSEF8_END,本件业务粒度：CASEWHENTRIMbet09INBankerPlayerTHENF1_WHENTRIMbet09TieTHENF2_WHENTRIMbet09INBPairPPairAnyPairPerfectPairTHENF3_WHENTRIMbet09INBankerNaturalPlayerNaturalTHENF4_WHENTRIMbet09INBankerDragonBonusPlayerDragonBonusTHENF5_WHENTRIMbet09INSuper6Lucky7SuperLucky7THENF6_WHENTRIMbet09INBigSmallTHENF7_ELSEF8_END,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY CASE WHEN TRIM(bet09) IN ('Banker', 'Pla",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G55,member_id,member_id,本件业务粒度：member_id,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY member_id,,"G02,G08,G20,G21",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G56,dt × table_id × shoe_id,dt × table_id × shoe_id,本件业务粒度：dt × table_id × shoe_id,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,"G39,G68,G90",,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G57,table_id × table_flag × n_shoes,table_id × table_flag × n_shoes,本件业务粒度：table_id × table_flag × n_shoes,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G68,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G58,n_tables × n_shoes × mean_len,n_tables × n_shoes × mean_len,本件业务粒度：n_tables × n_shoes × mean_len,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G59,uid1 × uid2 × n_same_orders,uid1 × uid2 × n_same_orders,本件业务粒度：uid1 × uid2 × n_same_orders,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G60,uid × dealer_id × is_sentinel_dealer,uid × dealer_id × is_sentinel_dealer,本件业务粒度：uid × dealer_id × is_sentinel_dealer,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,"G42,G65",,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G61,p.bet_date × p.member_id × p.dealer_id × p.is_sentinel_dealer,bet_date × member_id × dealer_id × is_sentinel_dealer,本件业务粒度：bet_date × member_id × dealer_id × is_sentinel_dealer,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY p.bet_date, p.member_id, p.dealer_id, p.","G02,G10,G55,G65",,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G62,UPPER(TRIM(bet_side)),UPPERTRIMbet_side,本件业务粒度：UPPERTRIMbet_side,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY UPPER(TRIM(bet_side)),,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G63,1 × 2,1 × 2,本件业务粒度：1 × 2,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY 1, 2",G09,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G64,mem003,mem003,本件业务粒度：mem003,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY mem003,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G65,b.dealer_id,dealer_id,本件业务粒度：dealer_id,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY b.dealer_id,,"G60,G61",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G66,b.lv3,lv3,本件业务粒度：lv3,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY b.lv3,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G67,"COALESCE(NULLIF(TRIM(creator), ''), '未署名')",COALESCENULLIFTRIMcreator,本件业务粒度：COALESCENULLIFTRIMcreator,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY COALESCE(NULLIF(TRIM(creator), ''), '未署名",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G68,table_id,table_id,本件业务粒度：table_id,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY table_id,,"G05,G56,G57",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G69,c.TABLE_NAME,TABLE_NAME,本件业务粒度：TABLE_NAME,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY c.TABLE_NAME,,G72,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G70,member_id × change_date × action_type,member_id × change_date × action_type,本件业务粒度：member_id × change_date × action_type,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G55,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G71,member_id × cate × prev_date,member_id × cate × prev_date,本件业务粒度：member_id × cate × prev_date,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G55,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G72,TABLE_NAME × ORDINAL_POSITION × COLUMN_NAME,TABLE_NAME × ORDINAL_POSITION × COLUMN_NAME,本件业务粒度：TABLE_NAME × ORDINAL_POSITION × COLUMN_NAME,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,"G69,G88",,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G73,member_id × action_date × action_time,member_id × action_date × action_time,本件业务粒度：member_id × action_date × action_time,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G55,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G74,ORDINAL_POSITION × COLUMN_NAME × DATA_TYPE,ORDINAL_POSITION × COLUMN_NAME × DATA_TYPE,本件业务粒度：ORDINAL_POSITION × COLUMN_NAME × DATA_TYPE,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G88,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G75,member_id × field_name × business_field,member_id × field_name × business_field,本件业务粒度：member_id × field_name × business_field,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G55,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G76,lvl × level_name × n_all,lvl × level_name × n_all,本件业务粒度：lvl × level_name × n_all,ods_a168_bet02 窗内 canonical_base,顶层 UNION：同 grain 可出多行,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G77,gi011,gi011,本件业务粒度：gi011,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY gi011,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G78,scope × n_rows × n_vb_null,scope × n_rows × n_vb_null,本件业务粒度：scope × n_rows × n_vb_null,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G79,scope × n_base_rows × n_active_member,scope × n_base_rows × n_active_member,本件业务粒度：scope × n_base_rows × n_active_member,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G80,test × n_rows × n_both_null,test × n_rows × n_both_null,本件业务粒度：test × n_rows × n_both_null,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G81,TRIM(bet09) × TRIM(commission),TRIMbet09 × TRIMcommission,本件业务粒度：TRIMbet09 × TRIMcommission,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY TRIM(bet09), TRIM(commission)",G04,G27,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G82,g × comm,g × comm,本件业务粒度：g × comm,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY g, comm",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G83,grp × bet01 × member_id,grp × bet01 × member_id,本件业务粒度：grp × bet01 × member_id,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,"G55,G84",,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G84,t.grp,grp,本件业务粒度：grp,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY t.grp,,"G46,G83,G85",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G85,grp × n_rows × n_members,grp × n_rows × n_members,本件业务粒度：grp × n_rows × n_members,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G84,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G86,ip × n_member_log × country,ip × n_member_log × country,本件业务粒度：ip × n_member_log × country,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G01,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G87,n_matched_round × mae_turnover × mae_rebate,n_matched_round × mae_turnover × mae_rebate,本件业务粒度：n_matched_round × mae_turnover × mae_rebate,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G88,COLUMN_NAME,COLUMN_NAME,本件业务粒度：COLUMN_NAME,ods_a168_bet02 窗内 canonical_base,顶层 GROUP BY COLUMN_NAME,,"G72,G74",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G89,3,3,本件业务粒度：3,ods_a168_bet02 窗内 canonical_base,顶层 UNION：同 grain 可出多行,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G90,行数 × dt等于账务日 × dt等于下注日,dt × dt,本件业务粒度：dt × dt,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,"G41,G56",1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G91,未处置_注单行数 × 已处置_注单行数 × 未处置_局键数,_ × _ × _,本件业务粒度：_ × _ × _,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G92,member_id × bet_month × zero_kind,member_id × bet_month × zero_kind,本件业务粒度：member_id × bet_month × zero_kind,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G55,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G93,member_id × action × content,member_id × action × content,本件业务粒度：member_id × action × content,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,G55,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G94,table_name × h_src × has_uid,table_name × h_src × has_uid,本件业务粒度：table_name × h_src × has_uid,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G95,table_name × col_pos × column_name,table_name × col_pos × column_name,本件业务粒度：table_name × col_pos × column_name,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G96,"COALESCE(NULLIF(TRIM(lmc04), ''), '（空）')",COALESCENULLIFTRIMlmc04,本件业务粒度：COALESCENULLIFTRIMlmc04,ods_a168_bet02 窗内 canonical_base,"顶层 GROUP BY COALESCE(NULLIF(TRIM(lmc04), ''), '（空）')",,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin
+G97,dt_slice × n_user_active × n_pts_total,dt_slice × n_user_active × n_pts_total,本件业务粒度：dt_slice × n_user_active × n_pts_total,ods_a168_bet02 窗内 canonical_base,无顶层 GROUP BY,,,1:1 (xagg) / N:1 需降 xup / CROSS 仅限 xwin

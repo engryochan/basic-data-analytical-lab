@@ -1,0 +1,7 @@
+﻿constant_id,value,unit,scope,source,derivation,data_derived,production_allowed,reason,owner
+C-001,0.30,ratio,stake_ramp 分母（近期时窗在全窗中的时间占比）,v12.0.0 六层后缀 · 原版审计版 129 处 / 分批作业版 258 处,无 —— 硬写,false,false,D3 判死。若原意为时间权重，真值 = recent_days / total_days = 30 / 139 = 0.215827…（窗口 2026-03-21 … 2026-08-06 共 139 日； 近期段 2026-07-08 … 2026-08-06 共 30 日）。用 0.30 使该指标 系统性压至真值的 0.7194 倍。须改为渲染期现算，并同时输出 recent_days / total_days / recent_time_share 三列以便审计看到分母。,REDTEAM
+C-002,'2026-07-08',date,x_rec 近期时窗起点（x_bs CTE）,v12.0.0 · 129 / 258 处,无 —— 硬写,false,false,"D3 判死。应现算 DATE_SUB(<窗口末日>, 29)。窗口一变，此死数即失效， 且与 C-001 的分子分母将同时错位。",REDTEAM
+C-003,0.80,ratio,shoe_pos 尾段切点（R01 族）,v12.0.0 · 386 / 772 处,生产候选，非数据反解,false,false,T-03 FATAL。尾段假说已由四项独立检验证伪（符号检验 p=0.7591、 Wilcoxon p=0.8087、九分档 hold% 扫描零命中、外部 L1a 标签 AUC=0.3828 且方向反转）。本常数仅作【证伪档案实验常数】保留，禁作生产阈值； ranking / scoring / trigger / enforcement 四禁不因 v12.0.1 松动。,REDTEAM
+C-004,30,count,roi_denominator_status 薄暴露守卫 n_bets < 30,v12.0.0 · 520 / 1040 处,"待反解 n_min = f(p0, α, 半宽 h, 单双侧, 簇内相关 ρ, 设计效应)",unknown,conditional,须给统计反解依据。百家乐 ROI 具赔付不对称、注额异质、玩家异质、 序列相关、桌/荷官效应、佣金结构与重尾（净赢 CV 可达 8 量级）， 1/√n 仅为零效应 i.i.d. 下的一阶方差基线，不适用；须用经验 Var(ROI|n)， 并以 n_eff = n / (1 + (m−1)ρ) 校正。,待指派
+C-005,100,count,q 侧 HAVING COUNT(*) >= 100 入池门槛,v12.0.0 · 16 / 32 处,待反解,unknown,conditional,,待指派
+C-006,100000,rows,分批阶梯批量（分批作业版）,v12.0.0 · 129 处,工程参数（Superset 单次导出上限）,n/a,true,,工程
