@@ -1,0 +1,10 @@
+SET SESSION query_timeout = 259200;
+SET enable_spill = true;
+SET spill_mode = 'force';
+SET pipeline_dop = 8;
+SET cbo_cte_reuse = true;
+SET cbo_cte_reuse_rate = 1.0;
+SET enable_pipeline_engine = true;
+SET enable_global_runtime_filter = true;
+SET streaming_preaggregation_mode = 'force_streaming';
+SET spill_operator_min_bytes = 10485760;
