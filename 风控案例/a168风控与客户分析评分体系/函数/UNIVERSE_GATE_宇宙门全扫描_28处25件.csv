@@ -1,0 +1,29 @@
+件号,件名,行号,GROUP BY 粒度,HAVING 子句,闸类,删除对象,阈值是否硬编码,裁定建议
+#004,B4_2b_funnel_and_mu0.csv,1178,g,HAVING COUNT(*) >= 1000,G-DEF,分组桶 g,是,对象定义门，1000 为硬编码，须数据推导
+#007,C01_ip_chain.csv,1879,bet_ip,HAVING COUNT(DISTINCT member_id) >= 20,G-DEF,bet_ip,是,「多会员 IP」定义门，20 为硬编码
+#008,C06_hedge_pairs.csv,2103,"bet_ip, round_key, member_id",HAVING ABS(SUM(CASE WHEN TRIM(bet_side) = 'Banker' THEN stake,G-DEF/G-PAIR,对冲对 / 配对,是,ABS 项属对冲定义；COUNT(*)>=30 属配对样本量门
+#008,C06_hedge_pairs.csv,2119,"a.bet_ip, a.member_id, b.member_id",HAVING COUNT(*) >= 30,G-DEF/G-PAIR,对冲对 / 配对,是,ABS 项属对冲定义；COUNT(*)>=30 属配对样本量门
+#009,C06d_hedge_pairs_dated.csv,2342,"bet_ip, round_key, member_id",HAVING ABS(SUM(CASE WHEN TRIM(bet_side) = 'Banker' THEN stake,G-DEF/G-PAIR,对冲对 / 配对,是,同 #008
+#009,C06d_hedge_pairs_dated.csv,2363,"a.bet_ip, a.member_id, b.member_id",HAVING  COUNT(*) >= 30,G-DEF/G-PAIR,对冲对 / 配对,是,同 #008
+#010,C08_subnet_all.csv,2626,1,HAVING COUNT(DISTINCT member_id) >= 5,G-DEF,subnet_24,是,「多会员网段」定义门，5 为硬编码
+#011,C08_subnet_sparse.csv,2889,1,HAVING COUNT(DISTINCT member_id) >= 5 AND COUNT(DISTINCT bet_ip) <= 30,G-DEF,subnet_24,是,同 #010，另 <=30 亦硬编码
+#022,I_ip_agg.csv,5412,bet_ip,HAVING SUM(CASE WHEN n_orders_ip>=30 THEN 1 ELSE 0 END) >= 5,G-DEF,bet_ip,是,IP 定义门，n_orders_ip>=30 与 >=5 双硬编码
+#023,I_ip_player.csv,5648,"b.bet_ip, b.member_id",HAVING COUNT(*) >= 30,G-PAIR,IP×会员 配对,是,配对样本量门，30 硬编码
+#043,P0C09_安慰剂检验.csv,10027,"a.mem, a.d, a.注单数, a.洗码量",HAVING  COUNT(DISTINCT p.d) > 0,G-CLEAN,安慰剂样本,否,COUNT(DISTINCT p.d)>0 非限制性
+#044,P11_阿泽尾段投注总帐.csv,10288,pid,HAVING COUNT(*) >= 30,G-UNIVERSE,会员,是,★ 幸存者筛选，须改证据标签
+#046,P11_雷欧尾段投注总帐.csv,10853,member_id,HAVING COUNT(*) >= 100,G-UNIVERSE,会员,是,★ 幸存者筛选，须改证据标签
+#049,P12c_member_daily_pnl.csv,11581,uid,HAVING COUNT(*) >= 100,G-UNIVERSE,会员,是,★ 幸存者筛选，须改证据标签
+#050,P13_personal_entry.csv,11822,uid,HAVING SUM(n_bets) >= 100,G-UNIVERSE,会员,是,★ 幸存者筛选，须改证据标签
+#057,P_player_month.csv,13601,"member_id, DATE_TRUNC('month', bet_date)",HAVING COUNT(DISTINCT round_key) >= 30,G-UNIVERSE,会员×月,是,★ 幸存者筛选，须改证据标签
+#064,R01_late_shoe.csv,15524,member_id,HAVING COUNT(*) >= 100,G-UNIVERSE,会员,是,★ 幸存者筛选；R01 已 T-03 FATAL，仅作描述
+#065,R01_late_shoe_w2.csv,15773,member_id,HAVING COUNT(*) >= 100,G-UNIVERSE,会员,是,同 #064
+#069,R02_same_table.csv,16783,member_id HAVING COUNT(*) >= 300,FROM mr GROUP BY member_id HAVING COUNT(*) >= 300,G-UNIVERSE/G-PAIR,会员 / 同桌对,是,★ 300 为宇宙门；100 为配对样本量门
+#069,R02_same_table.csv,16797,"x.member_id, y.member_id",HAVING COUNT(*) >= 100,G-UNIVERSE/G-PAIR,会员 / 同桌对,是,★ 300 为宇宙门；100 为配对样本量门
+#075,S01_player_score.csv,18370,b.member_id,HAVING COUNT(DISTINCT b.round_key) >= 30,G-UNIVERSE,会员,是,"★★ 主件，排除 562,401 名会员（77.73%），最高优先"
+#080,S05_member_month_panel.csv,19489,"b.member_id, DATE_TRUNC('month', b.bet_date)",HAVING COUNT(*) >= 30,G-UNIVERSE,会员×月,是,★★ 面板主件
+#081,S_player_tail.csv,19765,member_id,HAVING COUNT(*) >= 30,G-UNIVERSE,会员,是,★ 幸存者筛选
+#083,T02_daily_roi.csv,20220,member_id HAVING COUNT(DISTINCT bet_date) >= 20,GROUP BY member_id HAVING COUNT(DISTINCT bet_date) >= 20,G-UNIVERSE,会员,是,★ 幸存者筛选，20 硬编码
+#084,T03_arbitrage.csv,20471,member_id,HAVING COUNT(*) >= 100,G-UNIVERSE,会员,是,★ 幸存者筛选
+#085,TL00_table_inventory.csv,20704,c.TABLE_NAME,HAVING  SUM(CASE WHEN c.COLUMN_COMMENT LIKE '%限額%',G-DEF,表,否,字典件，限額列定义，非会员宇宙
+#110,X_combo.csv,26502,p.member_id HAVING COUNT(*) >= 30),GROUP BY p.member_id HAVING COUNT(*) >= 30),G-UNIVERSE,会员,是,★ 幸存者筛选
+#114,Z04_name_collision.csv,27393,COLUMN_NAME,HAVING COUNT(DISTINCT 含义) >= 2,G-DEF,列名,否,撞名定义（>=2 即撞名之定义），合规
