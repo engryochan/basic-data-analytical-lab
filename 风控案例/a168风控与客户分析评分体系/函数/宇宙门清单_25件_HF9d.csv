@@ -1,0 +1,26 @@
+件号,CSV文件名,门槛表达式,门槛值,分母实体,与S01可否同宇宙比对
+004,B4_2b_funnel_and_mu0.csv,HAVING COUNT(*) >= 1000,1000,行,否
+007,C01_ip_chain.csv,HAVING COUNT(DISTINCT member_id) >= 20,20,会员数,否
+008,C06_hedge_pairs.csv,HAVING COUNT(*) >= 30,30,配对注单,否
+009,C06d_hedge_pairs_dated.csv,HAVING COUNT(*) >= 30,30,配对注单,否
+010,C08_subnet_all.csv,HAVING COUNT(DISTINCT member_id) >= 5,5,会员数,否
+011,C08_subnet_sparse.csv,HAVING COUNT(DISTINCT member_id) >= 5 AND COUNT(DISTINCT bet_ip) <= 30,5 / 30,会员数 与 IP数,否
+022,I_ip_agg.csv,HAVING SUM(CASE WHEN n_orders_ip>=30 THEN 1 ELSE 0 END) >= 5,30 / 5,IP 与 IP数,否
+023,I_ip_player.csv,HAVING COUNT(*) >= 30,30,注单,部分
+043,P0C09_安慰剂检验.csv,HAVING COUNT(DISTINCT p.d) > 0,>0,日,否
+044,P11_阿泽尾段投注总帐.csv,HAVING COUNT(*) >= 30,30,注单,部分
+046,P11_雷欧尾段投注总帐.csv,HAVING COUNT(*) >= 100,100,注单,部分
+049,P12c_member_daily_pnl.csv,HAVING COUNT(*) >= 100,100,注单,部分
+050,P13_personal_entry.csv,HAVING SUM(n_bets) >= 100,100,注单,部分
+057,P_player_month.csv,HAVING COUNT(DISTINCT round_key) >= 30,30,局,★ 与 S01 同判据
+064,R01_late_shoe.csv,HAVING COUNT(*) >= 100,100,注单,部分
+065,R01_late_shoe_w2.csv,HAVING COUNT(*) >= 100,100,注单,部分
+069,R02_same_table.csv,HAVING COUNT(*) >= 100（两处）,100,注单,部分
+075,S01_player_score.csv,HAVING COUNT(DISTINCT b.round_key) >= 30,30,局,★ 本件
+080,S05_member_month_panel.csv,HAVING COUNT(*) >= 30,30,注单,部分
+081,S_player_tail.csv,HAVING COUNT(*) >= 30,30,注单,部分
+083,T02_daily_roi.csv,HAVING COUNT(DISTINCT bet_date) >= 20,20,日,否
+084,T03_arbitrage.csv,HAVING COUNT(*) >= 100,100,注单,部分
+085,TL00_table_inventory.csv,HAVING SUM(CASE WHEN COLUMN_COMMENT LIKE ...) ,元数据,列,否
+110,X_combo.csv,HAVING COUNT(*) >= 30,30,注单,部分
+114,Z04_name_collision.csv,HAVING COUNT(DISTINCT 含义) >= 2,2,字段含义,否
