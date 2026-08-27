@@ -1,0 +1,17 @@
+构件,所在件,层级覆盖,现状,裁定,处置
+测试线剔除 e 侧 x_testagent,129 件全部,bet18~bet22 五层,五层齐全,PASS,无须改
+测试线剔除 q 侧,44 件,bet18~bet22 五层,五层齐全 零漏层,PASS,无须改
+lvX_null / lvX_zero 普查,v1.3 P1d,五层,五层齐全,PASS,无须改
+n_lv1_chain ~ n_lv5_chain,v1.2 P1b-fix / v1.3 P1e / v1.4 P1i,五层,五层齐全,PASS,无须改
+chain_key 拼接,v1.3 P1g,五层,五列全参与 2528=2528=2528,PASS,无须改
+父唯一性 全窗,v1.4 P1f,lv5→lv4/lv1 lv4→lv3/lv1 lv3→lv2/lv1 lv2→lv1,四层全覆盖,PASS,无须改
+零值嵌套性,v1.4 P1h,五层,五层齐全,PASS,无须改
+bet01_multi_lv3,v1.6 PK2b,仅 lv3 一层,覆盖 1/5 且样本仅 2178 笔,FAIL,v1.7 PG1 改五层全测 + 全宇宙
+同局多父 mp CTE,v1.4 P1k / v1.5 PK2 / v1.6 PK2b PK2c,仅 lv4→lv3 一对,四对父子只测一对,FAIL,v1.7 PG2 改四对全扫
+f_multi_parent_round,HF9-A 设计稿,仅 lv4→lv3,同上,FAIL,改为 f_multi_parent_lv2/lv3/lv4/lv5 + 汇总列
+P1j 多父节点敞口,v1.4 P1j,lv4→lv3 与 lv5→lv4 两对,缺 lv2→lv1 lv3→lv2,CONDITIONAL,由 v1.7 PG2 补齐
+n_chain 会员粒度,HF9-A 设计稿,原为 COUNT(DISTINCT lv3) 恒 1,已 KILL 改出 lv1_id~lv5_id,PASS,已五级化
+chain_spread / top_concentration,HF9-A 设计稿,n_lv5 / n_lv1,五层基数派生,PASS,无须改
+n_lv3_chain,HF9-A 设计稿,单层,保留为 LEGACY 对账锚,PASS,五层新列并出
+荷官测试线间接识别,v1.1 P2,按 eid 统计五级测试线占比,五层齐全,PASS,无须改
+14 件 q 侧污染量,v1.1 P4,五级 JOIN,五层齐全,PASS,无须改

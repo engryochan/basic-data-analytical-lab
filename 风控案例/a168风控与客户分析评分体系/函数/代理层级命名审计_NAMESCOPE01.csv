@@ -1,0 +1,25 @@
+现行列名,出现件数,实际层级覆盖,名称是否声明层级,裁定,建议处置
+agent_cost,128,仅 bet23（LV1 顶级占成）,否,FAIL 名称隐去层级,新增 agent_cost_lv1_b 双列并出；旧名留锚
+agent_pct,128,仅 bet23（LV1）,否,FAIL,更名 agent_pct_lv1
+company_retain_pct,128,仅 bet23（LV1）,否,FAIL,更名 company_retain_pct_lv1
+agent_cost_a_legacy,128,仅 bet23（LV1）,否,FAIL,更名 agent_cost_a_lv1_legacy
+agent_cost_valid_base_legacy,128,仅 bet23（LV1）,否,FAIL,更名 agent_cost_valid_base_lv1_legacy
+cost_complement_b,128,仅 bet23（LV1）,否,FAIL 且属已锁八项台账,新增 cost_complement_lv1_b 双列；旧名留锚不可改
+pct_complement,128,仅 bet23（LV1）,否,FAIL,新增 pct_complement_lv1 双列
+pct_top_bet23,128,仅 bet23（LV1）,是（bet23/top 已声明）,PASS,无须改
+residual_b,128,依赖 agent_cost（LV1）,否,FAIL 且属已锁八项台账,新增 residual_lv1_b 双列；旧名留锚不可改
+residual_a,128,依赖 agent_cost_a（LV1）,否,FAIL,新增 residual_lv1_a 双列
+agent_formula_version,129,常量 AG03-UNRESOLVED,不适用,PASS,建议并列新增 agent_level_scope = LV1_ONLY_bet23
+lv3,13,仅 LV3,是,CONDITIONAL,保留 LEGACY；HF9-A 增出 lv1_id~lv5_id
+n_lv3_chain,3,仅 LV3,是,CONDITIONAL,保留 LEGACY；HF9-A 增出 n_lv1_chain~n_lv5_chain
+member_per_chain,1,分母仅 COUNT(DISTINCT lv3),否,FAIL,更名 member_per_lv3_chain；增出五级版
+n_chain,2,仅 LV3 且恒等于 1,否,KILLED,已裁 DEPRECATED_KILLED 替换 n_chain_key
+n_lv1 n_lv2 n_lv3 n_lv4 n_lv5,3,五级齐全,是,PASS,无须改
+pct_lv1 ~ pct_lv5,1,五级齐全,是,PASS,无须改
+lv1_is_test ~ lv5_is_test,1,五级齐全,是,PASS,无须改
+lv1_hit ~ lv5_hit,1,五级齐全,是,PASS,无须改
+lv1_id agent_level top_agent_id parent_agent_id,1,五级台账,是,PASS,无须改
+f_testline is_test_line line_has_test,129,五级 JOIN 齐全,层级中立且确为全覆盖,PASS,无须改
+agent_lv1,1,仅 LV1,是,PASS,无须改
+bet01_multi_lv3,探查件 v1.6,仅 LV3,是,已作废,由 v1.7 PG1 的 incons_lv1~lv5 八列取代
+f_multi_parent_round,HF9-A 设计稿,仅 lv4-lv3,否,FAIL,改为 f_multi_parent_lv2~lv5 + f_multi_parent_any + multi_parent_levels

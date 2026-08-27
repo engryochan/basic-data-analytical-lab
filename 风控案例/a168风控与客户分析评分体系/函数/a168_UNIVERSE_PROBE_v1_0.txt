@@ -1,0 +1,527 @@
+
+-- -- U0 -- 基础窗：仅分区窗 + 百家乐。源码 #075 L18264。已知答案：124,731,833 / 723,557
+SELECT COUNT(DISTINCT b.bet01)                                            AS u0_rows_dedup,
+       COUNT(DISTINCT CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT))           AS u0_members
+FROM ods_mariadb_2b.ods_a168_bet02 b
+WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+  AND b.bet02 = '101';
+
+00:00:23.493
+
+u0_rows_dedup	u0_members
+124731833	723557
+
+
+
+-- -- U1 -- + 有效注单哨兵（category='1' 且 bet38='N'）。源码 #075 L18274
+SELECT COUNT(DISTINCT b.bet01)                                            AS u1_rows_dedup,
+       COUNT(DISTINCT CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT))           AS u1_members
+FROM ods_mariadb_2b.ods_a168_bet02 b
+WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+  AND b.bet02 = '101'
+  AND b.category = '1'
+  AND UPPER(TRIM(b.bet38)) = 'N';
+
+00:00:24.442
+
+u1_rows_dedup	u1_members
+124725280	723496
+
+
+-- -- U2 -- + 会员身份哨兵（bet05 > 0）。源码 #075 L18275
+SELECT COUNT(DISTINCT b.bet01)                                            AS u2_rows_dedup,
+       COUNT(DISTINCT CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT))           AS u2_members
+FROM ods_mariadb_2b.ods_a168_bet02 b
+WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+  AND b.bet02 = '101'
+  AND b.category = '1'
+  AND UPPER(TRIM(b.bet38)) = 'N'
+  AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0;
+
+00:00:25.111
+
+u2_rows_dedup	u2_members
+124725280	723496
+
+
+
+-- -- U3 -- + 汇率哨兵（bet11 > 0）。源码 #075 L18276。已知 bet11 缺失或 <=0 者为 0 笔，故 U3 应 = U2
+SELECT COUNT(DISTINCT b.bet01)                                            AS u3_rows_dedup,
+       COUNT(DISTINCT CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT))           AS u3_members
+FROM ods_mariadb_2b.ods_a168_bet02 b
+WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+  AND b.bet02 = '101'
+  AND b.category = '1'
+  AND UPPER(TRIM(b.bet38)) = 'N'
+  AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+  AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0;
+
+00:00:22.271
+
+u3_rows_dedup	u3_members
+124725280	723496
+
+
+
+-- -- U4 -- + bet08 非空。源码 #075 L18277
+--    ★ 本条的差值是【本次探查最关键的未知数之一】：
+--      bet08 非空究竟是「清洗」（脏值剔除）还是「宇宙门」（删主体），
+--      取决于它砍掉多少会员。砍注单不砍会员 => 清洗；砍掉整批会员 => 宇宙门，须重裁。
+SELECT COUNT(DISTINCT b.bet01)                                            AS u4_rows_dedup,
+       COUNT(DISTINCT CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT))           AS u4_members
+FROM ods_mariadb_2b.ods_a168_bet02 b
+WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+  AND b.bet02 = '101'
+  AND b.category = '1'
+  AND UPPER(TRIM(b.bet38)) = 'N'
+  AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+  AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+  AND NULLIF(TRIM(b.bet08),'') IS NOT NULL;
+
+00:00:22.755
+
+u4_rows_dedup	u4_members
+124725280	723496
+
+
+
+-- -- U5 -- + 五级代理测试线剔除。源码 #075 L18278（五级 LEFT JOIN，与生产件逐字同构）
+--    ★ U5 即 #075 / #057 / #080 / #081 / #110 五件在【移除宇宙门后】的合法宇宙。
+SELECT COUNT(DISTINCT b.bet01)                                            AS u5_rows_dedup,
+       COUNT(DISTINCT CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT))           AS u5_members
+FROM ods_mariadb_2b.ods_a168_bet02 b
+LEFT JOIN (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+           FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1') t1
+       ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+LEFT JOIN (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+           FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1') t2
+       ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+LEFT JOIN (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+           FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1') t3
+       ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+LEFT JOIN (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+           FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1') t4
+       ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+LEFT JOIN (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+           FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1') t5
+       ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+  AND b.bet02 = '101'
+  AND b.category = '1'
+  AND UPPER(TRIM(b.bet38)) = 'N'
+  AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+  AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+  AND NULLIF(TRIM(b.bet08),'') IS NOT NULL
+  AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL;
+
+00:00:24.184
+
+u5_rows_dedup	u5_members
+124713543	723442
+
+
+-- -- U5N -- 同 U5 但【不含 bet08 非空】。这是 #046 / #049 / #064 / #083 / #084 的口径。
+--    ★ 全包 14 件 G-UNIVERSE 并非同一套清洗 predicate，故宇宙不止一个。
+--      U5 与 U5N 的差值即「bet08 口径分歧」的规模，须一并留档。
+SELECT COUNT(DISTINCT b.bet01)                                            AS u5n_rows_dedup,
+       COUNT(DISTINCT CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT))           AS u5n_members
+FROM ods_mariadb_2b.ods_a168_bet02 b
+LEFT JOIN (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+           FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1') t1
+       ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+LEFT JOIN (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+           FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1') t2
+       ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+LEFT JOIN (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+           FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1') t3
+       ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+LEFT JOIN (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+           FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1') t4
+       ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+LEFT JOIN (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+           FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1') t5
+       ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+  AND b.bet02 = '101'
+  AND b.category = '1'
+  AND UPPER(TRIM(b.bet38)) = 'N'
+  AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+  AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+  AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL;
+
+00:00:23.650
+
+u5n_rows_dedup	u5n_members
+124713543	723442
+
+
+
+-- -- G075 -- #075 S01_player_score ★ 主件。粒度 member_id，闸 COUNT(DISTINCT round_key) >= 30
+--    源码：清洗 L18274-18278 · round_key L18283 · GROUP BY L18369 · HAVING L18370
+--    已知答案锚：groups_after 应 = 161,156
+WITH ta AS (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+            FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1'),
+base AS (
+  SELECT b.bet01,
+         CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT)                         AS member_id,
+         CONCAT_WS('|', b.bet03, b.bet04, b.bet39)                        AS round_key
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+  LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+  LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+  LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+  LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+    AND b.category = '1'
+    AND UPPER(TRIM(b.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(b.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+g AS (
+  SELECT member_id,
+         COUNT(DISTINCT round_key)                                        AS n_gate,
+         COUNT(DISTINCT bet01)                                            AS n_rows
+  FROM base
+  GROUP BY member_id
+)
+SELECT COUNT(*)                                                           AS groups_before,
+       SUM(CASE WHEN n_gate >= 30 THEN 1 ELSE 0 END)                      AS groups_after,
+       SUM(n_rows)                                                        AS rows_before,
+       SUM(CASE WHEN n_gate >= 30 THEN n_rows ELSE 0 END)                 AS rows_after,
+       MIN(n_gate)                                                        AS gate_min,
+       MAX(n_gate)                                                        AS gate_max
+FROM g;
+
+00:00:05.238
+
+groups_before	groups_after	rows_before	rows_after	gate_min	gate_max
+723442	161156	124713543	120256939	1	484046
+
+
+-- -- G080 -- #080 S05_member_month_panel。粒度 member_id × 月，闸 COUNT(DISTINCT bet01) >= 30
+--    源码：清洗 L19450-19454 · GROUP BY L19487 · HAVING L19488
+--    已知答案锚：groups_after 应 = 278,729
+WITH ta AS (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+            FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1'),
+base AS (
+  SELECT b.bet01,
+         CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT)                         AS member_id,
+         DATE_TRUNC('month', b.dt)                                        AS ym
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+  LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+  LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+  LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+  LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+    AND b.category = '1'
+    AND UPPER(TRIM(b.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(b.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+g AS (SELECT member_id, ym, COUNT(DISTINCT bet01) AS n_rows FROM base GROUP BY member_id, ym)
+SELECT COUNT(*)                                                           AS groups_before,
+       SUM(CASE WHEN n_rows >= 30 THEN 1 ELSE 0 END)                      AS groups_after,
+       SUM(n_rows)                                                        AS rows_before,
+       SUM(CASE WHEN n_rows >= 30 THEN n_rows ELSE 0 END)                 AS rows_after,
+       COUNT(DISTINCT member_id)                                          AS members_before
+FROM g;
+
+00:00:03.703
+
+groups_before	groups_after	rows_before	rows_after	members_before
+1030097	278729	124713543	119643039	723442
+
+
+
+-- -- G057 -- #057 P_player_month。粒度 member_id × 月，闸 COUNT(DISTINCT round_key) >= 30
+--    源码：清洗 L13570-13574（与 #075 同套）· round_key L13579 · HAVING L13601
+WITH ta AS (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+            FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1'),
+base AS (
+  SELECT b.bet01,
+         CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT)                         AS member_id,
+         DATE_TRUNC('month', b.dt)                                        AS ym,
+         CONCAT_WS('|', b.bet03, b.bet04, b.bet39)                        AS round_key
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+  LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+  LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+  LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+  LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+    AND b.category = '1'
+    AND UPPER(TRIM(b.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(b.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+g AS (SELECT member_id, ym, COUNT(DISTINCT round_key) AS n_gate, COUNT(DISTINCT bet01) AS n_rows
+      FROM base GROUP BY member_id, ym)
+SELECT COUNT(*)                                                           AS groups_before,
+       SUM(CASE WHEN n_gate >= 30 THEN 1 ELSE 0 END)                      AS groups_after,
+       SUM(n_rows)                                                        AS rows_before,
+       SUM(CASE WHEN n_gate >= 30 THEN n_rows ELSE 0 END)                 AS rows_after,
+       COUNT(DISTINCT member_id)                                          AS members_before
+FROM g;
+
+00:00:05.244
+
+groups_before	groups_after	rows_before	rows_after	members_before
+1030097	248903	124713543	118190661	723442
+
+
+
+-- -- G083 -- #083 T02_daily_roi。粒度 member_id，闸 COUNT(DISTINCT bet_date) >= 20
+--    源码：清洗 L20212-20215（★ 无 bet08 条件）· HAVING L20219
+WITH ta AS (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+            FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1'),
+base AS (
+  SELECT b.bet01,
+         CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT)                         AS member_id,
+         b.dt                                                             AS bet_date
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+  LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+  LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+  LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+  LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+    AND b.category = '1'
+    AND UPPER(TRIM(b.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+g AS (SELECT member_id, COUNT(DISTINCT bet_date) AS n_gate, COUNT(DISTINCT bet01) AS n_rows
+      FROM base GROUP BY member_id)
+SELECT COUNT(*)                                                           AS groups_before,
+       SUM(CASE WHEN n_gate >= 20 THEN 1 ELSE 0 END)                      AS groups_after,
+       SUM(n_rows)                                                        AS rows_before,
+       SUM(CASE WHEN n_gate >= 20 THEN n_rows ELSE 0 END)                 AS rows_after
+FROM g;
+
+00:00:03.641
+
+groups_before	groups_after	rows_before	rows_after
+723442	26941	124713543	85313563
+
+
+
+-- -- GB-A -- 清洗口径【不含 bet08】：#046 #049 #064 #084 及 #044 #050 的近似
+--    ★ 注意：#044 的 grain 用 bet05，另有 bet03/bet04 非空条件；#050 的闸是 SUM(n_bets)，
+--      在会员粒度上等价于 COUNT(*)。两件的细微差异记入 §W3，不在本条内混算。
+WITH ta AS (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+            FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1'),
+base AS (
+  SELECT b.bet01,
+         CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT)                         AS member_id
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+  LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+  LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+  LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+  LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+    AND b.category = '1'
+    AND UPPER(TRIM(b.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+g AS (SELECT member_id, COUNT(DISTINCT bet01) AS n_rows FROM base GROUP BY member_id)
+SELECT COUNT(*)                                                           AS members_before,
+       SUM(n_rows)                                                        AS rows_before,
+       SUM(CASE WHEN n_rows >=  30 THEN 1 ELSE 0 END)                     AS members_ge30,
+       SUM(CASE WHEN n_rows >=  30 THEN n_rows ELSE 0 END)                AS rows_ge30,
+       SUM(CASE WHEN n_rows >= 100 THEN 1 ELSE 0 END)                     AS members_ge100,
+       SUM(CASE WHEN n_rows >= 100 THEN n_rows ELSE 0 END)                AS rows_ge100,
+       SUM(CASE WHEN n_rows >= 300 THEN 1 ELSE 0 END)                     AS members_ge300,
+       SUM(CASE WHEN n_rows >= 300 THEN n_rows ELSE 0 END)                AS rows_ge300
+FROM g;
+
+00:00:03.463
+
+members_before	rows_before	members_ge30	rows_ge30	members_ge100	rows_ge100	members_ge300	rows_ge300
+723442	124713543	179693	121141574	92412	116420314	46890	108446102
+
+
+-- -- GB-B -- 清洗口径【含 bet08 非空】：#081 #110 及 #075 家族的会员基数对照
+WITH ta AS (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+            FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1'),
+base AS (
+  SELECT b.bet01,
+         CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT)                         AS member_id
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+  LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+  LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+  LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+  LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+    AND b.category = '1'
+    AND UPPER(TRIM(b.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(b.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+g AS (SELECT member_id, COUNT(DISTINCT bet01) AS n_rows FROM base GROUP BY member_id)
+SELECT COUNT(*)                                                           AS members_before,
+       SUM(n_rows)                                                        AS rows_before,
+       SUM(CASE WHEN n_rows >=  30 THEN 1 ELSE 0 END)                     AS members_ge30,
+       SUM(CASE WHEN n_rows >=  30 THEN n_rows ELSE 0 END)                AS rows_ge30,
+       SUM(CASE WHEN n_rows >= 100 THEN 1 ELSE 0 END)                     AS members_ge100,
+       SUM(CASE WHEN n_rows >= 100 THEN n_rows ELSE 0 END)                AS rows_ge100,
+       SUM(CASE WHEN n_rows >= 300 THEN 1 ELSE 0 END)                     AS members_ge300,
+       SUM(CASE WHEN n_rows >= 300 THEN n_rows ELSE 0 END)                AS rows_ge300
+FROM g;
+
+00:00:03.475
+
+
+members_before	rows_before	members_ge30	rows_ge30	members_ge100	rows_ge100	members_ge300	rows_ge300
+723442	124713543	179693	121141574	92412	116420314	46890	108446102
+
+
+
+-- -- W1 -- #065 R01_late_shoe_w2 的观察窗与全包【不同】
+--    源码 L15712：dt >= '2026-08-07' AND dt < '2026-08-20'
+--    即 #065 用的是主窗【之后】的 13 天，属 walk-forward 样本外窗，
+--    方向正确（以过去预测未来，非以未来解释过去），但：
+--      ① 它不属于 U0~U5 任何一级宇宙，绝不可并入主窗口径合并统计；
+--      ② 其宇宙门 COUNT(*) >= 100 是在【13 天】窗上设的，与主窗 139 天的 100 不可比。
+--    本条只测该窗的基础规模，供 UNIVERSE-PROBE-GATE 单独裁定。
+SELECT COUNT(DISTINCT b.bet01)                                            AS w2win_rows_dedup,
+       COUNT(DISTINCT CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT))           AS w2win_members,
+       MIN(b.dt)                                                          AS dt_min,
+       MAX(b.dt)                                                          AS dt_max
+FROM ods_mariadb_2b.ods_a168_bet02 b
+WHERE b.dt >= '2026-08-07' AND b.dt < '2026-08-20'
+  AND b.bet02 = '101'
+  AND b.category = '1'
+  AND UPPER(TRIM(b.bet38)) = 'N'
+  AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0;
+
+00:00:03.218
+
+
+w2win_rows_dedup	w2win_members	dt_min	dt_max
+11744545	118535	2026-08-07	2026-08-19
+
+
+-- -- W2 -- #069 R02_same_table 的 q 侧【没有测试线剔除】
+--    源码 L16765-16776：mr CTE 直接自 bet02 取数，仅有 category='1' / bet38='N' / bet05>0，
+--    既无 rn=1（但有 SELECT DISTINCT，对本粒度等效去重），亦【无五级代理测试线剔除】。
+--    ⇒ 11,739 笔测试线注单会进入 #069。本条量其规模。
+--    另：源码 L16778-16781 自述门槛由 100 提至 300 是【为降内存】，非业务推导 ——
+--        这是「资源约束改写业务判据」的实证案例，须于 UNIVERSE-PROBE-GATE 单独裁定。
+WITH ta AS (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+            FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1')
+SELECT COUNT(DISTINCT b.bet01)                                            AS n069_rows_all,
+       COUNT(DISTINCT CASE WHEN COALESCE(t1.aid,t2.aid,t3.aid,t4.aid,t5.aid) IS NOT NULL
+                           THEN b.bet01 END)                              AS n069_rows_testline,
+       COUNT(DISTINCT CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT))           AS n069_members_all
+FROM ods_mariadb_2b.ods_a168_bet02 b
+LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+  AND b.bet02 = '101'
+  AND b.category = '1'
+  AND UPPER(TRIM(b.bet38)) = 'N'
+  AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0;
+
+00:00:24.363
+
+n069_rows_all	n069_rows_testline	n069_members_all
+124725280	11737	723496
+
+
+-- -- W3 -- #044 的 grain 与清洗与其余会员件不同，单独量
+--    源码 L10259-10263（清洗，★ 无 bet05>0、无 bet11>0）· L10280-10282（bet03/04/05 非空）
+--    · GROUP BY pid L10287 · HAVING COUNT(*) >= 30 L10288
+WITH ta AS (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+            FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1'),
+base AS (
+  SELECT b.bet01, CAST(b.bet05 AS BIGINT)                                 AS pid
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+  LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+  LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+  LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+  LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+    AND b.category = '1'
+    AND UPPER(TRIM(b.bet38)) = 'N'
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+    AND b.bet03 IS NOT NULL AND b.bet04 IS NOT NULL AND b.bet05 IS NOT NULL
+),
+g AS (SELECT pid, COUNT(DISTINCT bet01) AS n_rows FROM base GROUP BY pid)
+SELECT COUNT(*)                                                           AS members_before,
+       SUM(n_rows)                                                        AS rows_before,
+       SUM(CASE WHEN n_rows >= 30 THEN 1 ELSE 0 END)                      AS members_ge30,
+       SUM(CASE WHEN n_rows >= 30 THEN n_rows ELSE 0 END)                 AS rows_ge30
+FROM g;
+
+00:00:03.384
+
+members_before	rows_before	members_ge30	rows_ge30
+723442	124713543	179693	121141574
+
+
+
+-- -- Q075 -- #075 会员局数分布（供分层参考，非阈值裁定）
+WITH ta AS (SELECT DISTINCT CAST(NULLIF(TRIM(age001),'') AS BIGINT) AS aid
+            FROM ods_mariadb_2b.ods_a168_agent WHERE TRIM(age022) = '1'),
+base AS (
+  SELECT CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT)                         AS member_id,
+         CONCAT_WS('|', b.bet03, b.bet04, b.bet39)                        AS round_key
+  FROM ods_mariadb_2b.ods_a168_bet02 b
+  LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT)
+  LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT)
+  LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT)
+  LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT)
+  LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT)
+  WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+    AND b.bet02 = '101'
+    AND b.category = '1'
+    AND UPPER(TRIM(b.bet38)) = 'N'
+    AND CAST(NULLIF(TRIM(b.bet05),'') AS BIGINT) > 0
+    AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+    AND NULLIF(TRIM(b.bet08),'') IS NOT NULL
+    AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+),
+g AS (SELECT member_id, COUNT(DISTINCT round_key) AS n_rounds FROM base GROUP BY member_id)
+SELECT COUNT(*)                                                           AS n_members,
+       PERCENTILE_APPROX(n_rounds, 0.10)                                  AS p10,
+       PERCENTILE_APPROX(n_rounds, 0.25)                                  AS p25,
+       PERCENTILE_APPROX(n_rounds, 0.50)                                  AS p50,
+       PERCENTILE_APPROX(n_rounds, 0.75)                                  AS p75,
+       PERCENTILE_APPROX(n_rounds, 0.90)                                  AS p90,
+       PERCENTILE_APPROX(n_rounds, 0.95)                                  AS p95,
+       PERCENTILE_APPROX(n_rounds, 0.99)                                  AS p99,
+       AVG(n_rounds)                                                      AS avg_rounds,
+       MAX(n_rounds)                                                      AS max_rounds
+FROM g;
+
+00:00:03.433
+
+n_members	p10	p25	p50	p75	p90	p95	p99	avg_rounds	max_rounds
+723442	1	2	6	24	120	341.3655700683594	2447.47998046875	126.62183976047838	484046
+
+
