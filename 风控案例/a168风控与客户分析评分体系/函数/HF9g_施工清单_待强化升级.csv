@@ -1,0 +1,25 @@
+编号,事项,级别,类别,须重导?,现状,实测依据/出处,前置条件
+G-04,分区别名 _post(20)/_pre_rg(4)/_alarm(3) 与 _recent 谓词逐字同一，须真特化或并名废别名,S1,语义契约,是（27 件次）,待动工,x_rec 定义在 128 件中逐字同一：CASE WHEN b.dt >= '2026-07-08' THEN 1 ELSE 0 END,先生裁示：真特化 or 并名，二择一
+G-05,#018 六层连接键错配：x_agg.x_key=s.x_product(bet09) vs q.product_code=r.bet02,S1,连接键,是（1 件）,待动工,交付件实测 141 列中 127 列恒 NULL；product_code 取值 101/102/…/5031 系 bet02,无（可即改）
+F-44,导出通道换行/BOM 不一致：#017/#018 为 LF＋BOM，#075 为 CRLF 无 BOM,S2,血统,是（全部）,待动工,三档实测：DX04/DX05 首三字节 efbbbf、CR=0；S01 无 BOM、全 CRLF,无（改导出设置即可）
+F-21,#078 S03_agent_score 缺 decision_status / admit_to_risk_decision / deliverable_class 三列,S2·VERIFY,禁令,是（1 件）,阻断,#078 仅 60 个 AS 别名，全包唯一无禁令列者,须先出代理专用 decision_rule，禁照搬会员逻辑
+F-26,赏罚改「符号分段 ＋ residual_b ＋ 绝对金额阈值」，替代相对分位,S1,判型,是（256 处）,阻断,丙方案实测：6.4% 人捕 81% 利润，人均效率 12.7× vs 甲 4.75×,须先生给绝对金额阈值，或授权我实测反解
+F-36/37/38,column_registry 改双轴（statistical_class × lineage_stability × determinism）,S1,登记,否,已出 v2.0,A1a 111 / A1b 6 / A2 11 / B 8 / META 9；人工标记史 标 NON_FROZEN,—
+F-31/32,回归闸改 schema 驱动；自足版内嵌 #075,S1,治理,否,已出并实跑 PASS,九项逐位命中，17.011 秒,—
+F-10,门槛全清单斧正四处 ＋ CRLF 归一,S2,登记,否,已出 HF9f 版,HAVING 23 件/26 条 · 真 LIMIT 1 件 · 无门槛 104 件 · #116/#122 档名,—
+F-12,快照 §一 MD5 以实测值重登,S2,血统,否,待落档,两版实测 MD5 与 W-60 逐位一致，与 §一 登记不符,—
+F-40,G-04/G-05 缺陷登记表（分证据级）,S1,登记,否,已出,OBSERVED 28 · SUSPECT 10 · CLEARED 5,—
+F-41,Source-Native 四原则 ＋ N0 Copy/N1 Derived/N2 Native/N3 Novel 四级,S1,架构,否,待落规范,122/128 件六层段 123 列中 115 列逐字同一，特化率 6.5%,—
+F-42,分层由固定 19/10/100 改 registry 动态导出,S2,登记,否,待落规范,NOT_FOR_DECISION 100 件；文中 109 与表中 100 不自洽须择一,—
+F-45,审计纪律：估计式之选择不得引用规则值（防循环确认）,S1,方法,否,本轮新立,选择须先由基准（平权）＋ 内部诊断（Q）定，规则值只用于事后比对,—
+F-46,规则血统六元组：rule_source/rule_version/effective_from/effective_to/product_variant/commission_regime,S1,血统,否,本轮新立,缺此六元组，数字吻合只能称 numerically consistent，不得称 rule-identified,—
+F-47,commission lineage 十项调查表（source_table/column/grain/datatype/domain/NULL 语义/更新频率/派生 SQL/上游字段/业务定义），并须答「下注时 regime」抑或「事后结算属性」，且须含 table×effective_from/to 时效,S1,数据契约,否,本轮新立·最高优先,commission_flag=1 之 Banker hold 1.2027% 既低于规则免佣 1.46%、又低于 flag=0 之 1.1633%，方向双重矛盾,须业务侧提供
+F-6,n_chain_key 定为 STRUCTURAL_INVARIANT ＋ >1 触发链路复验告警,S3,登记,否,待落规范,"723,442 行恒为 1，非 NULL；chain_key 唯一值 2,528，五级填充率 100%",—
+F-5,ods_a168_log_mem_change 纳入快照冻结,S1 BLOCK,血统,是（届时）,阻断,人工标记史 三次运行持续变动：83095108 113→114→116；最大相对差 18.75%,须上游支持水位冻结
+F-4,PERCENTILE_APPROX 敏感性实验 → A2 容差收紧,S2 VERIFY,可复现性,否,阻断,HF9d↔HF9f 实测最大相对差 0.4375%（p75_stake），不同行 ≤4,须先取判型阈值
+F-43,evidence_rate 五档门槛复核（L1 仅 101 名 / L5 占 99.404%）,S2 VERIFY,证据,是（届时）,阻断,"#075 实测 L1 101 · L2 393 · L3 943 · L4 2,880 · L5 719,125",并入 F-4 一并裁
+F-22~25,theo / adt / nmpt / esi 四支,S1,新指标,是（届时）,阻断×4,① x_prod CTE 未建 ② house_edge 未授权 ③ 范围未裁 ④ ★ 新增：R3 实测 Q=9.3~42.6，单一常数 edge 不足以描述过程,F-47 闭合 ＋ 规则 SSOT ＋ 范围裁示
+F-48,"Tie 赔付疑非 8:1：观测 15.07%，规则 14.36%，随机效应校正后 CI [14.47%,15.67%] 仍不含规则值",S2,数据契约,否,本轮新立,R3 实测；全 7 行中唯一 RE 校正后仍不覆盖者,须查 Tie 赔率与边注混入
+G-05b,其余 10 件 SUSPECT 逐件人工核 q 侧源字段,S2,连接键,可能,阻断,静态扫描命中但未取数验证；已核销 5 件误报,逐件取数核
+—,128 件 Source-Native 扩张,—,架构,是,BLOCKED,G-04 未治前不得扩张；一次只改一个变量,G-04 治毕
+—,HF9f-B 改生产判型,—,判型,是,KILL,B 层只计算不判型，此界不得越,—

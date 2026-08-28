@@ -1,0 +1,7 @@
+项,规范值,校验方式,不合格处置
+编码,UTF-8,首三字节 ≠ EF BB BF,重导
+BOM,无,同上,重导
+换行,全 CRLF,CR 计数 = LF 计数 = 行数,重导
+随件登记,byte_size · row_count · column_count · newline_type · bom · md5 · encoding,导出闸自动登记，禁人工肉眼核,补登
+实测违规（HF9f）,#017 DX04：LF ＋ BOM；#018 DX05：LF ＋ BOM,首三字节 efbbbf，CR=0,本批立约，导出通道改设置
+实测合规（HF9f）,#075 S01：CRLF 无 BOM,"CR=LF=723,443",—

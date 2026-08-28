@@ -10,6 +10,12 @@
 --      非 bet09 单键。下方 edge_map 之 edge 栏一律留 NULL，禁止以任何推测值填补。
 --   ③ 范围阻断：四支新指标施加于四实体件（8 处）抑或全六层模板（256 处），未获裁示。
 -- 【执行护栏】下方 GUARD 段令本档在 edge_map 未填之前恒回 0 行，杜绝误跑出数。
+-- 【HF9f-B 修订 R1 · 2026-08-28】前一稿以裸标识符 e_active_days / e_residual_b / e_bar 作待接锚点，
+--   StarRocks 于「分析期」即做列名解析（早于执行期），故护栏来不及生效，直接报
+--   「Column 'e_active_days' cannot be resolved」——该错易被误读为档案损坏，实为占位未接。
+--   R1 改以 CAST(NULL AS DOUBLE) 充当三处锚点：本档遂可完整通过语法与语义分析，
+--   执行后由护栏 WHERE g.n_edge_filled > 0 收敛为 0 行，回「0 rows」即为「BLOCKED 如设计」，
+--   与真实故障可明确区分。三处锚点已以「★ 锚点一/二/三」标出，落地时逐处替换。
 -- 【禁令】esi 只测注种选择，严禁引向靴内位置。尾段投注假说已由四项独立检验证伪
 --        （符号检验 p=0.7591 · Wilcoxon p=0.8087 · 九门槛 hold% 扫描零命中 · 外部 L1a AUC=0.3828 方向相反），
 --        T-03 闸态 FATAL，不得以任何新指标为名复活。
@@ -66,9 +72,9 @@ SELECT                                                                          
   ROUND(t.theo, 8)                                                                 AS theo,          -- 数值取值：理论赢 ＝ Σ(洗码量 × 庄家优势)；业界 theo / ADT 之分子
   ROUND(1.0 - t.valid_bet_unmapped / NULLIF(t.valid_bet_all, 0), 8)                AS mapped_coverage_rate, -- 比率表达式：映射覆盖率；低覆盖者其 theo 不可信
   CASE WHEN t.valid_bet_unmapped > 0 THEN 'UNKNOWN_PRODUCT' ELSE 'OK' END          AS product_map_flag, -- 条件分支：未映射产品旗标；未映射之洗码量一律不以 1 或 0 顶替（铁律：NULL ≠ 0）
-  ROUND(t.theo / NULLIF(CAST(e_active_days AS DOUBLE), 0), 8)                      AS adt,           -- 比率表达式：日均理论值 ADT ＝ theo / 活跃天数；★ e_active_days 待接 x_agg
-  ROUND(e_residual_b / NULLIF(t.theo, 0), 8)                                       AS nmpt,          -- 比率表达式：真净利实收率 ＝ residual_b / theo；★ e_residual_b 待接六层三层；theo=0 者恒 NULL
-  ROUND(t.theo / NULLIF(t.valid_bet_all * e_bar, 0), 8)                            AS esi,           -- 比率表达式：选注优势指数 ＝ theo / (洗码量 × 全体加权优势)；★ e_bar 待由全体实测反解
+  ROUND(t.theo / NULLIF(CAST(NULL AS DOUBLE), 0), 8)                               AS adt,           -- 比率表达式：日均理论值 ADT ＝ theo / 活跃天数；★ 锚点一 —— 落地时以 e.active_days 替换 CAST(NULL AS DOUBLE)
+  ROUND(CAST(NULL AS DOUBLE) / NULLIF(t.theo, 0), 8)                               AS nmpt,          -- 比率表达式：真净利实收率 ＝ residual_b / theo；★ 锚点二 —— 落地时以 e.residual_b 替换 CAST(NULL AS DOUBLE)；theo=0 者恒 NULL
+  ROUND(t.theo / NULLIF(t.valid_bet_all * CAST(NULL AS DOUBLE), 0), 8)             AS esi,           -- 比率表达式：选注优势指数 ＝ theo / (洗码量 × 全体加权优势)；★ 锚点三 —— 落地时以实测反解之 e_bar 常数替换 CAST(NULL AS DOUBLE)
   'HF9f-B-DRAFT'                                                                   AS theo_calc_version -- 字面取值：本段版本标识，实验层专用
 FROM theo_agg t                                                                                     -- 取数来源：取自会员级理论赢
 CROSS JOIN guard g                                                                                  -- 交叉连接：接执行护栏

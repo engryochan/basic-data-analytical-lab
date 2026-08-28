@@ -1,0 +1,27 @@
+bet09,is_free_comm,stake_share,n_bets,observed_hold_pooled,rule_reference_edge,rule_reference_source,relative_deviation,consistency,house_edge,status,edge_version,effective_from,effective_to,note
+Banker,0,0.45339,42343486,0.01163251,0.010579,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,0.099585,OBSERVED_MATCH,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+Player,0,0.388688,40497084,0.0122638,0.012351,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,-0.00706,OBSERVED_MATCH,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+Banker,1,0.071368,4134815,0.01202656,0.0146,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,-0.176263,OBSERVED_GAP,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+Player,1,0.052034,3390730,0.01113116,0.012351,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,-0.098764,OBSERVED_MATCH,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+Tie,0,0.01001,9110912,0.15064764,0.1436,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,0.049078,OBSERVED_MATCH,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+Super6,0,0.005009,4266751,0.2047555,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+BPair,0,0.004845,5537851,0.10531478,0.103614,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,0.016415,OBSERVED_MATCH,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+PPair,0,0.004733,5408675,0.10156726,0.103614,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,-0.019754,OBSERVED_MATCH,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+Lucky7,0,0.003994,4050652,0.18176448,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+SuperLucky7,0,0.001485,2899197,0.1681262,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+Tie,1,0.001099,443037,0.15270849,0.1436,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,0.06343,OBSERVED_MATCH,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+Super6,1,0.000687,308830,0.20831359,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+Lucky7,1,0.000528,247736,0.1920613,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+BPair,1,0.000489,281503,0.10806291,0.103614,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,0.042937,OBSERVED_MATCH,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+PPair,1,0.000463,268985,0.15270027,0.103614,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,0.473742,OBSERVED_GAP,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+PerfectPair,0,0.000323,269227,0.0577106,0.1707,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,-0.661918,OBSERVED_GAP,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+BankerDragonBonus,0,0.000226,117648,0.10339625,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+SuperLucky7,1,0.000176,179561,0.12214969,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+PlayerDragonBonus,0,0.000176,84699,0.08613227,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+Big,0,0.000107,13648,0.10167105,0.0453,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,1.244394,OBSERVED_GAP,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+AnyPair,0,7.5e-05,95357,0.14055653,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+BankerDragonBonus,1,3.6e-05,10007,0.14407759,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+PlayerDragonBonus,1,2.6e-05,8012,0.05735827,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+BankerNatural,0,1.6e-05,7738,0.18959413,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+PerfectPair,1,1.4e-05,9061,-0.0024047,0.1707,公开百家乐规则（8 副牌）· 未获平台授权 · 仅作对照,-1.014087,OBSERVED_GAP,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
+AnyPair,1,2e-06,3271,0.22655451,,无公开规则值可对照,,NO_RULE_REFERENCE,,CANDIDATE_UNAUTHORIZED,v0.1,,,本行 house_edge 栏刻意留空。observed hold 系结果非规则，不得径填。须由游戏规则文档／产品定义表／供应商契约三者之一背书后方可填入并转 AUTHORIZED。
