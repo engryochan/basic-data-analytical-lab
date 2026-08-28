@@ -1,0 +1,147 @@
+seq,deliverable,column_name,column_role,class,introduced_in,note,grain,registry_version
+1,075 S01_player_score.csv,member_id,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+2,075 S01_player_score.csv,流水贡献,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+3,075 S01_player_score.csv,游戏输赢贡献,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+4,075 S01_player_score.csv,活跃稳定,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+5,075 S01_player_score.csv,退水支出,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+6,075 S01_player_score.csv,n_ip,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+7,075 S01_player_score.csv,n_chain,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+8,075 S01_player_score.csv,lv1_id,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+9,075 S01_player_score.csv,lv2_id,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+10,075 S01_player_score.csv,lv3_id,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+11,075 S01_player_score.csv,lv4_id,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+12,075 S01_player_score.csv,lv5_id,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+13,075 S01_player_score.csv,chain_key,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+14,075 S01_player_score.csv,n_chain_key,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+15,075 S01_player_score.csv,f_upline_changed,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+16,075 S01_player_score.csv,人工标记史,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+17,075 S01_player_score.csv,投注产品结构熵,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+18,075 S01_player_score.csv,索提诺稳定性,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+19,075 S01_player_score.csv,生命周期阶段,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+20,075 S01_player_score.csv,stake,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+21,075 S01_player_score.csv,valid_bet,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+22,075 S01_player_score.csv,profit,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+23,075 S01_player_score.csv,n_bets,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+24,075 S01_player_score.csv,n_rounds,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+25,075 S01_player_score.csv,roi,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+26,075 S01_player_score.csv,roi_recent,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+27,075 S01_player_score.csv,roi_non_recent,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+28,075 S01_player_score.csv,roi_ex_rebate,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+29,075 S01_player_score.csv,roi_numerator,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+30,075 S01_player_score.csv,roi_denominator,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+31,075 S01_player_score.csv,roi_denominator_status,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+32,075 S01_player_score.csv,rebate_cost,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+33,075 S01_player_score.csv,cost_complement_b,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+34,075 S01_player_score.csv,pct_complement,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+35,075 S01_player_score.csv,pct_top_bet23,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+36,075 S01_player_score.csv,agent_formula_version,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+37,075 S01_player_score.csv,agent_level_scope,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+38,075 S01_player_score.csv,agent_cost_lv1,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+39,075 S01_player_score.csv,agent_cost_lv2,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+40,075 S01_player_score.csv,agent_cost_lv3,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+41,075 S01_player_score.csv,agent_cost_lv4,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+42,075 S01_player_score.csv,agent_cost_lv5,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+43,075 S01_player_score.csv,agent_pct_lv1,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+44,075 S01_player_score.csv,agent_pct_lv2,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+45,075 S01_player_score.csv,agent_pct_lv3,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+46,075 S01_player_score.csv,agent_pct_lv4,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+47,075 S01_player_score.csv,agent_pct_lv5,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+48,075 S01_player_score.csv,retain_pct_lv1,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+49,075 S01_player_score.csv,retain_pct_lv2,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+50,075 S01_player_score.csv,retain_pct_lv3,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+51,075 S01_player_score.csv,retain_pct_lv4,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+52,075 S01_player_score.csv,retain_pct_lv5,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+53,075 S01_player_score.csv,chain_depth_avg,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+54,075 S01_player_score.csv,agent_cost_chain_additive,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+55,075 S01_player_score.csv,agent_cost_chain_nested,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+56,075 S01_player_score.csv,residual_chain_additive,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+57,075 S01_player_score.csv,residual_chain_nested,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+58,075 S01_player_score.csv,decision_status,DECISION,B,HF9e,决策标签，随总体变动；action_priority 于 HF9f 已正名,member_id,v1.0
+59,075 S01_player_score.csv,admit_to_risk_decision,DECISION,B,HF9e,决策标签，随总体变动；action_priority 于 HF9f 已正名,member_id,v1.0
+60,075 S01_player_score.csv,deliverable_class,DECISION,B,HF9e,决策标签，随总体变动；action_priority 于 HF9f 已正名,member_id,v1.0
+61,075 S01_player_score.csv,agent_cost_a_legacy,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+62,075 S01_player_score.csv,agent_cost_valid_base_legacy,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+63,075 S01_player_score.csv,ngr,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+64,075 S01_player_score.csv,residual_b,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+65,075 S01_player_score.csv,residual_a,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+66,075 S01_player_score.csv,ngr_rate,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+67,075 S01_player_score.csv,residual_b_rate,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+68,075 S01_player_score.csv,agent_cost_bet23_formal_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+69,075 S01_player_score.csv,net_margin_bet23_formal_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+70,075 S01_player_score.csv,net_margin_bet23_formal_rate_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+71,075 S01_player_score.csv,agent_cost_lv1_bet23_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+72,075 S01_player_score.csv,agent_cost_lv2_bet24_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+73,075 S01_player_score.csv,agent_cost_lv3_bet25_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+74,075 S01_player_score.csv,agent_cost_lv4_bet26_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+75,075 S01_player_score.csv,agent_cost_lv5_bet27_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+76,075 S01_player_score.csv,net_margin_lv1_bet23_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+77,075 S01_player_score.csv,net_margin_lv1_bet23_rate_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+78,075 S01_player_score.csv,agent_cost_chain_additive_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+79,075 S01_player_score.csv,agent_cost_chain_nested_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+80,075 S01_player_score.csv,net_margin_chain_additive_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+81,075 S01_player_score.csv,net_margin_chain_nested_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+82,075 S01_player_score.csv,net_margin_chain_additive_rate_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+83,075 S01_player_score.csv,net_margin_chain_nested_rate_canonical,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+84,075 S01_player_score.csv,residual_a_rate,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+85,075 S01_player_score.csv,avg_stake_per_bet,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+86,075 S01_player_score.csv,avg_valid_bet_per_round,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+87,075 S01_player_score.csv,avg_profit_per_round,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+88,075 S01_player_score.csv,avg_profit_per_day,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+89,075 S01_player_score.csv,avg_profit_per_shoe,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+90,075 S01_player_score.csv,avg_stake_per_active_day,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+91,075 S01_player_score.csv,avg_rounds_per_active_day,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+92,075 S01_player_score.csv,avg_stake_recent,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+93,075 S01_player_score.csv,avg_stake_non_recent,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+94,075 S01_player_score.csv,p25_stake,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+95,075 S01_player_score.csv,p50_stake,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+96,075 S01_player_score.csv,p75_stake,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+97,075 S01_player_score.csv,p90_stake,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+98,075 S01_player_score.csv,p95_stake,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+99,075 S01_player_score.csv,p99_stake,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+100,075 S01_player_score.csv,p50_valid_bet,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+101,075 S01_player_score.csv,p50_profit,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+102,075 S01_player_score.csv,p95_over_p50,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+103,075 S01_player_score.csv,p99_over_p50,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+104,075 S01_player_score.csv,avg_over_p50,METRIC,A2,HF9e,PERCENTILE_APPROX 派生 —— 同一总体重跑仍可能微差（HF9d↔HF9e 实测各 1–3 行不同，相对差 0.004%–0.454%）；禁作硬阈值,member_id,v1.0
+105,075 S01_player_score.csv,common_table_count,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+106,075 S01_player_score.csv,common_dealer_count,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+107,075 S01_player_score.csv,common_ip_count,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+108,075 S01_player_score.csv,common_product_count,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+109,075 S01_player_score.csv,share_recent,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+110,075 S01_player_score.csv,hold_rate,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+111,075 S01_player_score.csv,hold_rate_recent,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+112,075 S01_player_score.csv,rebate_rate_actual,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+113,075 S01_player_score.csv,rebate_pct_config,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+114,075 S01_player_score.csv,turnover_multiple,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+115,075 S01_player_score.csv,free_comm_rate,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+116,075 S01_player_score.csv,roi_delta_recent,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+117,075 S01_player_score.csv,first_seen,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+118,075 S01_player_score.csv,last_seen,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+119,075 S01_player_score.csv,active_days,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+120,075 S01_player_score.csv,active_shoes,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+121,075 S01_player_score.csv,active_sessions,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+122,075 S01_player_score.csv,span_days,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+123,075 S01_player_score.csv,persistence,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+124,075 S01_player_score.csv,ramp_recent_vs_prior,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+125,075 S01_player_score.csv,ramp_recent_vs_all,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+126,075 S01_player_score.csv,stake_ramp,METRIC,A1,HF9e,"精确可复现 —— HF9d↔HF9e 同批 161,156 名逐位相同",member_id,v1.0
+127,075 S01_player_score.csv,vip_tier,SCALE,B,HF9e,总体相关 —— 须携 pr_* 血统五元组解读；禁作判型入参,member_id,v1.0
+128,075 S01_player_score.csv,economic_value,SCALE,B,HF9e,总体相关 —— 须携 pr_* 血统五元组解读；禁作判型入参,member_id,v1.0
+129,075 S01_player_score.csv,risk_value,SCALE,B,HF9e,总体相关 —— 须携 pr_* 血统五元组解读；禁作判型入参,member_id,v1.0
+130,075 S01_player_score.csv,pr_stake,SCALE,B,HF9e,总体相关 —— 须携 pr_* 血统五元组解读；禁作判型入参,member_id,v1.0
+131,075 S01_player_score.csv,action_priority,DECISION,B,HF9e,决策标签，随总体变动；action_priority 于 HF9f 已正名,member_id,v1.0
+132,075 S01_player_score.csv,audit_rn,META,META,HF9e,行号/批号/运行标识；排除于逐位比对之外,member_id,v1.0
+133,075 S01_player_score.csv,batch_id,META,META,HF9e,行号/批号/运行标识；排除于逐位比对之外,member_id,v1.0
+134,075 S01_player_score.csv,run_id,META,META,HF9e,行号/批号/运行标识；排除于逐位比对之外,member_id,v1.0
+135,075 S01_player_score.csv,snapshot_sync_time,META,META,HF9e,行号/批号/运行标识；排除于逐位比对之外,member_id,v1.0
+136,075 S01_player_score.csv,roi_pr_global,SCALE,B,HF9f,ROI 之全体百分位；F-17 正名，取代 risk_value,member_id,v1.0
+137,075 S01_player_score.csv,pr_global,SCALE,B,HF9f,全体口径百分位；≡ pr_stake,member_id,v1.0
+138,075 S01_player_score.csv,pr_qualified,SCALE,B,HF9f,合格子集（n_rounds>=30）内百分位；不合格者 NULL,member_id,v1.0
+139,075 S01_player_score.csv,pr_qualified_population,LINEAGE,META,HF9f,血统：合格子集定义,member_id,v1.0
+140,075 S01_player_score.csv,pr_global_population_n,LINEAGE,META,HF9f,血统：全体参照总体规模，现算,member_id,v1.0
+141,075 S01_player_score.csv,pr_qualified_population_n,LINEAGE,META,HF9f,血统：合格参照总体规模，现算,member_id,v1.0
+142,075 S01_player_score.csv,pr_calculation_method,LINEAGE,META,HF9f,血统：算法标识,member_id,v1.0
+143,075 S01_player_score.csv,pr_calculation_version,LINEAGE,META,HF9f,血统：算法版本,member_id,v1.0
+144,075 S01_player_score.csv,evidence_flag,EVIDENCE,A1,HF9f,THIN_ROUNDS / OK；THIN_ROUNDS 禁入执行队列,member_id,v1.0
+145,075 S01_player_score.csv,evidence_rate,EVIDENCE,A1,HF9f,MDE 反解五档；承 HF9e 前议值，待 F-4 复核,member_id,v1.0
+146,075 S01_player_score.csv,hold_ci_halfwidth_approx,EVIDENCE,A1,HF9f,逐行现算 95% 半宽近似；σ 常数 0.95 待 F-4 与实测 0.9249 对齐,member_id,v1.0

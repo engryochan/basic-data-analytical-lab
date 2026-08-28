@@ -1,0 +1,30 @@
+件号,CSV文件名,门槛类型,门槛表达式,门槛值,分母实体,粒度,六层口径,HF9e状态,建议
+004,B4_2b_funnel_and_mu0.csv,HAVING,COUNT(*) >= 1000,1000,行,全窗/元数据,INVALID,保留,待议 元数据件门槛无商业含义
+007,C01_ip_chain.csv,HAVING,COUNT(DISTINCT member_id) >= 20,20,会员数,IP,OK,保留,待议 IP聚簇门槛
+008,C06_hedge_pairs.csv,HAVING,ABS(SUM(庄)-SUM(闲)) 与 COUNT(*) >= 30,30,配对注单,配对,INVALID,保留,待议
+009,C06d_hedge_pairs_dated.csv,HAVING,ABS(...) 与 COUNT(*) >= 30,30,配对注单,配对×日,INVALID,保留,待议
+010,C08_subnet_all.csv,HAVING,COUNT(DISTINCT member_id) >= 5,5,会员数,子网,OK,保留,待议
+011,C08_subnet_sparse.csv,HAVING,COUNT(DISTINCT member_id) >= 5 AND COUNT(DISTINCT bet_ip) <= 30,5 / 30,会员数 与 IP数,子网,OK,保留,待议
+022,I_ip_agg.csv,HAVING,SUM(CASE WHEN n_orders_ip>=30) >= 5,30 / 5,注单 与 IP数,IP聚合,INVALID,保留,待议 双层门槛
+023,I_ip_player.csv,HAVING,COUNT(*) >= 30,30,注单,IP×会员,INVALID,保留,★ 高优先 与会员宇宙相关
+043,P0C09_安慰剂检验.csv,HAVING,COUNT(DISTINCT p.d) > 0,>0,日,检验,INVALID,保留,无实质门槛
+044,P11_阿泽尾段投注总帐.csv,HAVING,COUNT(*) >= 30,30,注单,会员,INVALID,保留,待议
+046,P11_雷欧尾段投注总帐.csv,HAVING,COUNT(*) >= 100,100,注单,会员,INVALID,保留,待议
+049,P12c_member_daily_pnl.csv,HAVING,COUNT(*) >= 100,100,注单,会员×日,WRONG_GRAIN,保留,待议
+050,P13_personal_entry.csv,HAVING,SUM(n_bets) >= 100,100,注单,会员,INVALID,保留,待议
+057,P_player_month.csv,HAVING,COUNT(DISTINCT round_key) >= 30,30,局,会员×月,WRONG_GRAIN,★ 已解除,已纳入 HF9e
+064,R01_late_shoe.csv,HAVING,COUNT(*) >= 100,100,注单,会员,INVALID,保留,待议 靴尾件 假说已证伪
+065,R01_late_shoe_w2.csv,HAVING,COUNT(*) >= 100,100,注单,会员,INVALID,保留,待议 同上
+069,R02_same_table.csv,HAVING,COUNT(*) >= 100（两处）,100,注单,会员,INVALID,保留,★ 曾由300降至100 资源导出门槛
+075,S01_player_score.csv,HAVING,COUNT(DISTINCT b.round_key) >= 30,30,局,会员,OK PRIMARY,★ 已解除,已纳入 HF9e
+080,S05_member_month_panel.csv,HAVING,COUNT(*) >= 30,30,注单,会员×月,OK,保留,★ 高优先 与 S01 同为会员件
+081,S_player_tail.csv,HAVING,COUNT(*) >= 30,30,注单,会员,INVALID,保留,待议
+083,T02_daily_roi.csv,HAVING,COUNT(DISTINCT bet_date) >= 20,20,日,会员,INVALID,保留,★ CHAIN-01 相关
+084,T03_arbitrage.csv,HAVING,COUNT(*) >= 100,100,注单,会员,INVALID,保留,待议
+085,TL00_table_inventory.csv,HAVING,SUM(CASE WHEN COLUMN_COMMENT LIKE ...),元数据,列,表,INVALID,保留,元数据件 非商业门槛
+110,X_combo.csv,HAVING,COUNT(*) >= 30,30,注单,会员,INVALID,保留,待议
+114,Z04_name_collision.csv,HAVING,COUNT(DISTINCT 含义) >= 2,2,字段含义,字段,INVALID,保留,元数据件 非商业门槛
+116,Z06_probe_member_dtl.csv,LIMIT,LIMIT 20,20,行,样本,INVALID,保留,★ 样本件 CSV仅20行 须标 SAMPLE_ONLY
+122,Z12_probe_wallet_dtl.csv,LIMIT,LIMIT 20,20,行,样本,INVALID,保留,★ 样本件 CSV仅20行 须标 SAMPLE_ONLY
+002,B01_bt_panel.csv,封锁,—,—,—,会员×日,WRONG_GRAIN,封锁,BE事故根因 最后单独议
+其余 102 件,—,无门槛,—,—,—,—,—,无门槛,全量输出
