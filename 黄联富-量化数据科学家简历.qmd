@@ -99,7 +99,15 @@ tbl <- function(df, caption = NULL, align = NULL) {
 ## HTML → <a href>；PDF / DOCX → [文字](网址)，由 pandoc 转换。
 ## 切记：资料格内**不得**写 <https://…>，浏览器会当成未知 HTML 标签吃掉。
 lnk <- function(url, label = NULL) {
-  label <- if (is.null(label)) sub("^https?://(www\\.)?", "", url) else label
+  ## 预设标签：剥去 scheme 与 www.；若剥后仍含百分号编码（如 Stack Overflow
+  ## 之 Unicode slug），退回只显示网域，免得表格塞进一串天书。
+  auto <- sub("^https?://(www\\.)?", "", url)
+  auto <- vapply(strsplit(auto, "/", fixed = TRUE), function(z) {
+    bad <- grepl("%[0-9A-Fa-f]{2}", z)          # 百分号编码之路径段
+    if (!any(bad)) paste(z, collapse = "/")
+    else paste(z[cumsum(bad) == 0], collapse = "/")
+  }, character(1))
+  label <- if (is.null(label)) auto else label
   if (is_html) {
     sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', url, label)
   } else {
@@ -220,8 +228,9 @@ communities <- tribble(
   "世博量化官网",     "https://www.scibrokes.com",                                             "企业主页",
   "统计之都（COS）",  "https://d.cosx.org",                                                    "中文 R 语言与统计学社区",
   "经管之家",        "https://bbs.pinggu.org/forum-69-1.html",                                 "计量经济学 / R 语言版块",
-  "Stack Overflow",  "https://stackoverflow.com",                                             "R / Shiny 技术问答",
-  "Kaggle",          "https://www.kaggle.com",                                                "机器学习竞赛与数据集"
+  ## 注：本网址含百分号编码（slug 为 rγσ-ξηg-lιαη-Ημ-雷欧），须逐字保留，勿手动「美化」
+  "Stack Overflow",  "https://stackoverflow.com/users/3806250/r%ce%b3%cf%83-%ce%be%ce%b7g-l%ce%b9%ce%b1%ce%b7-%ce%97%ce%bc-%e9%9b%b7%e6%ac%a7", "R / Shiny 技术问答",
+  "Kaggle",          "https://www.kaggle.com/englianhu",                                       "机器学习竞赛与数据集"
 )
 n_comm <- nrow(communities)
 
