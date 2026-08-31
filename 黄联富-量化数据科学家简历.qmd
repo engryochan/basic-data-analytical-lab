@@ -1,0 +1,476 @@
+---
+title: "黄联富 · 量化数据科学家 · 个人简历"
+subtitle: "赢家黄氏江夏堂 ®γσ ξηg Lian Hu"
+lang: zh
+date: last-modified
+date-format: "YYYY-MM-DD"
+
+# ── 单一事实来源：改此处即三格式同步 ────────────────────────────────
+params:
+  display_name: "Ryo Eng"          # 称谓铁律默认值；如需还原原档「雷欧 ∪ 瑞欧」，只改这一行
+  org: "世博量化® / Scibrokes Trading®"
+  city: "马来西亚，雪兰莪州，丹戎加弄，峇东新村"
+  doi: "10.13140/RG.2.1.3035.9926"
+  show_todo: true                  # 设 false 即隐藏全部「待补」标记，出干净对外版
+
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-title: "目录"
+    number-sections: true
+    theme: cosmo
+    embed-resources: true
+    echo: true
+    code-fold: true
+    code-summary: "显示生成此表的代码"
+    tbl-cap-location: top
+  pdf:
+    pdf-engine: xelatex
+    documentclass: article
+    papersize: a4
+    geometry: [top=2.2cm, bottom=2.2cm, left=2.2cm, right=2.2cm]
+    toc: true
+    toc-title: "目录"
+    number-sections: true
+    echo: false
+    # Windows 11 预设。macOS 可改 "Songti SC"；Linux 可改 "Noto Serif CJK SC"
+    CJKmainfont: "Microsoft YaHei"
+    CJKoptions: [AutoFakeBold, AutoFakeSlant]
+    mainfont: "Times New Roman"
+    monofont: "Consolas"
+  docx:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    echo: false
+    # 如有企业模板，取消下行注释并置于同目录
+    # reference-doc: scibrokes-reference.docx
+
+execute:
+  warning: false
+  message: false
+  echo: false
+---
+
+```{r setup}
+#| include: false
+
+## 呈表纪律：HTML 走 DT 互动表，PDF / DOCX 退回 kable 静态表。
+## 三格式共用同一份资料框，避免同一事实抄三遍而走样。
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(tibble)
+  library(knitr)
+  library(kableExtra)
+  library(here)
+  library(tidyverse)
+})
+
+is_html <- knitr::is_html_output()
+
+if (is_html && !requireNamespace("DT", quietly = TRUE)) is_html <- FALSE
+
+tbl <- function(df, caption = NULL, align = NULL) {
+  if (is_html) {
+    DT::datatable(
+      df,
+      caption   = caption,
+      rownames  = FALSE,
+      escape    = FALSE,
+      class     = "compact stripe hover",
+      options   = list(
+        dom        = "t",
+        paging     = FALSE,
+        ordering   = FALSE,
+        scrollX    = TRUE,
+        autoWidth  = FALSE
+      )
+    )
+  } else {
+    ## 关键：走 markdown pipe 表，让 pandoc 负责把 [文字](网址) 转成
+    ## PDF 的 \\href{} 与 DOCX 的超链接。若用 booktabs/latex 直出，
+    ## 链接会被 LaTeX 转义成纯文字 —— 此即先前「网址不见了」之一因。
+    knitr::kable(df, format = "pipe", caption = caption, align = align)
+  }
+}
+
+## ── 链接产生器：三格式各出各的写法，资料层只存裸网址 ────────────────
+## HTML → <a href>；PDF / DOCX → [文字](网址)，由 pandoc 转换。
+## 切记：资料格内**不得**写 <https://…>，浏览器会当成未知 HTML 标签吃掉。
+lnk <- function(url, label = NULL) {
+  label <- if (is.null(label)) sub("^https?://(www\\.)?", "", url) else label
+  if (is_html) {
+    sprintf('<a href="%s" target="_blank" rel="noopener">%s</a>', url, label)
+  } else {
+    sprintf("[%s](%s)", label, url)
+  }
+}
+gh <- function(owner, repo) sprintf("https://github.com/%s/%s", owner, repo)
+
+## 待补标记：来源 PDF 有字被裁掉之处，一律显式留痕，不臆补
+TODO <- function(txt) {
+  if (!isTRUE(params$show_todo)) return("")
+  if (is_html) {
+    sprintf('<mark style="background:#ffe9a8;">⟪待补：%s⟫</mark>', txt)
+  } else {
+    sprintf("**⟪待补：%s⟫**", txt)
+  }
+}
+
+ym <- function(x) as.Date(paste0(x, "-01"))
+```
+
+```{r data}
+#| include: false
+
+## ── 工作经历（单一事实来源，年资由此现算，不硬编码）────────────────
+jobs <- tribble(
+  ~seq, ~org,                          ~role,                                          ~start,    ~end,      ~place,
+  1,    "完美真人", "数据分析专员",                        "2026-07", NA,        "格鲁吉亚，巴统，戈尼奥",
+  2,    "斯达克专业客服外包企业（美国上市公司）", "客服专员",                        "2026-03", "2026-06",        "马来西亚，雪兰莪州，阿拉白沙罗",
+  3,    "世博量化® / Scibrokes Trading®", "创办人 ∩ 量化科技工程师",                        "2020-10", NA,        "马来西亚，雪兰莪州，峇东新村",
+  4,    "阿里彩票",                      "推广人员 ∩ 数据分析师",                          "2019-11", "2020-07", "菲律宾，克拉克，太阳城",
+  5,    "贵族酒店",                      "客服人员 ∩ 风控专员",                            "2017-11", "2018-05", "柬埔寨，西哈努克港",
+  6,    "万华媒体（马）私人有限公司",       "客服人员 ∩ 业务员",                              "2015-05", "2015-09", "马来西亚，巴生河流域，疏邦",
+  7,    "施乐",                          "交易审查员 / 风控专员",                          "2015-02", "2015-04", "马来西亚，巴生河流域，孟沙",
+  8,    "富士全录",                      "客服人员 ∩ 技术支援",                            "2014-03", "2014-04", "马来西亚，巴生河流域，八达岭在野",
+  9,    "资信利",                        "客服人员 ∩ 技术支援",                            "2013-10", "2013-11", "马来西亚，巴生河流域，孟沙",
+  10,    "立博博彩公司（Ladbrokes）",       "客服人员 ∩ 客服主管",                            "2008-03", "2012-07", "马来西亚，雪兰莪州，赛博在野",
+  11,    "新宝皇冠（iGaming / 体育博彩）",   "数据分析师 ∩ 培训师 ∩ 操盘手 / 交易员",            "2006-07", "2007-06", "菲律宾，马尼拉，马卡蒂市",
+  12,   "特里必斯（iGaming / 体育博彩）",   "数据分析师 ∩ 队长 ∩ 资深操盘手 / 交易员",          "2005-11", "2006-07", "马来西亚，雪兰莪州，赛博在野",
+  13,   "赫萨贸易（外汇）",               "操盘手 / 交易员 ∩ 代理 ∩ 业务员 ∩ 风控专员",       "2005-07", "2005-10", "马来西亚，巴生河流域，旧古仔路"
+)
+
+career_start  <- min(ym(jobs$start))
+career_years  <- floor(as.numeric(Sys.Date() - career_start) / 365.25)
+n_employers   <- nrow(jobs)
+
+## ── 技能 ───────────────────────────────────────────────────────────
+skills_ai <- tribble(
+  ~分类,         ~掌握技术,
+  "时间序列建模", "GARCH / GJR-GARCH / eGARCH（rugarch）、ARIMA(p,d,q)、Seasonal ETS、状态空间模型",
+  "隐变量模型",   "隐马尔科夫模型 HMM（depmixS4）、贝叶斯混合模型（Bayesian Mixture Models）",
+  "深度学习",     "Transformer 序列建模（torch）、LSTM-Attention（keras3）、前馈神经网络",
+  "传统机器学习", "SVM（kernlab）、随机森林、梯度提升",
+  "强化学习",     "金融场景 RL 应用（NYU 专项认证）、Q-learning、策略梯度",
+  "贝叶斯推断",   "贝叶斯统计混合模型（加州大学认证）、先验更新、MCMC",
+  "仓位管理",     "Kelly Criterion（静态 / 分数 / 滚动动态）、DCC-GARCH 多变量协方差估计",
+  "文本挖掘",     "Text Mining & Analytics（伊利诺伊大学认证）、Text Retrieval、Search Engine 原理"
+)
+
+## ── 学历 ───────────────────────────────────────────────────────────
+edu <- tribble(
+  ~机构,                          ~`专项 / 课程`,                                            ~完成年份,
+  "拉曼学院（TARC）",           "电脑科学系",                              "2002—2003",
+  "约翰斯·霍普金斯大学 / Coursera", "Data Science Specialization（10 门课 + Capstone，共 11 项认证）", "2014–2015",
+  "约翰斯·霍普金斯大学 / Coursera", "Mastering Software Development in R（5 门课 + Capstone，共 6 项认证）", "2016–2017",
+  "伊利诺伊大学厄巴纳-香槟分校 / Coursera", "Data Mining Specialization（数据可视化 + 文本检索 + 文本挖掘）", "2016–2017",
+  "纽约大学 / Coursera",           "Advanced Methods of Reinforcement Learning in Finance",   "2017–2018",
+  "北京大学 / Coursera",           "Bioinformatics: Hidden Markov Models（隐马尔科夫模型）",     "2017–2018",
+  "加州大学 / Coursera",           "Bayesian Statistics: Mixture Models（贝叶斯统计：混合模型）", "2018",
+  "密歇根大学 / Coursera",         "Programming for Everybody — Python",                       "2016"
+)
+
+## ── 量化金融专业认证 ───────────────────────────────────────────────
+certs <- tribble(
+  ~证书名称,                                              ~核心技能关联,
+  "Introduction to Machine Learning for Trading",         "ML × 量化交易",
+  "Quantitative Trading Strategies and Models",           "RL / 量化策略",
+  "Trading using Options Sentiment Indicators",           "Options 情绪指标",
+  "Coursera JHU：Practical Machine Learning",             "机器学习实践",
+  "Coursera JHU：Regression Models",                      "回归建模",
+  "Coursera JHU：Statistical Inference",                  "统计推断",
+  "Coursera JHU：Developing Data Products",               "Shiny 数据产品",
+  "DataCamp：Computational Finance with R",               "计量金融 R",
+  "DataCamp：Kaggle R Tutorial on Machine Learning",      "Kaggle ML 竞赛",
+  "DataCamp：Data Analysis and Statistical Inference",    "统计推断",
+  "Coursera Illinois：Corporate Finance（公司财务）",       "投资组合评估",
+  "Coursera Illinois：Managerial Accounting（管理会计）",   "iGaming ROI 分析",
+  "Coursera Illinois：Operations Management（运营管理）",   "业务运营分析",
+  "Google Analytics 认证",                                "数字营销分析"
+)
+n_certs <- nrow(certs)
+
+## ── 开源项目：只存 owner / repo，网址由 gh() 现算 ──────────────────
+## 铁律第九条：禁硬编码。显示文字与 href 同源，永不脱钩。
+projects <- tribble(
+  ~项目名称,                                  ~owner,       ~repo,                                     ~研究方向,
+  "binary.com-interview-question",            "englianhu",  "binary.com-interview-question",           "金融投注彩券量化策略回测（资金管理、P&L 归因）",
+  "real-time-fxcm",                           "scibrokes",  "real-time-fxcm",                          "外汇量化交易实时跳帧、秒钟、分钟汇价系列",
+  "ali-zonghui",                              "englianhu",  "ali-zonghui",                             "阿里彩票（基本产品与会员报表分析）",
+  "betting-strategy-and-model-validation",    "scibrokes",  "betting-strategy-and-model-validation",   "体育彩券量化策略回测（资金管理、P&L 归因）",
+  "odds-modelling-and-testing-inefficiency",  "scibrokes",  "odds-modelling-and-testing-inefficiency", "对角膨胀双泊松赔率建模 + Kelly Criterion 实证",
+  "kelly-criterion",                          "scibrokes",  "kelly-criterion",                         "Kelly Criterion 仓位管理策略系列研究",
+  "setup-rstudio-server",                     "scibrokes",  "setup-rstudio-server",                    "DigitalOcean 上 RStudio Server 完整部署指南",
+  "owner（个人档案展示）",                      "scibrokes",  "owner",                                   "多语言 Shiny 应用（中简 / 繁 / 英 / 日 / 韩 / 德 / 法 / 意）",
+  "RedFlag-Linux",                            "englianhu",  "RedFlag-Linux",                           "中科红旗 Linux 操作系统研究与中文化探索"
+)
+n_projects <- nrow(projects)
+
+## ── 学术社区：只存裸网址，渲染时由 lnk() 包装 ──────────────────────
+communities <- tribble(
+  ~平台,             ~url,                                                                    ~活跃方式,
+  "GitHub（个人）",  "https://github.com/englianhu",                                          "开源代码、研究仓库、Issue 讨论",
+  "GitHub（世博量化）","https://github.com/scibrokes",                                         "企业级量化研究仓库",
+  "Gitee",           "https://gitee.com/englianhu",                                           "国内镜像仓库",
+  "RPubs",           "https://rpubs.com/englianhu",                                           "R Markdown 研究报告发布",
+  "ResearchGate",    "https://www.researchgate.net/profile/lianfu-yingjiahuangshijiangxiatang","论文发表与引用追踪",
+  "WordPress 博客",  "https://englianhu.wordpress.com",                                       "量化研究随笔",
+  "世博量化官网",     "https://www.scibrokes.com",                                             "企业主页",
+  "统计之都（COS）",  "https://d.cosx.org",                                                    "中文 R 语言与统计学社区",
+  "经管之家",        "https://bbs.pinggu.org/forum-69-1.html",                                 "计量经济学 / R 语言版块",
+  "Stack Overflow",  "https://stackoverflow.com",                                             "R / Shiny 技术问答",
+  "Kaggle",          "https://www.kaggle.com",                                                "机器学习竞赛与数据集"
+)
+n_comm <- nrow(communities)
+
+## ── 来源 PDF 之截断清单（附录现算，不硬编码件数）──────────────────
+gaps <- tribble(
+  ~章节,        ~`已补回之全句（原 PDF 于此处裁切）`,
+  "§2 专业摘要", "完成以约翰斯·霍普金斯大学",
+  "§2 专业摘要", "贝叶斯混合模型与强化学习",
+  "§5.1 世博量化","集成对冲基金基准比较",
+  "§5.2 阿里彩票","将量化思维迁移至营销",
+  "§5.3 贵族酒店","结合数据分析手段提升风控决策效率 / 效能",
+  "§5.5 施乐",   "识别潜在的市场操纵与异常交易行为",
+  "§5.8 立博",   "奠定完整的第一手数据基础。晋升为分析",
+  "§5.9 新宝皇冠","同时担任新员工培训 / 交易员",
+  "§5.11 赫萨贸易","对交易风险进行前置识别与管控",
+  "§6.1.1 赔率研究","GJR-GARCH 模型捕捉赔率波动的非对称效应，Markov Chain 滚动回测",
+  "§6.1.2 Kelly","系统实证、验证动态加权",
+  "§6.1.4 文化城","列举 9 类策略而正文称 11 种，缺 2 类策略名"
+)
+n_gaps <- nrow(gaps)
+
+## ── 转录差异登记：凡本档与来源 PDF 不逐字相同者，一律列此 ──────────
+deviations <- tribble(
+  ~章节,          ~来源PDF原文,                    ~本档,                              ~缘由,
+  "全档 / 页眉",   "黄联富（雷欧 ∪ 瑞欧）",           "黄联富（params$display_name）",     "称谓铁律；改 YAML 一行即还原",
+  "§2 专业摘要",   "拥有逾 20 年",                  "拥有逾 `r career_years` 年",        "禁硬编码；由 jobs 表最早起始日现算",
+  "§2 专业摘要",   "（无）",                        "（自 …起算，历经 … 家机构）",         "新增括注，由资料现算；如不需可删",
+  "§4.1 学历",     "Mixture Mod- els",             "Mixture Models",                   "修来源 PDF 之断词错误",
+  "§5.1 世博量化", "（fract Kelly）",               "（fractional Kelly）",              "补全被裁之词；属推定，请复核",
+  "§5.4 万华媒体", "目录作「私人有限公司」正文作「有限公司」", "私人有限公司",                "两处不一致，采目录版；请裁定",
+  "§5.8 立博",     "整段连写",                      "拆为三条项目符号",                   "仅版式，字未改"
+)
+n_dev <- nrow(deviations)
+```
+
+# `r params$display_name` · 量化数据科学家 · 个人简历 {#sec-head}
+
+**赢家黄氏江夏堂 ®γσ ξηg Lian Hu，黄联富**
+
+**`r params$org` · 创办人**
+
+## 联系方式
+
+- `r params$city`
+- **GitHub（个人）**：<https://github.com/englianhu>
+- **GitHub（世博量化）**：<https://github.com/scibrokes>
+- **Gitee**：<https://gitee.com/englianhu>
+- **RPubs**：<https://rpubs.com/englianhu>
+- **ResearchGate**：<https://www.researchgate.net/profile/lianfu-yingjiahuangshijiangxiatang>
+- **WordPress 博客**：<https://englianhu.wordpress.com>
+- **世博量化官网**：<https://www.scibrokes.com>
+
+# 专业摘要 {#sec-summary}
+
+拥有逾 **`r career_years`** 年横跨金融量化分析、iGaming 市场预测建模与 AI 驱动应用开发的复合型经验（自 `r format(career_start, "%Y 年 %m 月")` 起算，历经 `r n_employers` 家机构）。完成以约翰斯·霍普金斯大学。
+
+现为 `r params$org` 创办人，独立研发基于 GARCH 族模型、隐马尔科夫模型（HMM）、贝叶斯混合模型与强化学习的全自动中频外汇交易系统。
+
+在 iGaming 领域以量化方法对 40 家博彩公司赔率市场进行实证研究，成果发表于 ResearchGate（DOI: [`r params$doi`](https://doi.org/`r params$doi`)），累计阅读逾千次。精通中英日三语技术写作，长期活跃于 GitHub、RPubs、统计之都、经管之家等开源学术平台。
+
+# 核心技能与专业工具 {#sec-skills}
+
+## 人工智能与机器学习算法
+
+```{r skills-tbl}
+tbl(skills_ai)
+```
+
+## 数据科学工具链
+
+**R 语言（主力）**：rugarch · depmixS4 · torch · keras3 · kernlab · PerformanceAnalytics · PortfolioAnalytics · tidyquant · quantmod / TTR · FactorAnalytics · IBrokers API · Shiny · Plumber · bslib · R Markdown · bookdown · DT · plotly
+
+**Python**：pandas · numpy · scikit-learn（Michigan / DataCamp 认证基础）
+
+**基础设施**：DigitalOcean VPS · Linux 基础运维 · Nginx 反向代理 · PostgreSQL · Redis · Oracle Cloud Always Free · shinyapps.io
+
+**AI 工具**：Claude API · ChatGPT API · Prompt Engineering · Google Analytics（认证）
+
+## 语言能力
+
+中文（简体 / 繁体）母语 ｜ 英文专业工作级 ｜ 日文工作沟通级（JLPT 认证）｜ 马来语基础
+
+# 认证与学历 {#sec-edu}
+
+## 学历
+
+```{r edu-tbl}
+tbl(edu)
+```
+
+## 量化金融专业认证
+
+所有证书原件存档于仓库 `博物院/` 文件夹，可供核查。合计 **`r n_certs`** 项。
+
+```{r certs-tbl}
+tbl(certs)
+```
+
+# 工作经历 {#sec-work}
+
+```{r work-overview}
+jobs |>
+  transmute(
+    `#`    = seq,
+    机构   = org,
+    职位   = role,
+    起     = start,
+    迄     = ifelse(is.na(end), "迄今", end),
+    地点   = ifelse(place == "", "—", place)
+  ) |>
+  tbl(caption = sprintf("工作经历总览（%d 家机构，%s 起算）",
+                        n_employers, format(career_start, "%Y-%m")))
+```
+
+## 完美真人
+
+**职位**：数据分析专员 ｜ **时间**：2020 年 10 月 — 迄今 ｜ **地点**：2016 年 07 月 — 迄今 | **地点**：格鲁吉亚，巴统，戈尼奥
+
+通过StarRocks、Superset、DolphinScheduler互相搭配的后端，编写SQL语言来分析数据库内所有数据表各维度灵活搭配。从清洗数据、挖掘数据、分析数据，分类会员、荷官、代理、风控人员四大实的画像、特征，并输出许多关键指标。
+
+## **职位**：客服专员 | **时间**：2026 年 03 月 — 2026 年 06 月 | **地点**：马来西亚，巴生河流域，阿拉白沙罗
+
+美国上市公司斯达克专业客服外包公司旗下的新加坡星和电信项目，接待新加坡客户从客服、技术支援、新购或迁移、账目、行动电话与行动电话号码服务、家用光纤/宽带/宽频配套。
+
+## 世博量化® / Scibrokes Trading®
+
+**职位**：创办人 ∩ 量化科技工程师 ｜ **时间**：2020 年 10 月 — 迄今 ｜ **地点**：马来西亚，雪兰莪州，峇东新村
+
+基于约翰斯·霍普金斯大学数据科学专项所学的系统性方法论，独立研发外汇中频量化交易框架，覆盖 8 大货币对。
+
+- **波动率建模**：GJR-GARCH（非对称波动率捕捉）作为最优拟合模型，参照 NYU Stern vLab 学术标准，使用 `rugarch` 包进行滚动窗口估计，严格规避前视偏差（Look-ahead Bias）。
+- **市场状态识别**：结合北京大学隐马尔科夫模型课程所学，使用 `depmixS4` 实现多状态 HMM，识别趋势 / 震荡 / 高波动三类市场机制并动态切换策略。
+- **仓位管理**：滚动 Kelly Criterion 仓位估计器，引入 DCC-GARCH 多变量协方差矩阵，配合仓位上限约束（fractional Kelly），将理论最优仓位转化为风险可控的执行策略。
+- **深度学习集成**：基于 JHU Practical Machine Learning 与 NYU 强化学习认证，构建 `torch` Transformer 与 `keras3` LSTM-Attention 双引擎时序预测模块。
+- **AI 数据产品**：构建量化研究平台（<https://github.com/englianhu>）—— R Shiny 多模块应用，集成对冲基金基准比较、K 线图、配对交易管道、ML 集成模型与 CAS（CVaR-Adjusted Sortino Rate）风险仪表盘，通过 DigitalOcean VPS 自主部署，配合 Nginx 反向代理实现公网访问。
+
+## 阿里彩票
+
+**职位**：推广人员 ∩ 数据分析师 ｜ **时间**：2019 年 11 月 — 2020 年 7 月 ｜ **地点**：菲律宾，克拉克，太阳城
+
+运用数据分析方法辅助推广策略制定，结合用户行为数据进行投放效果评估与 ROI 优化，将量化思维迁移至营销。
+
+## 贵族酒店
+
+**职位**：客服人员 ∩ 风控专员 ｜ **时间**：2017 年 11 月 — 2018 年 5 月 ｜ **地点**：柬埔寨，西哈努克港
+
+在客服职能之外兼任风险控制专员，负责识别异常交易行为与用户风险评级，结合数据分析手段提升风控决策效率/效能。
+
+## 万华媒体（马）私人有限公司
+
+**职位**：客服人员 ∩ 业务员 ｜ **时间**：2015 年 5 月 — 2015 年 9 月 ｜ **地点**：马来西亚，巴生河流域，疏邦
+
+承担客户服务与业务拓展双重职能，积累了跨职能协作与客户关系管理的实战经验。
+
+## 施乐
+
+**职位**：交易审查员 / 风控专员 ｜ **时间**：2015 年 2 月 — 2015 年 4 月 ｜ **地点**：马来西亚，巴生河流域，孟沙
+
+专责交易数据审查与风险合规核查，运用数据分析方法对交易模式进行系统性监控，识别潜在的市场操纵与异常交易行为。
+
+## 富士全录
+
+**职位**：客服人员 ∩ 技术支援 ｜ **时间**：2014 年 3 月 — 2014 年 4 月 ｜ **地点**：马来西亚，巴生河流域，八达岭在野
+
+在客服岗位兼任技术支援，处理系统故障排查与用户技术问题，积累了一线技术运营经验。
+
+## 资信利
+
+**职位**：客服人员 ∩ 技术支援 ｜ **时间**：2013 年 10 月 — 2013 年 11 月 ｜ **地点**：马来西亚，巴生河流域，孟沙
+
+在客服岗位兼任技术支援，处理系统故障排查与用户技术问题，积累了一线技术运营经验。
+
+## 立博博彩公司（Ladbrokes）
+
+**职位**：客服人员 ∩ 客服主管 ｜ **时间**：2008 年 3 月 — 2012 年 7 月 ｜ **地点**：马来西亚，雪兰莪州，赛博在野
+
+在 iGaming 行业积累第一手赔率数据处理与玩家行为分析经验，直接支撑后续独立量化建模研究：
+
+- 处理 40 家博彩公司亚盘、大小球赔率数据（含开盘价至收盘价完整走势），建立结构化数据管道；
+- 自主引入 R 语言进行赔率走势统计分析与用户投注行为模式识别；
+- 构建初步的市场无效性量化检测框架，为 Dixon-Coles 双泊松模型的实证研究（DOI: [`r params$doi`](https://doi.org/`r params$doi`)）奠定完整的第一手数据基础。
+
+## 新宝皇冠（iGaming / 体育博彩）
+
+**职位**：数据分析师 ∩ 培训师 ∩ 操盘手 / 交易员 ｜ **时间**：2006 年 7 月 — 2007 年 6 月 ｜ **地点**：菲律宾，马尼拉，马卡蒂市
+
+以 Excel 为主要工具进行赔率数据分析与投注策略建模（量化研究生涯的早期奠基阶段），同时担任新员工培训、操盘交易、交易员执行日内博彩交易决策。
+
+## 特里必斯（iGaming / 体育博彩）
+
+**职位**：数据分析师 ∩ 队长 ∩ 资深操盘手 / 交易员 ｜ **时间**：2005 年 11 月 — 2006 年 7 月 ｜ **地点**：马来西亚，雪兰莪州，赛博在野
+
+晋升为团队队长，负责带领交易小组制定并执行量化投注策略；以数据分析方法系统性评估赔率市场无效性，为 Dixon-Coles 学术研究积累了第一手的实战认知。
+
+## 赫萨贸易（外汇）
+
+**职位**：操盘手 / 交易员 ∩ 代理 ∩ 业务员 ∩ 风控专员 ｜ **时间**：2005 年 7 月 — 2005 年 10 月 ｜ **地点**：马来西亚，巴生河流域，旧古仔路
+
+职业生涯入场阶段，同时承担四项职能：执行交易指令、开发代理网络、拓展业务客户、以及对交易风险进行前，这段高强度的多角色经历奠定了日后量化风控与数据分析能力的实践基础。
+
+# 科研成果与出版 {#sec-research}
+
+## 已发表研究
+
+### Odds Modelling and Testing Inefficiency of Sports Bookmakers
+
+**发表平台**：ResearchGate ｜ **DOI**：<https://doi.org/`r params$doi`> ｜ **年份**：2016–2018 ｜ **入选**：RStudio Bookdown Contest 2018 ｜ **累计阅读**：1,157 次
+
+应用 Karlis & Ntzoufras（2005）对角膨胀双泊松回归模型，结合 Dixon & Coles（1996）加权函数，对 40 家博彩公司的亚盘 / 大小球赔率进行系统性市场无效性检验。GJR-GARCH 模型捕捉赔率波动的非对称效应，Markov Chain 滚动回测覆盖 4 个完整足球赛季，Kelly Criterion 投注策略在 13 家庄家数据上验证，2011–2013 赛季合计净利润超 800 美元，胜率维持 31%–33%。
+
+### Application of Kelly Criterion Model in Sportsbook Investment
+
+**发表平台**：RPubs（<https://rpubs.com/englianhu>）｜ **年份**：2014–2016
+
+系统实证静态 Kelly、分数 Kelly 与动态加权 Kelly 三种仓位管理策略在 13 家博彩公司数据上的差异表现，验证动态加权，Kelly 在长期复利增长上的优越性，为外汇交易仓位管理框架提供方法论基础。
+
+### 外汇 GARCH 模型系列研究
+
+**发表平台**：RPubs / GitHub: englianhu ｜ **年份**：2015 – 至今
+
+系列研究涵盖 ARIMA(p,d,q) 参数最优化、GJR-GARCH 非对称波动率建模（binary.com 面试试题系列）、日内 ETS 回测等，逐步形成完整的外汇量化研究方法论体系。
+
+### 量化文化城策略体系（峇东新村诸子百家量化文化城）
+
+**载体**：JSX 仿真平台 + R Shiny ｜ **年份**：2024–2025
+
+系统梳理 11 种量化策略类型（多因子、事件驱动、市场中性、CTA、套利、期货、期权、固定收益、HFT 类，以 Piotroski F-Score 为核心的基本面量化选股方法应对 A 股 IPO 注册制改革带来的规模化选股挑战。
+
+## 开源项目
+
+```{r projects-tbl}
+projects |>
+  mutate(`GitHub 仓库` = lnk(gh(owner, repo), paste0(owner, "/", repo))) |>
+  select(项目名称, `GitHub 仓库`, 研究方向) |>
+  tbl(caption = sprintf("开源项目（%d 项，网址由 owner/repo 现算）", n_projects))
+```
+
+# 学术社区与开源平台 {#sec-community}
+
+```{r community-tbl}
+communities |>
+  mutate(链接 = lnk(url)) |>
+  select(平台, 链接, 活跃方式) |>
+  tbl(caption = sprintf("学术社区与开源平台（%d 处）", n_comm))
+```
+
+---
+
+::: {style="text-align:center; font-size:0.85em;"}
+© `r format(Sys.Date(), "%Y")` 赢家黄氏江夏堂 ®γσ ξηg Lian Hu，黄联富 ｜ `r params$org` ｜
+企业知识产权® 及版权® 所有，盗版必究 ｜ `r params$city`
+:::

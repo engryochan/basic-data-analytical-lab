@@ -1,1 +1,0 @@
-{"frames":[{"func":"自动识别可用模型(日度汇总, \"日度汇总\")","file":"","line_number":0,"end_line_number":0,"character_number":0,"end_character_number":0}],"message":"错误于类别型栏位[sapply(类别型栏位, function(f) uniqueN(dt[[f]]) > : \n  类别为'list'的下标无效\n"}

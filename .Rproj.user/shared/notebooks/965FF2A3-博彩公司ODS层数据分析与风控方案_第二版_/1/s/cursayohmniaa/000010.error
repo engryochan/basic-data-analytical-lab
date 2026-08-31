@@ -1,1 +1,0 @@
-{"frames":[{"func":"stop(\"既没有数据库连线，本地'数据库/'资料夹里也找不到批次CSV文件。\",\n         \"请按0.1节设置conf/env取得连线，或确认批次CSV已放进\",\n         \"'数据库/'资料夹后再重新执行。\")","file":"","line_number":66,"end_line_number":68,"character_number":5,"end_character_number":28}],"message":"错误: 既没有数据库连线，本地'数据库/'资料夹里也找不到批次CSV文件。请按0.1节设置conf/env取得连线，或确认批次CSV已放进'数据库/'资料夹后再重新执行。\n"}

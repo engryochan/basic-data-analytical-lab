@@ -1,1 +1,0 @@
-{"frames":[{"func":"stop(\"请选择以下任一方式后再回来执行本节：(a) 用上面印出的SQL手动导出，\",\n       \"存成'候选明细...第N批.csv'放进'数据库/'资料夹；\",\n       \"(b) 按0.1节说明设置好conf/env并取得连线权限。\")","file":"","line_number":85,"end_line_number":87,"character_number":3,"end_character_number":40}],"message":"错误: 请选择以下任一方式后再回来执行本节：(a) 用上面印出的SQL手动导出，存成'候选明细...第N批.csv'放进'数据库/'资料夹；(b) 按0.1节说明设置好conf/env并取得连线权限。\n"}
