@@ -1,0 +1,130 @@
+件号,CSV名称,六层族别,血统判定,类别,理由／用途
+001,A_anchor.csv,x_agg,血统 · 可入册,,
+002,B01_bt_panel.csv,x_agg,血统 · 可入册,,
+003,B01_bt_panel_delta.csv,x_agg,血统 · 可入册,,
+004,B4_2b_funnel_and_mu0.csv,x_win(D-14 族),非血统 · 排除,诊断,漏斗与 mu0
+005,B4_5b_tip_nature.csv,x_agg,非血统 · 排除,诊断,小费性质
+006,B_online_base.csv,x_agg,血统 · 可入册,,
+007,C01_ip_chain.csv,x_agg,血统 · 可入册,,
+008,C06_hedge_pairs.csv,x_agg,血统 · 可入册,,
+009,C06d_hedge_pairs_dated.csv,x_agg,血统 · 可入册,,
+010,C08_subnet_all.csv,x_win(D-14 族),血统 · 可入册,,
+011,C08_subnet_sparse.csv,x_win(D-14 族),血统 · 可入册,,
+012,D03S_daily_roi_diff.csv,x_agg,血统 · 可入册,,
+013,DICT_01a_bet41_tri.csv,x_win(D-14 族),非血统 · 排除,字典,bet41 三态
+014,DICT_01b_roundkey_card.csv,x_win(D-14 族),非血统 · 排除,字典,round_key 基数
+015,DICT_01c_dimension.csv,x_win(D-14 族),非血统 · 排除,字典,维度字典
+016,DICT_01d_bet_latency.csv,x_agg,非血统 · 排除,字典,下注延迟字典
+017,DX04_bet09_profile.csv,x_agg,血统 · 可入册,,
+018,DX05_product_panorama.csv,x_agg,血统 · 可入册,,
+019,E02_segment_econ.csv,x_win(D-14 族),血统 · 可入册,,
+020,EV01_disposal_events.csv,x_agg,血统 · 可入册,,
+021,EV02_member_disposal.csv,x_agg,血统 · 可入册,,
+022,I_ip_agg.csv,x_agg,血统 · 可入册,,
+023,I_ip_player.csv,x_agg,血统 · 可入册,,
+024,K01_risk_feature_matrix.csv,x_agg,血统 · 可入册,,
+025,K01b_seed_goldip.csv,x_agg,非血统 · 排除,已证伪·空输出,金 IP 白名单三年零命中，已证伪；本轮输出 0 行
+026,K01b_seed_manual.csv,x_agg,血统 · 可入册,,
+027,K01c_seed_dated.csv,x_agg,血统 · 可入册,,
+028,L_label_dist.csv,x_win(D-14 族),非血统 · 排除,标签诊断,标签分布
+029,P01A_crosstab.csv,x_win(D-14 族),非血统 · 排除,标签诊断,交叉表
+030,P01B_diff_ratio.csv,x_win(D-14 族),非血统 · 排除,标签诊断,差异比
+031,P01C_split_by_dim.csv,x_win(D-14 族),非血统 · 排除,标签诊断,按维切分
+032,P01D_vs_validbet.csv,x_win(D-14 族),非血统 · 排除,标签诊断,对 validbet
+033,P01E_identity_test.csv,x_win(D-14 族),非血统 · 排除,标签诊断,恒等式检验
+034,P02A_lmc_samples.csv,x_win(D-14 族),非血统 · 排除,标签诊断,lmc 样本
+035,P02B_changestatus_patterns.csv,x_win(D-14 族),非血统 · 排除,标签诊断,变更状态型态
+036,P02C_key_check.csv,x_win(D-14 族),非血统 · 排除,标签诊断,键检查
+037,P02D_events_in_window.csv,x_win(D-14 族),非血统 · 排除,标签诊断,窗内事件
+038,P0C02_标签口径.csv,x_win(D-14 族),非血统 · 排除,标签诊断,标签口径
+039,P0C03_标记次数分布.csv,x_win(D-14 族),非血统 · 排除,标签诊断,标记次数分布
+040,P0C04_同日泄漏检验.csv,x_win(D-14 族),非血统 · 排除,标签诊断,同日泄漏检验
+041,P0C05_标记时点定位.csv,x_win(D-14 族),非血统 · 排除,标签诊断,标记时点定位
+042,P0C06_LabelB骨架.csv,x_win(D-14 族),非血统 · 排除,标签诊断,LabelB 骨架
+043,P0C09_安慰剂检验.csv,x_win(D-14 族),非血统 · 排除,标签诊断,安慰剂检验
+044,P11_阿泽尾段投注总帐.csv,x_win(D-14 族),非血统 · 排除,个人模型,阿泽尾段投注模型 —— 个人研究模型，非公司血统；且尾段假说已四检证伪（T-03 FATAL）
+045,P11_阿泽尾段投注模型会员名单.csv,x_agg,非血统 · 排除,个人模型,阿泽尾段投注模型会员名单 —— 同上
+046,P11_雷欧尾段投注总帐.csv,x_win(D-14 族),非血统 · 排除,个人模型,雷欧尾段投注模型 —— 个人研究模型，非公司血统
+047,P12a_platform_daily.csv,x_agg,血统 · 可入册,,
+048,P12b_member_events.csv,x_agg,血统 · 可入册,,
+049,P12c_member_daily_pnl.csv,x_agg,血统 · 可入册,,
+050,P13_personal_entry.csv,x_agg,血统 · 可入册,,
+051,PH0_8r1_rg_case.csv,x_agg,血统 · 可入册,,
+052,PH0_8r2_rg_crosstable.csv,x_win(D-14 族),血统 · 可入册,,
+053,PI01_treatment_delta_member.csv,x_agg,血统 · 可入册,,
+054,PI02_treatment_delta_platform.csv,x_win(D-14 族),血统 · 可入册,,
+055,PI03_reinvest_loop.csv,x_win(D-14 族),血统 · 可入册,,
+056,PI04_member_5d_profile.csv,x_agg,血统 · 可入册,,
+057,P_player_month.csv,x_agg,血统 · 可入册,,
+058,QSB_01a_category_census.csv,x_win(D-14 族),非血统 · 排除,数据质量,类别普查
+059,QSB_01c_cat1_contamination.csv,x_agg,血统 · 可入册,,
+060,QSB_02a_lowcard_fields.csv,x_win(D-14 族),非血统 · 排除,数据质量,低基数字段
+061,QSB_02b2_lowcard_five_gates.csv,x_win(D-14 族),非血统 · 排除,数据质量,低基数五闸
+062,QSB_02b_state_cross.csv,x_win(D-14 族),非血统 · 排除,数据质量,状态交叉
+063,QSB_02c_push_by_family.csv,x_win(D-14 族),非血统 · 排除,数据质量,按族推送
+064,R01_late_shoe.csv,x_agg,血统 · 可入册,,靴尾（已证伪，仅画像）
+065,R01_late_shoe_w2.csv,x_agg,血统 · 可入册,,靴尾（已证伪，仅画像）
+066,R01anm_shoe_anomaly.csv,x_agg,血统 · 可入册,,
+067,R01chk_shoe_len_by_table.csv,x_agg,血统 · 可入册,,
+068,R01inv_shoe_len_census.csv,x_win(D-14 族),非血统 · 排除,诊断,靴长普查
+069,R02_same_table.csv,x_agg,血统 · 可入册,,
+070,R03_player_dealer.csv,x_agg,血统 · 可入册,,
+071,R03b_player_dealer_daily.csv,x_agg,血统 · 可入册,,
+072,R03chk_settlement_form.csv,x_agg,血统 · 可入册,,
+073,R03inv_pair_census.csv,x_win(D-14 族),血统 · 可入册,,
+074,R_rebate_dist.csv,x_win(D-14 族),血统 · 可入册,,
+075,S01_player_score.csv,x_agg,血统 · 可入册,,
+076,S02_dealer_score.csv,x_agg,血统 · 可入册,,
+077,S02b_dealer_pace.csv,x_agg,血统 · 可入册,,
+078,S03_agent_score.csv,x_win(D-14 族),血统 · 可入册,,
+079,S04_analyst_score.csv,x_agg,血统 · 可入册,,
+080,S05_member_month_panel.csv,x_agg,血统 · 可入册,,
+081,S_player_tail.csv,x_agg,血统 · 可入册,,
+082,S_second_dist.csv,x_agg,血统 · 可入册,,
+083,T02_daily_roi.csv,x_agg,血统 · 可入册,,
+084,T03_arbitrage.csv,x_agg,血统 · 可入册,,
+085,TL00_table_inventory.csv,x_win(D-14 族),非血统 · 排除,元数据,桌台清单
+086,TL02_config_change.csv,x_win(D-14 族),非血统 · 排除,配置,限红配置变更
+087,TL03_pseudo_treatment.csv,x_agg,非血统 · 排除,空输出,伪处置组，本轮输出 0 行
+088,TL03b_pseudo_treatment.csv,x_agg,血统 · 可入册,,
+089,TL04_log_schema.csv,x_win(D-14 族),非血统 · 排除,元数据,日志 schema
+090,TL06_log_mem_change.csv,x_agg,血统 · 可入册,,
+091,TL07_mem_change_shape.csv,x_win(D-14 族),非血统 · 排除,配置,mem_change 形态
+092,TL08_treatment_events.csv,x_agg,血统 · 可入册,,
+093,TL09_member_schema.csv,x_win(D-14 族),非血统 · 排除,元数据,会员表 schema
+094,TL10_treatment_ledger.csv,x_agg,血统 · 可入册,,
+095,TL11_treatment_episode.csv,x_agg,血统 · 可入册,,
+096,TL11c_population_reconcile.csv,x_win(D-14 族),非血统 · 排除,配置,人口对账
+097,TL14_limit_treatment.csv,x_agg,血统 · 可入册,,
+098,T_table_span.csv,x_agg,血统 · 可入册,,
+099,VB_00_validbet_contract.csv,x_win(D-14 族),非血统 · 排除,账目对账,validbet 契约验证
+100,VB_00b_zero_five_rates.csv,x_win(D-14 族),非血统 · 排除,账目对账,零/五费率验证
+101,VB_41_identity_global.csv,x_win(D-14 族),非血统 · 排除,账目对账,bet41 恒等式全局
+102,VB_41b_identity_strata.csv,x_agg,非血统 · 排除,账目对账,恒等式分层
+103,VB_41b_identity_strata_v18b.csv,x_agg,非血统 · 排除,账目对账,恒等式分层 v18b
+104,VB_41c1_964_detail.csv,x_agg,非血统 · 排除,账目对账,964 明细
+105,VB_41c2_concentration.csv,x_win(D-14 族),非血统 · 排除,账目对账,集中度
+106,VB_41c2_concentration_v2.csv,x_win(D-14 族),非血统 · 排除,账目对账,集中度 v2
+107,V_ipmatch.csv,x_agg,血统 · 可入册,,
+108,V_recon.csv,x_win(D-14 族),非血统 · 排除,账目对账,V_recon 账务对账 —— 属内控轴（T-10），不入会员赏罚
+109,V_table_counts.csv,x_win(D-14 族),非血统 · 排除,账目对账,表计数核对
+110,X_combo.csv,x_win(D-14 族),血统 · 可入册,,
+111,Z01_table_inventory.csv,x_win(D-14 族),非血统 · 排除,元数据,表清单
+112,Z02_excluded_tables.csv,x_win(D-14 族),非血统 · 排除,元数据,排除表清单
+113,Z03_column_dictionary.csv,x_win(D-14 族),非血统 · 排除,元数据,列字典
+114,Z04_name_collision.csv,x_win(D-14 族),非血统 · 排除,元数据,同名异义
+115,Z05_missing_typehint.csv,x_win(D-14 族),非血统 · 排除,元数据,缺型别提示
+116,Z06_generated_probe_sql.csv,x_win(D-14 族),非血统 · 排除,探针,生成式探针 SQL
+117,Z07_probe_bet02.csv,x_win(D-14 族),非血统 · 排除,探针,bet02 探针
+118,Z08_roundkey_integrity.csv,x_win(D-14 族),非血统 · 排除,探针,round_key 完整性
+119,Z09_time_axis_recon.csv,x_win(D-14 族),非血统 · 排除,探针,时间轴对账
+120,Z11_sentinel_impact.csv,x_win(D-14 族),非血统 · 排除,探针,哨兵值影响
+121,Z14_zero_month_diagnosis.csv,x_agg,非血统 · 排除,探针,零月诊断
+122,_P12b-pre.csv,x_agg,非血统 · 排除,探针,_P12b 前置
+123,_PH0_1b_table_inventory.csv,x_win(D-14 族),非血统 · 排除,前置盘点,表清单
+124,_PH0_2b_column_inventory.csv,x_win(D-14 族),非血统 · 排除,前置盘点,列清单
+125,_PH0_3_lmc_category.csv,x_win(D-14 族),非血统 · 排除,前置盘点,lmc 类别
+126,_PH0_4L1_member_columns.csv,x_win(D-14 族),非血统 · 排除,前置盘点,会员列
+127,_PH0_4b_rg_keyword.csv,x_win(D-14 族),非血统 · 排除,前置盘点,RG 关键词
+128,_PH0_4w2_balance_points.csv,x_win(D-14 族),非血统 · 排除,前置盘点,余额点
+129,_PH0_6b_member_daily.csv,x_agg,非血统 · 排除,前置盘点,会员日表
