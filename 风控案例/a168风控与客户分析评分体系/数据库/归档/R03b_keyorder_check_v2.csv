@@ -1,2 +1,0 @@
-﻿n_rows,n_distinct_K3,duplicate_K3_n,n_distinct_K4,duplicate_K4_n,verdict
-18139550,18139550,0,18139550,0,K3 与 K4 皆唯一（惟唯一性 ≠ 跨次导出稳定，仍须 Run A/B + CC-03）

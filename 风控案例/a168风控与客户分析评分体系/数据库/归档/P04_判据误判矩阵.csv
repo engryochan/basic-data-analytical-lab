@@ -1,5 +1,0 @@
-﻿matrix_def,shoe_len_def,cell,n_rows,rows_pct,n_members,stake_sum,stake_pct,pnl_sum,pnl_pct
-abs=bet04>=40 vs rel=rno/MAX(round_no)>=0.80,MAX(round_no) 观测口径（非真实靴长，V01 限界）,1_绝对是相对是,26011286,20.8568,393970,2673332734.22,19.8967,-46362425.27,19.8001
-abs=bet04>=40 vs rel=rno/MAX(round_no)>=0.80,MAX(round_no) 观测口径（非真实靴长，V01 限界）,2_绝对是相对否,2044003,1.6390,140325,216500933.79,1.6113,-3825211.82,1.6336
-abs=bet04>=40 vs rel=rno/MAX(round_no)>=0.80,MAX(round_no) 观测口径（非真实靴长，V01 限界）,3_绝对否相对是,2444176,1.9598,160094,252060436.99,1.8760,-6442549.00,2.7514
-abs=bet04>=40 vs rel=rno/MAX(round_no)>=0.80,MAX(round_no) 观测口径（非真实靴长，V01 限界）,4_绝对否相对否,94214078,75.5444,656918,10294199368.34,76.6160,-177522771.01,75.8149

@@ -1,0 +1,14 @@
+﻿treatment_id,name,intent,intensity_levels,treatment_evidence_status,ledger_source,n_treated,n_control,mde_sigma,cost_per_unit,multiplicity_control,economic_path_status,blocked_until
+T0,CONTINUE,不干预,L0,OBSERVED_CONTROL,"PI02 未处置 723,256",,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T1,PROTECT,VIP／留存／提高服务,L1-L2,PROSPECTIVE_ONLY,零记录,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T2,MONITOR,加强观察不限制,L1,OBSERVATIONAL_ONLY,K01b/K01c 125 人（2022，窗外）,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T3,LIMIT,温和限额／降暴露,L1-L4,OBSERVED_LEDGER,★唯一完备：TL14 568 行 · TL11 315 节；方向仅 TIGHTEN，无 LOOSEN 样本,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T4,REVIEW,人工复核,L2,OBSERVATIONAL_ONLY,S04 n=6，无判别力,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T5,RESTRUCTURE,改代理／佣金／账户结构,L2-L3,OBSERVATIONAL_ONLY,"TL02 mem003 70,923（1.24%）",,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T6,GROW_RECRUIT,转推广员／代理,L1,PROSPECTIVE_ONLY,零处置记录；须先建 member_to_agent_conversion 表,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T7,REACTIVATE,误伤／沉默人群唤回,L1,PROSPECTIVE_ONLY,零记录,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T8,RECOVERY,已降会员重新营销,L1-L2,PROSPECTIVE_ONLY,零记录,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T9,SEPARATE,关系隔离（会员—荷官／代理），不罚整体,L2-L3,PROSPECTIVE_ONLY,零记录；待 R03b,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T10,ESCALATE,高级人工复核,L3-L4,PROSPECTIVE_ONLY,零记录,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T11,PRICE_POLICY,★政策杠杆：调退水率／对冲流水计入规则,L1-L3,OBSERVED_CONFIG,R_rebate_dist 37 档 · P01B 退水率 0.30~1.00%（中位 0.80%）vs 解析线 1.1465%,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED
+T12,PRODUCT_POLICY,★政策杠杆：按注型调整,L1-L3,OBSERVED_CONFIG,QSB_02c 六族 mu0：F1 -1.594% … F6 -22.439%，极差 14.08×,,,,BLOCKED(F-26 / mcid_cost_anchor_status),NONE,NOT_ESTABLISHED,treatment_status.S3 AND S4 == CLOSED

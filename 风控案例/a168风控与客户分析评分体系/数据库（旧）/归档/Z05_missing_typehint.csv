@@ -1,0 +1,1309 @@
+﻿表名,列序,列名,存储类型,原始注释,状态
+ods_a168_RedPacketSetup,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_RedPacketSetup_setting,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_RedPacket_No,3,id,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_RedPacket_Order,3,id,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_RedPacket_Order,4,mid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_RedPacket_Order,6,currency,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_RedPacket_Order,7,rate,varchar,"source_type=decimal(8,4); ",🟠 有类型无含义
+ods_a168_RedPacket_Order,10,lv1percent,varchar,"source_type=decimal(16,4); ",🟠 有类型无含义
+ods_a168_RedPacket_Order,11,lv2percent,varchar,"source_type=decimal(16,4); ",🟠 有类型无含义
+ods_a168_RedPacket_Order,12,lv3percent,varchar,"source_type=decimal(16,4); ",🟠 有类型无含义
+ods_a168_RedPacket_Order,13,lv4percent,varchar,"source_type=decimal(16,4); ",🟠 有类型无含义
+ods_a168_RedPacket_Order,14,lv5percent,varchar,"source_type=decimal(16,4); ",🟠 有类型无含义
+ods_a168_SMR_log,3,sn,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_SMR_log,4,bet02,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_SMR_log,5,bet03,varchar,"source_type=decimal(12,0); ",🟠 有类型无含义
+ods_a168_SMR_log,6,bet04,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_SMR_log,7,bet22,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_SMR_log,8,category,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_SMR_log,9,receivetime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_agent,4,age002,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_agent,5,age003,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_agent,6,age004,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_agent,7,age005,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_agent,8,age006,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent,9,age007,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent,10,age008,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent,11,age009,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent,12,age010,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent,13,age011,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent,14,age012,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_agent,15,age013,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_agent,19,age017,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent,20,age018,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent,25,age023,varchar,source_type=char(1); ,🟠 有类型无含义
+ods_a168_agent,27,credit,varchar,"source_type=decimal(15,4); ",🟠 有类型无含义
+ods_a168_agent,28,cash,varchar,"source_type=decimal(15,4); ",🟠 有类型无含义
+ods_a168_agent,29,type,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent,30,currency,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent,31,tip,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent,33,prefix_add,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent,38,opengame,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_agent,39,site,varchar,source_type=varchar(60); ,🟠 有类型无含义
+ods_a168_agent,45,chkKey,varchar,source_type=varchar(100); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,4,age002,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,5,age003,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,6,age004,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,7,age005,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_agent_bak20250610,8,age006,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,9,age007,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,10,age008,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,11,age009,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,12,age010,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,13,age011,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,14,age012,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_agent_bak20250610,15,age013,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_agent_bak20250610,19,age017,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent_bak20250610,20,age018,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent_bak20250610,25,age023,varchar,source_type=char(1); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,27,credit,varchar,"source_type=decimal(15,4); ",🟠 有类型无含义
+ods_a168_agent_bak20250610,28,cash,varchar,"source_type=decimal(15,4); ",🟠 有类型无含义
+ods_a168_agent_bak20250610,29,type,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,30,currency,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,31,tip,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent_bak20250610,33,prefix_add,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent_bak20250610,38,opengame,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,39,site,varchar,source_type=varchar(60); ,🟠 有类型无含义
+ods_a168_agent_bak20250610,45,chkKey,varchar,source_type=varchar(100); ,🟠 有类型无含义
+ods_a168_agent_elec,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_elec,4,gid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_elec,5,profitRate,varchar,"source_type=decimal(3,2); ",🟠 有类型无含义
+ods_a168_agent_elec,6,pot,varchar,"source_type=decimal(16,4); ",🟠 有类型无含义
+ods_a168_agent_elec,7,potLock,varchar,source_type=tinyint(1); ,🟠 有类型无含义
+ods_a168_agent_permissionrole,6,lv1,varchar,source_type=bit(1); ,🟠 有类型无含义
+ods_a168_agent_permissionrole,7,lv2,varchar,source_type=bit(1); ,🟠 有类型无含义
+ods_a168_agent_permissionrole,8,lv3,varchar,source_type=bit(1); ,🟠 有类型无含义
+ods_a168_agent_permissionrole,9,lv4,varchar,source_type=bit(1); ,🟠 有类型无含义
+ods_a168_agent_permissionrole,10,lv5,varchar,source_type=bit(1); ,🟠 有类型无含义
+ods_a168_agent_sub,15,ags013,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_agent_sub,16,chkKey,varchar,source_type=varchar(100); ,🟠 有类型无含义
+ods_a168_agent_test,4,age002,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_agent_test,5,age003,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_agent_test,6,age004,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_agent_test,7,age005,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_agent_test,8,age006,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_test,9,age007,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_test,10,age008,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_test,11,age009,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_test,12,age010,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_test,13,age011,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_test,14,age012,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_agent_test,15,age013,varchar,source_type=char(15); ,🟠 有类型无含义
+ods_a168_agent_test,19,age017,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent_test,20,age018,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent_test,25,age023,varchar,source_type=char(1); ,🟠 有类型无含义
+ods_a168_agent_test,27,credit,varchar,"source_type=decimal(15,4); ",🟠 有类型无含义
+ods_a168_agent_test,28,cash,varchar,"source_type=decimal(15,4); ",🟠 有类型无含义
+ods_a168_agent_test,29,type,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_test,30,currency,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agent_test,31,tip,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent_test,32,prefix_add,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_agent_test,36,opengame,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_agent_test,37,site,varchar,source_type=varchar(60); ,🟠 有类型无含义
+ods_a168_agent_test,43,chkKey,varchar,source_type=varchar(100); ,🟠 有类型无含义
+ods_a168_agents_LoginPass,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_agents_LoginPass,8,password,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_agents_LoginPass,9,addtime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_agents_LoginPass,11,skyname,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_agents_LoginPass,17,operator,varchar,source_type=varchar(25); ,🟠 有类型无含义
+ods_a168_agents_LoginPass,18,modify_time,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_agents_LoginPass,21,co,varchar,source_type=varchar(10); ,🟠 有类型无含义
+ods_a168_agents_LoginPass,24,subdomain,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_aggregate_setting,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_aggregate_token,3,code,varchar,source_type=varchar(12); ,🟠 有类型无含义
+ods_a168_aggregate_token,4,mid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_aggregate_token,5,token,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_aggregate_token,6,create_at,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_aggregate_token,7,update_at,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_aggregate_transaction,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_aisetting,3,sn,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_aisetting,4,gid,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_aisetting,5,content,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_alarmMessage,4,time,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_alarmMessage,5,parentID,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_alarmMessage,6,mid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_alarmMessage,7,type,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_alarmMessage,8,content,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_alarmMessage,9,status,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_alertMessage,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_alertMessage,4,mid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_alertMessage,5,message,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_alertMessage,6,errorTime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_alertMessage,7,unierrorTime,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_alert_ip_setting,3,id,varchar,source_type=int(8); ,🟠 有类型无含义
+ods_a168_alert_ip_setting,4,ip,varchar,source_type=varchar(128); ,🟠 有类型无含义
+ods_a168_alert_ip_setting,5,creator,varchar,source_type=varchar(8); ,🟠 有类型无含义
+ods_a168_alert_ip_setting,6,addtime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_alert_ip_setting,7,remarks,varchar,source_type=varchar(1000); ,🟠 有类型无含义
+ods_a168_ban_bet_area,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_ban_bet_area,4,account_type,varchar,source_type=varchar(1); ,🟠 有类型无含义
+ods_a168_ban_bet_area,5,gid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_bet,52,bet050,varchar,source_type=float; ,🟠 有类型无含义
+ods_a168_bet,54,bet052,varchar,"source_type=double(5,2); ",🟠 有类型无含义
+ods_a168_bet,55,bet053,varchar,source_type=tinyint(4); ,🟠 有类型无含义
+ods_a168_bet,56,bet054,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_bet_No,3,bet01,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_bet_limit_default,4,gtype,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_bet_limit_default,5,set01,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,6,set02,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,7,set03,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,8,set04,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,9,set05,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,10,set06,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,11,set07,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,12,set08,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,13,set09,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,14,set10,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,15,set11,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,16,set12,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,17,set13,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,18,set14,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_bet_limit_default,19,status,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_bet_partner,8,partnerBetId,varchar,source_type=varchar(100); ,🟠 有类型无含义
+ods_a168_bet_partner,9,gameId,varchar,source_type=varchar(64); ,🟠 有类型无含义
+ods_a168_betchange_log,3,log_id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_betchange_log,4,operation_type,varchar,source_type=varchar(32); ,🟠 有类型无含义
+ods_a168_betchange_log,5,change_time,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_betchange_log,6,old_bet01,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_betchange_log,7,new_bet01,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_betchange_log,8,old_bet05,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_betchange_log,9,new_bet05,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_betchange_log,10,old_bet09,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_betchange_log,11,new_bet09,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_betchange_log,12,old_ip,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_betchange_log,13,new_ip,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_category,3,sn,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_categoryLevel,3,lv_id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_close_tip_list,3,game_user,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_control,13,chkKey,varchar,source_type=varchar(100); ,🟠 有类型无含义
+ods_a168_conversion,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_conversion,4,mid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_conversion,10,employee1name,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_conversion,12,employee2name,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_conversion,13,updatetime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_conversion,14,addtime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_conversion,16,iom_id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_conversion,17,phonenumber,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_currency,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_currency,4,code,varchar,source_type=varchar(5); ,🟠 有类型无含义
+ods_a168_currency,5,name,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_dailyreport,3,id,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_dailyreport,26,bet39,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_dailyreport,29,category,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_dailyreport2,3,id,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_dailyreport2,26,bet39,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_dailyreport2,29,category,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_dailyreport_member,3,id,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_dailyreport_table,3,id,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_dailyreport_usercount,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_emp_login,3,eid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_emp_login,4,sid,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_emp_login,5,logintime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_emp_login,6,loginip,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_emp_login,7,status,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_emp_login,8,remark,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_employee,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_employee,4,account,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_employee,5,password,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_employee,6,name,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_employee,9,phone,varchar,source_type=varchar(13); ,🟠 有类型无含义
+ods_a168_employee,10,email,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_employee,11,qq,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_employee,15,lasttime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_employee,16,lastip,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_employee,17,addtime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_employee,18,addip,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_employee,20,image2,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_func_counter,3,date,varchar,source_type=date; ,🟠 有类型无含义
+ods_a168_func_counter,4,ui,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_func_counter,5,function,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_func_counter,6,counts,varchar,source_type=int(8) unsigned; ,🟠 有类型无含义
+ods_a168_game_No,3,gameNo,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_No,4,gid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_No,5,table_no,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_No,6,cdate,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_game_callwebapi,8,addtime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_game_callwebapi,9,updatetime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_game_demoipsetting,3,ip,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_demoipsetting,6,comment,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_game_info,18,3rdno,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_game_info_verify,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_info_verify,4,action,varchar,source_type=varchar(12); ,🟠 有类型无含义
+ods_a168_game_log,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_log,4,mid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_log,5,user_agent,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_game_log,6,web_address,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_game_log,8,website_delay_time,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_log,9,url_index,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_log,10,api_delay_time,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_log,11,load_html_id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_log,12,load_html_time,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_log,13,server_id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_log,14,server_delay_time,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_log,15,video_type,varchar,source_type=varchar(5); ,🟠 有类型无含义
+ods_a168_game_log,16,video_delay_time,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_log,17,addtime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_game_statistics,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_statistics,4,gid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_statistics,5,t_number,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_statistics,6,people,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_statistics,7,time,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_game_tip,3,currency_code,varchar,source_type=varchar(10); ,🟠 有类型无含义
+ods_a168_game_tip,4,amount_list,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_game_transfer,3,tcpsocketport,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_transfer,4,websocketport,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_type,3,code,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_type,4,twname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,5,cnname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,6,enname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,7,inname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,8,janame,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,9,koname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,10,thname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,11,viname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,12,hiname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,13,msname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,14,esname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_game_type,15,status,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_type,16,ps003,varchar,"source_type=decimal(16,2); ",🟠 有类型无含义
+ods_a168_game_type,17,ps004,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_type,18,ps005,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_type,19,ps006,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_type,20,ps007,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_type,21,ps008,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_type,22,ps009,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_type,23,ps010,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_game_type,24,ps011,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_ipblacklist,3,id,varchar,source_type=int(8); ,🟠 有类型无含义
+ods_a168_ipblacklist,4,ip,varchar,source_type=varchar(16); ,🟠 有类型无含义
+ods_a168_ipblacklist,5,creator,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_ipblacklist,7,addtime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_ipblacklist,8,remarks,varchar,source_type=varchar(1000); ,🟠 有类型无含义
+ods_a168_iphistory,3,id,varchar,source_type=int(8); ,🟠 有类型无含义
+ods_a168_iphistory,4,type,varchar,source_type=varchar(4); ,🟠 有类型无含义
+ods_a168_iphistory,5,uid,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_iphistory,6,ulv,varchar,source_type=varchar(4); ,🟠 有类型无含义
+ods_a168_iphistory,7,ip,varchar,source_type=varchar(16); ,🟠 有类型无含义
+ods_a168_iphistory,8,datetime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_jackpot,10,remaining,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_keyserver_command,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_keyserver_command,4,time,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_keyserver_command,5,gameID,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_keyserver_command,6,tableID,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_keyserver_command,7,protocol,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_keyserver_command,8,data,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_log_age_cash_change,3,lacc01,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_log_mem_change,3,lmc01,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_log_realtimebet,3,mid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_log_realtimebet,4,gid,varchar,source_type=int(6); ,🟠 有类型无含义
+ods_a168_log_realtimebet,5,gameNo,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_log_realtimebet,6,gameNoRound,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_log_realtimebet,7,betTime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_log_realtimebet,8,totalBetMoney,varchar,"source_type=decimal(16,4); ",🟠 有类型无含义
+ods_a168_member,3,mem001,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member,4,mem002,varchar,source_type=varchar(48); ,🟠 有类型无含义
+ods_a168_member,5,mem003,varchar,source_type=varchar(65); ,🟠 有类型无含义
+ods_a168_member,6,mem004,varchar,source_type=varchar(48); ,🟠 有类型无含义
+ods_a168_member,7,mem005,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_member,8,mem006,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member,9,mem007,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member,10,mem008,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member,11,mem009,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member,12,mem010,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member,13,mem011,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member,14,mem012,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member,15,mem013,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_member,16,mem014,varchar,source_type=char(15); ,🟠 有类型无含义
+ods_a168_member,23,mem021,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member,26,mem023,varchar,source_type=tinyint(4); ,🟠 有类型无含义
+ods_a168_member,28,mem026,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member,39,tip,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_member,41,wallet,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_member,43,site,varchar,source_type=varchar(60); ,🟠 有类型无含义
+ods_a168_member_click_counter,3,date,varchar,source_type=date; ,🟠 有类型无含义
+ods_a168_member_click_counter,4,mid,varchar,source_type=int(10) unsigned; ,🟠 有类型无含义
+ods_a168_member_click_counter,5,ui,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_member_click_counter,6,function,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_member_click_counter,7,counts,varchar,source_type=int(10) unsigned; ,🟠 有类型无含义
+ods_a168_member_dtl,13,mem011,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member_explosion_setting,3,sn,varchar,source_type=int(5); ,🟠 有类型无含义
+ods_a168_member_explosion_setting,4,gid,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_member_explosion_setting,5,tableid,varchar,source_type=int(5); ,🟠 有类型无含义
+ods_a168_member_explosion_setting,6,people,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member_explosion_setting,7,setting_time,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_member_explosion_setting,8,editor,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_member_explosion_setting,9,modif_time,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_member_odds,3,mid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_member_odds,4,gid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_news,3,new001,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_news,4,new002,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_news,5,new003,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_news,6,new004,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_news,7,new005,varchar,"source_type=enum(''A'',''E'',''W''); ",🟠 有类型无含义
+ods_a168_news,8,new006,varchar,"source_type=enum(''N'',''M''); ",🟠 有类型无含义
+ods_a168_news,9,new007,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_news,10,new008,varchar,source_type=varchar(10); ,🟠 有类型无含义
+ods_a168_odds_default,3,id,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_odds_default,4,gid,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_opengame_log,3,aid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_opengame_log,4,opengame,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_opengame_log,5,time,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_partner_bng_token,3,mid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_partner_bng_token,4,token,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_bng_token,6,op_time,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_partner_gamelist,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_partner_gamelist,5,cnname,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_gamelist,6,twname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_partner_gamelist,7,enname,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_gamelist,8,inname,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_gamelist,9,janame,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_gamelist,10,koname,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_gamelist,11,thname,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_gamelist,12,viname,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_gamelist,13,hiname,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_gamelist,14,msname,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_reportTime,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_partner_reportTime,4,code,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_partner_setting,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_partner_setting,10,create_at,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_partner_setting,11,update_at,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_partner_transation,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_partner_transation,6,mid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_partner_transation,7,code,varchar,source_type=int(4); ,🟠 有类型无含义
+ods_a168_partner_transation,8,round_id,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_partner_transation,17,isFinish,varchar,"source_type=enum(''Y'',''N'',''X''); ",🟠 有类型无含义
+ods_a168_partner_transation,18,remark,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_partner_transation_log,3,trans_id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_partner_transation_log,4,text,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_partner_transation_log,5,created_at,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_partner_type,5,twname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_partner_type,6,cnname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_partner_type,7,enname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_partner_type,8,inname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_partner_type,9,janame,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_partner_type,10,koname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_partner_type,11,thname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_partner_type,12,viname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_partner_type,13,hiname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_partner_type,14,msname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_passiplist,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_passiplist,4,agentid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_passiplist,5,lv,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_passiplist,6,account,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_payment_bank,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_payment_method,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_payment_method,5,name,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_method,6,data,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_platform,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_payment_setting,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_payment_setting,5,lv_id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_payment_type,3,type,varchar,source_type=varchar(10); ,🟠 有类型无含义
+ods_a168_payment_type,4,cnname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_type,5,twname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_type,6,enname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_type,7,inname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_type,8,janame,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_type,9,koname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_type,10,thname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_type,11,viname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_type,12,hiname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_payment_type,13,msname,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_permissions,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_permissionsPage,3,id,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_permissionsPageRoles,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_permissionsPageRoles,4,rolesId,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_permissionsPageRoles,5,pageId,varchar,source_type=int(5); ,🟠 有类型无含义
+ods_a168_permissionsgroup,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_permissionsgroup,8,lastmodifytime,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_realtimelog,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_realtimelog,4,total,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_realtimelog,7,reset,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_realtimelog,8,cancel,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_realtimelog,11,time,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_roles,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_roles,6,lastmodifytime,varchar,source_type=timestamp; ,🟠 有类型无含义
+ods_a168_shuffle_gid,3,gid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_shuffle_gid,4,name,varchar,source_type=varchar(100); ,🟠 有类型无含义
+ods_a168_shuffle_info,3,id,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,4,roomTable,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,5,addtime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_shuffle_info,7,gid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_shuffle_info,8,tableid,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_shuffle_info,9,frequency,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_shuffle_info,10,log,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_shuffle_info,11,shoe,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,12,shoeTime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_shuffle_info,13,shuffler1,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,14,shuffler1Time,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_shuffle_info,15,sup1,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,16,sup1Time,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_shuffle_info,17,shuffler2,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,18,shuffler2Time,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_shuffle_info,19,sup2,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,20,sup2Time,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_shuffle_info,21,style,varchar,source_type=varchar(10); ,🟠 有类型无含义
+ods_a168_shuffle_info,22,styleTime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_shuffle_info,23,supCheckIn,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,24,supCheckInTime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_shuffle_info,25,dealerCheckIn,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,26,dealerCheckInTime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_shuffle_info,27,supCheckOut,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,28,supCheckOutTime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_shuffle_info,29,dealerCheckOut,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_shuffle_info,30,dealerCheckOutTime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_site,3,sn,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_site,4,value,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_stream,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_stream,4,secretKey,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_stream,5,validitySecond,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_subagent_permissionrole,6,lv1,varchar,source_type=bit(1); ,🟠 有类型无含义
+ods_a168_subagent_permissionrole,7,lv2,varchar,source_type=bit(1); ,🟠 有类型无含义
+ods_a168_subagent_permissionrole,8,lv3,varchar,source_type=bit(1); ,🟠 有类型无含义
+ods_a168_subagent_permissionrole,9,lv4,varchar,source_type=bit(1); ,🟠 有类型无含义
+ods_a168_subagent_permissionrole,10,lv5,varchar,source_type=bit(1); ,🟠 有类型无含义
+ods_a168_symbol,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_symbol,4,code,varchar,source_type=varchar(15); ,🟠 有类型无含义
+ods_a168_symbol,5,name,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_symbol,6,path,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_symbol,7,filename,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_tablelimit,3,sn,varchar,source_type=int(5); ,🟠 有类型无含义
+ods_a168_tablelimit,4,gid,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_tablelimit,5,tableid,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_tablelimit,6,netgroupname,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_tablelimit,7,telgroupname,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_tablelimit,8,tablename,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_tablelimit,9,setvalue,varchar,source_type=int(25); ,🟠 有类型无含义
+ods_a168_tablelimit,13,tieminbet,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_tablelimit,14,tiemaxbet,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_tablelimit,15,pairminbet,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_tablelimit,16,pairmaxbet,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_tablelimit,17,modifyname,varchar,source_type=varchar(25); ,🟠 有类型无含义
+ods_a168_tablelimit,18,modifydate,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_tablelimit,26,sort,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_tablelimit,27,sort2,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_tablelimit_third,3,id,varchar,source_type=int(5); ,🟠 有类型无含义
+ods_a168_temp_id_list,3,id,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_tip,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_tip,4,name,varchar,source_type=varchar(20); ,🟠 有类型无含义
+ods_a168_tip,5,price,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_tip,6,addtime,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_urllist,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_urllist,4,code,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_urllist,5,co,varchar,source_type=varchar(100); ,🟠 有类型无含义
+ods_a168_urllist,6,www,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_urllist,7,api,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_urllist,8,api3rd,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_urllist,9,rtmp,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_urllist,10,flv,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_urllist,11,hls,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_urllist,12,ws,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_urllist,13,gs,varchar,source_type=varchar(50); ,🟠 有类型无含义
+ods_a168_urllist,15,lang,varchar,source_type=varchar(5); ,🟠 有类型无含义
+ods_a168_urllist,16,register,varchar,source_type=int(1); ,🟠 有类型无含义
+ods_a168_urllist,17,ui,varchar,source_type=varchar(1); ,🟠 有类型无含义
+ods_a168_urllist,18,apkbutton,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_urllist,19,apkurl,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_wallet_dtl,3,id,varchar,source_type=bigint(20); ,🟠 有类型无含义
+ods_a168_wallet_dtl,4,user,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_wallet_dtl,11,bet_detail,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_wallet_dtl,12,detail,varchar,source_type=text; ,🟠 有类型无含义
+ods_a168_wallet_dtl,14,feedback_id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_wallet_dtl,15,gtype,varchar,source_type=int(3); ,🟠 有类型无含义
+ods_a168_wallet_feedbackerr,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_wallet_feedbackerr,5,money,varchar,"source_type=decimal(12,4); ",🟠 有类型无含义
+ods_a168_wallet_feedbackerr,8,errorCode,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_wallet_feedbackerr,10,wirteLogDate,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_wallet_feedbackerr,11,success,varchar,"source_type=enum(''Y'',''N''); ",🟠 有类型无含义
+ods_a168_wechat_url,3,id,varchar,source_type=int(11); ,🟠 有类型无含义
+ods_a168_wechat_url,4,url,varchar,source_type=varchar(255); ,🟠 有类型无含义
+ods_a168_white_list,3,id,varchar,source_type=int(5); ,🟠 有类型无含义
+ods_a168_white_list,4,aid,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_white_list,6,white_list,varchar,source_type=mediumtext; ,🟠 有类型无含义
+ods_a168_white_list,7,operator,varchar,source_type=varchar(30); ,🟠 有类型无含义
+ods_a168_white_list,8,add_time,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_white_list,9,update_time,varchar,source_type=datetime; ,🟠 有类型无含义
+ods_a168_white_list,10,add_unix_time,varchar,source_type=int(10); ,🟠 有类型无含义
+ods_a168_white_list,11,update_unix_time,varchar,source_type=int(10); ,🟠 有类型无含义
+ods_a168_RedPacketSetup,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_RedPacketSetup,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_RedPacketSetup,23,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_RedPacketSetup,24,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_RedPacketSetup,25,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_RedPacketSetup,26,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_RedPacketSetup_setting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_RedPacketSetup_setting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_RedPacketSetup_setting,13,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_RedPacketSetup_setting,14,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_RedPacketSetup_setting,15,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_RedPacketSetup_setting,16,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_RedPacket_No,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_RedPacket_No,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_RedPacket_No,4,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_RedPacket_No,5,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_RedPacket_No,6,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_RedPacket_No,7,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_RedPacket_Order,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_RedPacket_Order,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_RedPacket_Order,17,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_RedPacket_Order,18,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_RedPacket_Order,19,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_RedPacket_Order,20,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_SMR_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_SMR_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_SMR_log,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_SMR_log,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_SMR_log,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_SMR_log,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_age_login,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_age_login,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_age_login,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_age_login,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_age_login,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_age_login,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_age_sub_login,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_age_sub_login,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_age_sub_login,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_age_sub_login,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_age_sub_login,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_age_sub_login,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_agent,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_agent,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_agent,48,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_agent,49,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_agent,50,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_agent,51,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_agent_bak20250610,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_agent_bak20250610,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_agent_bak20250610,48,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_agent_bak20250610,49,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_agent_bak20250610,50,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_agent_bak20250610,51,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_agent_dtl,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_agent_dtl,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_agent_dtl,19,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_agent_dtl,20,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_agent_dtl,21,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_agent_dtl,22,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_agent_dtl_test,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_agent_dtl_test,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_agent_dtl_test,19,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_agent_dtl_test,20,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_agent_dtl_test,21,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_agent_dtl_test,22,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_agent_elec,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_agent_elec,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_agent_elec,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_agent_elec,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_agent_elec,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_agent_elec,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_agent_partner_gamelist,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_agent_partner_gamelist,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_agent_partner_gamelist,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_agent_partner_gamelist,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_agent_partner_gamelist,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_agent_partner_gamelist,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_agent_permissionrole,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_agent_permissionrole,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_agent_permissionrole,12,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_agent_permissionrole,13,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_agent_permissionrole,14,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_agent_permissionrole,15,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_agent_sub,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_agent_sub,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_agent_sub,19,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_agent_sub,20,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_agent_sub,21,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_agent_sub,22,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_agent_test,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_agent_test,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_agent_test,46,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_agent_test,47,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_agent_test,48,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_agent_test,49,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_agents_LoginPass,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_agents_LoginPass,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_agents_LoginPass,25,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_agents_LoginPass,26,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_agents_LoginPass,27,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_agents_LoginPass,28,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_aggregate_setting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_aggregate_setting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_aggregate_setting,11,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_aggregate_setting,12,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_aggregate_setting,13,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_aggregate_setting,14,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_aggregate_token,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_aggregate_token,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_aggregate_token,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_aggregate_token,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_aggregate_token,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_aggregate_token,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_aggregate_transaction,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_aggregate_transaction,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_aggregate_transaction,19,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_aggregate_transaction,20,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_aggregate_transaction,21,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_aggregate_transaction,22,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_aisetting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_aisetting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_aisetting,6,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_aisetting,7,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_aisetting,8,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_aisetting,9,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_alarmMessage,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_alarmMessage,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_alarmMessage,11,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_alarmMessage,12,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_alarmMessage,13,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_alarmMessage,14,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_alertMessage,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_alertMessage,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_alertMessage,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_alertMessage,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_alertMessage,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_alertMessage,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_alert_ip_setting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_alert_ip_setting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_alert_ip_setting,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_alert_ip_setting,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_alert_ip_setting,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_alert_ip_setting,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_apiurl,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_apiurl,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_apiurl,6,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_apiurl,7,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_apiurl,8,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_apiurl,9,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_ban_bet_area,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_ban_bet_area,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_ban_bet_area,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_ban_bet_area,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_ban_bet_area,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_ban_bet_area,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_bet,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_bet,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_bet,57,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_bet,58,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_bet,59,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_bet,60,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_bet01,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_bet01,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_bet01,46,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_bet01,47,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_bet01,48,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_bet01,49,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_bet02,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_bet02,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_bet02,55,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_bet02,56,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_bet02,57,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_bet02,58,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_bet_No,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_bet_No,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_bet_No,4,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_bet_No,5,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_bet_No,6,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_bet_No,7,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_bet_limit_default,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_bet_limit_default,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_bet_limit_default,21,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_bet_limit_default,22,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_bet_limit_default,23,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_bet_limit_default,24,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_bet_partner,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_bet_partner,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_bet_partner,12,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_bet_partner,13,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_bet_partner,14,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_bet_partner,15,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_betchange_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_betchange_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_betchange_log,15,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_betchange_log,16,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_betchange_log,17,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_betchange_log,18,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_category,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_category,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_category,30,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_category,31,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_category,32,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_category,33,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_categoryLevel,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_categoryLevel,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_categoryLevel,18,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_categoryLevel,19,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_categoryLevel,20,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_categoryLevel,21,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_change_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_change_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_change_log,11,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_change_log,12,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_change_log,13,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_change_log,14,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_close_tip_list,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_close_tip_list,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_close_tip_list,4,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_close_tip_list,5,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_close_tip_list,6,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_close_tip_list,7,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_control,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_control,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_control,16,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_control,17,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_control,18,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_control,19,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_control_login,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_control_login,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_control_login,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_control_login,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_control_login,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_control_login,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_conversion,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_conversion,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_conversion,18,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_conversion,19,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_conversion,20,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_conversion,21,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_ctl_rto,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_ctl_rto,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_ctl_rto,6,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_ctl_rto,7,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_ctl_rto,8,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_ctl_rto,9,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_currency,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_currency,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_currency,11,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_currency,12,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_currency,13,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_currency,14,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_dailyreport,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_dailyreport,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_dailyreport,31,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_dailyreport,32,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_dailyreport,33,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_dailyreport,34,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_dailyreport2,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_dailyreport2,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_dailyreport2,32,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_dailyreport2,33,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_dailyreport2,34,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_dailyreport2,35,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_dailyreport_member,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_dailyreport_member,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_dailyreport_member,32,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_dailyreport_member,33,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_dailyreport_member,34,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_dailyreport_member,35,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_dailyreport_table,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_dailyreport_table,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_dailyreport_table,20,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_dailyreport_table,21,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_dailyreport_table,22,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_dailyreport_table,23,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_dailyreport_usercount,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_dailyreport_usercount,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_dailyreport_usercount,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_dailyreport_usercount,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_dailyreport_usercount,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_dailyreport_usercount,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_emp_login,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_emp_login,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_emp_login,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_emp_login,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_emp_login,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_emp_login,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_employee,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_employee,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_employee,21,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_employee,22,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_employee,23,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_employee,24,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_func_counter,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_func_counter,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_func_counter,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_func_counter,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_func_counter,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_func_counter,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_No,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_No,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_No,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_No,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_No,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_No,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_callwebapi,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_callwebapi,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_callwebapi,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_callwebapi,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_callwebapi,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_callwebapi,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_demoipsetting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_demoipsetting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_demoipsetting,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_demoipsetting,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_demoipsetting,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_demoipsetting,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_info,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_info,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_info,20,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_info,21,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_info,22,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_info,23,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_info_verify,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_info_verify,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_info_verify,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_info_verify,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_info_verify,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_info_verify,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_log,23,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_log,24,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_log,25,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_log,26,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_parame,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_parame,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_parame,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_parame,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_parame,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_parame,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_result,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_result,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_result,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_result,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_result,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_result,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_statistics,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_statistics,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_statistics,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_statistics,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_statistics,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_statistics,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_tip,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_tip,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_tip,5,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_tip,6,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_tip,7,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_tip,8,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_transfer,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_transfer,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_transfer,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_transfer,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_transfer,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_transfer,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_game_type,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_game_type,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_game_type,25,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_game_type,26,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_game_type,27,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_game_type,28,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_in_out_m,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_in_out_m,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_in_out_m,13,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_in_out_m,14,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_in_out_m,15,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_in_out_m,16,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_in_out_m_chip,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_in_out_m_chip,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_in_out_m_chip,13,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_in_out_m_chip,14,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_in_out_m_chip,15,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_in_out_m_chip,16,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_ipblacklist,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_ipblacklist,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_ipblacklist,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_ipblacklist,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_ipblacklist,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_ipblacklist,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_iphistory,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_iphistory,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_iphistory,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_iphistory,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_iphistory,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_iphistory,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_jackpot,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_jackpot,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_jackpot,14,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_jackpot,15,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_jackpot,16,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_jackpot,17,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_keyserver_command,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_keyserver_command,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_keyserver_command,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_keyserver_command,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_keyserver_command,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_keyserver_command,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_log_age_cash_change,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_log_age_cash_change,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_log_age_cash_change,16,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_log_age_cash_change,17,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_log_age_cash_change,18,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_log_age_cash_change,19,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_log_mem_change,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_log_mem_change,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_log_mem_change,14,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_log_mem_change,15,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_log_mem_change,16,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_log_mem_change,17,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_log_realtimebet,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_log_realtimebet,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_log_realtimebet,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_log_realtimebet,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_log_realtimebet,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_log_realtimebet,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_mem_login,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_mem_login,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_mem_login,11,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_mem_login,12,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_mem_login,13,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_mem_login,14,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_member,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_member,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_member,50,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_member,51,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_member,52,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_member,53,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_member_category,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_member_category,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_member_category,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_member_category,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_member_category,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_member_category,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_member_click_counter,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_member_click_counter,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_member_click_counter,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_member_click_counter,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_member_click_counter,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_member_click_counter,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_member_dtl,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_member_dtl,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_member_dtl,19,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_member_dtl,20,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_member_dtl,21,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_member_dtl,22,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_member_explosion_setting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_member_explosion_setting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_member_explosion_setting,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_member_explosion_setting,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_member_explosion_setting,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_member_explosion_setting,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_member_odds,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_member_odds,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_member_odds,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_member_odds,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_member_odds,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_member_odds,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_member_partner_account,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_member_partner_account,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_member_partner_account,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_member_partner_account,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_member_partner_account,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_member_partner_account,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_member_partner_gamelist,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_member_partner_gamelist,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_member_partner_gamelist,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_member_partner_gamelist,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_member_partner_gamelist,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_member_partner_gamelist,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_member_url,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_member_url,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_member_url,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_member_url,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_member_url,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_member_url,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_news,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_news,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_news,11,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_news,12,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_news,13,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_news,14,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_odds_default,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_odds_default,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_odds_default,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_odds_default,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_odds_default,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_odds_default,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_opengame_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_opengame_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_opengame_log,6,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_opengame_log,7,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_opengame_log,8,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_opengame_log,9,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_orderslist,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_orderslist,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_orderslist,6,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_orderslist,7,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_orderslist,8,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_orderslist,9,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_partner_bng_token,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_partner_bng_token,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_partner_bng_token,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_partner_bng_token,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_partner_bng_token,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_partner_bng_token,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_partner_gamelist,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_partner_gamelist,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_partner_gamelist,34,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_partner_gamelist,35,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_partner_gamelist,36,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_partner_gamelist,37,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_partner_reportTime,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_partner_reportTime,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_partner_reportTime,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_partner_reportTime,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_partner_reportTime,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_partner_reportTime,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_partner_setting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_partner_setting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_partner_setting,12,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_partner_setting,13,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_partner_setting,14,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_partner_setting,15,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_partner_transation,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_partner_transation,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_partner_transation,19,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_partner_transation,20,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_partner_transation,21,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_partner_transation,22,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_partner_transation_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_partner_transation_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_partner_transation_log,6,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_partner_transation_log,7,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_partner_transation_log,8,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_partner_transation_log,9,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_partner_type,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_partner_type,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_partner_type,26,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_partner_type,27,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_partner_type,28,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_partner_type,29,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_passiplist,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_passiplist,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_passiplist,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_passiplist,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_passiplist,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_passiplist,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_payment_bank,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_payment_bank,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_payment_bank,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_payment_bank,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_payment_bank,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_payment_bank,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_payment_method,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_payment_method,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_payment_method,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_payment_method,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_payment_method,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_payment_method,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_payment_order,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_payment_order,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_payment_order,20,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_payment_order,21,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_payment_order,22,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_payment_order,23,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_payment_platform,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_payment_platform,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_payment_platform,19,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_payment_platform,20,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_payment_platform,21,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_payment_platform,22,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_payment_setting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_payment_setting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_payment_setting,23,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_payment_setting,24,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_payment_setting,25,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_payment_setting,26,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_payment_type,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_payment_type,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_payment_type,14,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_payment_type,15,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_payment_type,16,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_payment_type,17,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_permissionrole,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_permissionrole,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_permissionrole,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_permissionrole,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_permissionrole,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_permissionrole,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_permissions,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_permissions,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_permissions,13,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_permissions,14,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_permissions,15,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_permissions,16,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_permissionsPage,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_permissionsPage,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_permissionsPage,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_permissionsPage,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_permissionsPage,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_permissionsPage,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_permissionsPageRoles,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_permissionsPageRoles,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_permissionsPageRoles,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_permissionsPageRoles,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_permissionsPageRoles,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_permissionsPageRoles,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_permissionsgroup,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_permissionsgroup,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_permissionsgroup,10,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_permissionsgroup,11,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_permissionsgroup,12,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_permissionsgroup,13,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_play_set,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_play_set,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_play_set,15,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_play_set,16,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_play_set,17,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_play_set,18,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_realtimebet,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_realtimebet,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_realtimebet,15,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_realtimebet,16,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_realtimebet,17,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_realtimebet,18,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_realtimelobby,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_realtimelobby,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_realtimelobby,9,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_realtimelobby,10,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_realtimelobby,11,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_realtimelobby,12,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_realtimelog,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_realtimelog,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_realtimelog,12,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_realtimelog,13,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_realtimelog,14,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_realtimelog,15,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_risklist,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_risklist,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_risklist,6,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_risklist,7,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_risklist,8,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_risklist,9,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_roles,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_roles,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_roles,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_roles,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_roles,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_roles,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_shuffle_gid,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_shuffle_gid,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_shuffle_gid,5,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_shuffle_gid,6,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_shuffle_gid,7,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_shuffle_gid,8,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_shuffle_info,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_shuffle_info,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_shuffle_info,31,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_shuffle_info,32,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_shuffle_info,33,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_shuffle_info,34,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_site,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_site,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_site,5,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_site,6,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_site,7,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_site,8,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_sms_setting,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_sms_setting,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_sms_setting,16,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_sms_setting,17,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_sms_setting,18,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_sms_setting,19,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_stream,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_stream,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_stream,6,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_stream,7,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_stream,8,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_stream,9,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_subagent_permissionrole,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_subagent_permissionrole,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_subagent_permissionrole,12,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_subagent_permissionrole,13,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_subagent_permissionrole,14,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_subagent_permissionrole,15,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_symbol,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_symbol,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_symbol,8,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_symbol,9,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_symbol,10,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_symbol,11,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_tablelimit,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_tablelimit,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_tablelimit,28,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_tablelimit,29,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_tablelimit,30,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_tablelimit,31,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_tablelimit_third,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_tablelimit_third,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_tablelimit_third,16,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_tablelimit_third,17,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_tablelimit_third,18,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_tablelimit_third,19,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_temp_id_list,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_temp_id_list,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_temp_id_list,4,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_temp_id_list,5,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_temp_id_list,6,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_temp_id_list,7,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_tip,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_tip,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_tip,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_tip,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_tip,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_tip,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_urllist,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_urllist,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_urllist,20,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_urllist,21,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_urllist,22,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_urllist,23,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_wallet_dtl,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_wallet_dtl,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_wallet_dtl,17,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_wallet_dtl,18,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_wallet_dtl,19,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_wallet_dtl,20,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_wallet_feedbackerr,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_wallet_feedbackerr,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_wallet_feedbackerr,12,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_wallet_feedbackerr,13,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_wallet_feedbackerr,14,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_wallet_feedbackerr,15,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_wallet_reporter,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_wallet_reporter,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_wallet_reporter,14,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_wallet_reporter,15,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_wallet_reporter,16,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_wallet_reporter,17,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_wallet_reporter_copy,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_wallet_reporter_copy,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_wallet_reporter_copy,14,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_wallet_reporter_copy,15,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_wallet_reporter_copy,16,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_wallet_reporter_copy,17,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_wechat_url,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_wechat_url,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_wechat_url,7,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_wechat_url,8,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_wechat_url,9,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_wechat_url,10,sync_time,datetime,同步时间,🟠 缺原始类型
+ods_a168_white_list,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5,🟠 缺原始类型
+ods_a168_white_list,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天,🟠 缺原始类型
+ods_a168_white_list,12,source_db,varchar,来源库,🟠 缺原始类型
+ods_a168_white_list,13,source_table,varchar,来源表,🟠 缺原始类型
+ods_a168_white_list,14,ods_table_name,varchar,ODS表名,🟠 缺原始类型
+ods_a168_white_list,15,sync_time,datetime,同步时间,🟠 缺原始类型
+sync_checkpoint,1,task_name,varchar,同步任务名,🟠 缺原始类型
+sync_checkpoint,2,source_db,varchar,来源库,🟠 缺原始类型
+sync_checkpoint,3,source_table,varchar,来源表,🟠 缺原始类型
+sync_checkpoint,4,target_table,varchar,目标表,🟠 缺原始类型
+sync_checkpoint,5,sync_mode,varchar,同步模式,🟠 缺原始类型
+sync_checkpoint,6,last_sync_time,datetime,时间增量断点,🟠 缺原始类型
+sync_checkpoint,7,last_sync_id,varchar,ID/复合键断点,🟠 缺原始类型
+sync_checkpoint,8,updated_at,datetime,更新时间,🟠 缺原始类型
+sync_checkpoint,9,last_key1,varchar,断点字段1,🟠 缺原始类型
+sync_checkpoint,10,last_key2,varchar,断点字段2,🟠 缺原始类型
+sync_checkpoint,11,last_key3,varchar,断点字段3,🟠 缺原始类型
+sync_checkpoint,12,last_key4,varchar,断点字段4,🟠 缺原始类型
+sync_checkpoint,13,last_key5,varchar,断点字段5,🟠 缺原始类型

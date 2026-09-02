@@ -1,0 +1,51 @@
+﻿TABLE_NAME,ORDINAL_POSITION,COLUMN_NAME,DATA_TYPE,COLUMN_COMMENT
+ods_a168_change_log,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_change_log,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_change_log,3,id,varchar,source_type=int(11); 序號
+ods_a168_change_log,4,function,varchar,source_type=varchar(30); 功能
+ods_a168_change_log,5,content,varchar,source_type=varchar(500); 指令
+ods_a168_change_log,6,lv,varchar,source_type=int(11); 操作者層級
+ods_a168_change_log,7,operator,varchar,source_type=int(11); 操作者
+ods_a168_change_log,8,optime,varchar,source_type=datetime; 操作時間
+ods_a168_change_log,9,ip,varchar,source_type=varchar(255); 操作者ip
+ods_a168_change_log,10,utp,varchar,source_type=varchar(1); 操作者utp
+ods_a168_change_log,11,source_db,varchar,来源库
+ods_a168_change_log,12,source_table,varchar,来源表
+ods_a168_change_log,13,ods_table_name,varchar,ODS表名
+ods_a168_change_log,14,sync_time,datetime,同步时间
+ods_a168_log_age_cash_change,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_log_age_cash_change,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_log_age_cash_change,3,lacc01,varchar,source_type=int(11); 
+ods_a168_log_age_cash_change,4,lacc02,varchar,source_type=int(11); LV
+ods_a168_log_age_cash_change,5,lacc03,varchar,source_type=int(11); ID
+ods_a168_log_age_cash_change,6,op_utp,varchar,source_type=char(1); 操作者類型
+ods_a168_log_age_cash_change,7,lacc04,varchar,source_type=int(11); OPLV
+ods_a168_log_age_cash_change,8,lacc05,varchar,source_type=int(11); OPID
+ods_a168_log_age_cash_change,9,lacc06,varchar,"source_type=decimal(15,4); 異動金額"
+ods_a168_log_age_cash_change,10,lacc07,varchar,source_type=datetime; 操作時間
+ods_a168_log_age_cash_change,11,lacc08,varchar,source_type=varchar(20); 備註
+ods_a168_log_age_cash_change,12,lacc09,varchar,"source_type=decimal(15,4); 異動前金額"
+ods_a168_log_age_cash_change,13,lacc10,varchar,source_type=int(11); upid
+ods_a168_log_age_cash_change,14,lacc11,varchar,"source_type=decimal(15,4); 上層異動前金額"
+ods_a168_log_age_cash_change,15,pointtype,varchar,source_type=int(11); 0:現金;1:信用;
+ods_a168_log_age_cash_change,16,source_db,varchar,来源库
+ods_a168_log_age_cash_change,17,source_table,varchar,来源表
+ods_a168_log_age_cash_change,18,ods_table_name,varchar,ODS表名
+ods_a168_log_age_cash_change,19,sync_time,datetime,同步时间
+ods_a168_log_mem_change,1,__source_pk,varchar,源行唯一键：优先源主键/唯一键MD5，无主键则整行MD5
+ods_a168_log_mem_change,2,dt,date,StarRocks日分区日期：优先来源业务时间，无时间字段则同步当天
+ods_a168_log_mem_change,3,lmc01,varchar,source_type=int(11); 
+ods_a168_log_mem_change,4,lmc02,varchar,source_type=int(11); ID
+ods_a168_log_mem_change,5,lmc03,varchar,source_type=int(11); LV
+ods_a168_log_mem_change,6,lmc04,varchar,"source_type=enum(''add'',''edit'',''changestatus''); 類別(新增，修改）"
+ods_a168_log_mem_change,7,lmc05,varchar,source_type=varchar(1000); 內容
+ods_a168_log_mem_change,8,lmc06,varchar,source_type=int(11); 操作者
+ods_a168_log_mem_change,9,lmc07,varchar,source_type=int(11); 操作者LV
+ods_a168_log_mem_change,10,lmc08,varchar,source_type=datetime; 異動時間
+ods_a168_log_mem_change,11,lmc09,varchar,source_type=varchar(1000); SQL
+ods_a168_log_mem_change,12,lmc10,varchar,source_type=varchar(20); IP
+ods_a168_log_mem_change,13,lmc11,varchar,source_type=varchar(1); 操做者utp
+ods_a168_log_mem_change,14,source_db,varchar,来源库
+ods_a168_log_mem_change,15,source_table,varchar,来源表
+ods_a168_log_mem_change,16,ods_table_name,varchar,ODS表名
+ods_a168_log_mem_change,17,sync_time,datetime,同步时间

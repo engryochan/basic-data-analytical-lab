@@ -1,2 +1,0 @@
-﻿n_k3_groups_dup,n_k3_excess_rows,n_k3_with_both_flags,n_k3_dup_not_by_sentinel,max_rows_per_k3,declared_time_window,actual_where_predicate,derived_min_bet_date,derived_max_bet_date,window_label_verdict
-0,0,0,0,1,2026-03-21..2026-08-06,b.dt >= 2026-03-21 AND b.dt < 2026-08-07 (half-open),2026-03-21,2026-08-06,LABEL_MATCH

@@ -1,0 +1,21 @@
+﻿id,target,rule,severity,reason,negative_assurance_evidence
+P-01,候选_同桌异常_最终版_已去重.csv,永久禁止读取,S1,无生成声明，疑存在 round_key 折叠污染；同桌判据须自 R02_same_table.csv 重跑,UNAUDITABLE_COMMITMENT — 须补检出手段
+P-02,ods_a168_game_log.ip,禁作下注 IP 使用,S1,已裁定为网关 IP（§E1-03）；下注 IP 只取 ods_a168_bet02.ip,UNAUDITABLE_COMMITMENT — 须补检出手段
+P-03,卷一 §C-06 原版,禁止运行，改跑 卷二 §C06fix,S1,原版以 '1'/'B'/'庄' 判庄闲，与库内实际 Banker/Player 不符，实测零行；且争抢同一导出文件名,UNAUDITABLE_COMMITMENT — 须补检出手段
+P-04,§S-04a,禁止运行，改跑 §S04p,S2,S-04a 出 IP 明细，风控员雷达需实体级聚合；争抢同一导出文件名,UNAUDITABLE_COMMITMENT — 须补检出手段
+P-05,ods_a168_bet01,金额算式禁止施用于本表,S1,自 bet14 起与 ods_a168_bet02 整段错位（bet17 在本表为 LV3ID 而非净输赢）；误用则数值照算而结果全错且无任何报警,UNAUDITABLE_COMMITMENT — 须补检出手段
+P-06,普适样本量门槛（如 n>=30）,禁止手写,S2,最小样本量须逐指标反解，含有效样本量 n_eff 校正；MDE 须依 estimand、结局分布族与设计效应分别推导,UNAUDITABLE_COMMITMENT — 须补检出手段
+P-07,OFFSET 分页,禁止使用，强制键集游标,S1,已实证 36.49% 重复率,UNAUDITABLE_COMMITMENT — 须补检出手段
+P-09,valid_bet 跨章合计,条件许可：须先核验该窗口内 validbet 之 NULL 率为零，方可跨章合计,S3,§T03 系与 §E02c 系对 validbet 之 NULL 处理契约不同（回退本金 vs 直取）。 2026-08-18 实测本窗口 NULL 率为零，两者等价；但该等价性依赖数据实况而非设计保证， 故不设永久禁令，改设复检前提。核验方法见 §Z-14a 之 n_vb_null 列。,UNAUDITABLE_COMMITMENT — 须补检出手段
+P-08,以 DATE(bet08) 切日,禁止；窗口切日唯一合法字段为 dt（= bet07 账户日期）,S1,两者差异 38.6%,UNAUDITABLE_COMMITMENT — 须补检出手段
+P-10,切 IP／自动换 IP 作为身份重置,永久封存,S1,IP 若成为身份重置按钮，即构成规避风险控制与账户管控。IP 在本系统只作识别坐标（entity_resolution），永不作身份重置。,UNAUDITABLE_COMMITMENT — 须建「同自然人跨 IP 续投」检出探针
+P-11,调整 RNG seed／re-seed 以对付特定玩家,永久封存,S1,触碰游戏公平性核心。正解为不改变游戏结果，只改变是否、以何条件、在何公开规则下提供服务。,"★已具备：fairness_assurance_monitor —— p_base_incl(BANKER)=0.4586244 vs 八副牌理论 0.458597，差 0.0000274（n=124,713,543）"
+P-12,动态改赔率,永久封存,S1,牌照级风险,UNAUDITABLE_COMMITMENT — 须建赔率表版本快照与变更审计轨
+P-13,蜜罐诱饵桌台,永久封存,S1,牌照级风险,UNAUDITABLE_COMMITMENT
+P-14,强制整数下注,永久封存,S1,牌照级风险,UNAUDITABLE_COMMITMENT
+P-15,以全窗口百分位定赏罚线,禁止,S1,economic_value 泄漏已证；且违 temporal_admissibility（source_max_dt ≤ feature_as_of）,window_scope 栏机检：FULL_WINDOW 者禁入预测
+P-16,以实现输赢符号（net_margin/roi/economic_value 之正负）定罚,禁止,S1,"三条独立实证：G-07（罚桶下期净额皆为正，高敞口×上期我方亏 8,889 人下期人均 2,213 为全矩阵最高）· PI02（处置组 hold 1.709% < 未处置 1.964%）· X_combo（flag_ip=1 人均 −1,650 vs flag_ip=0 −1,009）",criterion_family 栏机检：OUTCOME_BASED 者 admit_to_risk_decision 恒 FALSE
+P-17,无阈值之判据出「判定」,禁止；只得出分布与排序,S2,承 B-2：42 条方向判据中 36 PENDING_INVERSE、7 BLOCKED；65/66 判据 threshold 为 NA,threshold_status 栏机检
+P-18,T-03 尾投／靴尾下注之任何评分／排序／触发／处罚,四枚布尔全 false，永不复活,S1,承 B-5；四项独立检验（Sign p=0.7591 · Wilcoxon p=0.8087 · 九档 hold% 扫描零命中 · 外部标签 AUC=0.3828 方向反转）；P11 另添旁证 roi_late −0.01748 < roi_non_late −0.01663,ranking/scoring/trigger/enforcement 四栏机检恒 false
+P-19,admit_to_risk_decision = TRUE,五门未开，十六皆锁,S1,承 B-6 与 unlock_predicate；实况 G01 FAIL·G02 FAIL·G03 PARTIAL·G04 RENDER_COMPUTED·G05 FAIL·global NOT_PASS；causal_status 无一 ESTABLISHED；mcid_cost_anchor_status BLOCKED,unlock_predicate 机器谓词
+P-20,因果分析（PSM／DID／HMM／处置效应估计）,BLOCKED_UNTIL(treatment_status.S3 AND S4 == CLOSED),S1,承 treatment_status.blocked_until_S3_S4_closed 与其防偷渡令：「lmc02 接线键已解」≠「treatment 已解」,treatment_status.S3/S4 状态机检
