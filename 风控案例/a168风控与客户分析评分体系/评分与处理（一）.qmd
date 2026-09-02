@@ -1,0 +1,1342 @@
+---
+title: "评分与处理（一）"
+format: html
+---
+
+先生，这一轮我把此前能检索到的**历史方案、两份参考、v1.5.0 registry、HF9f/HF9g 施工审计、商业盈利审计标准、57 维方案以及最近三轮对话**重新交叉核了一遍。结论先定：
+
+> **这次不是继续“增加几项指标”，而是要把 `registry_risk_typology_v1.5.001` 从“57维能力登记册”升级成“四实体 × 57维 × 任意组合 × 时间窗口 × 处置方案 × 商业结果”的统一坐标字典。**
+>
+> **57维一维不删；35 CORE 一维不删；22 EXTENDED 一维不删；四实体各自完整拥有自己的57维坐标；实体之间允许任意阶梯组合。**
+>
+> 更重要的是：**能力值、风险判断、处理方式、处理后的商业效果四层必须分开，但必须最终连成可实测闭环。**
+
+历史材料也明确支持这个方向：过去已经确定“模型 → Gate → Treatment → Outcome → Causal Evaluation → Incremental NGR → Net Economic Value”的完整闭环，而不能用模型存在本身证明盈利。
+
+---
+
+# 一、先把“统一坐标”正式钉死
+
+之前最大的问题，是把：
+
+> 会员16维 + 荷官13维 + 代理13维 + 专员15维
+
+理解成四套**互不相干的小矩阵**。
+
+先生现在纠正后的意思，我确认如下：
+
+## 四实体不是“四个维度集合”，而是四个坐标系节点
+
+即：
+
+```text
+                         会员 M01~M16
+                              │
+                ┌─────────────┼─────────────┐
+                │             │             │
+          荷官 H01~H13   代理 A01~A13   专员 C01~C15
+                │             │             │
+                └─────────────┼─────────────┘
+                              │
+                       四实体联合空间
+```
+
+但是每个实体的能力维度**全部保留**。
+
+因此不是：
+
+```text
+会员 × 荷官 = 16 × 13
+```
+
+然后就结束。
+
+而是：
+
+```text
+会员16 × 荷官13
+```
+
+其中每一个组合单元，同时携带：
+
+```text
+会员全部16维
++
+荷官全部13维
+```
+
+同理：
+
+```text
+会员 × 荷官 × 代理
+
+= 16 + 13 + 13
+= 42个实体能力坐标
+```
+
+而不是只拿其中二维指标。
+
+最终：
+
+```text
+会员 × 荷官 × 代理 × 风控专员
+
+= 16 + 13 + 13 + 15
+= 57个实体能力坐标
+```
+
+**一个不遗漏。**
+
+所以先生所谓的“57维”，准确说应升级成：
+
+> **四实体统一 57-dimensional capability coordinate system。**
+
+这点现在正式冻结。
+
+---
+
+# 二、四实体交叉层级必须全部进入 registry
+
+至少固定以下六级：
+
+| 交叉层                 |        必须保留 |
+| ------------------- | ----------: |
+| 会员                  |         16维 |
+| 荷官                  |         13维 |
+| 代理                  |         13维 |
+| 风控专员                |         15维 |
+| 会员 × 荷官             | **29维联合向量** |
+| 会员 × 代理             | **29维联合向量** |
+| 会员 × 风控专员           | **31维联合向量** |
+| 荷官 × 代理             | **26维联合向量** |
+| 荷官 × 风控专员           | **28维联合向量** |
+| 代理 × 风控专员           | **28维联合向量** |
+| 会员 × 荷官 × 代理        | **42维联合向量** |
+| 会员 × 荷官 × 风控专员      | **44维联合向量** |
+| 会员 × 代理 × 风控专员      | **44维联合向量** |
+| 荷官 × 代理 × 风控专员      | **41维联合向量** |
+| 会员 × 荷官 × 代理 × 风控专员 | **57维联合向量** |
+
+这里有一个非常重要的升级：
+
+> **不是要求所有组合都必须计算所有 pairwise 数学关系。**
+>
+> 而是要求所有组合一旦进入分析，其成员实体的全部原生能力坐标都必须随之进入。
+
+这避免再次发生“为了二维交叉而把实体本身压缩掉”的退化。
+
+---
+
+# 三、再加一层：交叉数组不是简单 Cartesian Join
+
+这是我这次 REDTEAM 特别要挡住的坑。
+
+如果直接：
+
+```sql
+member
+× dealer
+× agent
+× operator
+```
+
+很容易产生：
+
+> 巨型笛卡尔积 + 假关系 + 内存爆炸。
+
+所以正式方案必须定义：
+
+```text
+ENTITY_LINK_GATE
+```
+
+只有存在真实业务关系/暴露关系的组合才能进入。
+
+例如：
+
+### M × H
+
+必须存在：
+
+```text
+member_id
+dealer_id
+round/shoe/date
+```
+
+共同暴露。
+
+### M × A
+
+必须存在：
+
+```text
+member_id
+agent_id
+有效代理链
+```
+
+### M × H × A
+
+必须同时满足三者真实连接。
+
+### M × H × A × C
+
+还必须存在：
+
+```text
+operator_id
+treatment/event/log
+```
+
+或者能够证明该专员对该对象产生实际作用。
+
+因此：
+
+> **57维是坐标空间；LINK GATE 是组合空间入口。**
+
+两者不能混淆。
+
+---
+
+# 四、此前所有“强化升级”裁决，重新归并成一个总账
+
+我逐项校对后，过去的重要升级可以归成 **11 大类**。
+
+---
+
+## U-01：35 → 57，永久只增不减
+
+正式冻结：
+
+```text
+CORE = 35
+EXTENDED = 22
+TOTAL = 57
+```
+
+不是：
+
+```text
+先35
+以后有空再57
+```
+
+而是：
+
+```text
+Registry 永远登记57
+施工可以按 data_availability 分阶段
+任何阶段不得删除任何维度
+```
+
+历史审计已经明确指出，“分期施工”本身不是退化；真正禁止的是为了简化而删除维度。这个原则必须保留。
+
+---
+
+# 五、U-02：57维必须三重绑定
+
+每一维都必须拥有：
+
+```text
+domain_id
++
+capability_facet
++
+dimension_class
+```
+
+即：
+
+```text
+D01~D12
+×
+F01~F08
+×
+CORE/EXTENDED
+```
+
+而不是单纯：
+
+```text
+dimension_name
+```
+
+同时保留：
+
+```text
+evidence_ladder
+temporal_admissibility
+leakage_status
+economic_role
+risk_role
+```
+
+---
+
+# 六、U-03：时间防泄漏从“附加说明”升级成硬闸
+
+这点必须升级到所有57维。
+
+每一个 capability observation 都必须记录：
+
+```text
+feature_as_of
+source_max_dt
+source_min_dt
+lookback_window
+prediction_horizon
+label_cutoff
+future_exclusion
+```
+
+硬条件：
+
+```text
+source_max_dt <= feature_as_of
+```
+
+以及：
+
+```text
+feature_as_of < prediction_horizon
+```
+
+更进一步，我建议正式增加：
+
+```text
+asof_entity_key
+asof_population
+asof_relationship
+asof_treatment
+```
+
+因为仅防止 `dt` 泄漏还不够。
+
+**人口本身变化也可能泄漏。**
+
+---
+
+# 七、U-04：57维 → 任意实体阶梯组合
+
+这是先生此次要求中最关键的升级。
+
+registry 必须有：
+
+```text
+entity_scope
+```
+
+允许：
+
+```text
+M
+H
+A
+C
+
+MH
+MA
+MC
+HA
+HC
+AC
+
+MHA
+MHC
+MAC
+HAC
+
+MHAC
+```
+
+并且：
+
+```text
+capability_vector
+```
+
+自动继承参与实体的**全部维度**。
+
+---
+
+# 八、U-05：能力值与风险值必须彻底分家
+
+历史 registry 已经明确：
+
+> `OBSERVED ≠ LABEL_VALIDATED ≠ CAUSALLY_ESTABLISHED ≠ ADMITTED_TO_RISK_DECISION`
+
+而且风险轴不得因为规模大就自动变成风险。
+
+所以现在升级成四层：
+
+```text
+L2 Capability
+      ↓
+L3 Risk / Value Evidence
+      ↓
+L4 Decision / Treatment
+      ↓
+L5 Commercial Outcome
+```
+
+例如：
+
+```text
+高Theo
+≠ 高风险
+
+高流水
+≠ 高风险
+
+高ROI
+≠ 高风险
+
+高IP关联
+≠ 自动处罚
+```
+
+---
+
+# 九、U-06：Economic Value 不得重复计票
+
+此前已经实测：
+
+```text
+economic_value ≡ net_margin
+Spearman = 1
+```
+
+所以：
+
+```text
+economic_value
+```
+
+继续保留，但必须：
+
+```text
+equivalent_to = net_margin
+```
+
+禁止：
+
+```text
+net_margin + economic_value
+```
+
+当成两个独立经济轴。
+
+这属于**信息保留但禁止重复计票**，是强化而非删除。
+
+---
+
+# 十、U-07：ROI 永远不能重新爬回主罚轴
+
+这一条必须写成 registry 硬规则。
+
+此前实测已经发现：
+
+* 极端 ROI 经常由极小样本产生；
+* ROI 混入综合判型以后表现变差；
+* `roi_weighted_by_stake` 在会员粒度数学上退化为 ROI 本身。
+
+所以：
+
+```text
+ROI
+→ PROFILE / DESCRIPTIVE / SUPPORT
+```
+
+而不是：
+
+```text
+ROI
+→ automatic punishment
+```
+
+尤其：
+
+```text
+late_share
+high ROI
+small n
+```
+
+不能直接变成风险结论。历史数据已经发现极端 `late_share` 很少，但明确警告“选择条件 ≠ 风险证明”。
+
+---
+
+# 十一、U-08：ramp_recent 必须从 vs_all 升级成 vs_prior
+
+这个已经是确定缺陷：
+
+```text
+ramp_recent
+```
+
+现有63件的分母包含自身 recent：
+
+```text
+recent / ALL
+```
+
+存在机械相关。
+
+正式升级：
+
+```text
+recent / prior
+```
+
+并进入：
+
+```text
+DF-3
+S2
+```
+
+---
+
+# 十二、U-09：theo / ADT / NMPT / ESI 必须进入57维商业强化层
+
+但是不能简单“多加四列”。
+
+`theo` 必须：
+
+```text
+member × bet09
+× house_edge
+```
+
+先产生中间粒度，再汇总。
+
+历史审计已经明确发现：现有 `#075` 在会员级只保留产品数量和产品熵，`bet09 × valid_bet` 已被提前折叠，因此 Theo 实际上需要新增 `x_prod` CTE，而不是简单增加一列。
+
+因此升级为：
+
+```text
+theo
+adt
+nmpt
+esi
+```
+
+但每一个都必须登记：
+
+```text
+formula
+source
+grain
+edge_version
+effective_date
+zero_protection
+economic_role
+```
+
+---
+
+# 十三、U-10：赏罚不能只有“一个结果”
+
+这是此前规划最应该进一步强化的地方。
+
+正式 registry 必须新增：
+
+```text
+treatment_policy_dictionary
+```
+
+一个实体/组合可以有：
+
+```text
+T00 = NO_ACTION / CONTINUE
+T01 = PROTECT
+T02 = VIP / RETENTION
+T03 = PROMOTION
+T04 = RECRUIT_AS_AGENT
+T05 = MONITOR
+T06 = REVIEW
+T07 = LIMIT
+T08 = REDUCE_COMP
+T09 = MANUAL_REVIEW
+T10 = ESCALATE
+T11 = SUSPEND
+T12 = REMOVE
+```
+
+**不是说每个实体都能使用全部Treatment。**
+
+而是：
+
+> registry 必须保存所有可行处理方式，然后由实体类型、风险、价值、证据和业务约束决定哪些 Treatment 可进入。
+
+---
+
+# 十四、最重要的升级：每一种 Treatment 都必须计算“反事实”
+
+先生之前举的：
+
+> 高频小额、持续赢钱的会员怎么办？
+
+这正好应该成为标准模板。
+
+不是：
+
+```text
+高ROI → 限额
+```
+
+而是：
+
+### Scenario A
+
+```text
+继续正常投注
+```
+
+预测：
+
+```text
+未来NGR
+未来Theo
+未来ADT
+未来Net Margin
+未来留存
+未来流水
+未来会员贡献
+```
+
+### Scenario B
+
+```text
+限额
+```
+
+测：
+
+```text
+Incremental NGR
+Incremental Profit
+Churn
+Turnover loss
+Market-share effect
+```
+
+### Scenario C
+
+```text
+培养成为代理
+```
+
+测：
+
+```text
+新增会员
+新增代理
+新增流水
+新增Theo
+新增NGR
+代理留存
+链路质量
+净经济价值
+```
+
+### Scenario D
+
+```text
+VIP / retention
+```
+
+测：
+
+```text
+comp cost
+retention uplift
+NGR uplift
+```
+
+### Scenario E
+
+```text
+观察
+```
+
+测：
+
+```text
+risk avoided
+cost avoided
+future loss
+```
+
+---
+
+# 十五、所以正式建立 Treatment Counterfactual Matrix
+
+核心结构：
+
+| Treatment | 处理前 | 处理后  | 对照      | 增量                 |
+| --------- | --- | ---- | ------- | ------------------ |
+| 不处理       | PRE | POST | Control | ΔNGR               |
+| 限额        | PRE | POST | Control | ΔNGR               |
+| VIP       | PRE | POST | Control | ΔNGR               |
+| 促活        | PRE | POST | Control | ΔNGR               |
+| 转代理       | PRE | POST | Control | ΔMembers/Agent/NGR |
+| 观察        | PRE | POST | Control | ΔRisk/Profit       |
+| 人工复核      | PRE | POST | Control | ΔCost/Outcome      |
+| 暂停        | PRE | POST | Control | ΔLoss avoided      |
+
+然后统一计算：
+
+```text
+Incremental NGR
+Incremental Profit
+Incremental Members
+Incremental Agents
+Incremental Turnover
+Retention Δ
+Churn Δ
+Market-share proxy Δ
+Treatment Cost
+Risk Avoided
+Net Economic Value
+```
+
+最终：
+
+$$
+\boxed{
+INEV =
+Incremental\ NGR
+-
+Treatment\ Cost
+-
+Opportunity\ Cost
++
+Risk\ Avoided
+}
+$$
+
+---
+
+# 十六、U-11：商业成功必须从“相关”升级到“因果”
+
+历史方案已经把这一点钉死：
+
+> 模型存在 ≠ 盈利；回测盈利 ≠ 生产盈利；相关 ≠ 因果；NGR增长 ≠ Incremental NGR。
+
+所以每一个 Treatment 都要进入：
+
+```text
+PRE
+ ↓
+Treatment
+ ↓
+POST
+ ↓
+Control
+ ↓
+PSM / DID / Event Study
+ ↓
+Incremental NGR
+ ↓
+Incremental Profit
+ ↓
+Net Economic Value
+```
+
+如果能随机：
+
+```text
+A/B / Randomized Control
+```
+
+优先。
+
+不能随机才：
+
+```text
+PSM
+DID
+Event Study
+```
+
+并且必须 purge / embargo，避免时间泄漏。
+
+---
+
+# 十七、57维不能只是“画像”，要真正证明商业价值
+
+这就是最终商业闭环：
+
+```text
+57D Capability Vector
+          ↓
+Cross-Entity Vector
+          ↓
+Risk × Value
+          ↓
+Treatment Candidate
+          ↓
+Treatment Assignment
+          ↓
+Outcome
+          ↓
+Causal Evaluation
+          ↓
+Incremental NGR
+          ↓
+Incremental Profit
+          ↓
+Market Share / Members / Agents
+          ↓
+Net Economic Value
+```
+
+历史方案已经提出 SOPP：
+
+```text
+Signal
+→ Operational Threshold
+→ L1/L2
+→ Evidence
+→ L3 Review
+→ Approved Action
+→ Outcome
+→ Gold Label
+```
+
+并且特别强调作业阈值、评估、经济价值三层不能混合。
+
+---
+
+# 十八、最终我建议把 v1.5.001 registry 升级成“四本字典 + 一张总矩阵”
+
+不是只有：
+
+```text
+registry_risk_typology
+```
+
+而是：
+
+## Dictionary ①：Capability Dictionary
+
+```text
+57维
+×
+4实体
+×
+domain
+×
+facet
+×
+CORE/EXTENDED
+×
+formula
+×
+source
+×
+grain
+```
+
+---
+
+## Dictionary ②：Cross-Entity Dictionary
+
+```text
+M
+H
+A
+C
+MH
+MA
+MC
+HA
+HC
+AC
+MHA
+MHC
+MAC
+HAC
+MHAC
+```
+
+每一个组合：
+
+```text
+完整继承参与实体全部能力维
++
+relationship features
++
+exposure
++
+evidence
+```
+
+---
+
+## Dictionary ③：Treatment Dictionary
+
+```text
+T00~T12
+```
+
+每个 Treatment：
+
+```text
+适用实体
+适用风险
+适用价值
+证据门槛
+成本
+预期收益
+副作用
+可逆性
+监管/合规
+实验要求
+```
+
+---
+
+## Dictionary ④：Outcome / Economic Dictionary
+
+统一：
+
+```text
+ROI
+Net Margin
+ADT
+Theo
+Economic Value
+NMPT
+ESI
+GGR
+NGR
+Incremental NGR
+Incremental Profit
+Retention
+Churn
+Turnover
+New Members
+New Agents
+Market Share
+Treatment Cost
+Risk Avoided
+Net Economic Value
+```
+
+并明确：
+
+> **Outcome 不是 Capability。**
+
+---
+
+# 十九、第五张：Unified Cross Matrix
+
+最终真正的核心产品其实是：
+
+```text
+                    价值
+                     ↑
+                     │
+          ┌──────────┼──────────┐
+          │          │          │
+        高价值     高价值      低价值
+        低风险     高风险      高风险
+          │          │          │
+       RETAIN      PROTECT     REVIEW
+       GROW        MONITOR     LIMIT
+       VIP         TEST        ESCALATE
+          │          │          │
+          └──────────┼──────────┘
+                     │
+                     ↓
+                    风险
+```
+
+但这只是**决策框架**。
+
+真正进入计算时：
+
+```text
+57D
++
+Cross Entity
++
+Evidence
++
+Temporal
++
+Treatment
++
+Outcome
++
+Causal
++
+Economic
+```
+
+全部保留。
+
+---
+
+# 二十、我特别建议增加一个“Treatment Dominance”判据
+
+这是我认为比单纯比较 ROI 更强的一步。
+
+对于同一个对象：
+
+```text
+T0 不处理
+T1 限额
+T2 VIP
+T3 促活
+T4 转代理
+T5 观察
+T6 复核
+```
+
+分别得到：
+
+$$
+NEV(T_0),NEV(T_1),...,NEV(T_6)
+$$
+
+然后寻找：
+
+$$
+T^*=\arg\max_T NEV(T)
+$$
+
+但必须满足：
+
+```text
+Evidence ≥ required level
++
+Temporal CLEAN
++
+Multiplicity controlled
++
+No material harm
+```
+
+这样系统最终回答的就不再是：
+
+> “这个人危险吗？”
+
+而是：
+
+> **“在目前证据下，对这个人采取哪一种处理，对公司的增量经济价值最大？”**
+
+这才真正接近先生所说的**赏罚分明 + 商业盈利操作系统**。
+
+---
+
+# 二十一、但有一条必须狠狠挡住
+
+不能因为最终目标是：
+
+> 增加市场份额、会员、代理、利润
+
+就反过来把：
+
+```text
+未来利润
+未来会员
+未来代理
+```
+
+偷偷塞回 Feature。
+
+否则立即发生：
+
+```text
+OUTCOME_LEAK
+LABEL_LEAK
+FUTURE_DEPENDENCY
+```
+
+所以：
+
+### 预测阶段
+
+只能：
+
+```text
+feature_as_of
+→ prediction
+```
+
+### 评价阶段
+
+才：
+
+```text
+prediction
+→ actual outcome
+```
+
+### 商业阶段
+
+才：
+
+```text
+actual outcome
+→ incremental economics
+```
+
+**绝不能反过来。**
+
+---
+
+# 二十二、目前资料能否已经证明“方案一定盈利”？
+
+这里我要坚持 REDTEAM 的最高标准：
+
+### 能证明的
+
+目前资料已经足以证明：
+
+* 数据基础比过去完整；
+* Treatment Ledger 已经存在；
+* 处置节已经形成；
+* 多项经济指标已经存在；
+* 四实体均有相当规模的结构化数据；
+* `Theo / ADT / NMPT / ESI` 有明确升级路径；
+* 处置前后分析具备实际基础；
+* 可以建立 PSM/DID/Event Study；
+* 可以建立 Incremental NGR / Net Economic Value 框架。
+
+历史方案也明确要求把最终经济评价落在 Incremental NGR 减去全部相关成本。
+
+### 目前还不能证明的
+
+但是：
+
+> **不能仅凭现有静态数据宣布“该商业方案已经证明一定增加市场份额、会员、代理和利润”。**
+
+真正必须实测：
+
+```text
+Treatment
+vs
+Control
+```
+
+然后：
+
+```text
+ΔRetention
+ΔMembers
+ΔAgents
+ΔTurnover
+ΔNGR
+ΔProfit
+```
+
+并扣：
+
+```text
+Treatment Cost
+Opportunity Cost
+```
+
+才能得到：
+
+$$
+\boxed{Incremental\ Net\ Economic\ Value}
+$$
+
+这一点不是保守，而是整个系统最重要的**防自欺闸门**。
+
+---
+
+# 二十三、因此 v1.5.001 当前正式“强化冻结版”应包含这些项目
+
+我建议登记为：
+
+### A. 维度体系
+
+```text
+57维
+CORE 35
+EXTENDED 22
+四实体完整继承
+```
+
+### B. 统一坐标
+
+```text
+D01-D12
+F01-F08
+CORE/EXTENDED
+```
+
+### C. 组合空间
+
+```text
+M
+H
+A
+C
+MH
+MA
+MC
+HA
+HC
+AC
+MHA
+MHC
+MAC
+HAC
+MHAC
+```
+
+### D. 时间安全
+
+```text
+temporal_admissibility
+temporal_hard_gate
+future_dependency
+label_dependency
+leakage_status
+```
+
+### E. 统计安全
+
+```text
+evidence_ladder
+multiplicity_control
+BH_FDR
+Bonferroni
+Permutation
+NONE → 禁 admit
+```
+
+### F. 经济安全
+
+```text
+Theo
+ADT
+Net Margin
+NMPT
+ESI
+Incremental NGR
+Incremental Profit
+Net Economic Value
+```
+
+### G. Treatment
+
+```text
+T00~T12
+```
+
+### H. Counterfactual
+
+```text
+T0 vs T1 ... Tn
+```
+
+### I. Causal
+
+```text
+A/B
+PSM
+DID
+Event Study
+```
+
+### J. Commercial Outcome
+
+```text
+Members
+Agents
+Turnover
+Retention
+Churn
+Market Share
+NGR
+Profit
+```
+
+### K. Audit
+
+```text
+source
+grain
+formula
+as_of
+snapshot
+MD5
+version
+equivalent_to
+availability
+evidence
+causal_status
+```
+
+---
+
+# 二十四、最后的总裁决
+
+我现在正式把前面多轮容易混淆的几个概念彻底统一：
+
+> **57维不是57个孤立指标。**
+
+而是：
+
+$$
+\boxed{
+\textbf{四实体统一能力坐标系}
+}
+$$
+
+再向外扩展：
+
+$$
+\boxed{
+57D
+\rightarrow
+15种实体组合
+\rightarrow
+Evidence
+\rightarrow
+Risk\times Value
+\rightarrow
+Treatment
+\rightarrow
+Counterfactual
+\rightarrow
+Causal
+\rightarrow
+Incremental\ NGR
+\rightarrow
+Net\ Economic\ Value
+}
+$$
+
+其中：
+
+**会员16、荷官13、代理13、风控专员15，一维不能少。**
+
+而且：
+
+> **四实体联合时，不允许为了“交叉”而删掉任何一个参与实体的能力维。**
+
+再进一步：
+
+> **不是寻找“最危险的人”，而是寻找“在证据充分、无信息泄漏的条件下，什么处理方式能够产生最大的增量净经济价值，同时减少不必要的会员、代理和市场流失”。**
+
+这才真正把先生一直要求的：
+
+**“只能强化与升级，禁止退化”**
+
+落实成了工程规则，而不是一句口号。
+
+目前我认为**不应该再动 `registry_risk_typology_v1.5.001` 成品文件**；应先把以上“57D × 15组合 × Treatment × Outcome × Economic”规格冻结进清单。待 `R03_player_dealer.csv`、`R03b_player_dealer_daily.csv` 到位后，再按冻结规格一次性施工。现有审计也明确把这两件列为荷官实体的核心承载，因此此时不提前假造其维度结果，是正确的。
+
+**一句交接总诀：**
+
+> **“四体同坐标，五十七维全；阶梯任意交，原维一不减；先时序，后证据；先价值，后风险；先方案，后处置；处置必对照，结果必因果；NGR扣成本，增量定胜负；未证不称盈，已证方生产。”**
