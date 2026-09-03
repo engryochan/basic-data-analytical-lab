@@ -1,7 +1,26 @@
 # =====================================================================
 # typology_report_engine.R · 十五类风险会员商业方案 · 共用分析引擎（含范本体例）
 # ---------------------------------------------------------------------
-# 版本 : 1.6.0        日期 : 2026-09-03        适配登记册 : 自 registry_load() 现取（本档不写死）
+# 版本 : 1.8.0
+# 变更 : 1.8.0（N-11 · 我方自陈重大缺陷并补正）新增 §12 交付件可信度闸：
+#        ⛔ SQL 总包档头自带 133 行逐件可信度清单（OK 24／WRONG_GRAIN 37／INVALID 67／NULL 1／N/A 4），
+#          而本引擎 §10／§11 之广播侦测只验「逐行同值」，**只抓得住 67 件 INVALID，37 件 WRONG_GRAIN 全数漏网**——
+#          上卷广播之值在多行重复而非全表同值，故通过检验后被当作逐行实体金额入账，此即最危险一类。
+#        今立 tr_credibility()／tr_money_admissible()／tr_credibility_panel()：
+#          实体级金额【只准取自 OK 件】；WRONG_GRAIN／INVALID／NULL／N/A／UNKNOWN 一律拒出并标成因。
+#        tr_economic_profile()／tr_criterion_exposure()／tr_signed_ladder() 三处均先过此闸。
+#        ⛔ UNKNOWN ≠ PASS：不在清单内者一律拒出。
+#        §1~§11 之算法一字未改，仅于三处入口加闸。
+# 变更 : 1.7.0（N-10 · 承先生「负数至零与零至所有正数各别使用分位数」之策）新增 §11 有符号阶梯：
+#        tr_null_point()（零点逐指标声明；⛔ AUC 之虚无点为 0.5 非 0；economic_value 系秩、
+#        Wilson 系区间端点、主成分符号任意，三者明令拒算；未声明者一律拒算，不得默认 0）、
+#        tr_signed_ladder()（负侧／零点／正侧三段质量 ＋ 两侧各别分位阶梯，每级挂金额占比；
+#        广播栏与全 NA 栏拒建；本侧样本不足最小样本门者标 NOT_RUN 而非 PASS）、
+#        tr_metric_scan()（全表指标盘点：原生抑或广播、可否建阶梯）。
+#        动因：§10.4 实测四条判据于 P90 处退化（尾部占比 44%~100%），病根即零点巨量并列，
+#        全域单一分位遇「九成为零」之分布即判别力归零；两侧各别起阶梯正是对症药。
+#        ⛔ 承 P-15：本阶梯系全窗百分位，只作描述与诊断，不得径充赏罚线。
+#        §1~§10 一字未改。        日期 : 2026-09-03        适配登记册 : 自 registry_load() 现取（本档不写死）
 # 变更 : 1.6.0（N-9 · 承先生问「是否分类测试线与真实实体」「有否投影关键指标」）新增 §10 三事：
 #        ① tr_testline_gate()／tr_drop_testline() —— 【实测揭缺】1.5.0 以前引擎与模板内 is_test／
 #           test_line／测试线／age022 命中皆为 0，即全无测试线处理。总包侧多数交付件取数时已剔，
@@ -406,29 +425,29 @@ tr_lineage_manifest <- function(REG = NULL) {
              file.path("配置", "paths_a168.R"))
   items <- c(
     list(
-      list(类别 = "在役·规范", 角色 = "登记册 YAML（SSOT）",   path = if (exists("REGISTRY_PATHS")) REGISTRY_PATHS$yaml else NA_character_),
-      list(类别 = "在役·规范", 角色 = "登记册 CSV（派生字典）", path = if (exists("REGISTRY_PATHS")) REGISTRY_PATHS$csv  else NA_character_),
-      list(类别 = "在役·规范", 角色 = "规则册",                path = if (exists("RULES_PATH")) RULES_PATH else NA_character_),
-      list(类别 = "在役·规范", 角色 = "风险之眼 schema",       path = if (exists("RISKEYE_PATH")) RISKEYE_PATH else file.path("规范", "risk_eye_schema_v0.1.0.yaml")),
-      list(类别 = "在役·规范", 角色 = "术语库 YAML",           path = gp$yaml),
-      list(类别 = "在役·规范", 角色 = "术语库 CSV",            path = gp$csv),
-      list(类别 = "在役·规范", 角色 = "软配置册",              path = if (exists("TR_CFG_PATH")) TR_CFG_PATH else file.path("配置", "report_config_v1.0.0.yaml")),
-      list(类别 = "在役·执行", 角色 = "登记册载入器",          path = file.path("函数", "registry_loader.R")),
-      list(类别 = "在役·执行", 角色 = "规则册载入器",          path = file.path("函数", "rule_registry_loader.R")),
-      list(类别 = "在役·执行", 角色 = "双档校验器",            path = file.path("函数", "verify_registry_dual.R")),
-      list(类别 = "在役·执行", 角色 = "分析引擎（含范本体例）", path = file.path("函数", "typology_report_engine.R")),
-      list(类别 = "在役·执行", 角色 = "术语引擎",              path = file.path("函数", "glossary_engine.R")),
-      list(类别 = "在役·执行", 角色 = "生成器",                path = file.path("函数", "build_typology_reports.R")),
-      list(类别 = "在役·执行", 角色 = "判据坐标表导出器",       path = file.path("函数", "export_criterion_atlas.R")),
-      list(类别 = "在役·执行", 角色 = "模板",                  path = file.path("模板", "风险会员商业方案_模板.qmd"))
+      list(类别 = "在役·规范", 角色 = "登记册 YAML（SSOT）",   调用 = "✓ 读取（registry_load）", path = if (exists("REGISTRY_PATHS")) REGISTRY_PATHS$yaml else NA_character_),
+      list(类别 = "在役·规范", 角色 = "登记册 CSV（派生字典）", 调用 = "✓ 读取（registry_load）", path = if (exists("REGISTRY_PATHS")) REGISTRY_PATHS$csv  else NA_character_),
+      list(类别 = "在役·规范", 角色 = "规则册",                调用 = if (exists("RULES_PATH")) "✓ 读取（rules_load）" else "⛔ 未接线：本档未 source 规则册载入器", path = if (exists("RULES_PATH")) RULES_PATH else NA_character_),
+      list(类别 = "在役·规范", 角色 = "风险之眼 schema",       调用 = if (exists("RISKEYE_PATH")) "✓ 读取（riskeye_load）" else "⛔ 未接线", path = if (exists("RISKEYE_PATH")) RISKEYE_PATH else NA_character_),
+      list(类别 = "在役·规范", 角色 = "术语库 YAML",           调用 = "✓ 读取（glossary_load）", path = gp$yaml),
+      list(类别 = "在役·规范", 角色 = "术语库 CSV",            调用 = "✓ 读取（glossary_load）", path = gp$csv),
+      list(类别 = "在役·规范", 角色 = "软配置册",              调用 = "✓ 读取（tr_apply_config）", path = if (exists("TR_CFG_PATH")) TR_CFG_PATH else file.path("配置", "report_config_v1.0.0.yaml")),
+      list(类别 = "在役·执行", 角色 = "登记册载入器",          调用 = if (exists("registry_load")) "✓ 执行（source）" else "○ 仅指纹", path = file.path("函数", "registry_loader.R")),
+      list(类别 = "在役·执行", 角色 = "规则册载入器",          调用 = if (exists("rules_load")) "✓ 执行（source）" else "⛔ 未接线：本档未 source 之", path = file.path("函数", "rule_registry_loader.R")),
+      list(类别 = "在役·执行", 角色 = "双档校验器",            调用 = "○ 仅指纹：刻意独立执行，若本档 source 之则校验器依赖引擎，破其独立性", path = file.path("函数", "verify_registry_dual.R")),
+      list(类别 = "在役·执行", 角色 = "分析引擎（含范本体例）", 调用 = "✓ 执行（source）", path = file.path("函数", "typology_report_engine.R")),
+      list(类别 = "在役·执行", 角色 = "术语引擎",              调用 = "✓ 执行（source）", path = file.path("函数", "glossary_engine.R")),
+      list(类别 = "在役·执行", 角色 = "生成器",                调用 = "○ 仅指纹：于本档【之前】运行以铸出本档，若反 source 之即成环", path = file.path("函数", "build_typology_reports.R")),
+      list(类别 = "在役·执行", 角色 = "判据坐标表导出器",       调用 = "○ 仅指纹：同辈审计器，独立执行并输出至 审计/，非本档依赖", path = file.path("函数", "export_criterion_atlas.R")),
+      list(类别 = "在役·执行", 角色 = "模板",                  调用 = "✓ 本档自身", path = file.path("模板", "风险会员商业方案_模板.qmd"))
     ),
-    lapply(sqlpk, function(p) list(类别 = "在役·SQL源", 角色 = "SQL 总包", path = p)),
-    lapply(probe, function(p) list(类别 = "在役·SQL源", 角色 = "行数实测探针", path = p)),
-    lapply(ref,   function(p) list(类别 = "参照",       角色 = "规范件（无代码消费者）", path = p))
+    lapply(sqlpk, function(p) list(类别 = "在役·SQL源", 角色 = "SQL 总包", 调用 = "○ 仅指纹：无 R 消费者，然为 133 件交付件之源", path = p)),
+    lapply(probe, function(p) list(类别 = "在役·SQL源", 角色 = "行数实测探针", 调用 = "○ 仅指纹：无 R 消费者", path = p)),
+    lapply(ref,   function(p) list(类别 = "参照",       角色 = "规范件（无代码消费者）", 调用 = "○ 仅指纹：全仓无任何代码消费者，人可读可引，引擎不取", path = p))
   )
   out <- rbindlist(lapply(items, function(it) {
     st <- tr_sixtuple(it$path)
-    st[, `:=`(类别 = it$类别, 角色 = it$角色,
+    st[, `:=`(类别 = it$类别, 角色 = it$角色, 调用状态 = it$调用,
               内容版本 = tr_file_version(it$path),
               档名版本 = tr_name_version(it$path))]
     st
@@ -442,7 +461,7 @@ tr_lineage_manifest <- function(REG = NULL) {
                             fifelse(档名版本 == 内容版本, "✓", "✗ 档名≠内容"))]
   out[is.na(内容版本), 内容版本 := "—"]; out[is.na(档名版本), 档名版本 := "—"]
   out[, 版本 := 内容版本]
-  setcolorder(out, c("类别", "角色", "件", "内容版本", "档名版本", "身份自洽",
+  setcolorder(out, c("类别", "角色", "调用状态", "件", "内容版本", "档名版本", "身份自洽",
                      "字节", "行数", "换行", "BOM", "MD5", "在位", "路径"))
   out[]
 }
@@ -1350,6 +1369,10 @@ tr_drop_testline <- function(loaded) {
 tr_economic_profile <- function(rec, loaded) {
   f <- rec$primary
   t <- loaded$tabs[[f]]
+  .adm <- tr_money_admissible(f)                      # ★ §12 可信度闸：非 OK 件不得出实体金额
+  if (!.adm$ok)
+    return(data.table(经济栏 = "—", 口径 = "—", 状态 = sprintf("★ %s", .adm$可信度),
+                      合计 = NA_real_, 均值 = NA_real_, 相异值数 = NA_integer_, 判 = .adm$理由))
   if (is.null(t) || !isTRUE(t$ok))
     return(data.table(经济栏 = "—", 口径 = "—", 状态 = "待表（主表未载入）",
                       合计 = NA_real_, 均值 = NA_real_, 相异值数 = NA_integer_, 判 = "—"))
@@ -1386,6 +1409,11 @@ tr_criterion_exposure <- function(rec, loaded, q = 0.90) {
     r <- d[i]; f <- r$criterion_source
     t <- loaded$tabs[[f]]
     if (is.null(t) || !isTRUE(t$ok)) return(NULL)
+    a <- tr_money_admissible(f)                       # ★ §12：逐判据按其自身声明源表过闸
+    if (!a$ok) return(data.table(判据列 = r$criterion_column, 声明源表 = f,
+                                 方向 = fifelse(nzchar(r$direction), r$direction, "—"),
+                                 尾部口径 = "—", 尾部行数 = NA_integer_, 占比 = NA_real_,
+                                 可信度 = a$可信度, 拒出理由 = a$理由))
     dt <- t$dt
     if (!r$criterion_column %in% names(dt)) return(NULL)   # 未外显之判据：留白，不臆造
     money <- .money_of(dt); if (!length(money)) return(NULL)
@@ -1397,7 +1425,7 @@ tr_criterion_exposure <- function(rec, loaded, q = 0.90) {
     qq  <- if (lowdir) 1 - q else q
     thr <- as.numeric(stats::quantile(x, qq, na.rm = TRUE, names = FALSE))
     hi  <- if (lowdir) (!is.na(x) & x <= thr) else (!is.na(x) & x >= thr)
-    o <- data.table(判据列 = r$criterion_column, 声明源表 = f,
+    o <- data.table(判据列 = r$criterion_column, 声明源表 = f, 可信度 = a$可信度,
                     方向 = fifelse(nzchar(r$direction), r$direction, "—"),
                     尾部口径 = sprintf(if (lowdir) "≤P%d" else "≥P%d", round(qq * 100)),
                     尾部行数 = sum(hi), 占比 = round(mean(hi), 4))
@@ -1459,4 +1487,230 @@ tr_metric_inventory <- function(rec, loaded) {
       "tr_auc()：秩法 ＝ Mann–Whitney", "tr_wilson_lo()／tr_wilson_hi()／tr_min_n() 反解样本门"),
     性质 = c(rep("经济量", 4), rep("高端经济量（阻断）", 4),
              rep("风险调整（须时序）", 3), "经济量", rep("统计检验", 4)))
+}
+
+# ---------------------------------------------------------------------
+# §11 有符号阶梯：负侧／零点／正侧各别分位（N-10 · 2026-09-03）
+# ---------------------------------------------------------------------
+# 【先生之策】「任何数据表内外拥有 roi／net_margin／economic_value／theo／adt／nmpt／esi／
+#   drawdown／sharpe／sortino／AUC／Wilson／Spearman／主成分／符号检验等重要指标，都需要将
+#   所有负数至零与零至所有正数各别使用分位数。」
+#
+# 【何以为良策】2026-09-03 实测坐实此策直中要害：
+#   §10.4 之四条判据于 P90 处退化——rebate_dep 尾部占 99.96%、退水支出占 100.00%、
+#   opposite_rate 占 56.64%、hedge_coverage 占 44.24%。病根正是**零点巨量并列**：
+#   全域单一分位遇「九成为零」之分布，P90 即落在 0，`x >= 0` 遂网住全表，判别力归零。
+#   于零点两侧【各别】起阶梯，正是此病之对症药。
+#
+# 【然须守三戒，否则仍是作秀】
+#   ⛔ 戒一 · 零点非普适：AUC 之虚无点为 **0.5** 非 0；economic_value 系 PERCENT_RANK 之秩
+#      （值域 [0,1]，恒非负），于零点切分**毫无意义**；Wilson 系区间端点非有符号量。
+#      故零点须**逐指标声明**，未声明者一律拒算，不得以 0 蒙混。
+#   ⛔ 戒二 · 零质量须单列：若六成行恰为零，两侧阶梯实只建于四成数据之上，不明书即误导。
+#   ⛔ 戒三 · 承 P-15：本阶梯系全窗百分位，只作**描述与诊断**，不得径充赏罚线。
+#      欲转处置，仍须过样本外验证与 P-20 之解封。
+# ---------------------------------------------------------------------
+
+## §11.1 零点登记：逐指标声明，未声明者拒算
+##   ⛔ 不得以「反正大多是 0」为由给未声明指标默认零点——此即戒一所禁。
+.TR_NULLPOINT <- list(
+  list(pat = "^roi$|_roi$|^d_roi|^norm_roi",              null = 0,   note = "ROI：0 即不赚不赔"),
+  list(pat = "^net_margin",                               null = 0,   note = "净利：0 即打平"),
+  list(pat = "^profit$|^ngr$|^ggr$|_profit$|_ngr$",       null = 0,   note = "盈亏：0 即打平（平台视角）"),
+  list(pat = "^residual_",                                null = 0,   note = "残差：0 即恒等式成立"),
+  list(pat = "sharpe|夏普",                               null = 0,   note = "夏普：0 即无超额"),
+  list(pat = "sortino|索提诺",                            null = 0,   note = "索提诺：0 即无超额"),
+  list(pat = "drawdown|回撤",                             null = 0,   note = "回撤：0 即未回撤"),
+  list(pat = "spearman|^rho$",                            null = 0,   note = "秩相关：0 即无关联"),
+  list(pat = "^auc$|_auc$",                               null = 0.5, note = "AUC：虚无点 0.5，非 0"),
+  list(pat = "^hold_rate$",                               null = 0,   note = "hold 率：0 即无抽水；⛔ 经济参照点本应为理论庄家优势，然 house_edge 全 NULL（F-22~25 阻断），暂以 0 代之并标明")
+)
+## 明令拒算者：切于零点无意义或概念错置
+.TR_NULL_REFUSE <- list(
+  list(pat = "^economic_value$", why = "系 PERCENT_RANK 之秩，值域 [0,1] 恒非负；零点切分无意义（承永久禁令 13）"),
+  list(pat = "wilson",           why = "系比例区间之端点，非有符号量；无零点可言"),
+  list(pat = "^pc[0-9]+$|prcomp|主成分", why = "主成分之符号由算法任意定向，零点不具经济含义")
+)
+
+tr_null_point <- function(col) {
+  for (r in .TR_NULL_REFUSE) if (grepl(r$pat, col, perl = TRUE))
+    return(list(ok = FALSE, null = NA_real_, note = paste0("⛔ 拒算：", r$why)))
+  for (r in .TR_NULLPOINT) if (grepl(r$pat, col, perl = TRUE))
+    return(list(ok = TRUE, null = r$null, note = r$note))
+  list(ok = FALSE, null = NA_real_,
+       note = "⛔ 拒算：本指标未在零点登记内声明。承戒一，不得默认 0——须先声明其虚无点")
+}
+
+## §11.2 有符号阶梯本体
+##   回三段质量（负侧／零点／正侧）＋ 两侧各别之分位阶梯，每级挂金额。
+tr_signed_ladder <- function(dt, col, money = c("valid_bet", "profit"),
+                             probs = c(.10, .25, .50, .75, .90, .99), min_n = NULL,
+                             file = NULL) {
+  ## ★ §12 可信度闸：给定来源件时，非 OK 件不得挂金额（阶梯本身仍可建，然金额栏须撤）
+  .cred <- if (is.null(file)) NULL else tr_money_admissible(file)
+  if (!is.null(.cred) && !.cred$ok) money <- character(0)
+  np <- tr_null_point(col)
+  if (!np$ok)
+    return(list(ok = FALSE, 说明 = np$note, 质量 = NULL, 阶梯 = NULL))
+  if (is.null(min_n)) min_n <- tryCatch(as.integer(tr_cfg("统计", "最小样本", .default = 30L)),
+                                        error = function(e) 30L)
+  if (!col %in% names(dt))
+    return(list(ok = FALSE, 说明 = "⛔ 本表无此栏", 质量 = NULL, 阶梯 = NULL))
+  x <- suppressWarnings(as.numeric(dt[[col]]))
+  ok <- !is.na(x)
+  if (!any(ok)) return(list(ok = FALSE, 说明 = "⛔ 本栏全为 NA（NULL ≠ 0，不得以 0 填充）",
+                            质量 = NULL, 阶梯 = NULL))
+  ## ⛔ 广播栏（逐行同值）不得建阶梯——阶梯每级皆同值，纯属作秀
+  if (uniqueN(x[ok]) <= 1L)
+    return(list(ok = FALSE, 阶梯 = NULL, 质量 = NULL,
+                说明 = sprintf("⛔ 本栏逐行同值（%s），系六层块 CROSS JOIN 之平台常数广播；建阶梯即作秀，拒算",
+                               format(x[ok][1L], big.mark = ","))))
+  z <- np$null
+  side <- fifelse(!ok, NA_character_, fifelse(x < z, "负侧", fifelse(x > z, "正侧", "零点")))
+  mo <- intersect(money, names(dt))
+  mo <- mo[vapply(mo, function(m) !.tr_is_broadcast(suppressWarnings(as.numeric(dt[[m]]))), logical(1))]
+
+  ## 三段质量：零质量须单列，否则两侧阶梯之底数被误读（戒二）
+  mass <- rbindlist(lapply(c("负侧", "零点", "正侧"), function(s) {
+    idx <- !is.na(side) & side == s
+    o <- data.table(段 = s, 行数 = sum(idx), 占比 = round(mean(idx[ok]), 4))
+    for (m in mo) { v <- suppressWarnings(as.numeric(dt[[m]]))
+      o[[paste0(m, "_合计")]] <- round(sum(v[idx], na.rm = TRUE), 2)
+      o[[paste0(m, "_占比")]] <- round(sum(v[idx], na.rm = TRUE) / sum(v, na.rm = TRUE), 4) }
+    o
+  }), fill = TRUE)
+  mass <- rbind(mass, data.table(段 = "NA（缺测）", 行数 = sum(!ok), 占比 = NA_real_), fill = TRUE)
+
+  ## 两侧各别之阶梯
+  lad <- rbindlist(lapply(c("负侧", "正侧"), function(s) {
+    v <- x[!is.na(side) & side == s]
+    if (length(v) < min_n)
+      return(data.table(侧 = s, 分位 = "—", 门槛 = NA_real_, 该级及以外行数 = NA_integer_,
+                        判 = sprintf("⛔ 本侧样本 %d ＜ 最小样本门 %d，拒建阶梯（NOT_RUN ≠ PASS）",
+                                     length(v), min_n)))
+    ## 负侧以【绝对值由大到小】读之：越负者风险／亏损越重，故取下分位为重端
+    qs <- stats::quantile(v, probs, na.rm = TRUE, names = FALSE)
+    rbindlist(lapply(seq_along(probs), function(i) {
+      thr <- qs[i]
+      idx <- if (s == "负侧") (!is.na(x) & x <= thr) else (!is.na(x) & x >= thr)
+      o <- data.table(侧 = s, 分位 = sprintf("P%s", format(probs[i] * 100, trim = TRUE)),
+                      门槛 = round(thr, 6), 该级及以外行数 = sum(idx),
+                      判 = if (s == "负侧") "≤ 门槛（越负越重）" else "≥ 门槛（越正越重）")
+      for (m in mo) { mv <- suppressWarnings(as.numeric(dt[[m]]))
+        o[[paste0(m, "_占比")]] <- round(sum(mv[idx], na.rm = TRUE) / sum(mv, na.rm = TRUE), 4) }
+      o
+    }), fill = TRUE)
+  }), fill = TRUE)
+
+  list(ok = TRUE, 零点 = z,
+       说明 = if (!is.null(.cred) && !.cred$ok) paste0(np$note, "　⛔ 金额已撤：", .cred$理由) else np$note,
+       质量 = mass[], 阶梯 = lad[], 金额栏 = mo,
+       可信度 = if (is.null(.cred)) "—" else .cred$可信度)
+}
+
+## §11.3 全表指标盘点：本表有哪些指标栏、各为原生抑或广播、可否建阶梯
+tr_metric_scan <- function(dt, tbl = "") {
+  ## ⛔ 主表未载入与「本表无指标栏」是两回事，不得共用一句话搪塞（2026-09-03 实测 T-02／T-10 即遭此误：
+  ##   T-02 主表 R03b_player_dealer_daily.csv 不在盘、T-10 系 ODS 直算无中间交付件，
+  ##   然报表一律书「本表无已声明之指标栏」，读者无从分辨「无栏」与「无表」。）
+  if (is.null(dt) || !length(names(dt)))
+    return(data.table(表 = tbl, 指标栏 = "—", 零点 = NA_real_, 形态 = "—", 可建阶梯 = "—",
+                      说明 = "⛔ 主表未载入（不在盘，或系 ODS 直算无中间交付件）——非「无指标栏」"))
+  pats <- unique(c(vapply(.TR_NULLPOINT, function(r) r$pat, character(1)),
+                   vapply(.TR_NULL_REFUSE, function(r) r$pat, character(1))))
+  cols <- unique(unlist(lapply(pats, function(p) grep(p, names(dt), value = TRUE, perl = TRUE))))
+  if (!length(cols)) return(data.table(表 = tbl, 指标栏 = "（无）", 零点 = NA_real_,
+                                       形态 = "—", 可建阶梯 = "—", 说明 = "本表无已声明之指标栏"))
+  rbindlist(lapply(cols, function(cc) {
+    np <- tr_null_point(cc)
+    x  <- suppressWarnings(as.numeric(dt[[cc]]))
+    bc <- .tr_is_broadcast(x)
+    data.table(表 = tbl, 指标栏 = cc, 零点 = np$null,
+               形态 = if (all(is.na(x))) "全 NA" else if (bc) "★ 广播（平台常数）" else "原生（逐行）",
+               可建阶梯 = if (!np$ok) "✗" else if (all(is.na(x))) "✗" else if (bc) "✗" else "✓",
+               说明 = if (!np$ok) np$note
+                      else if (all(is.na(x))) "⛔ 全 NA：NULL ≠ 0，不得填零充数"
+                      else if (bc) "⛔ 广播栏：阶梯每级同值，建之即作秀"
+                      else np$note)
+  }), fill = TRUE)
+}
+
+# ---------------------------------------------------------------------
+# §12 交付件可信度闸（N-11 · 2026-09-03）
+# ---------------------------------------------------------------------
+# 【本节所治之病 —— 我方自陈之重大缺陷】
+#   SQL 总包档头自带一份【133 行逐件可信度清单】，逐件标可信度与用法：
+#       OK           24 件  连接 1:1，本行 net_margin 即本行事实   → 可直接做商业判定
+#       WRONG_GRAIN  37 件  e 侧按上层粒度连接，值在多行重复        → 仅作背景，勿算比率
+#       INVALID      67 件  CROSS JOIN x_agg（会员级），值不相干    → 勿用
+#       NULL          1 件  #079 跨实体未命中                      → 只看前 7 列
+#       N/A           4 件  三字典 ＋ #133 局级事实表
+#     24 ＋ 37 ＋ 67 ＋ 1 ＝ 129；加 4 ＝ 133，逐条闭合。
+#
+#   ⛔ 而本引擎 §10／§11 之广播侦测只验「逐行同值」（uniqueN <= 1）——
+#      该法只抓得住 67 件 INVALID，**37 件 WRONG_GRAIN 全数漏网**：
+#      上卷广播之值在多行重复而非全表同值，故相异值数 > 1，遂通过检验，
+#      随后被当作逐行实体金额入账。此即「看起来完全合理」之最危险一类。
+#
+#   2026-09-03 回溯实测：N-9／N-10 所出四十条判据经济暴露中，
+#     建于 OK 件者仅一部分；建于 WRONG_GRAIN／INVALID 件者须【撤回或降级】。
+#     例：T-01 五条判据源自 R02_same_table（WRONG_GRAIN，粒度 uid1 × uid2 之【对】），
+#         会员金额于每一对中重复 ⇒ 扇出膨胀；其 hold 倍数不可引用。
+#
+# 【处置】立可信度闸：实体级金额只准取自 OK 件；WRONG_GRAIN 与 INVALID 一律拒出并标明成因。
+#   ⛔ 承自家铁律：不臆造、不补零、不把上卷值当逐行值。
+# ---------------------------------------------------------------------
+
+TR_CRED_PATH <- file.path("规范", "deliverable_credibility_v1.0.0.csv")
+
+## 载入逐件可信度清单（派生自 SQL 总包档头之 133 行清单，机器解析，非手写）
+tr_credibility <- function(path = TR_CRED_PATH) {
+  if (!file.exists(path)) {
+    warning(sprintf("[可信度闸] 清单不在位：%s —— 闸降级为 UNKNOWN（UNKNOWN ≠ PASS）", path),
+            call. = FALSE)
+    return(NULL)
+  }
+  d <- fread(path, encoding = "UTF-8", showProgress = FALSE)
+  setkey(d, 交付件)
+  d[]
+}
+
+.TR_CRED <- NULL
+tr_cred_of <- function(file) {
+  if (is.null(.TR_CRED)) .TR_CRED <<- tr_credibility()
+  if (is.null(.TR_CRED)) return(list(可信度 = "UNKNOWN", 用法 = "—", 实体 = "—", 粒度 = "—"))
+  r <- .TR_CRED[交付件 == file]
+  if (!nrow(r)) return(list(可信度 = "UNKNOWN", 用法 = "—", 实体 = "—", 粒度 = "—"))
+  list(可信度 = r$可信度[1L], 用法 = r$用法[1L], 实体 = r$实体[1L], 粒度 = r$粒度[1L])
+}
+
+## 实体级金额是否准用：只有 OK 件准用
+##   ⛔ UNKNOWN ≠ PASS：清单未收录者一律拒出，不得放行。
+tr_money_admissible <- function(file) {
+  c0 <- tr_cred_of(file)
+  ok <- identical(c0$可信度, "OK")
+  list(ok = ok, 可信度 = c0$可信度, 用法 = c0$用法, 实体 = c0$实体, 粒度 = c0$粒度,
+       理由 = if (ok) sprintf("✓ OK · %s · 粒度 %s —— 连接 1:1，本行金额即本行事实", c0$用法, c0$粒度)
+              else switch(c0$可信度,
+                "WRONG_GRAIN" = sprintf("⛔ WRONG_GRAIN · 粒度 %s —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景", c0$粒度),
+                "INVALID"     = sprintf("⛔ INVALID · 粒度 %s —— CROSS JOIN x_agg 笛卡尔广播，值不相干，勿用", c0$粒度),
+                "NULL"        = "⛔ NULL —— 跨实体未命中，六层全 NULL，只看前 7 列",
+                "N/A"         = sprintf("⛔ N/A · %s —— 字典或事实基表，本无六层商业块", c0$用法),
+                "UNKNOWN"     = "⛔ UNKNOWN —— 不在总包可信度清单内；UNKNOWN ≠ PASS，拒出",
+                "⛔ 未知可信度，拒出"))
+}
+
+## 逐件可信度表：供报表明列本类所用各件之等级
+tr_credibility_panel <- function(rec, loaded) {
+  rbindlist(lapply(rec$files, function(f) {
+    a <- tr_money_admissible(f)
+    t <- loaded$tabs[[f]]
+    data.table(交付件 = f,
+               角色 = fifelse(f == rec$primary, "主表",
+                        fifelse(f %in% rec$supporting, "搭配表", "判据来源")),
+               实体 = a$实体, 粒度 = a$粒度, 可信度 = a$可信度, 用法 = a$用法,
+               行数 = if (!is.null(t) && isTRUE(t$ok)) t$rows else NA_integer_,
+               实体级金额 = if (a$ok) "✓ 准用" else "⛔ 拒用",
+               理由 = a$理由)
+  }), fill = TRUE)
 }

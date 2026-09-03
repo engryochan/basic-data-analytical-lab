@@ -1,0 +1,54 @@
+﻿类,判据列,声明源表,方向,尾部口径,尾部行数,占比,可信度,拒出理由,valid_bet_尾部,valid_bet_占全表,profit_尾部,profit_占全表,stake_尾部,stake_占全表,尾部hold率,全表hold率,hold倍数
+T-01,lift,R02_same_table.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 uid1 × uid2 × n_same_o —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-01,jaccard,R02_same_table.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 uid1 × uid2 × n_same_o —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-01,same_rate,R02_same_table.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 uid1 × uid2 × n_same_o —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-01,exp_same,R02_same_table.csv,—,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 uid1 × uid2 × n_same_o —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-01,n_tables,R02_same_table.csv,low,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 uid1 × uid2 × n_same_o —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-02,特定玩家复现率,S02_dealer_score.csv,high,≥P90,30,0.1003,OK,,23589267.6,0.0023,494180.62,0.0026,26592491.66,0.0024,0.020949,0.018881,1.11
+T-02,节奏稳定度,S02_dealer_score.csv,abnormal,≥P90,30,0.1003,OK,,1424514355.11,0.1407,28242023.41,0.1477,1577792168.01,0.1403,0.019826,0.018881,1.05
+T-03,late_share,R01_late_shoe.csv,—,≥P90,9244,0.1,OK,,575098054.66,0.05,8452760.11,0.0449,636595408.47,0.0499,0.014698,0.016366,0.898
+T-03,shoe_pos_p50,R01_late_shoe.csv,—,≥P90,10056,0.1088,OK,,191865067.45,0.0167,4538858.03,0.0241,212715344.24,0.0167,0.023657,0.016366,1.445
+T-03,stake_ramp,R01_late_shoe.csv,—,≥P90,9122,0.0987,OK,,495776273.98,0.0431,8767808.1,0.0466,547993394.87,0.0429,0.017685,0.016366,1.081
+T-03,tail_share,S_player_tail.csv,—,≥P90,15961,0.1,OK,,1972882399.84,0.1666,34158536.27,0.1736,2210393946.83,0.1682,0.017314,0.016619,1.042
+T-04,opposite_rate,C06_hedge_pairs.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 bet_ip × m_a × m_b —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-04,n_opposite_round,C06_hedge_pairs.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 bet_ip × m_a × m_b —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-04,hedge_coverage,C06_hedge_pairs.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 bet_ip × m_a × m_b —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-04,dir_stake,C06_hedge_pairs.csv,—,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 bet_ip × m_a × m_b —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-04,bet_ip,C06_hedge_pairs.csv,—,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 bet_ip × m_a × m_b —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-04,lv3,C06_hedge_pairs.csv,—,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 bet_ip × m_a × m_b —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-05,hedge_rate,T03_arbitrage.csv,high,≥P90,8064,0.1,OK,,1059573218.3,0.0927,22963019.89,0.1238,1238134259.31,0.0976,0.021672,0.016235,1.335
+T-05,stake_cv,T03_arbitrage.csv,low,≤P10,8064,0.1,OK,,717629785.05,0.0628,8526773.87,0.046,795046788.37,0.0627,0.011882,0.016235,0.732
+T-05,rebate_dep,K01_risk_feature_matrix.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 member_id × is_seed × —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-05,side_entropy,K01_risk_feature_matrix.csv,low,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 member_id × is_seed × —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-06,n_member_eff,I_ip_agg.csv,high,≥P90,881,0.1017,OK,,167627344.97,0.1975,3475674.57,0.2159,186697323.48,0.1981,0.020735,0.018972,1.093
+T-06,n_member_raw,I_ip_agg.csv,high,≥P90,873,0.1008,OK,,98305594.3,0.1158,2260941.66,0.1404,108879663.57,0.1155,0.022999,0.018972,1.212
+T-06,share_p90,I_ip_agg.csv,—,≥P90,1988,0.2296,OK,,247564148.68,0.2917,6024410.56,0.3742,274497050.82,0.2913,0.024335,0.018972,1.283
+T-06,ip_order_share,I_ip_player.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 b.bet_ip × b.member_id —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-07,索提诺稳定性,S01_player_score.csv,high,≥P90,56710,0.0784,OK,,4146134074.22,0.3426,19528299.33,0.0864,4605751036.12,0.3428,0.00471,0.01867,0.252
+T-07,投注产品结构熵,S01_player_score.csv,low,≤P10,236119,0.3264,OK,,148087489.38,0.0122,10350436.17,0.0458,164071462.72,0.0122,0.069894,0.01867,3.744
+T-07,win_rate_all,R03_player_dealer.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 uid × dealer_id × is_s —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-07,stake_p90_p50,K01_risk_feature_matrix.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 member_id × is_seed × —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-08,reb_k,E02_segment_econ.csv,—,—,,,INVALID,⛔ INVALID · 粒度 m.rebate_rate_bkt × m. —— CROSS JOIN x_agg 笛卡尔广播，值不相干，勿用,,,,,,,,,
+T-08,comm_k,E02_segment_econ.csv,—,—,,,INVALID,⛔ INVALID · 粒度 m.rebate_rate_bkt × m. —— CROSS JOIN x_agg 笛卡尔广播，值不相干，勿用,,,,,,,,,
+T-08,rebate_rate_bkt,E02_segment_econ.csv,—,—,,,INVALID,⛔ INVALID · 粒度 m.rebate_rate_bkt × m. —— CROSS JOIN x_agg 笛卡尔广播，值不相干，勿用,,,,,,,,,
+T-08,退水消耗比,S03_agent_score.csv,high,—,,,INVALID,⛔ INVALID · 粒度 b.lv3 —— CROSS JOIN x_agg 笛卡尔广播，值不相干，勿用,,,,,,,,,
+T-08,退水支出,S05_member_month_panel.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 b.member_id × DATE_TRU —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-09,新增会员质量,S03_agent_score.csv,low,—,,,INVALID,⛔ INVALID · 粒度 b.lv3 —— CROSS JOIN x_agg 笛卡尔广播，值不相干，勿用,,,,,,,,,
+T-09,下线留存,S03_agent_score.csv,low,—,,,INVALID,⛔ INVALID · 粒度 b.lv3 —— CROSS JOIN x_agg 笛卡尔广播，值不相干，勿用,,,,,,,,,
+T-09,真实流水,S03_agent_score.csv,—,—,,,INVALID,⛔ INVALID · 粒度 b.lv3 —— CROSS JOIN x_agg 笛卡尔广播，值不相干，勿用,,,,,,,,,
+T-09,member_per_chain,C01_ip_chain.csv,high,≥P90,681,0.1009,OK,,54006296.43,0.1525,1499972.76,0.1664,59847148.31,0.1518,0.027774,0.025462,1.091
+T-11,bet_ip,I_ip_player.csv,—,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 b.bet_ip × b.member_id —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-11,ip_order_share,I_ip_player.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 b.bet_ip × b.member_id —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-11,n_orders_ip,I_ip_player.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 b.bet_ip × b.member_id —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-11,jaccard,R02_same_table.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 uid1 × uid2 × n_same_o —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-11,member_per_chain,C01_ip_chain.csv,high,≥P90,681,0.1009,OK,,54006296.43,0.1525,1499972.76,0.1664,59847148.31,0.1518,0.027774,0.025462,1.091
+T-12,stake_cv,K01_risk_feature_matrix.csv,low,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 member_id × is_seed × —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-12,side_entropy,K01_risk_feature_matrix.csv,low,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 member_id × is_seed × —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-12,progress,X_combo.csv,—,—,,,INVALID,⛔ INVALID · 粒度 1 × 2 —— CROSS JOIN x_agg 笛卡尔广播，值不相干，勿用,,,,,,,,,
+T-13,night_share,K01_risk_feature_matrix.csv,high,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 member_id × is_seed × —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-13,bet_hour,K01_risk_feature_matrix.csv,—,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 member_id × is_seed × —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-15,生命周期阶段,S01_player_score.csv,—,≥P90,72357,0.1,OK,,8464687504.38,0.6995,145675854.91,0.6448,9399005269.59,0.6995,0.01721,0.01867,0.922
+T-15,span_days,S01_player_score.csv,—,≥P90,72956,0.1008,OK,,8316343046.77,0.6872,146252641.93,0.6473,9229880962.3,0.6869,0.017586,0.01867,0.942
+T-15,活跃稳定,S05_member_month_panel.csv,jump,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 b.member_id × DATE_TRU —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-15,流水贡献,S05_member_month_panel.csv,jump,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 b.member_id × DATE_TRU —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
+T-15,n_ip,S05_member_month_panel.csv,jump,—,,,WRONG_GRAIN,⛔ WRONG_GRAIN · 粒度 b.member_id × DATE_TRU —— e 侧按上层粒度连接，金额于多行重复；作实体金额即扇出膨胀，仅可作背景,,,,,,,,,
