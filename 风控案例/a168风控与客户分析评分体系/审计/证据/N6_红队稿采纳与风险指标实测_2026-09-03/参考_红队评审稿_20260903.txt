@@ -1,0 +1,723 @@
+redteam / critic / killcritic / blindspot / actionplan/
+
+先生，这一轮我裁定：**方向正确，而且已经从“修 SQL”进入“修契约”的阶段。**
+尤其是本轮翻出的 **13 条判据缺列**，其严重性高于此前 `agent_id / is_test / bet06` 三个捏造列名：后三者是执行层命名错误；这 13 条则证明**Registry → Deliverable 的契约可能静默断裂而不报错**。
+
+我建议现在**不要急着 Git commit，也不要马上进入 A03**。先把下面几个裁决钉死。
+
+---
+
+# 一、Redteam：本轮最严重的问题已经不是 SQL
+
+### 1. `is_test` / `agent_id` / `bet06`
+
+这三项已经可以正式：
+
+```text
+W-84 = RETRACTED
+```
+
+且必须保留：
+
+> **不得由模型/审计者凭语义直觉创造列名；任何列名必须先有包内实证血统。**
+
+这一条应升级成以后所有 SQL 施工的硬规则：
+
+```text
+COLUMN_NAME
+    ↓
+SEARCH EXISTENCE
+    ↓
+CONTEXT CHECK
+    ↓
+OUTPUT CHECK
+    ↓
+ONLY THEN USE
+```
+
+特别是：
+
+> **CTE alias ≠ output column**
+
+这是本轮真正值得升级进工程规范的一条。
+
+---
+
+# 二、Critic：13 条缺列才是本轮核心发现
+
+这里我要把先生目前的结论再收紧一点。
+
+目前已经证明：
+
+```text
+13 criteria
+    ↓
+criterion_column
+    ↓
+声明 source_table 中不存在
+```
+
+但继续追溯以后发现：
+
+```text
+8 = CTE internal alias
+1 = other module output
+4 = genuinely unbuilt
+```
+
+所以不能简单写成：
+
+> “13 条判据引用不存在的字段。”
+
+更准确的最终表述应该是：
+
+> **13 条判据的登记册 `criterion_column` 与其声明的交付源表不一致；其中 8 条引用了总包内部计算别名而非交付输出列，1 条实际属于其他模块输出，4 条目前确无已建字段。**
+
+这个措辞非常重要。
+
+因为它把：
+
+```text
+Registry error
+```
+
+与：
+
+```text
+Deliverable missing
+```
+
+分开了。
+
+---
+
+# 三、Killcritic：`intersect()` 静默吞掉判据，是必须封杀的
+
+我认为这是本轮最危险的发现。
+
+如果引擎是：
+
+```r
+intersect(requested_columns, actual_columns)
+```
+
+然后继续运行，那么：
+
+```text
+criterion A
+requested = c("silent_days", "roi", "n_rounds")
+
+actual = c("roi", "n_rounds")
+
+intersect()
+      ↓
+c("roi", "n_rounds")
+```
+
+程序：
+
+> **不报错。**
+
+但业务上实际发生的是：
+
+> **`silent_days` 这一判据被无声删除。**
+
+这比 SQL syntax error 更危险。
+
+因为：
+
+```text
+SQL error
+→ 人会发现
+
+silent omission
+→ 人可能永远不知道
+```
+
+因此我建议正式加入：
+
+## **KILL RULE：Criterion Silent-Drop Prohibition**
+
+凡是：
+
+```text
+registered criterion column
+        ∉
+actual source columns
+```
+
+不得：
+
+```r
+intersect()
+```
+
+后静默继续。
+
+至少必须产生：
+
+```text
+criterion_status = BLOCKED
+criterion_gate_reason = COLUMN_NOT_IN_DECLARED_SOURCE
+```
+
+而不是：
+
+```text
+criterion_status = OK
+```
+
+更不能：
+
+```text
+criterion = omitted
+```
+
+无声消失。
+
+---
+
+# 四、四级阶梯现在还要再加一层“语义来源”
+
+先生前面要求的：
+
+```text
+SOURCE_EXISTS
+→ SOURCE_ALIGNED
+→ SOURCE_ADMISSIBLE
+→ CRITERION_ELIGIBLE
+```
+
+现在仍然成立。
+
+但本轮已经证明，仅靠这四层还不够。
+
+因为：
+
+```text
+SOURCE_EXISTS = TRUE
+```
+
+可以发生在：
+
+> 总包内部 CTE 确实计算过 `silent_days`。
+
+但是：
+
+```text
+SOURCE_ALIGNED = FALSE
+```
+
+因为它根本没有成为该交付表的输出字段。
+
+所以建议最终形成：
+
+```text
+SOURCE_EXISTS
+      ↓
+OUTPUT_EXPOSED
+      ↓
+SOURCE_ALIGNED
+      ↓
+SOURCE_ADMISSIBLE
+      ↓
+CRITERION_ELIGIBLE
+```
+
+### 新增的关键门：
+
+**`OUTPUT_EXPOSED`**
+
+意思是：
+
+> 这个字段不是“总包曾经算过”，而是**真正存在于声明的交付件输出中**。
+
+这正好封住本轮 8 个 CTE alias 漏洞。
+
+---
+
+# 五、Blindspot：`audit_rn` 是强证据，但不要把它绝对化
+
+先生目前用了：
+
+> “不在 `audit_rn` 排序键 → 不是输出列。”
+
+这个方法对于本包非常有价值，但我建议工程规范不要写成：
+
+```text
+audit_rn ∉ column
+→ definitely not output
+```
+
+而写成：
+
+```text
+audit_rn
+    ↓
+strong output-column evidence
+```
+
+最终还是必须以：
+
+```text
+actual CSV header
+```
+
+或实际表 schema 为最终证据。
+
+否则以后某个模块改变排序键定义，Atlas 自己又可能制造新的假阴性。
+
+所以优先级建议：
+
+```text
+真实交付件 header / schema       LEVEL 1
+实际 CREATE TABLE / SELECT 输出  LEVEL 2
+audit_rn 输出排序引用             LEVEL 3
+CTE alias                         LEVEL 4
+注释/命名推断                     禁止作为最终证据
+```
+
+---
+
+# 六、13 条应如何处置？
+
+这里我建议**绝对不要一次性全部改成正确列名**。
+
+分成三类：
+
+| 类别           | 数量 | 处置                                 |
+| ------------ | -: | ---------------------------------- |
+| CTE 内部别名，未外显 |  8 | **BLOCKED**                        |
+| 其他模块已有输出     |  1 | **重新指向正确 deliverable**，但须重新验 grain |
+| 真正未建         |  4 | **TO_BUILD / BLOCKED**             |
+
+尤其那 8 条：
+
+> **不要因为总包里“有这个计算”就把 criterion_column 改到别的字段。**
+
+因为那会产生第二次语义偷换。
+
+正确选择只有两个：
+
+```text
+A. 总包正式外显该字段
+B. Registry 改为真正存在且语义等价的输出字段
+```
+
+但这两者都必须经过 N-5 语义裁决。
+
+---
+
+# 七、`lv3` 那一条尤其不能直接搬
+
+先生说：
+
+```text
+lv3
+→ 系他模块输出列
+```
+
+这里我建议单独加：
+
+```text
+source_module
+source_deliverable
+```
+
+因为：
+
+```text
+column exists somewhere
+```
+
+并不意味着：
+
+```text
+column valid for this criterion
+```
+
+必须证明：
+
+```text
+column
+ ↓
+module
+ ↓
+deliverable
+ ↓
+entity
+ ↓
+grain
+ ↓
+time
+```
+
+全部闭合。
+
+---
+
+# 八、RC-01：代理名册漂移，建议正式升级为 Freeze 问题
+
+这个发现非常重要：
+
+```text
+ods_a168_agent
+177 references
+0 snapshot locks
+```
+
+而注单侧有时间锁。
+
+因此：
+
+```text
+same SQL
++
+same source history
++
+different execution time
+=
+different agent population
+```
+
+这意味着问题不是简单的：
+
+> “214 还是 215？”
+
+而是：
+
+> **Agent dimension 没有 temporal reproducibility。**
+
+我建议 RC-01 最终定义成：
+
+```text
+RC-01
+AGENT_DIM_TEMPORAL_NONREPRODUCIBILITY
+```
+
+状态：
+
+```text
+BLOCKING_FOR_REPRODUCIBLE_AGENT_ANALYTICS
+```
+
+解决方案不要直接假定一定是 `sync_time`，应比较两种设计：
+
+### A. Snapshot lock
+
+```text
+agent_snapshot_at
+```
+
+或等价冻结时间。
+
+### B. Materialized frozen roster
+
+例如：
+
+```text
+agent_roster_snapshot_vX
+```
+
+然后所有批次统一读取。
+
+最终目标是：
+
+```text
+same SQL
++
+same source snapshot
+=
+same agent universe
+```
+
+---
+
+# 九、n_member_pairs：这一轮自纠是正确的，而且必须保留
+
+这里我完全支持先生撤回此前过宽的说法。
+
+必须明确：
+
+```text
+n_member_pairs
+```
+
+是：
+
+> **pair-round occurrences 的理论组合数**
+
+而不是：
+
+> **unique member-pair observations**
+
+所以以后 T-01 至少分：
+
+```text
+n_pair_occurrences
+n_unique_member_pairs
+repeat_pair_rate
+pair_round_frequency
+```
+
+并且：
+
+```text
+n_member_pairs = Σ C(n_members,r, 2)
+```
+
+不能拿来直接当 IID 样本量。
+
+否则：
+
+```text
+same pair
+same session
+repeated rounds
+```
+
+会被错误地当成大量独立证据。
+
+先生本轮所说的：
+
+> “同局五次即得 lift 1,108 倍，荒谬。”
+
+正是非常好的 **kill test**。
+
+---
+
+# 十、对 `export_criterion_atlas.R` 的最终裁定
+
+我现在把之前的 GO **升级为 GO+，但要求加入本轮发现的 `OUTPUT_EXPOSED`**。
+
+最终建议：
+
+```text
+SOURCE_EXISTS
+OUTPUT_EXPOSED
+SOURCE_ALIGNED
+SOURCE_ADMISSIBLE
+CRITERION_ELIGIBLE
+```
+
+并且输出：
+
+```text
+criterion_gate_reason
+```
+
+同时必须产生：
+
+```text
+silent_drop_detected
+```
+
+或等价字段。
+
+---
+
+# 十一、Atlas 不应该只做“66 行”，而应成为未来的断路器
+
+这是我最希望先生现在改变的一点。
+
+不要把 Atlas 当成：
+
+> “生成一张漂亮的 66 条判据表。”
+
+它应该成为：
+
+> **Registry 与执行引擎之间的 Contract Test。**
+
+即：
+
+```text
+Registry
+   ↓
+Atlas
+   ↓
+Contract Test
+   ↓
+Execution
+```
+
+如果：
+
+```text
+criterion_column
+```
+
+不存在于声明的 source output：
+
+```text
+FAIL / BLOCK
+```
+
+而不是：
+
+```text
+intersect()
+→ silently omit
+→ PASS
+```
+
+这样以后再出现：
+
+```text
+agent_id
+is_test
+bet06
+```
+
+或者新的：
+
+```text
+某内部 alias
+```
+
+系统会在执行前直接把它打出来。
+
+---
+
+# 十二、Actionplan：现在不要碰 A03
+
+我建议施工顺序稍微调整：
+
+```text
+#133                         CLOSED
+   ↓
+Atlas engine                 GO+
+   ↓
+OUTPUT_EXPOSED gate          新增
+   ↓
+66 criteria × real outputs   实跑
+   ↓
+13 mismatch classification   CLOSED
+   ↓
+RC-01 agent snapshot         DESIGN / BLOCKER
+   ↓
+G3 table_status               HIGH
+   ↓
+N-5 semantic ruling           66 criteria
+   ↓
+Registry / Deliverable sync
+   ↓
+verify_registry_dual.R
+   ↓
+Git anchor
+   ↓
+A03 Edge Simulation           SIM ONLY
+```
+
+### 特别是：
+
+**不要因为 Atlas 做出来了，就认为 Registry 已经闭合。**
+
+Atlas 是：
+
+```text
+发现问题
+```
+
+不是：
+
+```text
+解决问题
+```
+
+---
+
+# 十三、Git：本轮暂不提交，我赞成
+
+因为目前仍有至少这些未闭事项：
+
+```text
+13 criterion/source mismatches
+RC-01 agent temporal reproducibility
+CD-01 CAST vs varchar canonical conflict
+G3 900–913 status
+N-5 semantic ruling
+```
+
+所以现在 Git 最正确的状态不是：
+
+```text
+FINAL
+```
+
+而是：
+
+```text
+AUDIT WORKTREE
+        ↓
+ATLAS FINDINGS
+        ↓
+REMEDIATION
+        ↓
+MACHINE VERIFY
+        ↓
+GIT ANCHOR
+```
+
+**没有必要为了“保存成果”提前制造一个错误基线。**
+
+---
+
+# 最终红队结论
+
+本轮我给出三个等级：
+
+### 🟢 已闭
+
+* W-84 三个捏造列名已撤回
+* `eid` / `age001` / `age022` 已实证
+* #133 三档同步
+* #133 `n_member_pairs` 契约补正
+* 历史 `132` provenance 未篡改
+
+### 🟠 新发现、必须处理
+
+* **13 条 criterion/source mismatch**
+* **8 条 CTE alias 未外显**
+* **1 条跨模块输出**
+* **4 条真正未建**
+* `intersect()` 造成 **silent criterion drop**
+* Agent roster 177 次引用、0 snapshot lock → **RC-01**
+
+### 🔴 当前不得放行
+
+```text
+Registry closure        NO
+Production A03          NO
+Reward wiring           NO
+Git final anchor        NO
+```
+
+而下一锤就是：
+
+> **`export_criterion_atlas.R` 必须加入 `OUTPUT_EXPOSED` 与 silent-drop kill gate，然后对盘上真实 130 件交付件实跑。**
+
+这一步完成后，我们就不再是在“猜登记册有没有跟上总包”，而是可以给出机器证据：
+
+```text
+Registry criterion
+       ↓
+Declared source
+       ↓
+Actual output
+       ↓
+Actual grain
+       ↓
+Actual key
+       ↓
+Fan-out
+       ↓
+Temporal admissibility
+       ↓
+Eligibility
+```
+
+**这一层闭合，才有资格进入 N-5。**
+
+> **本轮最重要的新口诀：**
+> **算过不算出，存有不算对；注册不算可用，存在不算外显。**
+> **CTE alias 不当交付列，`intersect()` 不得吞判据；先验输出，后验资格。**

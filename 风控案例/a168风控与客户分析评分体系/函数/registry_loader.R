@@ -1,7 +1,9 @@
 # =====================================================================
 # registry_loader.R · a168 风险类型登记册载入器与门闸
 # ---------------------------------------------------------------------
-# 载入器版本 : 1.5.003      适配登记册 : 1.5.003      日期 : 2026-09-03
+# 载入器版本 : 1.5.004      适配登记册 : 1.5.004      日期 : 2026-09-03
+# 变更     : N-7（2026-09-03）——两处实质改动：① 路径指向 v1.5.004 双档（加法升级：追加 OQ-13／OQ-14
+#            与 id_namespace_registry；判据层 66 行与 CSV 逐字节未改）；② .expect 1.5.003 → 1.5.004。
 # 变更     : N-3（2026-09-03）——两处实质改动：① 路径指向 v1.5.003 双档（头块补正版：parent 改指真正父版
 #            v1.5.002、version_note／revision_note 补正；判据层 66 行与 CSV 逐字节未改）；② .expect 1.5.002 → 1.5.003。
 #            R01～R03 门闸逻辑一字未改。裁定：Ryo Eng 2026-09-03。
@@ -119,8 +121,8 @@ REGISTRY_PATHS <- list(
   fn_dir   = .rp("函数"),
   db_dir   = .rp("数据表"),
   spec_dir = .rp("规范"),
-  yaml     = .rp("规范", "registry_risk_typology_v1.5.003.yaml"),
-  csv      = .rp("规范", "registry_risk_typology_v1.5.003.csv"),
+  yaml     = .rp("规范", "registry_risk_typology_v1.5.004.yaml"),
+  csv      = .rp("规范", "registry_risk_typology_v1.5.004.csv"),
   sql_main = .rp("a168_取数与核验_SQL总包_v10.sql")   # 08acdbc5 起驻项目根（冻结件）
 )
 
@@ -218,7 +220,7 @@ registry_load <- function(yaml_path = REGISTRY_PATHS$yaml,
         stop(sprintf("%s 之判据列集合不一致", t$type_id))
     }
     ## 版本号亦须同源（登记册与载入器同进同退，杜绝版本身份碰撞）
-    .expect <- "1.5.003"
+    .expect <- "1.5.004"
     if (!identical(as.character(ymeta$registry$version), .expect))
       stop(sprintf("YAML registry.version=%s，载入器预期 %s —— 请同步递增版本号后重跑",
                    ymeta$registry$version, .expect))

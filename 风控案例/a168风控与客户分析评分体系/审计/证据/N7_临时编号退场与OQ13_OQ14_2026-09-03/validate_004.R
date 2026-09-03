@@ -1,0 +1,20 @@
+setwd("C:/Users/engry/Documents/GitHub/basic-data-analytical-lab/风控案例/a168风控与客户分析评分体系")
+options(warn=1); suppressPackageStartupMessages({library(data.table);library(yaml)})
+acc <- list(); step <- function(n,e){r<-tryCatch({force(e);"PASS"},error=function(x)paste0("FAIL: ",conditionMessage(x)));acc[[length(acc)+1]]<<-data.table(step=n,status=r);cat(sprintf("[%s] %s\n",r,n));invisible(r)}
+step("registry_load() → v1.5.004", { REG <<- { source("函数/registry_loader.R"); registry_load() } })
+cat("  version =", as.character(REG$meta$registry$version), "| parent =", as.character(REG$meta$registry$parent$version),
+    "| dict", nrow(REG$dict), "x", ncol(REG$dict), "| OQ", length(REG$meta$open_questions), "条\n")
+step("registry_counts", { print(unlist(registry_counts(REG))) })
+step("rules_load → v0.1.3", { source("函数/rule_registry_loader.R"); RUL <<- rules_load(REG); cat("  rules =", nrow(RUL), "\n") })
+step("verify_registry_dual 1.3.0", { source("函数/verify_registry_dual.R"); VR <<- verify_registry_dual() })
+print(table(VR$status)); print(VR[rule_id %in% c("R03","R04","R04b","R05") | status!="PASS", .(rule_id,status,observed=substr(observed,1,44))])
+gate <- report_verify(VR)
+step("test_r24b", test_r24b())
+step("负向证明：R04b 对 v1.5.003 判 FAIL", {
+  VN <- verify_registry_dual("规范/registry_risk_typology_v1.5.003.yaml","规范/registry_risk_typology_v1.5.003.csv")
+  r <- VN[rule_id=="R04b"]; print(VN[rule_id %in% c("R03","R04b"), .(rule_id,status,observed,expected)])
+  if (!identical(r$status,"FAIL")) stop("R04b 未判 FAIL") })
+CFG <- yaml::read_yaml("配置/report_config_v1.0.0.yaml"); cat("CFG:", CFG$config$version, CFG$config$parent, "\n")
+step("引擎 1.3.0 + tr_apply_config", { source("函数/typology_report_engine.R"); tr_apply_config() })
+step("Atlas 1.1.0 仍可跑", { source("函数/export_criterion_atlas.R"); A <<- export_criterion_atlas(); cat("  atlas rows", nrow(A), "\n") })
+cat("\n== N-7 验收 ==\n"); print(rbindlist(acc)); cat("第二阶段闸：", gate, "\n")

@@ -1,6 +1,8 @@
 # =============================================================================
 # verify_registry_dual.R  ——  registry 双档双跑校验器
-# 版本 : 1.2.0        立册 : 2026-09-02        Owner : Ryo Eng
+# 版本 : 1.3.0        立册 : 2026-09-02        Owner : Ryo Eng
+# 变更 : 1.3.0（N-7 · 2026-09-03）target 1.5.003 → 1.5.004、parent 1.5.002 → 1.5.003。
+#        R01–R25、R04b、R24b 之判定逻辑与文字一字未改。
 # 变更 : 1.2.0（N-3 · 2026-09-03）target 1.5.002 → 1.5.003、parent 1.5.001 → 1.5.002；新增 rule_id "R04b" 一条——
 #        父版身份自洽闸：YAML registry.parent.version 须等于 VRD$parent_version（v1.5.002 之 parent 曾指祖父 v1.5.0，
 #        R04 只检非空故未捕）。R01–R25 与 R24b 之判定逻辑与文字一字未改（只增不减）。裁定：Ryo Eng 2026-09-03。
@@ -9,7 +11,7 @@
 #        R01–R25 与 R24b 之判定逻辑与文字一字未改。
 # 变更 : 1.0.1（N-1B）新增 .r24b_core() 与 rule_id "R24b" 一条 —— 负向保证【有效性】闸；
 #        另附 test_r24b() 三态自测 fixture。R01–R25 判定逻辑与文字一字未改（只增不减）。
-# 对象 : registry_risk_typology_v1.5.003.{yaml,csv}  （父版 v1.5.002 为对照锚）
+# 对象 : registry_risk_typology_v1.5.004.{yaml,csv}  （父版 v1.5.003 为对照锚）
 # -----------------------------------------------------------------------------
 # 【本档立意】SC-26 实证：所谓「R01–R25 校验器」从未作为可执行档存在，
 #   故上一轮「25/25 PASS」已撤销 TESTED_PASS，改判 UNKNOWN。
@@ -30,13 +32,13 @@ suppressPackageStartupMessages({
 
 # ---- 0. 参数（集中式常量，承 SC-31 之教训：禁散写路径）-----------------------
 VRD <- list(
-  version        = "1.2.0",
-  target_version = "1.5.003",
-  parent_version = "1.5.002",
-  yaml_path      = "规范/registry_risk_typology_v1.5.003.yaml",
-  csv_path       = "规范/registry_risk_typology_v1.5.003.csv",
-  parent_yaml    = "规范/registry_risk_typology_v1.5.002.yaml",
-  parent_csv     = "规范/registry_risk_typology_v1.5.002.csv",
+  version        = "1.3.0",
+  target_version = "1.5.004",
+  parent_version = "1.5.003",
+  yaml_path      = "规范/registry_risk_typology_v1.5.004.yaml",
+  csv_path       = "规范/registry_risk_typology_v1.5.004.csv",
+  parent_yaml    = "规范/registry_risk_typology_v1.5.003.yaml",
+  parent_csv     = "规范/registry_risk_typology_v1.5.003.csv",
   csv_encoding   = "UTF-8-BOM",   # 承 SC-25 役所定形制
   csv_eol        = "LF"
 )
