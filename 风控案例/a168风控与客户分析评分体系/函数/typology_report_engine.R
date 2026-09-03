@@ -1,7 +1,15 @@
 # =====================================================================
 # typology_report_engine.R · 十五类风险会员商业方案 · 共用分析引擎（含范本体例）
 # ---------------------------------------------------------------------
-# 版本 : 1.14.0
+# 版本 : 1.15.0
+# 变更 : 1.15.0（N-18 · 承先生令「以刚出炉之统一坐标规范补齐关键指标可行性清单」）——
+#        §22 新立：tr_ucc()／tr_ucc_metrics()／tr_ucc_axes()／tr_ucc_table_axes()／tr_ucc_gaps()／
+#        tr_ucc_citation()／tr_ssot()／tr_metric_feasibility_ucc()／tr_type_axes_check()。
+#        ⛔ 病根：§10.3 tr_metric_inventory() 只列 16 项、只凭主表一件、且「可算／阻断」二分过粗，
+#          未分【缺件（授权阻断）／缺算（引擎未实作）／设计如此（报表侧现算）／命名污染】四性质，
+#          亦未接统一坐标之【轴】与【极性】。今一律改以 规范/ucc_coordinate_registry_v1.0.0.yaml
+#          与 规范/metric_ssot_matrix_v1.0.0.csv 为凭现取。
+#        §1~§21 之算法一字未改（tr_metric_inventory 保留作旧表对照）。
 # 变更 : 1.14.0（N-17 · 我方自陈疏漏之斧正）——
 #        ⛔ 病根：范本 §3.1.1「关键字段」一节，本模板【实际渲染为空】。tr_ods_fields() 系以
 #          【判据列名】比对 Z03 字典，而本套判据列皆系交付件派生量，本不在 ODS 字典内 ⇒
@@ -3235,4 +3243,141 @@ tr_core_metric_formula <- function(rec, variant = NULL) {
                方向 = fifelse(nzchar(r$direction), r$direction, "—"),
                阈值状态 = r$threshold_status)
   }), fill = TRUE)
+}
+
+# ---------------------------------------------------------------------
+# §22 关键指标可行性清单 · UCC 统一坐标版（N-18 · 2026-09-03）
+# ---------------------------------------------------------------------
+# 【本节所治之病】§10.3 tr_metric_inventory() 只列 16 项、以主表一件为凭、
+#   且「可算／阻断」二分过粗，未分【缺件（授权阻断）／缺算（引擎未实作）／
+#   设计如此（报表侧现算）／命名污染】四性质，亦未接统一坐标之【轴】与【极性】。
+# 【今立】一律改以 规范/ucc_coordinate_registry_v1.0.0.yaml（七轴 · 逐指标状态）
+#   与 规范/metric_ssot_matrix_v1.0.0.csv（134 件 × 30 指标族 SSOT）为凭，
+#   逐指标出：轴 · 正名 · 算式 · 本类在位处 · 全库在位件数 · 状态 · 阻断 · 视角 · 极性
+#   · 准入评分 · 准入风控决策 · 判读。⛔ 一律现取，不写死。
+# ---------------------------------------------------------------------
+
+TR_UCC_PATH  <- file.path("规范", "ucc_coordinate_registry_v1.0.0.yaml")
+TR_SSOT_PATH <- file.path("规范", "metric_ssot_matrix_v1.0.0.csv")
+
+.TR_UCC <- new.env(parent = emptyenv())
+tr_ucc <- function(path = TR_UCC_PATH) {
+  if (!is.null(.TR_UCC$y)) return(.TR_UCC$y)
+  if (!file.exists(path)) return(NULL)
+  .TR_UCC$y <- yaml::read_yaml(path); .TR_UCC$y
+}
+tr_ucc_axes <- function() {
+  u <- tr_ucc(); if (is.null(u)) return(NULL)
+  rbindlist(lapply(u$axes, as.data.table), fill = TRUE)
+}
+tr_ucc_metrics <- function() {
+  u <- tr_ucc(); if (is.null(u)) return(NULL)
+  rbindlist(lapply(u$metrics, function(x) as.data.table(lapply(x, function(v)
+    if (is.null(v)) NA_character_ else as.character(v)[1L]))), fill = TRUE)
+}
+tr_ucc_table_axes <- function() {
+  u <- tr_ucc(); if (is.null(u)) return(NULL)
+  rbindlist(lapply(u$table_class_axes, function(x) data.table(
+    表类 = x$表类, 应有轴 = paste(unlist(x$应有轴), collapse = "+"), 例 = x$例)), fill = TRUE)
+}
+tr_ucc_gaps <- function() {
+  u <- tr_ucc(); if (is.null(u)) return(NULL)
+  rbindlist(lapply(u$gaps, function(x) data.table(
+    类 = x$类, 指标 = paste(unlist(x$指标), collapse = "、"), 成因 = x$成因, 处置 = x$处置)), fill = TRUE)
+}
+tr_ucc_citation <- function() {
+  u <- tr_ucc(); if (is.null(u)) return(NULL)
+  data.table(序 = seq_along(u$citation_discipline), 纪律 = unlist(u$citation_discipline))
+}
+
+.TR_SSOT <- new.env(parent = emptyenv())
+tr_ssot <- function(path = TR_SSOT_PATH) {
+  if (!is.null(.TR_SSOT$d)) return(.TR_SSOT$d)
+  if (!file.exists(path)) return(NULL)
+  d <- tryCatch(fread(path, encoding = "UTF-8", showProgress = FALSE), error = function(e) NULL)
+  if (!is.null(d)) setnames(d, sub("^﻿", "", names(d)))
+  .TR_SSOT$d <- d; d
+}
+
+## §22.1 本类之关键指标可行性清单（UCC 版）
+tr_metric_feasibility_ucc <- function(rec, loaded = NULL) {
+  M <- tr_ucc_metrics(); S <- tr_ssot()
+  if (is.null(M))
+    return(data.table(项 = "UCC 登记册", 状态 = "⛔ NOT_RUN",
+                      判读 = sprintf("⛔ %s 不在位——统一坐标未落册，本节拒算", TR_UCC_PATH)))
+  own <- rec$files
+  ## 本类各件之实测在位（以现档表头为准；表不在位者标待表）
+  hit_here <- function(canon) {
+    if (is.null(loaded)) return(list(n = NA_integer_, where = "—"))
+    w <- character(0)
+    for (f in own) {
+      t <- loaded$tabs[[f]]
+      if (is.null(t) || !isTRUE(t$ok)) next
+      cc <- grep(paste0("^", canon, "($|_)"), names(t$dt), value = TRUE, perl = TRUE)
+      if (!length(cc) && canon %in% names(t$dt)) cc <- canon
+      if (length(cc)) w <- c(w, sprintf("%s（%s）", sub("[.]csv$", "", f), paste(utils::head(cc, 3), collapse = "、")))
+    }
+    list(n = length(w), where = if (length(w)) paste(w, collapse = " ／ ") else "—")
+  }
+  out <- rbindlist(lapply(seq_len(nrow(M)), function(i) {
+    m <- M[i]
+    canon <- as.character(m$指标)
+    h <- hit_here(canon)
+    st <- as.character(m$状态)
+    ## 四性质归类（承 UCC 缺口台账）
+    ## ⛔ 归类须【先查命名污染】：hold_valid_bet／net_margin／索提诺稳定性 之状态串内亦含
+    ##   「报表侧现算」「已落地」等字样，若不先判即会被归错格（2026-09-03 实测之误）。
+    cls <- if (grepl("⛔ 无此列|裸名不在位|名涉|名实未符|判伪", st)) "④ 命名污染（须带限定引用）"
+           else if (grepl("^⛔ 阻断|随 theo", st)) "① 缺件（授权阻断）"
+           else if (grepl("引擎未实作", st)) "② 缺算（引擎未实作）"
+           else if (grepl("报表侧|可现算", st)) "③ 设计如此（报表侧现算）"
+           else if (grepl("DISPLAY ONLY|系【秩】", st)) "⑤ 相对刻度（DISPLAY ONLY）"
+           else if (grepl("部分件有", st)) "⑥ 部分件有（非通栏）"
+           else if (grepl("已落地", st)) "⓪ 已落地"
+           else "◇ 其他"
+    ss <- if (is.null(S)) NULL else S[canonical_name == canon & table_name %in% own]
+    data.table(
+      轴 = as.character(m$轴), 指标 = canon, 算式 = as.character(m$算式),
+      本类在位件数 = h$n, 本类在位处 = .tr_cut(h$where, 110L),
+      全库在位件数 = suppressWarnings(as.integer(m$在位件数)),
+      性质 = cls, 状态 = .tr_cut(st, 130L),
+      视角 = as.character(m$视角), 极性 = as.character(m$极性),
+      准入评分 = if (!is.null(ss) && nrow(ss)) as.character(ss$admit_to_scoring[1L]) else "—",
+      准入风控决策 = "FALSE",
+      判读 = if (cls == "⓪ 已落地" && isTRUE(h$n > 0)) "✓ 本类可用（⛔ 金额仍须过可信度闸）"
+             else if (cls == "① 缺件（授权阻断）") "⛔ 不可算 —— 阻断未解前一律 NULL，禁以 realized 顶替"
+             else if (cls == "② 缺算（引擎未实作）") "⛔ 未实作 —— ⛔ 禁冒充「不适用」；补作须限具日序或实体粒度之表"
+             else if (cls == "③ 设计如此（报表侧现算）") "◦ 报表侧现算，非交付件之列 —— 禁下沉为 134 件之栏"
+             else if (cls == "④ 命名污染（须带限定引用）") "⚑ 引用须带限定 —— 名实未符或裸名不在位，见引用纪律"
+             else if (cls == "⑤ 相对刻度（DISPLAY ONLY）") "⛔ 系【秩】非金额 —— DISPLAY ONLY，禁入判据输入"
+             else if (cls == "⑥ 部分件有（非通栏）") "◦ 非通栏 —— 有此栏者方可用；⛔ 结局量禁入罚轴（DF-2）"
+             else if (isTRUE(h$n == 0)) "○ 本类各件皆无此栏" else "—")
+  }), fill = TRUE)
+  setorder(out, 性质, 轴, 指标)
+  out[]
+}
+
+## §22.2 本类各件应属之坐标层（表类 → 应有轴），并与实有对照
+tr_type_axes_check <- function(rec, loaded = NULL) {
+  S <- tr_ssot()
+  if (is.null(S)) return(data.table(项 = "SSOT", 状态 = "⛔ NOT_RUN",
+                                    判读 = sprintf("⛔ %s 不在位", TR_SSOT_PATH)))
+  d <- S[table_name %in% rec$files]
+  if (!nrow(d)) return(data.table(项 = "SSOT", 状态 = "⛔ NOT_RUN", 判读 = "⛔ SSOT 内无本类各件"))
+  agg <- d[, .(表类 = table_class[1L], 应有轴 = table_axes_required[1L],
+               列源 = schema_source[1L], 列数 = table_ncol[1L],
+               可信度 = credibility[1L], 用法 = usage[1L],
+               实有轴 = paste(sort(unique(axis[present_flag == "TRUE"])), collapse = "+"),
+               在位指标族 = sum(present_flag == "TRUE")), by = table_name]
+  agg[, 角色 := fifelse(table_name == rec$primary, "主表",
+                fifelse(table_name %in% rec$supporting, "辅助表", "判据来源"))]
+  agg[, 缺轴 := vapply(seq_len(.N), function(i) {
+    need <- setdiff(strsplit(应有轴[i], "[+]")[[1L]], "—")
+    have <- strsplit(实有轴[i], "[+]")[[1L]]
+    m <- setdiff(need, have)
+    if (!length(m)) "✓ 齐" else paste0("⛔ 缺 ", paste(m, collapse = "+"))
+  }, character(1))]
+  setcolorder(agg, c("table_name", "角色", "表类", "应有轴", "实有轴", "缺轴"))
+  setnames(agg, "table_name", "交付件")
+  agg[]
 }

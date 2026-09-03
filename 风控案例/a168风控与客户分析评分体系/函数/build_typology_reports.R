@@ -1,7 +1,9 @@
 # =====================================================================
 # build_typology_reports.R · 十五类风险会员商业方案 · 生成器
 # ---------------------------------------------------------------------
-# 版本 : 1.3.12        日期 : 2026-09-03        适配登记册 : 自 registry_load() 现取（本器不写死）
+# 版本 : 1.3.13        日期 : 2026-09-03        适配登记册 : 自 registry_load() 现取（本器不写死）
+# 变更 : 1.3.13（N-18）version 默认 v1.12.0 → v1.13.0（模板 v1.13.0：一之四改以 UCC 统一坐标评估，
+#        32 项全指标 ＋ 坐标层对照 ＋ 缺口台账 ＋ 引用纪律）。铸件逻辑一字未改。
 # 变更 : 1.3.12（N-17）version 默认 v1.11.0 → v1.12.0（模板 v1.12.0：关键字段改由总包 SQL 现取
 #        ODS 源字段、核心指标补公式栏、模型章移回第二部分之末、去手写编号）。铸件逻辑一字未改。
 # 变更 : 1.3.11（N-16）version 默认 v1.10.0 → v1.11.0（模板 v1.11.0：删第一部分原第三节；
@@ -31,7 +33,7 @@ suppressPackageStartupMessages(library(data.table))
 
 build_typology_reports <- function(out_dir = file.path("分析", "风险会员商业方案"),
                                    template = file.path("模板", "风险会员商业方案_模板.qmd"),
-                                   version = "v1.12.0", date = format(Sys.Date(), "%Y-%m-%d"),
+                                   version = "v1.13.0", date = format(Sys.Date(), "%Y-%m-%d"),
                                    render_ids = NULL, blocked_reason = "") {
   source("函数/registry_loader.R")
   REG <- registry_load()
