@@ -1,9 +1,19 @@
 config:
   name: typology_report_config
-  version: 1.4.0
+  version: 1.6.0
   issued: '2026-09-03'
   parent: registry_risk_typology_v1.5.004
   changelog_1_4_0: N-7（2026-09-03）——parent 改指 v1.5.004（追加 OQ-13／OQ-14 与 id_namespace_registry）。其余一字未改。
+  changelog_1_6_0: N-13（2026-09-03 · 承先生问「为何十五份一律遗漏 SQL 原文与维度指标」）——
+    新增 sql_pack 节：SQL 总包三版（原版审计版_OPT／分批作业版_OPT／分批作业版1万_OPT，各 133 模块）
+    之档名、目录、默认溯源口径与内嵌行上限一律登记于此。病根：引擎 1.9.0 之 .tr_sql_pack_path()
+    以 Sys.glob 把档名硬写于码内，既违本册硬码铁律，又只认一版，先生所言之「*版」无从对照。
+    max_inline_lines 一栏取 0 即【全文不截】——旧本硬写 400 行截断，违禁截铁律。
+    其余命名空间、阈值、分位、管线、名册一字未改。
+  changelog_1_5_0: N-12（2026-09-03）——namespaces.delivery 由 数据表 改回 数据库（承 commit 6e53299
+    「斧正`数据库/`」之 R100 纯改名；改名后配置册未跟改，致引擎指向不存在之目录，130 件全数
+    静默报「待表（档不在位）」——看似缺数据，实为路径断裂。引擎 1.9.0 同步增交付命名空间闸，
+    目录不存在或零 csv 者一律 stop，禁再静默）。其余阈值、分位、管线、名册一字未改。
   changelog_1_3_0: N-3（2026-09-03）——parent 改指 v1.5.003（头块补正版）。namespaces、阈值、分位、管线、名册一字未改。
   changelog_1_2_0: N-2A（2026-09-03）——namespaces.delivery 由 数据库 改 数据表（承 commit 7f713dc 目录改名；
     原值致引擎十件交付件「待表（档不在位）」）；parent 改指 v1.5.002。其余阈值、分位、管线、名册一字未改。
@@ -14,13 +24,33 @@ config:
 
 # ── 命名空间（与 配置/paths_a168.R 同源；改布局只改此处） ──────────────
 namespaces:
-  delivery: 数据表          # 交付件 CSV（2026-09-03 起；前名 数据库）
+  delivery: 数据库          # 交付件 CSV（2026-09-03 · commit 6e53299 改回；R100 纯改名，内容逐位未变）
   exec: 函数                # R／SQL 执行件
   spec: 规范                # 登记册、术语库
   config: 配置              # 本册与导出参数
   audit: 审计               # 基线／查询稿／证据／工具
   analysis: 分析            # 报告产出
   template: 模板            # 模板
+
+# ── SQL 总包名册：交付件之取数原文出处（血统之根）────────────────────
+#   ⛔ 铁律：交付件**非无中生有自动生成**，而是于 Superset 执行下列总包内之
+#     对应模块、查 StarRocks 之 ODS 层后**下载落盘**至 namespaces.delivery。
+#     故报表须能就地出示「本件由哪段 SQL 所出」，档名一律登记于此，禁写死于码内。
+sql_pack:
+  dir: 函数                      # 总包所在命名空间（与 namespaces.exec 同）
+  default_variant: 原版审计版      # 本套报告之默认溯源口径
+  max_inline_lines: 0            # 单模块内嵌行上限；0 即【全文不截】（禁截铁律）
+  variants:
+    - 版: 原版审计版
+      档: a168_SQL总包_v12_0_0_HF9g-P5D_原版审计版_六层商业版_OPT.sql
+      用途: 六层商业指标 ＋ audit_rn 全序，不切片一次导全；审计与溯源之正典口径
+    - 版: 分批作业版
+      档: a168_SQL总包_v12_0_0_HF9g-P5D_分批作业版_六层商业版_OPT.sql
+      用途: 同一口径加 ORDER BY 全序 ＋ OFFSET 分批落盘；巨件导出用
+    - 版: 分批作业版1万
+      档: a168_SQL总包_v12_0_0_HF9g-P5D_分批作业版1万_六层商业版_OPT.sql
+      用途: 每批一万行之分批落盘；节点吃紧时用
+  deliverable_credibility: 规范/deliverable_credibility_v1.0.0.csv   # 逐件可信度清单（派生自总包档头 133 行）
 
 # ── 字段软定义：会员键别名、时间轴候选、ODS 字典表 ──────────────────────
 fields:

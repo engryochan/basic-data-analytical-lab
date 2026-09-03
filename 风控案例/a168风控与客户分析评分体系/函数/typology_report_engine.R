@@ -1,7 +1,40 @@
 # =====================================================================
 # typology_report_engine.R · 十五类风险会员商业方案 · 共用分析引擎（含范本体例）
 # ---------------------------------------------------------------------
-# 版本 : 1.8.0
+# 版本 : 1.10.0
+# 变更 : 1.10.0（N-13 · 承先生问「为何十五份一律遗漏 SQL 原文与维度指标」）——
+#        ⛔ 病根自陈：1.9.0 虽立 tr_sql_of()／tr_dimensions()，然**模板从未接线**
+#          （实测模板 v1.7.0 全档内 tr_sql_of／tr_dimensions／tr_delivery_gate 命中皆为 0）。
+#          器在库中而报表不出，与无器无异——此谓「造了闸而不装上」。故十五份之
+#          第二部分只见交付件清单而不见其取数 SQL，第三部分只见 ODS 字典与登记册口径，
+#          而不见 数据库/ 内主辅表逐栏之维度与指标。
+#        ① §13.4 就地重构：总包档名自 Sys.glob 硬写改为配置册 sql_pack 现取，并支持
+#           先生所言之「*版」——原版审计版_OPT／分批作业版_OPT／分批作业版1万_OPT
+#           三版各 133 模块，逐版可选、可对照；另立 tr_sql_pack_manifest() 出示三版血统。
+#           max_inline_lines = 0 即【全文不截】（旧本硬写 400 行截断，违禁截铁律）。
+#        ② §14 新立四器：tr_sql_standard()（SQL 原文之后逐项解释【输出标准】：源 ODS 库表、
+#           观测窗、快照闸、去重规则、粒度键、测试线处置、全序与批次、六层广播块、落盘标识、
+#           声明列数 ↔ 册载列数 ↔ 实测列数三方对账、实测行数、可信度裁定、落盘路径）、
+#           tr_sql_panel()（本类主辅表逐件溯源总览）、tr_dim_metric_panel()／
+#           tr_dim_metric_summary()（读 数据库/ 实档，逐栏定性维度抑或指标，全栏在册、
+#           零省略，并与列数对账；本类判据列就地标星）。
+#        ③ 模板 v1.8.0 同步接线：第二部分增「二之二 · 主辅表取数 SQL 原文与输出标准」，
+#           第三部分增「三 · 主辅数据表全维度与指标盘点」，并于设置章接上 tr_delivery_gate()。
+#        §1~§13.3 一字未改。
+# 变更 : 1.9.0（N-12）新增 §13 四事：
+#        ① tr_delivery_gate() —— ⛔ 实测硬故障：commit 6e53299 以 R100 纯改名把 数据表/ 改回 数据库/，
+#           而配置册 namespaces.delivery 未跟改，致 130 件全数静默报「待表（档不在位）」——
+#           看似缺数据，实为路径断裂。今立闸：目录不存在或零 csv 一律 stop，禁再静默。
+#        ② tr_hold_pair() ＋ .TR_HOLD_DEF —— hold 正名。全包机检定谳三量并存：
+#           hold_rate = −net/stake（六层块 128 处，1.681532%）、house_hold_pct = −player_pnl/stake_total
+#           （DX04 自有，逐投注面）、我方派生 profit/valid_bet（1.866970%，**总包无此列**）。
+#           三者分母各异，同名必致误读；自此一律带分母出名，禁裸称 hold。
+#        ③ tr_measured_edge() —— 实测庄家优势（逐投注面 23 面）。总包所阻断者乃【理论】edge 之授权，
+#           【实测】edge 无须授权，SELECT 即得：Banker 1.3020%、Player 1.3519%、Tie 15.0605%、
+#           对子 10.58%、Super6 20.5730%，加权 1.866970%。⛔ 口径为 realized（含运气），非理论 edge。
+#        ④ tr_sql_of()／tr_dimensions() —— 承先生之训「数据非无中生有自动生成，而是自 Superset 之
+#           StarRocks 以 SQL 查询后下载」：报表须就地出示本件由哪段 SQL 所出，并逐栏分维度与指标。
+#        §1~§12 一字未改。
 # 变更 : 1.8.0（N-11 · 我方自陈重大缺陷并补正）新增 §12 交付件可信度闸：
 #        ⛔ SQL 总包档头自带 133 行逐件可信度清单（OK 24／WRONG_GRAIN 37／INVALID 67／NULL 1／N/A 4），
 #          而本引擎 §10／§11 之广播侦测只验「逐行同值」，**只抓得住 67 件 INVALID，37 件 WRONG_GRAIN 全数漏网**——
@@ -1712,5 +1745,410 @@ tr_credibility_panel <- function(rec, loaded) {
                行数 = if (!is.null(t) && isTRUE(t$ok)) t$rows else NA_integer_,
                实体级金额 = if (a$ok) "✓ 准用" else "⛔ 拒用",
                理由 = a$理由)
+  }), fill = TRUE)
+}
+
+# ---------------------------------------------------------------------
+# §13 交付路径闸 · hold 正名 · 实测庄家优势 · SQL 溯源与维度指标（N-12 · 2026-09-03）
+# ---------------------------------------------------------------------
+
+## §13.1 交付命名空间闸
+##   ⛔ 2026-09-03 实测之硬故障：commit 6e53299「斧正 `数据库/`」以 R100 纯改名把
+##      数据表/ 改回 数据库/，而配置册 namespaces.delivery 未跟改，仍指 数据表。
+##      其时 tr_load() 对每一件回「待表（档不在位）」——130 件全数静默失败，
+##      **看似缺数据，实为路径断裂**。此即最须根除之静默之洞。
+##   处置：渲染之初即验交付目录，不存在或零 csv 者一律 stop，禁再静默。
+tr_delivery_gate <- function(db = TR_DB) {
+  if (!nzchar(db))
+    stop("[交付闸] 交付命名空间为空——配置册 namespaces.delivery 未设", call. = FALSE)
+  if (!dir.exists(db))
+    stop(sprintf(paste0("[交付闸] 交付目录不存在：%s\n",
+      "  ⛔ 此非「缺数据」而是【路径断裂】。本层实有目录：%s\n",
+      "  ⇒ 请改 配置/report_config_*.yaml 之 namespaces.delivery，勿改代码。"),
+      db, paste(list.dirs(".", recursive = FALSE, full.names = FALSE), collapse = "、")),
+      call. = FALSE)
+  n <- length(list.files(db, "[.]csv$"))
+  if (n == 0L)
+    stop(sprintf("[交付闸] 交付目录 %s 内零件 csv —— 拒绝在空目录上出数（NOT_RUN ≠ PASS）", db),
+         call. = FALSE)
+  data.table(闸 = "交付命名空间", 取值 = db, 件数 = n,
+             判 = sprintf("✓ PASS —— 目录在位且含 %s 件 csv", format(n, big.mark = ",")))
+}
+
+## §13.2 hold 正名：三量并存，禁以一名统称
+##   2026-09-03 全包机检定谳：
+##     hold_rate      = −net / stake            六层块，128 处，会员级   ⇒ profit / stake
+##     house_hold_pct = −player_pnl / stake_total  #017 DX04 自有栏，逐投注面
+##     （我方 R 侧曾用 profit / valid_bet 而亦称 hold —— **总包无此列，系自造**）
+##   ⛔ 三者分母各异，同名必致误读。自此一律带分母出名，禁裸称 hold。
+.TR_HOLD_DEF <- data.table(
+  名 = c("hold_rate（总包正典）", "hold_vs_valid_bet（我方派生）", "house_hold_pct（#017 自有）"),
+  算式 = c("profit ÷ stake", "profit ÷ valid_bet", "−player_pnl ÷ stake_total"),
+  出处 = c("六层块 · 128 处 · 会员级", "总包无此列 · 本引擎派生", "DX04_bet09_profile · 逐投注面"),
+  全平台实测 = c("1.681532 %", "1.866970 %", "逐投注面各异（见 §13.3）"))
+
+tr_hold_pair <- function(dt, profit = "profit", stake = "stake", valid_bet = "valid_bet") {
+  gv <- function(c) if (c %in% names(dt)) suppressWarnings(as.numeric(dt[[c]])) else rep(NA_real_, nrow(dt))
+  p <- gv(profit); s <- gv(stake); v <- gv(valid_bet)
+  data.table(
+    口径 = c("hold_rate（对本金 · 总包正典）", "hold_vs_valid_bet（对洗码 · 派生）"),
+    分母 = c(stake, valid_bet),
+    分子合计 = c(round(sum(p, na.rm = TRUE), 2), round(sum(p, na.rm = TRUE), 2)),
+    分母合计 = c(round(sum(s, na.rm = TRUE), 2), round(sum(v, na.rm = TRUE), 2)),
+    值 = c(round(sum(p, na.rm = TRUE) / sum(s, na.rm = TRUE), 8),
+           round(sum(p, na.rm = TRUE) / sum(v, na.rm = TRUE), 8)),
+    注 = c("总包 128 处之正典算式 −net/stake", "⛔ 总包无此列；本引擎派生，引用时须带分母"))
+}
+
+## §13.3 实测庄家优势（逐投注面）
+##   ⛔ 口径：**realized（已实现，含运气）**，非理论 edge。
+##   总包阻断因由二称「bet09 → house_edge 映射值未获授权」——授权者乃【理论】edge；
+##   而【实测】edge 无须授权，SELECT 即得，本节即以交付件反算并落盘。
+##   ⛔ 然承 #017 探针 R3 之实测（overdispersion Q/(k−1) = 9.3~42.6）：
+##      单一常数 edge 不足以描述观测过程 ⇒ 本表只作【已实现基线】，
+##      不得径充理论 edge，亦不得单独用以推 theo 而不附 CI。
+TR_EDGE_PATH <- file.path("审计", "实测庄家优势_逐投注面_v1.0.0_20260903.csv")
+tr_measured_edge <- function(path = TR_EDGE_PATH) {
+  if (!file.exists(path)) return(NULL)
+  fread(path, encoding = "UTF-8", showProgress = FALSE)[]
+}
+
+## §13.4 自总包取某交付件之 SQL 原文（1.10.0 · N-13 斧正：档名移入配置册、支持「*版」多口径）
+##   ⛔ 承先生之训：数据信息**非无中生有自动生成**，而是自 Superset 之 StarRocks
+##      以 SQL 查询后下载。故报表须能就地出示【本件由哪段 SQL 所出】。
+##   ⛔ 1.9.0 本器之二缺（本轮自陈）：
+##      ① 总包档名以 Sys.glob 硬写于码内 —— 违配置册硬码铁律；
+##      ② 只认「原版审计版_OPT」一版，先生所言之「*版」（另有 分批作业版_OPT
+##         与 分批作业版1万_OPT，各 133 模块）无从出示，口径差异亦无从对照。
+##      今一律移入配置册 sql_pack；码内不留任何档名。
+TR_SQL_PACK <- NULL          # 非 NULL 即以之覆写配置册（供临时对照，不入正式流程）
+
+.tr_sql_variants <- function() {
+  v <- rbindlist(lapply(.cfg("sql_pack", "variants"), function(x) as.data.table(x)), fill = TRUE)
+  v[, 档路径 := file.path(.cfg("sql_pack", "dir"), 档)]
+  v[]
+}
+
+.tr_sql_pack_path <- function(variant = NULL) {
+  if (!is.null(TR_SQL_PACK)) return(TR_SQL_PACK)
+  v <- .tr_sql_variants()
+  key <- if (is.null(variant)) .cfg("sql_pack", "default_variant") else variant
+  r <- v[版 == key]
+  if (!nrow(r))
+    stop(sprintf("[SQL 溯源] 配置册 sql_pack.variants 无此版：%s（在册：%s）",
+                 key, paste(v$版, collapse = "、")), call. = FALSE)
+  r$档路径[1L]
+}
+
+.TR_SQL_CACHE <- new.env(parent = emptyenv())
+.tr_sql_lines <- function(variant = NULL) {
+  key <- if (is.null(variant)) .cfg("sql_pack", "default_variant") else variant
+  if (!is.null(TR_SQL_PACK)) key <- paste0("[override]", key)
+  if (exists(key, envir = .TR_SQL_CACHE, inherits = FALSE)) return(get(key, envir = .TR_SQL_CACHE))
+  p <- tryCatch(.tr_sql_pack_path(variant), error = function(e) NA_character_)
+  if (is.na(p) || !file.exists(p)) return(NULL)
+  L <- readLines(p, warn = FALSE, encoding = "UTF-8")
+  assign(key, L, envir = .TR_SQL_CACHE)
+  L
+}
+
+## 模块头体例（结构解析器，非业务参数，故留于码内）：`--  64. R01_late_shoe.csv   [总包行 …]`
+.TR_SQL_HEAD_PAT <- "^--[[:space:]]+[0-9]{1,3}[.][[:space:]]+[^[:space:]]+[.]csv"
+.tr_sql_heads <- function(L) {
+  hd <- if (length(L)) grep(.TR_SQL_HEAD_PAT, L) else integer(0)
+  list(hd = hd,
+       nm = if (length(hd)) sub("^--[[:space:]]+[0-9]{1,3}[.][[:space:]]+([^[:space:]]+[.]csv).*$", "\\1", L[hd]) else character(0),
+       no = if (length(hd)) sub("^--[[:space:]]+([0-9]{1,3})[.].*$", "\\1", L[hd]) else character(0))
+}
+
+## 总包名册：逐版出示档名、在位、行数、模块数——血统就地可核，禁以口传
+tr_sql_pack_manifest <- function() {
+  v <- .tr_sql_variants()
+  dflt <- .cfg("sql_pack", "default_variant")
+  rbindlist(lapply(seq_len(nrow(v)), function(i) {
+    p <- v$档路径[i]; ex <- file.exists(p)
+    L <- if (ex) .tr_sql_lines(v$版[i]) else NULL
+    data.table(版 = v$版[i], 档名 = v$档[i],
+               在位 = if (ex) "✓ 在位" else "⛔ 不在位",
+               字节MB = if (ex) round(file.size(p) / 1e6, 2) else NA_real_,
+               总行数 = if (ex) length(L) else NA_integer_,
+               模块数 = if (ex) length(.tr_sql_heads(L)$hd) else NA_integer_,
+               用途 = v$用途[i],
+               本报告 = if (identical(v$版[i], dflt)) "★ 默认溯源口径" else "○ 备照")
+  }), fill = TRUE)
+}
+
+tr_sql_of <- function(file, max_lines = NULL, variant = NULL) {
+  if (is.null(max_lines)) max_lines <- .cfg("sql_pack", "max_inline_lines")
+  if (!is.numeric(max_lines) || max_lines <= 0) max_lines <- Inf   # 0 即【不截】：全文出示
+  vk <- if (is.null(variant)) .cfg("sql_pack", "default_variant") else variant
+  p  <- tryCatch(.tr_sql_pack_path(variant), error = function(e) NA_character_)
+  bad <- function(msg) list(ok = FALSE, 说明 = msg, sql = NULL, 模块号 = NA_character_,
+                            起 = NA_integer_, 迄 = NA_integer_, 行数 = NA_integer_,
+                            包 = if (is.na(p)) "—" else basename(p), 版 = vk)
+  if (is.na(p) || !file.exists(p))
+    return(bad(sprintf("⛔ SQL 总包不在位（%s 版）——无法出示原文；⛔ 不得以「自动生成」冒充取数", vk)))
+  L <- .tr_sql_lines(variant); H <- .tr_sql_heads(L)
+  if (!length(H$hd)) return(bad("⛔ 总包内未见模块头体例（`-- NNN. 件名.csv`）"))
+  i <- which(H$nm == file)
+  if (!length(i))
+    return(bad(sprintf("⛔ 总包（%s 版）内无本件之取数模块：%s —— 或系字典件／他模块派生，须另溯，不得默认已溯源", vk, file)))
+  i <- i[1L]; s <- H$hd[i]
+  e <- if (i < length(H$hd)) H$hd[i + 1L] - 1L else length(L)
+  blk <- L[s:e]
+  trunc <- length(blk) > max_lines
+  list(ok = TRUE,
+       说明 = if (trunc) sprintf("（本模块 %d 行，此处示前 %.0f 行；全文见总包第 %d~%d 行）",
+                                 length(blk), max_lines, s, e)
+              else sprintf("（全文 %d 行，一行未截；位于总包第 %d~%d 行）", length(blk), s, e),
+       sql = if (trunc) c(blk[seq_len(max_lines)],
+                          sprintf("-- …（余 %d 行略，见总包第 %d~%d 行）", length(blk) - max_lines, s, e)) else blk,
+       模块号 = H$no[i], 起 = s, 迄 = e, 行数 = length(blk), 包 = basename(p), 版 = vk)
+}
+
+## §13.5 某交付件之【维度 × 指标】盘点
+##   ⛔ 分维度与指标二类，逐栏定性，禁笼统称「字段」。
+.TR_DIM_PAT <- paste0("(^|_)(id|key|code|name|type|flag|status|level|tier|date|dt|time|hour|",
+                      "ip|member|agent|dealer|table|round|shoe|side|bucket|bkt|segment|seg|cat|",
+                      "class|group|grp|label|rank_band|is_[a-z]+)($|_)")
+tr_dimensions <- function(dt, file = "") {
+  if (is.null(dt) || !length(names(dt)))
+    return(data.table(交付件 = file, 栏 = "—", 类 = "—", 型 = "—", 相异值 = NA_integer_,
+                      缺失率 = NA_real_, 例 = "⛔ 主表未载入"))
+  n <- nrow(dt)
+  rbindlist(lapply(names(dt), function(cc) {
+    ## ⛔ 逐栏 tryCatch：一栏之失不得毁全表，且须【留痕】而非静默跳过
+    ##   （2026-09-03 实测：某型栏触发 as.POSIXct 转型而中断全表盘点）
+    tryCatch({
+      x <- dt[[cc]]
+      cl <- class(x)[1L]
+      isnum <- is.numeric(x)
+      if (!isnum && is.character(x)) {
+        hd <- head(x[!is.na(x) & nzchar(x)], 200L)
+        isnum <- length(hd) > 0L && suppressWarnings(!any(is.na(as.numeric(hd))))
+      }
+      nd <- uniqueN(x)
+      dimlike <- grepl(.TR_DIM_PAT, tolower(cc), perl = TRUE) || (!isnum) || nd <= 50L
+      ex <- as.character(head(unique(x[!is.na(x)]), 3L))
+      data.table(交付件 = file, 栏 = cc,
+                 类 = if (dimlike) "维度" else "指标",
+                 型 = cl, 相异值 = nd,
+                 缺失率 = round(sum(is.na(x) | (is.character(x) & !nzchar(x))) / max(n, 1L), 4),
+                 例 = paste(substr(ex, 1L, 22L), collapse = " / "))
+    }, error = function(e)
+      data.table(交付件 = file, 栏 = cc, 类 = "⛔ 盘点失败", 型 = class(dt[[cc]])[1L],
+                 相异值 = NA_integer_, 缺失率 = NA_real_,
+                 例 = paste("⛔", conditionMessage(e))))
+  }), fill = TRUE)
+}
+
+# ---------------------------------------------------------------------
+# §14 主辅表逐件之【SQL 原文 ＋ 输出标准】与【全维度指标盘点】（N-13 · 2026-09-03）
+# ---------------------------------------------------------------------
+# 【本节所治之病 —— 我方自陈】
+#   1.9.0 已立 tr_sql_of() 与 tr_dimensions() 二器，然**模板从未接线**：
+#   实测模板 v1.7.0 全档内 `tr_sql_of`／`tr_dimensions`／`tr_delivery_gate` 命中皆为 0。
+#   器在库中而报表不出，与无器无异——此即「造了闸而不装上」。故十五份之
+#   第二部分只见交付件清单而不见其取数 SQL，第三部分只见 ODS 字典与登记册口径
+#   而不见【数据库/ 内主辅表逐栏之维度与指标】。二处遗漏历十五份而一律，正坐此因。
+#
+# 【本节所立四器】
+#   ① tr_sql_standard()   —— 某件之【输出标准】：出处、源 ODS 库表、观测窗、快照闸、
+#                            去重规则、粒度键、测试线处置、全序、六层块、落盘标识、
+#                            声明列数 ↔ 实测列数对账、实测行数、可信度裁定、落盘路径。
+#                            置于 SQL 原文之后，逐项解释「这段 SQL 出的是一张什么标准的表」。
+#   ② tr_sql_panel()      —— 本类主表／辅助表／判据来源逐件之溯源总览（一件一行）。
+#   ③ tr_dim_metric_panel()／④ tr_dim_metric_summary()
+#                         —— 逐件读 数据库/ 之实档，逐栏定性为【维度】或【指标】，
+#                            全栏在册、零省略，并与列数对账。
+#   ⛔ 四器皆现算：档一换、栏一改，报表即随之变，禁手写字面量。
+# ---------------------------------------------------------------------
+
+## 正则助手（结构解析，非业务参数，故留于码内）
+.tr_rx1 <- function(pat, txt, group = 1L, none = "—") {
+  m <- regmatches(txt, regexec(pat, txt, perl = TRUE))[[1L]]
+  if (length(m) >= group + 1L && nzchar(trimws(m[group + 1L]))) trimws(m[group + 1L]) else none
+}
+.tr_rxall <- function(pat, txt) {
+  m <- regmatches(txt, gregexpr(pat, txt, perl = TRUE))[[1L]]
+  unique(m[nzchar(m)])
+}
+.tr_join <- function(x, none = "—", sep = "、") if (!length(x)) none else paste(x, collapse = sep)
+## 截断一律留痕：禁无声截字（承禁截铁律；此处系【呈表宽度】之截，非数据之截）
+.tr_cut <- function(x, n = 160L) {
+  x <- as.character(x)
+  ifelse(nchar(x) > n, paste0(substr(x, 1L, n), " …（原文见上列 SQL）"), x)
+}
+
+## §14.1 某交付件之【输出标准】—— 置于 SQL 原文之后作解
+##   ⛔ 一律自 SQL 原文与实档现算；SQL 未见者标「⛔ 未见于总包」，不得默认或臆补。
+tr_sql_standard <- function(file, loaded = NULL, variant = NULL) {
+  s  <- tr_sql_of(file, max_lines = 0L, variant = variant)
+  cr <- tr_cred_of(file)
+  t  <- if (!is.null(loaded)) loaded$tabs[[file]] else NULL
+  m_cols <- if (!is.null(t) && isTRUE(t$ok)) ncol(t$dt) else NA_integer_
+  m_rows <- if (!is.null(t) && isTRUE(t$ok)) t$rows   else NA_integer_
+  m_key  <- if (!is.null(t) && isTRUE(t$ok) && !is.na(t$key)) t$key else "—"
+  row <- function(x, y, z) data.table(项 = x, 取值 = y, 判读 = z)
+
+  if (!isTRUE(s$ok)) {
+    return(rbindlist(list(
+      row("总包出处", s$说明,
+          "⛔ 本件之取数 SQL 未能就地出示——证据链此处断裂，不得以「系统自动生成」搪塞"),
+      row("落盘路径", file.path(TR_DB, file),
+          sprintf("交付件在位与否：%s", if (!is.null(t) && isTRUE(t$ok)) "✓ 在位" else "⛔ 待表")),
+      row("实测形状", sprintf("%s 行 × %s 列",
+                              if (is.na(m_rows)) "—" else tr_f(m_rows),
+                              if (is.na(m_cols)) "—" else m_cols),
+          "实测取自 数据库/ 之现档，非声明值"),
+      row("可信度裁定", cr$可信度,
+          sprintf("实体 %s · 粒度 %s · 用法 %s", cr$实体, cr$粒度, cr$用法)))))
+  }
+
+  L    <- s$sql
+  hdr1 <- L[1L]
+  hdr2 <- if (length(L) >= 2L && grepl("典型学", L[2L], fixed = TRUE)) L[2L] else ""
+  code <- paste(L[!grepl("^[[:space:]]*--", L)], collapse = "\n")
+
+  decl  <- .tr_rx1("原[[:space:]]*([0-9]+)[[:space:]]*列", hdr1)
+  decl6 <- .tr_rx1("六层约[[:space:]]*([0-9]+)[[:space:]]*列", hdr1)
+  typo  <- .tr_rx1("典型学：([^　]+)", hdr2)
+  flag  <- .tr_rx1("派生旗标：([^　]+)", hdr2)
+  jkey  <- .tr_rx1("连接：(.+)$", hdr2)
+
+  ods   <- .tr_rxall("ods_[A-Za-z0-9_]+\\.[A-Za-z0-9_]+", code)
+  d_ge  <- .tr_rx1("dt[[:space:]]*>=[[:space:]]*'([^']+)'", code)
+  d_lt  <- .tr_rx1("dt[[:space:]]*<[[:space:]]*'([^']+)'", code)
+  snap  <- .tr_rx1("sync_time[[:space:]]*<=[[:space:]]*'([^']+)'", code)
+  part  <- .tr_rx1("PARTITION BY[[:space:]]*([^\n]+)", code)
+  ordby <- .tr_rx1("ORDER BY[[:space:]]*([^\n]*?)\\)[[:space:]]*AS[[:space:]]*(?:audit_rn|batch_rn)", code)
+  runid <- .tr_rx1("'([^']+)'[[:space:]]*AS[[:space:]]*run_id", code)
+  snapl <- .tr_rx1("'([^']+)'[[:space:]]*AS[[:space:]]*snapshot_sync_time", code)
+  grp   <- .tr_rxall("GROUP BY[[:space:]]+[^\n]+", code)
+  nxj   <- length(.tr_rxall("CROSS[[:space:]]+JOIN", code))
+  xcross <- grepl("CROSS[[:space:]]+JOIN[[:space:]]+x_agg", code, perl = TRUE)
+  xon    <- .tr_rx1("JOIN[[:space:]]+x_agg[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+ON[[:space:]]+([^\n]+)", code)
+  test  <- grepl("age022", code, fixed = TRUE)
+  offs  <- grepl("OFFSET", code, fixed = TRUE)
+  lim   <- grepl("LIMIT", code, fixed = TRUE)
+
+  ccol <- if (!is.null(.TR_CRED) && "栏数" %in% names(.TR_CRED)) {
+    r <- .TR_CRED[交付件 == file]; if (nrow(r)) as.integer(r$栏数[1L]) else NA_integer_
+  } else NA_integer_
+
+  rbindlist(list(
+    row("总包出处",
+        sprintf("%s ／ %s ／ 模块 #%s ／ 总包第 %s~%s 行（%s 行）",
+                s$包, s$版, s$模块号, tr_f(s$起), tr_f(s$迄), tr_f(s$行数)),
+        "⛔ 本件系于 Superset 执行上列 SQL 查 StarRocks 后**下载落盘**所得，非本报告自动生成；行号可就地复核"),
+    row("典型学与旗标",
+        sprintf("典型学 %s ／ 派生旗标 %s", typo, flag),
+        "旗标只供 CASE 条件聚合；总包无任何 WHERE／HAVING 以旗标过滤——故本件为【全量】而非【已筛】"),
+    row("源 ODS 库表", .tr_join(ods),
+        sprintf("凡 %d 张源表，皆 StarRocks 之 ODS 层；本件一切列之血统止于此", length(ods))),
+    row("观测窗（分区列 dt）",
+        if (identical(d_ge, "—") && identical(d_lt, "—")) "⛔ 本模块未见 dt 窗口" else sprintf("[%s, %s)", d_ge, d_lt),
+        "左闭右开；窗外之行不入本件——跨窗比较须另导，禁以本件外推"),
+    row("快照闸 sync_time", if (identical(snap, "—")) "⛔ 未见快照闸" else sprintf("<= '%s'", snap),
+        "冻结同步时点，令重跑可复现；无此闸者其数随上游回补而漂移"),
+    row("去重规则", if (identical(part, "—")) "○ 本模块未见 ROW_NUMBER 去重" else sprintf("PARTITION BY %s（取 rn = 1）", .tr_cut(part, 120L)),
+        "同键多版本只取最新一版；此即「注单号唯一」之落实处"),
+    row("测试线处置", if (test) "✓ 以 age022 = '1' 之代理左连剔除" else "○ 本模块未见 age022 —— 须查是否采标记法保留",
+        "⛔ 剔除法者交付件内不留痕；标记法者须先剔再入统计（见 §〇之二 测试线闸）"),
+    row("粒度键", sprintf("头注连接键 %s ／ %s", jkey,
+                          if (!length(grp)) "本模块未见 GROUP BY（逐行事实或窗口函数出数）"
+                          else sprintf("GROUP BY %d 处，末处：%s", length(grp), .tr_cut(grp[length(grp)], 100L))),
+        sprintf("实测会员键：%s —— 粒度即「一行代表什么」；读金额前必先认粒度", m_key)),
+    row("全序与批次",
+        sprintf("%s；%s%s",
+                if (identical(ordby, "—")) "未见全序 audit_rn" else sprintf("全序 ORDER BY %s", .tr_cut(ordby, 160L)),
+                if (offs) "本版含 OFFSET 分批" else "本版不切片（一次导全）",
+                if (lim) "；⚑ 含 LIMIT——须查是否截行" else ""),
+        "全序令分批之并集恰等于一次导全；无全序即批次间可重可漏"),
+    row("六层商业块（约 60 列）",
+        if (xcross) sprintf("⛔ CROSS JOIN x_agg —— 笛卡尔广播（全模块 CROSS JOIN 共 %d 处）", nxj)
+        else if (!identical(xon, "—")) .tr_cut(sprintf("JOIN x_agg ON %s —— 键连（全模块 CROSS JOIN 共 %d 处）", xon, nxj))
+        else sprintf("○ 本模块未见 x_agg 六层块（CROSS JOIN 共 %d 处）", nxj),
+        if (xcross) "⛔ 广播之列逐行同值或多行重复，不得充作本行实体金额（见本部分〇之三 可信度闸）"
+        else if (!identical(xon, "—")) sprintf("键连之六层列，其可用与否以可信度册为准——本件裁定 %s", cr$可信度)
+        else "本件之列皆出自本模块自算，无六层广播块"),
+    row("落盘标识", sprintf("run_id = %s ／ snapshot_sync_time = %s", runid, snapl),
+        "落盘标识随件同行，令交付件可回指其批次；对不上者即非本批之档"),
+    row("列数对账",
+        sprintf("头注声明 原 %s 列 ＋六层约 %s 列 ／ 可信度册载 %s 列 ／ 实测 %s 列",
+                decl, decl6, if (is.na(ccol)) "—" else ccol, if (is.na(m_cols)) "—" else m_cols),
+        if (!is.na(ccol) && !is.na(m_cols) && ccol == m_cols) "✓ 册载与实测相符"
+        else if (is.na(m_cols)) "⛔ 实档未载入，无从对账（待表）"
+        else "⚑ 册载与实测不符——以实测为准，并须查是否换版"),
+    row("实测行数", if (is.na(m_rows)) "⛔ 待表" else tr_f(m_rows),
+        "全量读入之行数；与文件换行数之对账见本部分〇节"),
+    row("可信度裁定", cr$可信度,
+        sprintf("实体 %s · 粒度 %s · 用法 %s —— %s", cr$实体, cr$粒度, cr$用法,
+                if (identical(cr$可信度, "OK")) "实体级金额准用" else "⛔ 实体级金额拒用")),
+    row("落盘路径", file.path(TR_DB, file),
+        sprintf("本报告第二、三部分之一切实测，皆读此档全量（%s）",
+                if (!is.null(t) && isTRUE(t$ok)) "✓ 已载入" else "⛔ 待表"))))
+}
+
+## §14.2 本类主辅表之 SQL 溯源总览（一件一行）
+tr_sql_panel <- function(rec, loaded = NULL, variant = NULL) {
+  rbindlist(lapply(rec$files, function(f) {
+    s <- tr_sql_of(f, max_lines = 0L, variant = variant)
+    t <- if (!is.null(loaded)) loaded$tabs[[f]] else NULL
+    code <- if (isTRUE(s$ok)) paste(s$sql[!grepl("^[[:space:]]*--", s$sql)], collapse = "\n") else ""
+    ods  <- if (nzchar(code)) .tr_rxall("ods_[A-Za-z0-9_]+\\.[A-Za-z0-9_]+", code) else character(0)
+    d_ge <- if (nzchar(code)) .tr_rx1("dt[[:space:]]*>=[[:space:]]*'([^']+)'", code) else "—"
+    d_lt <- if (nzchar(code)) .tr_rx1("dt[[:space:]]*<[[:space:]]*'([^']+)'", code) else "—"
+    data.table(
+      交付件 = f,
+      角色 = fifelse(f == rec$primary, "主表", fifelse(f %in% rec$supporting, "辅助表", "判据来源")),
+      SQL溯源 = if (isTRUE(s$ok)) "✓ 已出示原文" else "⛔ 未见于总包",
+      模块号 = if (isTRUE(s$ok)) paste0("#", s$模块号) else "—",
+      总包行 = if (isTRUE(s$ok)) sprintf("%s~%s", tr_f(s$起), tr_f(s$迄)) else "—",
+      模块行数 = if (isTRUE(s$ok)) s$行数 else NA_integer_,
+      源ODS表 = .tr_join(ods),
+      观测窗 = if (identical(d_ge, "—")) "—" else sprintf("[%s, %s)", d_ge, d_lt),
+      实测行数 = if (!is.null(t) && isTRUE(t$ok)) t$rows else NA_integer_,
+      实测列数 = if (!is.null(t) && isTRUE(t$ok)) ncol(t$dt) else NA_integer_,
+      可信度 = tr_cred_of(f)$可信度,
+      说明 = s$说明)
+  }), fill = TRUE)
+}
+
+## §14.3 本类主辅表【全维度 × 全指标】逐栏盘点（读 数据库/ 之实档，全栏在册、零省略）
+tr_dim_metric_panel <- function(rec, loaded) {
+  rbindlist(lapply(rec$files, function(f) {
+    t <- loaded$tabs[[f]]
+    role <- if (f == rec$primary) "主表" else if (f %in% rec$supporting) "辅助表" else "判据来源"
+    d <- if (!is.null(t) && isTRUE(t$ok)) tr_dimensions(t$dt, f)
+         else data.table(交付件 = f, 栏 = "—", 类 = "⛔ 待表", 型 = "—",
+                         相异值 = NA_integer_, 缺失率 = NA_real_,
+                         例 = sprintf("⛔ %s", if (is.null(t)) "未登记" else t$status))
+    ## 判据列就地标注：本类之判据出自哪一栏，一望即知
+    crit <- rec$dict[criterion_source == f, criterion_column]
+    d[, 角色 := role]
+    d[, 本类判据 := fifelse(栏 %in% crit, "★ 判据列", "—")]
+    setcolorder(d, c("交付件", "角色", "栏", "类", "本类判据"))
+    d[]
+  }), fill = TRUE)
+}
+
+## §14.4 盘点小结：逐件之维度数／指标数，并与列数对账（对不上即当场揭出）
+tr_dim_metric_summary <- function(rec, loaded, panel = NULL) {
+  if (is.null(panel)) panel <- tr_dim_metric_panel(rec, loaded)
+  rbindlist(lapply(rec$files, function(f) {
+    t <- loaded$tabs[[f]]
+    p <- panel[交付件 == f]
+    nd <- sum(p$类 == "维度"); nm <- sum(p$类 == "指标"); nf <- sum(p$类 == "⛔ 盘点失败")
+    nc <- if (!is.null(t) && isTRUE(t$ok)) ncol(t$dt) else NA_integer_
+    data.table(
+      交付件 = f,
+      角色 = fifelse(f == rec$primary, "主表", fifelse(f %in% rec$supporting, "辅助表", "判据来源")),
+      状态 = if (!is.null(t) && isTRUE(t$ok)) "✓ 全量载入" else sprintf("⛔ %s", if (is.null(t)) "未登记" else t$status),
+      列数 = nc, 维度 = nd, 指标 = nm, 盘点失败 = nf,
+      本类判据列 = sum(p$本类判据 == "★ 判据列"),
+      对账 = if (is.na(nc)) "—（待表）"
+             else if (nd + nm + nf == nc) sprintf("✓ %d ＋ %d ＋ %d ＝ %d 列，逐栏闭合，零省略", nd, nm, nf, nc)
+             else sprintf("⚑ %d ＋ %d ＋ %d ≠ %d 列——须查", nd, nm, nf, nc))
   }), fill = TRUE)
 }
