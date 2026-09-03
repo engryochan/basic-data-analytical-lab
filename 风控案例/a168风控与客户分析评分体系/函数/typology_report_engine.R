@@ -1,7 +1,20 @@
 # =====================================================================
 # typology_report_engine.R · 十五类风险会员商业方案 · 共用分析引擎（含范本体例）
 # ---------------------------------------------------------------------
-# 版本 : 1.5.0        日期 : 2026-09-03        适配登记册 : 自 registry_load() 现取（本档不写死）
+# 版本 : 1.6.0        日期 : 2026-09-03        适配登记册 : 自 registry_load() 现取（本档不写死）
+# 变更 : 1.6.0（N-9 · 承先生问「是否分类测试线与真实实体」「有否投影关键指标」）新增 §10 三事：
+#        ① tr_testline_gate()／tr_drop_testline() —— 【实测揭缺】1.5.0 以前引擎与模板内 is_test／
+#           test_line／测试线／age022 命中皆为 0，即全无测试线处理。总包侧多数交付件取数时已剔，
+#           惟 #078 S03_agent_score 采标记法保留（实测 4,191 行中 13 行 is_test_line=1，stake 合计 0）；
+#           T-08／T-09 以 S03 为判据来源，故该 13 行此前未经分离即入分位与相关计算。今立闸分离。
+#        ② tr_economic_profile()／tr_criterion_exposure() —— 【实测揭缺】1.5.0 以前引擎可执行码中
+#           net_margin／economic_value／theo／adt／nmpt／esi／drawdown／sharpe／sortino 命中皆为 0，
+#           即本报告只算【判据】，从不算【钱】——直违先生军令状。今补经济层，然【先验广播、后出金额】：
+#           六层商业块 118 栏系 CROSS JOIN 平台常数广播，逐行同值者一律拒出并标明，禁以广播充金额。
+#        ③ tr_metric_inventory() —— 先生所列各指标（theo／adt／nmpt／esi、ROI、Net Margin、
+#           Economic Value、MDD、Sharpe、Sortino、APUC、Wilcoxon、符号检验）逐条登记：可算者标可算，
+#           阻断者标出处，未实作者标未实作。⛔ 不以「未实作」冒充「不适用」，不以「可算」冒充「已证」。
+#        §1~§9 一字未改。
 # 变更 : 1.5.0（N-8c · 承先生指出配置册与三份 SQL 总包漏收）血统配套自 14 件扩至【全在役件】：
 #        新增 SQL 总包三版 ＋ 行数实测探针（在役·SQL源，产出 133 件交付件之源）、风险之眼 schema、
 #        及五件【参照·无代码消费者】之规范件（capability_registry／prohibited_action_registry／
@@ -1260,4 +1273,190 @@ tr_eval <- function(rec, loaded, mj, REG) {
       "准入评分 ≠ 主表已备（登记册 admission_dichotomy）",
       "本册全部登记判据之 admit_to_risk_decision 皆为 FALSE",
       "PENDING_INVERSE 者须逐指标反解含 n_eff，禁写普适门槛（P-06）"))
+}
+
+# ---------------------------------------------------------------------
+# §10 测试线闸 · 经济画像 · 指标可行性（N-9 · 2026-09-03）
+# ---------------------------------------------------------------------
+# 【立意】承先生军令状：「任何数据表与报表的任务是实测并证实可以提升业绩或经济价值
+#   的增减幅度，而非作秀忽悠」。2026-09-03 机检本引擎，两项硬缺口：
+#     ① **测试线全无处理**：引擎与模板内 is_test／test_line／测试线／age022 命中皆为 0。
+#        总包侧多数交付件已于取数时剔测试线，惟 #078 S03_agent_score 采【标记法】保留
+#        （实测 4,191 行中 is_test_line=1 者 13 行，其 stake 合计 0）。T-08／T-09 以 S03 为
+#        判据来源，故该 13 行未经分离即进入分位与相关计算——违「测试线与真实实体务必一律区分」。
+#     ② **全无经济量**：引擎可执行码中 net_margin／economic_value／theo／adt／nmpt／esi／
+#        drawdown／sharpe／sortino 命中皆为 0。即：本报告此前只算【判据】，从不算【钱】。
+#   本节补此二缺。⛔ 然补法须守铁律：六层商业块 118 栏系 CROSS JOIN 广播（平台常数逐行复制），
+#   以广播值充金额即是作秀。故经济层【先验广播、后出金额】，广播者一律拒出，标明理由。
+# ---------------------------------------------------------------------
+
+## §10.1 测试线闸：分离测试线与真实实体（会员／代理／荷官／风控专员）
+##   交付件侧之标记法列名（S03 之例）；ODS 侧之 age022 不在交付件内，故只能认标记列。
+## ⛔ 只收【布尔标记栏】。n_bets_testline／stake_testline_audit／profit_testline_audit 系
+##   【计数与金额之审计栏】，非标记——若误入，n_bets_testline=1 之真实代理将被当作测试线剔除。
+.TR_TESTLINE_COLS <- c("is_test_line", "is_test", "test_line")
+tr_testline_gate <- function(loaded) {
+  rows <- lapply(names(loaded$tabs), function(f) {
+    t <- loaded$tabs[[f]]
+    if (!isTRUE(t$ok)) return(data.table(交付件 = f, 标记列 = "—", 总行 = NA_integer_,
+      测试线行 = NA_integer_, 真实实体行 = NA_integer_, 处置 = "—（未载入）"))
+    cols <- intersect(.TR_TESTLINE_COLS, names(t$dt))
+    if (!length(cols)) return(data.table(交付件 = f, 标记列 = "无",
+      总行 = t$rows, 测试线行 = 0L, 真实实体行 = t$rows,
+      处置 = "取数时已剔（总包侧 age022='1' 左连取 NULL）—— 本件无标记列，视为全为真实实体"))
+    cc <- cols[1L]
+    v  <- t$dt[[cc]]
+    isT <- !is.na(v) & trimws(as.character(v)) %in% c("1", "TRUE", "true", "Y", "y")
+    data.table(交付件 = f, 标记列 = cc, 总行 = t$rows,
+      测试线行 = sum(isT), 真实实体行 = sum(!isT),
+      处置 = if (sum(isT) > 0L) "★ 本件采标记法保留测试线 —— 下游统计须先剔，否则口径混入"
+             else "标记列在位且无测试线行")
+  })
+  out <- rbindlist(rows, fill = TRUE)
+  attr(out, "n_testline") <- sum(out$测试线行, na.rm = TRUE)
+  out[]
+}
+
+## 依测试线闸剔除：回一份【已分离】之表集，供经济层与判据统计取用
+tr_drop_testline <- function(loaded) {
+  for (f in names(loaded$tabs)) {
+    t <- loaded$tabs[[f]]
+    if (!isTRUE(t$ok)) next
+    cols <- intersect(.TR_TESTLINE_COLS, names(t$dt))
+    if (!length(cols)) next
+    cc <- cols[1L]; v <- t$dt[[cc]]
+    keep <- is.na(v) | !(trimws(as.character(v)) %in% c("1", "TRUE", "true", "Y", "y"))
+    if (any(!keep)) {
+      loaded$tabs[[f]]$dt   <- t$dt[keep]
+      loaded$tabs[[f]]$rows <- sum(keep)
+      loaded$tabs[[f]]$testline_dropped <- sum(!keep)
+    }
+  }
+  loaded
+}
+
+## §10.2 广播侦测：六层商业块之栏若逐行同值，即为平台常数广播，禁充金额
+.tr_is_broadcast <- function(x) {
+  x <- x[!is.na(x)]
+  if (!length(x)) return(TRUE)
+  uniqueN(x) <= 1L
+}
+
+## §10.3 经济画像：先验广播，后出金额
+##   ⛔ 只用主表之【原生】经济栏；广播者拒出并标明。禁以广播值算任何金额。
+.TR_ECON_COLS <- c(stake = "本金", valid_bet = "洗码", profit = "NGR（块 profit ＝ GGR − 退水）",
+                   ngr = "块 ngr（重复扣退水 · DEPRECATED）", rebate_cost = "退水",
+                   residual_b = "残值 b", hold_rate = "hold 率")
+tr_economic_profile <- function(rec, loaded) {
+  f <- rec$primary
+  t <- loaded$tabs[[f]]
+  if (is.null(t) || !isTRUE(t$ok))
+    return(data.table(经济栏 = "—", 口径 = "—", 状态 = "待表（主表未载入）",
+                      合计 = NA_real_, 均值 = NA_real_, 相异值数 = NA_integer_, 判 = "—"))
+  dt <- t$dt
+  rbindlist(lapply(names(.TR_ECON_COLS), function(cc) {
+    if (!cc %in% names(dt))
+      return(data.table(经济栏 = cc, 口径 = .TR_ECON_COLS[[cc]], 状态 = "缺列",
+                        合计 = NA_real_, 均值 = NA_real_, 相异值数 = NA_integer_,
+                        判 = "本表无此栏"))
+    x <- suppressWarnings(as.numeric(dt[[cc]]))
+    nd <- uniqueN(x[!is.na(x)])
+    bc <- .tr_is_broadcast(x)
+    data.table(经济栏 = cc, 口径 = .TR_ECON_COLS[[cc]],
+      状态 = if (bc) "★ 广播（平台常数）" else "原生（逐行）",
+      合计 = if (bc) NA_real_ else round(sum(x, na.rm = TRUE), 2),
+      均值 = if (bc) NA_real_ else round(mean(x, na.rm = TRUE), 4),
+      相异值数 = nd,
+      判 = if (bc) "⛔ 禁充金额：本栏逐行同值，系六层块 CROSS JOIN 之平台常数广播"
+           else "✓ 可作金额（本表原生）")
+  }), fill = TRUE)
+}
+
+## §10.4 判据尾部之经济暴露：本类判据所指之尾部人群，究竟压着多少钱
+##   ⛔ 只描述暴露，不作赏罚（承 P-15 禁全窗百分位定线、P-16 禁以实现输赢符号定罚）
+tr_criterion_exposure <- function(rec, loaded, q = 0.90) {
+  d <- rec$dict
+  ## ⛔ 判据之金额须取【该判据自身之声明源表】，非一律取主表：全册 65 条判据中 23 条
+  ##   criterion_source ≠ primary_deliverable，若一律取主表，此 23 条永不出数（2026-09-03 实测）。
+  .money_of <- function(dt) {
+    m <- intersect(c("valid_bet", "profit", "stake"), names(dt))
+    m[vapply(m, function(k) !.tr_is_broadcast(suppressWarnings(as.numeric(dt[[k]]))), logical(1))]
+  }
+  out <- rbindlist(lapply(seq_len(nrow(d)), function(i) {
+    r <- d[i]; f <- r$criterion_source
+    t <- loaded$tabs[[f]]
+    if (is.null(t) || !isTRUE(t$ok)) return(NULL)
+    dt <- t$dt
+    if (!r$criterion_column %in% names(dt)) return(NULL)   # 未外显之判据：留白，不臆造
+    money <- .money_of(dt); if (!length(money)) return(NULL)
+    x <- suppressWarnings(as.numeric(dt[[r$criterion_column]]))
+    if (all(is.na(x)) || uniqueN(x[!is.na(x)]) < 3L) return(NULL)
+    ## 尾部方向依登记册 direction：high 者风险在上尾，low 者风险在【下尾】。
+    ##   一律取上十分位是判断错——2026-09-03 实测 T-07「投注产品结构熵」direction=low 即遭此误。
+    lowdir <- identical(tolower(trimws(r$direction)), "low")
+    qq  <- if (lowdir) 1 - q else q
+    thr <- as.numeric(stats::quantile(x, qq, na.rm = TRUE, names = FALSE))
+    hi  <- if (lowdir) (!is.na(x) & x <= thr) else (!is.na(x) & x >= thr)
+    o <- data.table(判据列 = r$criterion_column, 声明源表 = f,
+                    方向 = fifelse(nzchar(r$direction), r$direction, "—"),
+                    尾部口径 = sprintf(if (lowdir) "≤P%d" else "≥P%d", round(qq * 100)),
+                    尾部行数 = sum(hi), 占比 = round(mean(hi), 4))
+    for (m in money) {
+      v <- suppressWarnings(as.numeric(dt[[m]]))
+      o[[paste0(m, "_尾部")]]   <- round(sum(v[hi], na.rm = TRUE), 2)
+      o[[paste0(m, "_占全表")]] <- round(sum(v[hi], na.rm = TRUE) / sum(v, na.rm = TRUE), 4)
+    }
+    ## hold 率对照：尾部 hold ÷ 全表 hold。＞1 者贵客，＜1 者只走量不出钱。
+    ##   ⛔ 此为【暴露描述】，非赏罚线：承 P-15 禁以全窗百分位定线、P-16 禁以实现输赢符号定罚。
+    if (all(c("profit", "valid_bet") %in% money)) {
+      pv <- suppressWarnings(as.numeric(dt$profit)); vb <- suppressWarnings(as.numeric(dt$valid_bet))
+      h_t <- sum(pv[hi], na.rm = TRUE) / sum(vb[hi], na.rm = TRUE)
+      h_a <- sum(pv,     na.rm = TRUE) / sum(vb,     na.rm = TRUE)
+      o[, `:=`(尾部hold率 = round(h_t, 6), 全表hold率 = round(h_a, 6),
+               hold倍数 = round(h_t / h_a, 3))]
+    }
+    o
+  }), fill = TRUE)
+  if (!nrow(out)) return(NULL)
+  out[]
+}
+
+## §10.5 指标可行性清单：先生所列各指标，何者可算、何者不可、卡在何处
+##   ⛔ 一律据实登记，不以「未实作」冒充「不适用」，亦不以「可算」冒充「已证」。
+tr_metric_inventory <- function(rec, loaded) {
+  f <- rec$primary; t <- loaded$tabs[[f]]
+  has <- function(cc) !is.null(t) && isTRUE(t$ok) && cc %in% names(t$dt)
+  live <- function(cc) has(cc) && !.tr_is_broadcast(suppressWarnings(as.numeric(t$dt[[cc]])))
+  dt_axis <- !is.null(t) && isTRUE(t$ok) &&
+             length(intersect(c("dt", "bet_date", "biz_date", "ym", "date"), names(t$dt))) > 0L
+  ## 总包侧或已预算风险调整栏（如 S01 之「索提诺稳定性」）。R 侧虽无日序不能重算，然不得据此报「无」。
+  .pre <- function(pat) { if (is.null(t) || !isTRUE(t$ok)) return(NA_character_)
+                          h <- grep(pat, names(t$dt), value = TRUE); if (length(h)) h[1L] else NA_character_ }
+  .mdd <- .pre("回撤|drawdown"); .shp <- .pre("夏普|sharpe"); .srt <- .pre("索提诺|sortino")
+  .say <- function(pre) if (!is.na(pre)) sprintf("✓ 总包已算（栏 %s）", pre) else if (dt_axis) "△ 须日序" else "✗"
+  data.table(
+    指标 = c("ROI", "Net Margin", "Economic Value", "NGR／hold",
+             "Theo", "ADT", "NMPT", "ESI",
+             "最大回撤 MDD", "夏普率 Sharpe", "索提诺率 Sortino",
+             "APUC（每客均利）", "Wilcoxon 秩和", "符号检验", "AUC（秩法）", "Wilson 区间"),
+    本类可算 = c(
+      fifelse(live("roi"), "✓", "✗"), fifelse(live("net_margin_bet23_formal_canonical"), "✓", "✗"),
+      fifelse(live("economic_value"), "✓", "✗"), fifelse(live("profit") && live("valid_bet"), "✓", "✗"),
+      "✗", "✗", "✗", "✗",
+      .say(.mdd), .say(.shp), .say(.srt),
+      fifelse(live("profit"), "△ 可算", "✗"), "△ 可加", "△ 可加", "✓ 已实作", "✓ 已实作"),
+    阻断与出处 = c(
+      "主表 roi 栏；若广播则不可用", "主表 net_margin_*_canonical 栏；若广播则不可用",
+      "⛔ 系 PERCENT_RANK 之秩，非货币（承永久禁令 13）", "主表 profit／valid_bet 原生栏",
+      "⛔ house_edge 全 NULL（F-22~25 BLOCKED）；须 member×bet09×免佣 中间粒度",
+      "⛔ 分子为 theo，随之阻断", "⛔ 分母为 theo；且已实测撤回（−508,515）", "⛔ 须 bet09 级 edge",
+      "须实体×日序列；本类主表若无日期键则不可算（见 N-6 报告 §2.5 之可用面板六件）",
+      "同上；且平台层实测 Sharpe 2.56、MDD 仅占累计 0.052% ⇒ 判别力近零",
+      "同上；会员层前 3 月 Sortino 预测后 3 月 NGR 仅 Spearman 0.049",
+      "profit ÷ 实体数；须先剔测试线，否则分母含伪实体",
+      "本引擎未实作；处置前后配对比较之首选，然受 P-20 阻断（因果未解封）",
+      "本引擎未实作（现只见于章名）；同受 P-20 阻断",
+      "tr_auc()：秩法 ＝ Mann–Whitney", "tr_wilson_lo()／tr_wilson_hi()／tr_min_n() 反解样本门"),
+    性质 = c(rep("经济量", 4), rep("高端经济量（阻断）", 4),
+             rep("风险调整（须时序）", 3), "经济量", rep("统计检验", 4)))
 }
