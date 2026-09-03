@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
--- ★ a168 SQL 总包 v12.0.0-HF9g-P5 · 模块索引（133 件 · 133 张 CSV · 含 #130~#132 字典三件 · #133 局级事实表）★
+-- ★ a168 SQL 总包 v12.0.0-HF9g-P5 · 模块索引（134 件 · 134 张 CSV · 含 #130~#132 字典三件 · #133 局级事实表 · #134 投注面级已实现优势表）★
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- ★★ HF9g-P5 · D-14 斧正（全窗基线族之六层退化）· Ryo Eng 授权 2026-08-29 ★★
@@ -73,7 +73,7 @@
 -- 【F-44】交付件导出契约 —— 立约（本档为规范，实施在导出通道）
 --   病灶：#017 DX04 与 #018 DX05 之交付 CSV 为 LF 换行 ＋ UTF-8 BOM（首三字节 EF BB BF）；
 --         #075 S01 为 CRLF 无 BOM。同一总包、同一次导出，三档换行与 BOM 不一致，血统六元组不齐。
---   立约：全部 133 件交付件一律 UTF-8 · 无 BOM · 全 CRLF；每次导出须随件登记六元组：
+--   立约：全部 134 件交付件一律 UTF-8 · 无 BOM · 全 CRLF；每次导出须随件登记六元组：
 --         byte_size · row_count · column_count · newline_type · bom · md5（另加 encoding）。
 --   ★ 本项不改 SQL 一字，改的是导出通道设置；列此以立契约，供导出闸自动校验，免人工肉眼核。
 --
@@ -428,6 +428,11 @@
 -- 133 RK01_round_fact.csv                RK   E 局        round_key = bet03|bet04|bet39  24 N/A         FACT_BASE
 --     ★ #133 为局级事实表（2026-09-03 新建，只出事实不出判定），不套六层商业块；「局」非可处置实体。
 --       列数 24 含审计三栏（audit_rn／run_id／snapshot_sync_time）；分批版另加 batch_id 为 25。
+-- 134 HE01_bet_side_edge.csv            HE   E 投注面     bet_side × is_freecomm        25 N/A         FACT_BASE
+--     ★ #134 为投注面级已实现优势表（2026-09-03 新建，只出事实不出判定），不套六层商业块；
+--       「投注面」非可处置实体。列数 25 含审计三栏（audit_rn／run_id／snapshot_sync_time）；分批版另加 batch_id 为 26。
+--       ⛔ caliber 恒 'REALIZED_NOT_THEORETICAL'：本件之 hold_valid_bet / hold_rate 系已实现值，
+--         **绝非** house_edge（理论优势，现状 NULL）。混称即污染 theo → ADT → NMPT → ESI 全链。
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- 【异常 IP → 风险会员 · 三段证据链（本包已具备，勿另建大一统 JOIN）】
 --   ① 筛查  #022 I_ip_agg → #007 C01_ip_chain → #010/#011 C08_subnet → #107 V_ipmatch
@@ -495,7 +500,7 @@
 --     会话参数、前置闸、台账、纪律说明，一律归入本 §Z 段，位于全部交付件之前。
 --
 --   ★ 等价性：可执行语句之先后顺序未变 —— 仍为
---     SET × 10  →  PRE-GATE 00A  →  PRE-GATE 00B  →  第 1 件 …… →  第 132 件 →  第 133 件（RK01 局级事实表）。
+--     SET × 10  →  PRE-GATE 00A  →  PRE-GATE 00B  →  第 1 件 …… →  第 132 件 →  第 133 件（RK01 局级事实表）→  第 134 件（HE01 投注面级已实现优势表）。
 --     本次调整只搬动注释与段落，token 流逐位相同，输出必然一模一样（已由比对证明）。
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
 
@@ -607,7 +612,7 @@
 --   B6 新增 streaming_preaggregation_mode = 'force_streaming' —— 高基数 GROUP BY 跳过本地预聚合
 --   B7 新增 query_mem_limit = 34359738368 —— 把「进程超限（拖垮 BE、触发自动拉黑）」
 --        降级为「查询超限（只终止本查询）」
---   ★ 等价性依据：133 件末段皆 ORDER BY audit_rn；audit_rn 由 ROW_NUMBER() 所生恒唯一；
+--   ★ 等价性依据：134 件末段皆 ORDER BY audit_rn；audit_rn 由 ROW_NUMBER() 所生恒唯一；
 --     #071 之 26 个排序键含其 q 之全部四个粒度键（bet_date/uid/dealer_id/is_sentinel_dealer，
 --     与 GROUP BY 逐字同一）⇒ 排序键组合逐行唯一、无平局 ⇒ 全序确定
 --     ⇒ 输出与并行度、落盘与否、CTE 是否物化**逐位无关**。
@@ -692,7 +697,7 @@ SET query_mem_limit = 34359738368;
 --   ★ 我的错（W-58）：HF9c-fix 只把 NOW() 换成常量【赋值给变量】，
 --     引用处仍是 @变量 —— 跨会话依旧归空，等于没修。
 --     固定常量必须写在【使用处】，不是赋值处。本版全部内联，SQL 中不再出现任何 @ 变量。
---   ★ 二元锚（与六元组同级，全 133 件、一套三份必须完全一致）：
+--   ★ 二元锚（与六元组同级，全 134 件、一套三份必须完全一致）：
 --     snapshot_sync_time = '2026-08-27 09:00:00'
 --     run_id             = 'A168_HF9F_20260827_0900'
 --     batch_size         = 100000
@@ -700,7 +705,7 @@ SET query_mem_limit = 34359738368;
 --       理由：一套三份（原版审计版 / 10 万分批 / 1 万分批）共用同一 snapshot_sync_time 与
 --             run_id，却必然持有不同之 batch_size；若仍列为锚，三份即互相违锚，锚失其义。
 --             且 batch_size 不决定任何业务列之取值，只决定切片方式与 batch_id 之算法。
---       ⇒ 锚由三元降为**二元**：snapshot_sync_time ＋ run_id，二者全 133 件、三份脚本必须完全一致。
+--       ⇒ 锚由三元降为**二元**：snapshot_sync_time ＋ run_id，二者全 134 件、三份脚本必须完全一致。
 --       ★ 锁四扩充（原为「两版」，今为「三版」）：三份之输出，除 batch_id 一列外，
 --         行集、audit_rn 及其余全部列须逐位相同。batch_id 之差异为**预期且必然**：
 --           · 原版审计版 —— 无此列
@@ -49988,3 +49993,182 @@ ORDER BY z.audit_rn;
 --       单局最多注单 414。独玩局 184,746（3.05%）· 2~4 人 903,091 · 5~9 人 1,509,720 · ≥10 人 3,451,005（57.05%）。
 --       ★ 最大值 256 与 414 与 #118 Z08 逐位相同 —— 该二极值之持有局落于窗内，故二口径同值。
 
+-- 134. HE01_bet_side_edge.csv   [投注面级已实现优势表 · 新建 · 无六层商业块]
+--     典型学：BET_SIDE 已实现优势　粒度：bet_side × is_freecomm　说明：realized 口径之投注面事实地基
+--     ★ 本件循 #078 S03_agent_score / #130~#132 字典三件 / #133 RK01 局级事实表之例，**不套六层商业模板** ——
+--       「投注面」非可处置实体（不可限红、不可冻结、不可给退水），施以 NTILE / PERCENT_RANK
+--       即重蹈 D-14 覆辙（相对刻度施于非实体行）。投注面之赏罚一律回落至会员／荷官／桌台三实体。
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- 【命名双轨 · KILLCRITIC-01 · 本件之第一铁律】
+--   ⛔ 本件所出者一律为 **realized（已实现，含运气）**，正名 hold_valid_bet ／ hold_rate。
+--   ⛔ `house_edge` 一名**永久保留予【理论】优势**，本件绝不产出该名，亦不得被引为理论 edge。
+--      理论 edge 现状 NULL：授权未下，且 #017 探针 R3 实测 overdispersion Q/(k−1) = 9.3~42.6，
+--      单一常数 edge 架构已 KILL —— 纵获授权，亦不得以静态单值映射。
+--   ⛔ 已实现 ≠ 理论期望。混称即污染 theo → ADT → NMPT → ESI 全链。
+--
+-- 【本件立意】填补第二项结构空白：既有 133 件中，**无一以 bet09（投注面）为主键**。
+--   而「免佣桌可否与一般桌共用一个 edge」「未知产品之 theo 该不该 NULL」「逐面证据够不够」
+--   三问皆需投注面级事实为地基，现状是**有会员级 hold 而无投注面级 hold**。
+--   ★ 本件只出【事实】，不出【判定】：无旗标分档、无 action、无相对排名，一切下游自行现算。
+--   ★ 粒度取 bet_side × is_freecomm（较 HE-01 探针之 bet_side 单键更细）——
+--     按 is_freecomm 上卷即得 HE-01 之 23 行视图，故【只增不减】，无一信息丢失。
+--
+-- 【口径六锁 · 与全包逐字同一，勿改】
+--   ① 窗口   dt >= '2026-03-21' AND dt < '2026-08-07'
+--   ② 产品   bet02 = '101'（百家乐）
+--   ③ 快照   sync_time <= '2026-08-27 09:00:00'
+--   ④ 去重   PARTITION BY bet01 ORDER BY updatetime DESC, sync_time DESC, dt DESC 取 rn = 1
+--   ⑤ 基础闸 category = '1' · UPPER(bet38) = 'N' · 非测试线（五级代理左连取 NULL）
+--            · bet05 > 0（会员号为正）· bet11 > 0（汇率为正）
+--   ⑥ 归一   一切金额除以 bet11（汇率），与本包 round_key 族 ord 层逐字同法
+--
+-- 【二口径并出 · 与 #133 之差异须知】
+--   · profit ＝ −bet17 / bet11  —— ★ 六层块正典之 profit（`profit = -e.net`），本件以之为主口径。
+--   · ggr    ＝ (bet13 − bet14) / bet11 —— 与 #133 RK01 之 ggr 逐字同式（牌桌毛赢，庄家视角）。
+--   ⇒ 二者并出，令「牌桌毛赢」与「会员净输赢之负」之差可就地对账，⛔ 不以其一冒充其一。
+--
+-- 【加权双口径 · 循 #075 之 p_base_round_w／p_base_round_unw 先例（2026-08-11 增，供两种 estimand 对照）】
+--   · company_pct_unw ＝ AVG(bet23)                         —— 逐注**等权**（与六层块 194 处 AVG 同式）
+--   · company_pct_w   ＝ Σ(bet23 × valid_bet) / Σ valid_bet —— **暴露加权**
+--   · rebate_pct_unw / rebate_pct_w 同理（bet15）
+--   ⛔ 二者系两个 estimand，非两种精度；**并列出示，禁替换**。
+--   · ess_valid_bet ＝ (Σw)² / Σw²（w = valid_bet），ess_ratio ＝ ESS ÷ n_orders
+--     ⇒ ESS ≪ n 即证「加权后信息已压缩到极少数注单」；⛔ 禁以 n 大冒充证据强。
+--
+-- 【规模 · 2026-09-03 实测回填（非估非推，系 Superset／StarRocks 实跑回值）】
+--   T_true ＝ **39 行**（bet_side × is_freecomm；HE-02 探针实跑 8.242 秒回值）。
+--   按 is_freecomm 上卷 ＝ 23 行（HE-01 探针实跑 9.600 秒回值），其中
+--     evidence_flag = 'OK' 16 面 ／ 'NO_EVIDENCE' 7 面（各 1 注、10 元、零盈亏）。
+--   全体对账：Σn_orders 124,713,543（与 #133 RK01 之 n_bets_total 逐位相等）
+--     ｜ Σstake 13,436,093,473.3334 ｜ Σvalid_bet 12,101,545,164.6446 ｜ Σprofit 225,932,201.2126
+--     ｜ hold_valid_bet 1.86696986 % ｜ hold_rate 1.68153192 % ｜ valid/stake 90.06743804 %
+--   ⇒ 三路互证闭合：本件 ↔ 审计/实测庄家优势_逐投注面_v1.0.0_20260903.csv ↔ #075 S01_player_score
+--     （723,442 会员，1.866970 % ／ 1.681532 % ／ 90.067438 %）。逐面金额差 ≤ 0.0050（分币级舍入）。
+--   ⇒ 覆盖率闸（HE-03 实跑 7.484 秒）：未过证据门者 7 注 / 洗码 70 元，mapped_coverage_rate = 0.99999999。
+--
+-- 【已测得之结构事实（供下游引用，⛔ 本件不据此出判定）】
+--   ① 洗码折扣只落在 6 面（valid_over_stake < 1）：Banker 0.89588406 · Player 0.89817489 ·
+--      BankerDragonBonus 0.98199111 · PlayerDragonBonus 0.98239240 · BankerNatural 0.98334541 ·
+--      PlayerNatural 0.97884579；此 6 面占全体洗码 96.0560 %。其余 17 面 valid_over_stake = 1。
+--      ⇒ 「对本金」与「对洗码」两分母之 9.93 个百分点落差，几乎全由 Banker／Player 二面所致。
+--   ② 免佣 vs 一般之两样本 z 检定（HE-05 实跑 7.824 秒）：16 面中 **5 面** DIFFERENT_AT_5PCT ——
+--      PPair z = 7.5623（比 1.429）· AnyPair z = 5.8186（1.733）· PlayerDragonBonus z = −5.0674（0.231）·
+--      BankerDragonBonus z = 2.7392（1.266）· PlayerNatural z = −2.5712（0.728）。
+--      ⛔ 而主力二面 **Banker z = 0.1991、Player z = −1.2296 皆 NOT_DISTINGUISHED**。
+--      ⇒ 定谳：bet09 一元对主力面（占洗码 96%）**足以**定 realized edge；对 5 个边注面**不足**，
+--        且方向不一（有升有降），故非「免佣一律使 edge 上升」之单向规律。
+--      ⛔ 纵用 (bet09, is_freecomm) 二元亦只是分层常数 —— #017 R3 之 overdispersion 已否决单一常数架构。
+--   ③ 免佣占比之两口径差（HE-06 实跑 8.038 秒）：等权（占注单数）恒低于暴露加权（占洗码）——
+--      Banker 0.088967 → 0.132838（+49.3%）· Player 0.077263 → 0.118313（+53.1%）·
+--      Lucky7 0.068401 → 0.137614（+101.2%）· PerfectPair 0.095716 → 0.175967（+83.8%）。
+--      ⇒ **免佣注单之注额系统性大于一般注单**；凡以 free_comm_rate 为判据者，两口径可差逾一倍。
+--   ④ 公司自留比例之两口径差极小：主力面 |gap| ≤ 0.13 个百分点（Banker 96.005899 → 95.876407）；
+--      唯 Small 面 gap = −1.016558 为最大。⇒ 该栏加权收益甚微，登记以备，不主张替换。
+--
+-- 【禁令遵循】
+--   · P-07 禁 OFFSET —— 本件用 audit_rn 键集分批，非 OFFSET
+--   · P-08 禁以 DATE(bet08) 切日 —— 本件一律用 dt（账务日）
+--   · 只用行注释，无块注释；一切 ID 比较 CAST 至 BIGINT；一切除法以 NULLIF 护零
+--   · NULL ≠ 0，未观测者留 NULL 不写 0
+-- ▸ 导出：需要 —— 存为「数据库/HE01_bet_side_edge.csv」
+-- ── 分批作业版：每批 100,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── ① T_true ＝ **39 行**（2026-09-03 实测回填）⇒ 共 **1 批**，末批 **39 行**。
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+--      审计字段二（四锁）：audit_rn 全局观测坐标（排序键与原版逐字同一，两版可逐行对账）；
+--      batch_id 物理分批信息（由 audit_rn 算得，非引擎所赋）。
+--      ★ 锁三：二者皆为审计字段，不得进入任何业务指标计算。
+--      ★ 锁四：两版经 audit_rn 逐行字段核验后，方可宣布输出完全一致。
+SELECT z.*,
+       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT) AS batch_id
+FROM (
+SELECT w.*,
+       ROW_NUMBER() OVER (ORDER BY w.`valid_bet` DESC, w.`bet_side`, w.`is_freecomm`) AS audit_rn,
+       'A168_HF9F_20260827_0900' AS run_id,
+       '2026-08-27 09:00:00' AS snapshot_sync_time
+FROM (
+    WITH ta AS (
+      SELECT DISTINCT CAST(NULLIF(TRIM(age001), '') AS BIGINT) AS aid
+      FROM ods_mariadb_2b.ods_a168_agent
+      WHERE age022 = '1'
+    ),
+    rk AS (
+      SELECT b.*,
+             ROW_NUMBER() OVER (
+               PARTITION BY b.bet01
+               ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC)                AS rn
+      FROM ods_mariadb_2b.ods_a168_bet02 b
+      WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+        AND b.bet02 = '101'
+        AND b.sync_time <= '2026-08-27 09:00:00'
+    ),
+    base AS (
+      SELECT TRIM(r.bet09)                                                      AS bet_side,
+             CASE WHEN TRIM(r.commission) = '1' THEN 1 ELSE 0 END               AS is_freecomm,
+             CAST(NULLIF(TRIM(r.bet05), '') AS BIGINT)                          AS member_id,
+             TRIM(r.bet39)                                                      AS table_id,
+             CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS stake,
+             COALESCE(CAST(NULLIF(TRIM(r.validbet), '') AS DECIMAL(20,8)),
+                      CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8)))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS vbet,
+             -CAST(NULLIF(TRIM(r.bet17), '') AS DECIMAL(20,8))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS profit,
+             (CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8))
+            - CAST(NULLIF(TRIM(r.bet14), '') AS DECIMAL(20,8)))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS ggr,
+             CAST(NULLIF(TRIM(r.bet16), '') AS DECIMAL(20,8))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS rebate,
+             CAST(NULLIF(TRIM(r.bet15), '') AS DECIMAL(20,6))                   AS rebate_pct,
+             COALESCE(CAST(NULLIF(TRIM(r.bet23), '') AS DECIMAL(20,6)), 0)      AS company_pct
+      FROM rk r
+      LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(r.bet18), '') AS BIGINT)
+      LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(r.bet19), '') AS BIGINT)
+      LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(r.bet20), '') AS BIGINT)
+      LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(r.bet21), '') AS BIGINT)
+      LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(r.bet22), '') AS BIGINT)
+      WHERE r.rn = 1
+        AND r.category = '1'
+        AND UPPER(TRIM(r.bet38)) = 'N'
+        AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+        AND CAST(NULLIF(TRIM(r.bet05), '') AS BIGINT) > 0
+        AND CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)) > 0
+    )
+    SELECT b.bet_side,
+           b.is_freecomm,
+           COUNT(*)                                                             AS n_orders,
+           COUNT(DISTINCT b.member_id)                                          AS n_member,
+           COUNT(DISTINCT b.table_id)                                           AS n_table,
+           ROUND(SUM(b.stake), 4)                                               AS stake,
+           ROUND(SUM(b.vbet), 4)                                                AS valid_bet,
+           ROUND(SUM(b.profit), 4)                                              AS profit,
+           ROUND(SUM(b.ggr), 4)                                                 AS ggr,
+           ROUND(SUM(b.rebate), 4)                                              AS rebate_cost,
+           ROUND(SUM(b.profit) / NULLIF(SUM(b.vbet), 0), 8)                     AS hold_valid_bet,
+           ROUND(SUM(b.profit) / NULLIF(SUM(b.stake), 0), 8)                    AS hold_rate,
+           ROUND(SUM(b.vbet) / NULLIF(SUM(b.stake), 0), 8)                      AS valid_over_stake,
+           ROUND(1.959964 * STDDEV_SAMP(b.profit / NULLIF(b.vbet, 0))
+                 / NULLIF(SQRT(COUNT(*)), 0), 8)                                AS ci95_halfwidth_crude,
+           ROUND(POW(SUM(b.vbet), 2) / NULLIF(SUM(b.vbet * b.vbet), 0), 1)      AS ess_valid_bet,
+           ROUND(POW(SUM(b.vbet), 2) / NULLIF(SUM(b.vbet * b.vbet), 0)
+                 / NULLIF(COUNT(*), 0), 8)                                      AS ess_ratio,
+           ROUND(AVG(b.company_pct), 6)                                         AS company_pct_unw,
+           ROUND(SUM(b.company_pct * b.vbet) / NULLIF(SUM(b.vbet), 0), 6)       AS company_pct_w,
+           ROUND(AVG(b.rebate_pct), 6)                                          AS rebate_pct_unw,
+           ROUND(SUM(b.rebate_pct * b.vbet) / NULLIF(SUM(b.vbet), 0), 6)        AS rebate_pct_w,
+           CASE WHEN COUNT(*) >= 30 THEN 'OK' ELSE 'NO_EVIDENCE' END            AS evidence_flag,
+           CASE WHEN POW(SUM(b.vbet), 2) / NULLIF(SUM(b.vbet * b.vbet), 0)
+                     / NULLIF(COUNT(*), 0) < 0.01
+                THEN 'THIN_WEIGHTED_EVIDENCE' ELSE 'OK' END                     AS weight_evidence_flag,
+           'REALIZED_NOT_THEORETICAL'                                           AS caliber
+    FROM base b
+    GROUP BY b.bet_side, b.is_freecomm
+) w
+) z
+WHERE z.audit_rn >        0 AND z.audit_rn <= 100000   -- 第 1 批
+ORDER BY z.audit_rn;
+--     ★ audit_rn 之排序键与分批作业版**逐字同一**（锁一），故两版可逐行对账。
+--     ★ 本件仅 39 行，一批即全；分批版之 batch_id 只为体例一致与两版可逐行对账，非因体量。
+--     ★ evidence_flag = 'NO_EVIDENCE' 之面（各 1 注、10 元、零盈亏）⛔ 一律不得进入任何加权或 theo 计算。
+--     ★ caliber 恒为 'REALIZED_NOT_THEORETICAL' —— 硬编码于列内，令下游无从误认作理论 edge。
+--     ★ 下游若欲算 theo：theo = Σ(valid_bet_j × edge_j)，其 edge 须为【理论】值；
+--       以本件之 realized 值代入者，对本窗近乎恒等式（Σtheo ≈ Σprofit），⛔ 只可作分摊，不可称期望。

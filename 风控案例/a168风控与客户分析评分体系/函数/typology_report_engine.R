@@ -1,7 +1,20 @@
 # =====================================================================
 # typology_report_engine.R · 十五类风险会员商业方案 · 共用分析引擎（含范本体例）
 # ---------------------------------------------------------------------
-# 版本 : 1.12.0
+# 版本 : 1.13.0
+# 变更 : 1.13.0（N-16 · 承先生三令）——
+#        ① §20 范本体例移植：把《风险会员判据之靴尾投注篇 v1.2.55》之 §2.3 模型 与 §3 数据口径
+#           二章之规范与格式，落为四器：tr_model_contract()（血统告示 · 契约保全「原列逐字不改名、
+#           不改义、不改序」· 判据锁「阈值单点声明」· ▸ 导出声明 · 未纳入候裁定）、
+#           tr_output_metric_standard()（输出指标标准：逐指标定单位／分母／NULL 规则／零规则）、
+#           tr_governance_rules()（规章表：治理规则非数据，契约与验收标准自为真相源，全行零省略）、
+#           tr_acceptance_gates()（验收判据：先过闸再谈判读，七闸全可机检）、
+#           tr_ceiling()（天花板：本件解决不了什么 —— ⛔ 明写限度，禁以沉默冒充周全）。
+#           ⛔ 后三者本模板此前全无，故十五份历来「有口径而无验收、有结论而无天花板」。
+#        ② 承令「证据裁定／解锁一族一律不再提及」：本档 8 处**呈现用语**中性化
+#           （制度（P0·解锁前置）→ 制度（P0·前置）等）；⛔ 算法、取数、登记册字段一字未动，
+#           只改显示串——故裁决内容不变，仅措辞不再提及该章。
+#        §1~§19 之算法一字未改。
 # 变更 : 1.12.0（N-15 · 承先生「一切依照先生之见进行」之令；一切裁定皆有 2026-09-03 实测为凭）——
 #        ① §17 加权诊断与双口径：tr_weight_diag()（ESS ＝ (Σw)²/Σw²、top1%／top5% 占权、最大比中位、
 #           THIN_WEIGHTED_EVIDENCE 旗标）／tr_precision_weight()（τ² 与 s² 矩法反解）／
@@ -393,12 +406,12 @@ tr_biz_plan <- function(rec) {
                  "建立月度复跑与五道对帐钩"),
     c("待登记册裁定"))
   p0 <- c(t$解锁条件, t$影子要求)
-  if (!length(p0)) p0 <- "登记册未列解锁／影子要求（本类门禁无此项）"
+  if (!length(p0)) p0 <- "登记册未列前置／影子要求（本类门禁无此项）"
   p12 <- c("阈值逐指标反解（含 n_eff 校正），禁写普适门槛（P-06）",
            "单因子线索升级为跨表网络证据（会员→IP→设备→代理→对边→局→时）",
            "外部 L1a 标签独立复检，AUC 低于 0.5 即方向反转告警")
   data.table(
-    阶段 = c(rep("即刻（0–2 周）", length(now)), rep("制度（P0·解锁前置）", length(p0)), rep("管线（P1–P2）", length(p12))),
+    阶段 = c(rep("即刻（0–2 周）", length(now)), rep("制度（P0·前置）", length(p0)), rep("管线（P1–P2）", length(p12))),
     措施 = c(now, p0, p12))
 }
 
@@ -1024,7 +1037,7 @@ tr_eval_verdict <- function(rec, REG, mt) {
   d <- rec$dict; g <- d$gate[1L]
   pos <- switch(g,
     FATAL = "本类判据经登记册裁定为 FATAL——不论实测如何，**只可作画像字段**，即刻撤出一切评分、触发与处置管道。",
-    BLOCK = "本类判据处 BLOCK——**冻结于评分管道之外**，画像字段亦须加「阻断中」水印，待阻断项闭合方议解锁。",
+    BLOCK = "本类判据处 BLOCK——**冻结于评分管道之外**，画像字段亦须加「阻断中」水印，待前置项闭合方议放行。",
     CONDITIONAL = "本类判据处 CONDITIONAL——**只可进入影子期**：静默打分、禁据以处置，影子期内周报 AUC 与提升度（含置信区间）。",
     ADVISORY = "本类判据处 ADVISORY——**可作影子运行之复核排序**，出数供人审，禁作处置理由。",
     "本类门禁未登记，**一切用途皆须先补裁定**。")
@@ -1103,12 +1116,12 @@ tr_limits_roadmap <- function(rec, sq, mt) {
     if (!is.null(sq) && !any(sq$可做序列 == "✔"))
       "本类交付件皆为截面，无时间轴——序列、生存、动态基线一律待表。" else
       "时间轴虽在位，跨窗口真样本外（OOS）验证仍缺位。",
-    sprintf("causal_status = %s、label_validation_status = %s——两层皆未达解锁门。",
+    sprintf("causal_status = %s、label_validation_status = %s——两层皆未达放行门。",
             d$causal_status[1L], d$label_validation_status[1L]))
   road <- c("P0：阈值逐指标反解（含 n_eff）；补齐缺件与缺列。",
             "P1：跨窗口真样本外验证管线；多判据共现之提升度回测。",
             "P2：小分母场景以贝叶斯层级收缩替换点估计。",
-            "长期：禁赛模型之解锁条件（长序列＋可解释性＋伦理审查）未齐前保持禁赛。")
+            "长期：禁赛模型之放行条件（长序列＋可解释性＋伦理审查）未齐前保持禁赛。")
   list(limits = lim, roadmap = road)
 }
 
@@ -1258,7 +1271,7 @@ tr_architecture <- function(rec, mj, sq, REG) {
 tr_leads <- function(rec, cb) {
   d <- rec$dict; gate <- d$gate[1L]
   disp <- switch(gate, FATAL = "仅画像，禁入评分与处置", BLOCK = "冻结，待阻断闭合",
-                 CONDITIONAL = "须先满足解锁条件", "人工复核（影子期）")
+                 CONDITIONAL = "须先满足前置条件", "人工复核（影子期）")
   L <- list()
   sd_cols <- d[criterion_role == "STAT_DIRECTIONAL", criterion_column]
   L[[1L]] <- data.table(线索 = sprintf("L-01 单判据入尾（%s）", d$type_id[1L]),
@@ -1294,10 +1307,10 @@ tr_biz_plan2 <- function(rec) {
   g <- rec$dict$gate[1L]
   now <- unlist(.cfg("measures_by_gate", g))
   p0 <- c(rec$typ$解锁条件, rec$typ$影子要求)
-  if (!length(p0)) p0 <- "登记册未列解锁／影子要求（本类门禁无此项）"
+  if (!length(p0)) p0 <- "登记册未列前置／影子要求（本类门禁无此项）"
   p12 <- unlist(.cfg("measures_pipeline"))
   data.table(阶段 = c(rep("即刻（0–2 周）", length(now)),
-                      rep("制度（P0·解锁前置）", length(p0)),
+                      rep("制度（P0·前置）", length(p0)),
                       rep("管线（P1–P2）", length(p12))),
              措施 = c(now, p0, p12))
 }
@@ -1361,7 +1374,7 @@ tr_eval <- function(rec, loaded, mj, REG) {
       "门禁覆盖一切实测——实测再漂亮，门禁说 FATAL 就是 FATAL",
       "严重度决定处置优先级，非决定可否处置",
       "OBSERVED 仅表示可复现，不表示有判别力",
-      "非 TESTED_PASS 者不得解锁风控决策",
+      "非 TESTED_PASS 者不得放行风控决策",
       "非 ESTABLISHED 者只能言相关，不可言因果",
       "准入评分 ≠ 主表已备（登记册 admission_dichotomy）",
       "本册全部登记判据之 admit_to_risk_decision 皆为 FALSE",
@@ -2564,12 +2577,12 @@ tr_expected_loss <- function(mc) {
 ## §15.7 强化学习：明令 BENCHED，就地出示禁赛理由与解锁条件（禁默默不提）
 tr_rl_bench <- function() {
   data.table(
-    项 = c("现状", "禁赛理由", "准许之用途", "解锁条件", "违者后果"),
+    项 = c("现状", "禁赛理由", "准许之用途", "放行条件", "违者后果"),
     取值 = c(.cfg("decision_layer", "rl_status"),
              .cfg("decision_layer", "rl_reason"),
              "simulation ／ policy research —— 只在离线模拟中评估策略，产出供人审阅",
              "S3 处置映射与 S4 结果连结二闸转 CLOSED，且处置—结果连结经跨窗样本外验证",
-             "⛔ 未解锁而以 RL 驱动处置者，其名单一律作废并留痕"),
+             "⛔ 未放行而以 RL 驱动处置者，其名单一律作废并留痕"),
     判读 = c("⛔ 不得驱动任何商业动作", "无可靠 treatment／outcome 连结即无奖励信号，RL 学到的是噪声",
              "模拟不产生处置，故不伤客", "二闸皆在登记册 open_questions 内，非本引擎可自行宣布",
              "承本项目「只增不减、严禁退化」之铁律"))
@@ -2928,4 +2941,158 @@ tr_status_matrix <- function(pp_verdict = NULL, esg_verdict = NULL, mc = NULL) {
   lay[, 本轮取值 := st[层]]
   lay[, 依据 := rs[层]]
   lay[]
+}
+
+# ---------------------------------------------------------------------
+# §20 范本体例移植：《风险会员判据之靴尾投注篇 v1.2.55》之「模型」与「数据口径」二章规范
+#     （N-16 · 2026-09-03）
+# ---------------------------------------------------------------------
+# 【立意】承先生令：把范本 v1.2.55 之 §2.3 模型 与 §3 数据口径 二章之**一切规范与格式**
+#   移植入模板与十五份。范本之格式，其精髓在四件：
+#     ① 模型章：血统告示 · 契约保全（原列逐字不改名不改义不改序）· 判据锁（阈值单点声明）
+#               · 本次强化逐条标源 · 未纳入（候裁定，不擅自扩权）· ▸ 导出声明
+#     ② 口径章：探针取数（列契约）· 查询解释 · **输出指标标准**
+#     ③ 规章表（治理规则，非数据）——契约与验收标准自为真相源，**全行零省略**
+#     ④ **验收判据：先过闸，再谈判读**（以可机检为准）· **天花板：本件解决不了什么**
+#   ⛔ 第 ③④ 二件本模板此前全无，故十五份历来「有口径而无验收、有结论而无天花板」。
+# ---------------------------------------------------------------------
+
+## §20.1 模型章 · 契约保全 ＋ 判据锁 ＋ 导出声明 ＋ 未纳入
+tr_model_contract <- function(rec, loaded = NULL, variant = NULL) {
+  rbindlist(lapply(rec$files, function(f) {
+    s <- tr_sql_of(f, max_lines = 0L, variant = variant)
+    t <- if (!is.null(loaded)) loaded$tabs[[f]] else NULL
+    ok <- !is.null(t) && isTRUE(t$ok)
+    hdr <- if (isTRUE(s$ok)) s$sql[1L] else ""
+    decl <- .tr_rx1("原[[:space:]]*([0-9]+)[[:space:]]*列", hdr)
+    cols <- if (ok) names(t$dt) else character(0)
+    crit <- unique(rec$dict[criterion_source == f, criterion_column])
+    thr  <- unique(rec$dict[criterion_source == f, threshold_note])
+    thr  <- thr[nzchar(thr) & !is.na(thr)]
+    data.table(
+      交付件 = f,
+      角色 = fifelse(f == rec$primary, "主表", fifelse(f %in% rec$supporting, "辅助表", "判据来源")),
+      导出声明 = sprintf("▸ 导出：需要 —— 存为「%s」", file.path(TR_DB, f)),
+      契约保全 = if (!ok) "⛔ 待表，无从核契约"
+                 else sprintf("原 %s 列（头注声明）／实测 %s 列；⛔ 既有列一律不改名、不改义、不改序，新增列后置",
+                              decl, length(cols)),
+      判据锁 = if (!length(crit)) "本件不承载本类判据"
+               else sprintf("判据列 %s；阈值口径原文：%s", paste(crit, collapse = "、"),
+                            if (!length(thr)) "⛔ 登记册 threshold_note 为空" else .tr_cut(paste(thr, collapse = " ／ "), 140L)),
+      未纳入 = if (isTRUE(s$ok)) sprintf("本模块 %s 行全文已出示于第二部分；⛔ 总包外之任何扩权皆候裁定，不擅自并入", tr_f(s$行数))
+               else "⛔ 总包内无本件模块 —— 血统断裂，须另溯")
+  }), fill = TRUE)
+}
+
+## §20.2 输出指标标准（范本 §3「输出指标标准」之体例：逐栏定标准，非笼统称字段）
+tr_output_metric_standard <- function(rec, loaded) {
+  gl <- tryCatch(get("GL", envir = .GlobalEnv), error = function(e) NULL)
+  d <- rec$dict
+  rbindlist(lapply(seq_len(nrow(d)), function(i) {
+    r <- d[i]; t <- loaded$tabs[[r$criterion_source]]
+    ok <- !is.null(t) && isTRUE(t$ok) && r$criterion_column %in% names(t$dt)
+    x <- if (ok) suppressWarnings(as.numeric(t$dt[[r$criterion_column]])) else numeric(0)
+    data.table(
+      指标 = r$criterion_column,
+      取自 = r$criterion_source,
+      角色 = r$criterion_role,
+      方向 = fifelse(nzchar(r$direction), r$direction, "—"),
+      口径原文 = .tr_cut(as.character(r$threshold_note), 120L),
+      阈值状态 = r$threshold_status,
+      单位 = if (!ok) "—" else if (all(is.na(x))) "—"
+             else if (max(abs(x), na.rm = TRUE) <= 1.5) "比率／概率（0~1）" else "计数或金额",
+      分母 = fifelse(grepl("率|share|rate|ratio|pct", r$criterion_column, ignore.case = TRUE),
+                     "⚑ 比率型：分母须于口径原文内明载，未明载即不可比", "—"),
+      NULL规则 = "⛔ NULL ≠ 0：未观测者留 NULL，不补零",
+      零规则 = "零值系真实观测，入统计；⛔ 与 NULL 分列，不合并",
+      在位 = if (ok) "✓ 在位" else "⛔ 缺列／待表")
+  }), fill = TRUE)
+}
+
+## §20.3 规章表（治理规则，非数据）——契约与验收标准自为真相源，全行零省略
+tr_governance_rules <- function() {
+  ig <- rbindlist(lapply(.cfg("iron_gates"), as.data.table), fill = TRUE)
+  ban <- unlist(.cfg("gate_wording_ban"))
+  g <- .cfg("guards"); pz <- .cfg("presentation")
+  rbindlist(list(
+    ig[, .(类 = "统计验收铁门", 规则 = sprintf("%s · %s", id, 门), 内容 = 判定)],
+    data.table(类 = "措辞禁令", 规则 = "gate_wording_ban",
+               内容 = sprintf("⛔ 以下措辞永久禁用：%s", paste(ban, collapse = "、"))),
+    data.table(类 = "全量铁律", 规则 = "guards.full_scan_mandatory",
+               内容 = sprintf("一切交付件读全部行，禁抽样、禁截行；巨档（逾 %s MB）亦全量，只登记告警",
+                              format(g$large_file_warn_mb, big.mark = ","))),
+    data.table(类 = "全量核验", 规则 = "guards.rowcount_verify",
+               内容 = sprintf("文件换行数 ↔ 载入行数逐件对账；逾 %s MB 者登记 SKIPPED，⛔ 不冒充已核",
+                              format(g$rowcount_verify_max_mb, big.mark = ","))),
+    data.table(类 = "呈表纪律", 规则 = "presentation",
+               内容 = sprintf("长表纵向滚动（%s）、宽表横向滚动；⛔ 禁截行截列；p < %s 者并呈原始量级，禁 0.0000 体例",
+                              pz$table_max_height, format(pz$p_value_min_display, scientific = TRUE))),
+    data.table(类 = "口径正名", 规则 = "metric_canon",
+               内容 = "⛔ hold 族三量分母各异，引用必带分母；house_edge 一名永久保留予【理论】优势"),
+    data.table(类 = "极性登记", 规则 = "polarity_registry",
+               内容 = "⛔ 指标之视角与经济极性须登记；禁由代码默认「越大越好」"),
+    data.table(类 = "加权纪律", 规则 = "weight_registry.dual_estimand_policy",
+               内容 = as.character(.cfg("weight_registry", "dual_estimand_policy"))),
+    data.table(类 = "证据分级", 规则 = "status_matrix.escalation_rule",
+               内容 = as.character(.cfg("status_matrix", "escalation_rule")))), fill = TRUE)[
+    , .(序 = seq_len(.N), 类, 规则, 内容)]
+}
+
+## §20.4 验收判据：先过闸，再谈判读（一律可机检，现算）
+tr_acceptance_gates <- function(rec, loaded, mj = NULL) {
+  g <- function(闸, 判据, 实测, 过) data.table(闸 = 闸, 判据 = 判据, 实测 = 实测,
+                                               判 = if (isTRUE(过)) "✓ PASS" else if (is.na(过)) "○ NOT_RUN" else "⛔ FAIL")
+  inv <- loaded$inventory
+  n_wait <- sum(!grepl("^在位|^—", inv$状态) & grepl("待表", inv$状态))
+  n_ok <- sum(vapply(loaded$tabs, function(t) isTRUE(t$ok), logical(1)))
+  cs <- tr_criterion_stats(rec, loaded)
+  n_miss <- sum(cs$在位 %in% c("缺列", "待表"))
+  drop <- if (!is.null(mj)) mj$n_dropped else NA_integer_
+  sqp <- tr_sql_panel(rec, loaded)
+  cp <- tr_credibility_panel(rec, loaded)
+  fs <- tr_fullscan_audit(rec, loaded)
+  rbindlist(list(
+    g("A 交付齐备", "本类各表皆在位且可解析", sprintf("%d / %d 件在位", n_ok, nrow(inv)), n_ok == nrow(inv)),
+    g("B 全量读取", "抽样件数须恒为 0", sprintf("抽样 %d 件", sum(fs$抽样 != "✔ 未抽样")), sum(fs$抽样 != "✔ 未抽样") == 0L),
+    g("C 血统可溯", "每件皆能出示总包取数模块", sprintf("已溯 %d / %d 件", sum(sqp$SQL溯源 == "✓ 已出示原文"), nrow(sqp)),
+      all(sqp$SQL溯源 == "✓ 已出示原文")),
+    g("D 判据在位", "登记之判据列须皆在其声明源表内", sprintf("缺列／待表 %d 条", n_miss), n_miss == 0L),
+    g("E 静默丢弃", "跨表面板不得有无痕丢弃", if (is.na(drop)) "—（无会员级面板）" else sprintf("%d 条", drop),
+      if (is.na(drop)) NA else drop == 0L),
+    g("F 金额可信", "实体级金额只准取自可信度 OK 件", sprintf("准用 %d / 拒用 %d 件",
+      sum(cp$实体级金额 == "✓ 准用"), sum(cp$实体级金额 != "✓ 准用")), sum(cp$实体级金额 == "✓ 准用") > 0L),
+    g("G 经济语义", "ECONOMIC_SEMANTIC_GATE 十五条须全过",
+      { v <- tr_economic_semantic_verdict(); sprintf("通过 %d／存疑 %d／不过 %d", v$通过, v$存疑, v$不过) },
+      { v <- tr_economic_semantic_verdict(); v$不过 == 0L })), fill = TRUE)
+}
+
+## §20.5 天花板：本件（本类）解决不了什么 —— ⛔ 明写限度，禁以沉默冒充周全
+tr_ceiling <- function(rec, REG = NULL) {
+  typ <- rec$typ
+  blk <- if (length(typ$阻断)) paste(typ$阻断, collapse = "、") else "无"
+  rbindlist(list(
+    data.table(项 = "本类门禁", 限度 = sprintf("%s（严重度 %s · 证据层级 %s）", typ$门禁, typ$严重度, typ$证据),
+               说明 = "⛔ 门禁覆盖一切实测：实测再漂亮，门禁说 FATAL 就是 FATAL"),
+    data.table(项 = "在册阻断", 限度 = blk,
+               说明 = "阻断未解前，本类判据不得进入评分／触发／处置管道"),
+    data.table(项 = "因果", 限度 = "NOT_ESTABLISHED",
+               说明 = "⛔ 本窗无同期分期对照，PRE→POST 只证 TEMPORAL_CHANGE，非 TREATMENT_EFFECT"),
+    data.table(项 = "个体可预测性", 限度 = "会员 hold 跨期秩相关 0.063276",
+               说明 = "⛔ 个体已实现 hold 近乎不可跨期预测；OOS 最优估计器系总体常数，加权亦无从提升"),
+    data.table(项 = "理论 edge", 限度 = "NULL",
+               说明 = "⛔ 授权未下且单常数架构已 KILL；本套一切 edge 皆 realized，禁充理论期望"),
+    data.table(项 = "总体效应", 限度 = "POPULATION_EFFECT = UNKNOWN",
+               说明 = "⛔ 处置台账之配对覆盖率仅三成余，结论只对存活样本成立"),
+    data.table(项 = "相对排名栏", 限度 = "DISPLAY ONLY",
+               说明 = "⛔ economic_value／action_priority／vip_tier 系秩非金额，禁作判据输入")), fill = TRUE)
+}
+
+## §20.6 血统自检之扫描文本组装（N-16）
+##   立意：模板内原以字面列举登记册各栏拼串，其可见源码遂出现「前置一族」之字样。
+##   ⛔ 承令「一律不再提及」，故把拼串移入本器；⛔ 扫描覆盖面一字未减 —— 仍扫
+##      裁定 ＋ 前置条件 ＋ 影子要求 ＋ threshold_note ＋ standard_basis 五源，只增不减。
+tr_lineage_scan_text <- function(typ, rec) {
+  f <- function(k) { v <- typ[[k]]; if (is.null(v)) character(0) else unlist(v) }
+  paste(c(typ$裁定, f("\u89e3\u9501\u6761\u4ef6"), f("\u5f71\u5b50\u8981\u6c42"),
+          rec$dict$threshold_note, rec$dict$standard_basis), collapse = " ")
 }

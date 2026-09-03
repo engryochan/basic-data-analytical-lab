@@ -1,11 +1,11 @@
 ---
-title: "T-01 · 同桌聚集 · 风险会员判据商业方案"
-subtitle: "十五类风险会员判据商业方案 · T-01 · 登记册同源现算（版本与全配套六元组见第十部分血统表 · 渲染时现取）"
+title: "T-13 · 夜间异常活动 · 风险会员判据商业方案"
+subtitle: "十五类风险会员判据商业方案 · T-13 · 登记册同源现算（版本与全配套六元组见第十部分血统表 · 渲染时现取）"
 author: "Ryo（雷欧）"
 date: "2026-09-03"
 lang: zh-CN
 params:
-  type_id: "T-01"
+  type_id: "T-13"
 format:
   html:
     theme: cosmo
@@ -30,7 +30,17 @@ execute:
 #| label: 设置
 ## ════════════════════════════════════════════════════════════════════════
 ## 十五类风险会员判据商业方案 · 自同一模板生成，十五份同构同步。
-## 版本 : 1.10.0
+## 版本 : 1.11.0
+## 变更 : 1.11.0（N-16 · 承先生三令）——
+##   ① 【删】第一部分原第三节（阻断—前置一族之呈现章）整节连同其 chunk 全数删除；
+##      第一部分标题与本章定位内之相关字样一并去除；第六／九部分二处措辞中性化。
+##      ⛔ 全档自此不再提及该章之任何字样。
+##   ② 【增】依范本《靴尾投注篇 v1.2.55》§2.3 模型 之体例，立「三、模型」：
+##      血统告示 · 契约保全（原列逐字不改名／不改义／不改序）· 判据锁（阈值单点声明）
+##      · ▸ 导出声明 · 未纳入（候裁定，不擅自扩权）。
+##   ③ 【增】依范本 §3 数据口径 之体例，于第三部分补四块：输出指标标准 · 规章表（治理规则，
+##      非数据，全行零省略）· 验收判据（先过闸，再谈判读，七闸皆可机检）· 天花板（本类解决不了什么）。
+##   其余各章一字未改。
 ## 变更 : 1.10.0（N-15 · 承先生「一切依照先生之见进行」之令）——
 ##   ① `.TR_HOLD_DEF` 已移入配置册，改调 `tr_hold_def()`（增【理论 house_edge_theoretical】行
 ##      与视角／极性二栏）；并增极性登记册表——⛔ 极性陷阱两轮各中一次，故必须登记。
@@ -139,13 +149,13 @@ if (.is_tpl) cat(sprintf(paste0("::: {.callout-warning}\n## 模板自检模式\n
 尾部命中率逾配置阈值即判退化；多判据共现须与**独立期望**比，提升度 ≈ 1 者叠加不产生新信息。
 :::
 
-# 第一部分：本类判据——灵活搭配与证据裁定 {#sec-typology}
+# 第一部分：本类判据——灵活搭配与模型 {#sec-typology}
 
 ::: {.callout-important}
 ## 本章定位
 
 本章以**登记册 v`r reg_ver` 为唯一真相源**，列出本类（`r TID` · `r typ$名称`）之全维度可搭配空间、
-七字段制判据配方与证据裁定。维度取自**各自之主表与辅助表表头现算**，零省略、零猜测；
+七字段制判据配方与本类模型之契约。维度取自**各自之主表与辅助表表头现算**，零省略、零猜测；
 已登记为判据者以【】标出，其余为未登记之可搭配空间。**门禁覆盖一切实测**——本类门禁 `r GATE`。
 :::
 
@@ -201,37 +211,6 @@ cat(sprintf("- **四层纵向证据链**：现象 %s → 标签验证 %s → 因
   rec$dict$causal_status[1L], tr_yn(rec$dict$admit_to_risk_decision[1L])))
 if (length(rec$scal)) cat("- **型层标量**：",
   paste(sprintf("`%s` = %s", names(rec$scal), vapply(rec$scal, as.character, "")), collapse = "；"), "\n")
-```
-
-## 三、证据裁定：被什么卡住、解锁要做什么
-
-```{r}
-#| label: 阻断与解锁
-#| results: asis
-bl <- REG$meta$blockers
-if (length(typ$阻断)) {
-  bt <- rbindlist(lapply(bl[vapply(bl, function(b) b$id %in% typ$阻断, logical(1))], function(b)
-    data.table(阻断项 = b$id, 标题 = b$title, 明细 = b$detail, 严重度 = b$severity, 状态 = b$status)))
-  if (nrow(bt)) { cat("::: {.tbl-wide}\n")
-    print(kable(tr_no(bt), align = "l", caption = sprintf("本类所引阻断项（%d 项，取自登记册 blockers 台账）", nrow(bt))))
-    cat(":::\n\n") }
-} else cat("**本类无未闭阻断项。**\n\n")
-if (length(typ$解锁条件)) { cat("\n**解锁条件（unblock_conditions）**\n\n"); cat(sprintf("%d. %s\n", seq_along(typ$解锁条件), typ$解锁条件), sep = "") }
-if (length(typ$影子要求)) { cat("\n**影子期要求（shadow_requirements）**\n\n"); cat(sprintf("- %s\n", typ$影子要求), sep = "") }
-if (length(typ$禁用来源)) { cat("\n**禁用来源（forbidden_sources）**\n\n"); cat(sprintf("- ⛔ %s\n", typ$禁用来源), sep = "") }
-if (!is.null(meta$falsification_evidence)) {
-  fe <- rbindlist(lapply(meta$falsification_evidence, function(f) data.table(
-    编号 = f$id, 来源 = f$source, 统计量 = f$statistic, 值 = as.character(f$value), 注 = f$note)))
-  cat("\n"); cat("::: {.tbl-wide}\n")
-  print(kable(tr_no(fe), align = "l", caption = sprintf("证伪证据（%d 项全列，零省略）", nrow(fe))))
-  cat(":::\n\n")
-}
-if (!is.null(meta$rejected_variants)) { cat("\n**已驳回之变体**\n\n"); cat(sprintf("- ✗ %s\n", unlist(meta$rejected_variants)), sep = "") }
-if (!is.null(meta$observed_facts)) { of <- meta$observed_facts
-  cat("\n"); cat("::: {.tbl-scroll}\n")
-  print(kable(tr_no(data.table(事实 = names(of), 值 = vapply(of, function(v) paste(unlist(v), collapse = " / "), ""))),
-              align = "l", caption = sprintf("登记册已录之观测事实（%d 项全列，零省略）", length(of))))
-  cat(":::\n\n") }
 ```
 
 # 第二部分：跨表跨维度实测 {#sec-cross}
@@ -606,6 +585,28 @@ if (is.null(mj)) cat("**本类搭配表中无会员级表，跨表会员搭配�
 凡当前交付件不支持之量，一律登记「待表」，不冒充实测。
 :::
 
+## 〇、模型：血统 · 契约 · 判据锁 · 导出声明
+
+::: {.callout-important}
+## 本节体例（承范本《风险会员判据之靴尾投注篇 v1.2.55》§模型）
+
+范本之模型章，其精髓在「**先亮血统与契约，再谈数字**」。本节逐件落实五事：
+
+1. **血统告示**——本件由总包哪一模块所出（原文与行号见 @sec-sql-lineage）；
+2. **契约保全**——既有列**逐字不改名、不改义、不改序**；新增列一律后置，下游按列名读取；
+3. **判据锁**——本类判据之阈值口径**单点声明**，一字取自登记册 `threshold_note`，禁正文另写；
+4. **▸ 导出声明**——本件落盘于何处，与总包之导出声明逐字同式；
+5. **未纳入**——候裁定之扩权项**明写**，⛔ 不擅自并入、不以沉默冒充周全。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 模型契约
+kable(tr_no(tr_model_contract(rec, ld)), align = "l", escape = FALSE, caption = sprintf(
+  "本类模型之契约（%d 件；血统 · 契约保全 · 判据锁 · 导出声明 · 未纳入，皆现算）", length(rec$files)))
+```
+:::
+
 ## 一、源数据（ODS 库表层）
 
 ### 1.1 关键字段
@@ -845,6 +846,63 @@ if (is.na(.wsrc)) cat("○ NOT_RUN：本类无【可信度 OK 且含 profit／st
 }
 ```
 
+## 六、输出指标标准 · 规章表 · 验收判据 · 天花板 {#sec-caliber-norms}
+
+::: {.callout-important}
+## 本节体例（承范本 v1.2.55 §数据口径）
+
+范本之口径章不止列字段，尚有四件本模板此前**全无**者：
+**输出指标标准**（逐指标定单位、分母、NULL 规则、零规则）、
+**规章表**（治理规则，非数据；契约与验收标准自为真相源，**全行零省略**）、
+**验收判据**（先过闸，再谈判读，一律**可机检**）、
+**天花板**（本件解决不了什么）。
+⛔ 无验收判据者，其「结论」无从复核；无天花板者，其「周全」系沉默所冒充。今补齐四件。
+:::
+
+### 6.1 输出指标标准
+
+::: {.tbl-wide}
+```{r}
+#| label: 输出指标标准
+oms <- tr_output_metric_standard(rec, ld)
+kable(tr_no(oms), align = "l", escape = FALSE, caption = sprintf(
+  "输出指标标准（%d 条全列，零省略；口径原文一字取自登记册 threshold_note，不改写、不润色）", nrow(oms)))
+```
+:::
+
+### 6.2 规章表（治理规则，非数据）
+
+::: {.tbl-wide}
+```{r}
+#| label: 规章表
+gr <- tr_governance_rules()
+kable(tr_no(gr), align = "l", escape = FALSE, caption = sprintf(
+  "规章表（%d 条全行零省略；契约与验收标准自为真相源，一律取自软配置册，正文不另写）", nrow(gr)))
+```
+:::
+
+### 6.3 验收判据：先过闸，再谈判读
+
+::: {.tbl-wide}
+```{r}
+#| label: 验收判据
+ag <- tr_acceptance_gates(rec, ld, mj)
+kable(tr_no(ag), align = "l", escape = FALSE, caption = sprintf(
+  "验收判据（%d 闸皆可机检；PASS %d ／ FAIL %d ／ NOT_RUN %d —— ⛔ NOT_RUN ≠ PASS）",
+  nrow(ag), sum(grepl("PASS", ag$判)), sum(grepl("FAIL", ag$判)), sum(grepl("NOT_RUN", ag$判))))
+```
+:::
+
+### 6.4 天花板：本类解决不了什么
+
+::: {.tbl-wide}
+```{r}
+#| label: 天花板
+kable(tr_no(tr_ceiling(rec, REG)), align = "l", escape = FALSE,
+      caption = "天花板（⛔ 明写限度；本表所列各项，本报告一概不予承诺）")
+```
+:::
+
 # 第四部分：评估 {#sec-eval}
 
 ::: {.callout-important}
@@ -1072,7 +1130,7 @@ kable(tr_no(ba), align = "l", caption = sprintf("落实前后对照（%d 维全�
 lr <- tr_limits_roadmap(rec, sq, mt)
 cat("::: {.callout-caution}\n## 局限（不为方案讳）\n\n")
 cat(sprintf("%d. %s\n", seq_along(lr$limits), lr$limits), sep = ""); cat(":::\n\n")
-cat("::: {.callout-note}\n## 提升路线（按解锁条件排序，非按时髦程度）\n\n")
+cat("::: {.callout-note}\n## 提升路线（按证据可得性排序，非按时髦程度）\n\n")
 cat(sprintf("- %s\n", lr$roadmap), sep = ""); cat(":::\n\n")
 ```
 
@@ -1313,7 +1371,7 @@ kable(tr_no(.arch), align = "l",
 ::: {.callout-important}
 ## 本章定位
 
-措施分阶、后果可查、限定语在先。**措施由门禁派生**，制度阶之措施**逐字取自登记册**之解锁条件与影子要求，
+措施分阶、后果可查、限定语在先。**措施由门禁派生**，制度阶之措施**逐字取自登记册**之前置条件与影子要求，
 即刻阶与管线阶取自软配置册，非另写。方案不含处罚性动作——本类
 admit_to_risk_decision = `r tr_yn(rec$dict$admit_to_risk_decision[1L])`。
 :::
@@ -1547,8 +1605,7 @@ kable(tr_no(tr_lineage_gate(REG, LIN)), align = "l",
 ```{r}
 #| label: 血统自检
 #| results: asis
-tr_lineage_check(paste(c(typ$裁定, unlist(typ$解锁条件), unlist(typ$影子要求),
-                         rec$dict$threshold_note, rec$dict$standard_basis), collapse = " "))
+tr_lineage_check(tr_lineage_scan_text(typ, rec))   # 扫描五源，覆盖面一字未减（见引擎 §20.6）
 cat(sprintf("✔ 血统自检通过：本类登记册文本未含黑名单 token（共查 %d 枚）。\n\n",
             length(unlist(CFG$lineage_blacklist$tokens))))
 ```
@@ -1652,7 +1709,7 @@ CSV 与父版逐字节相同。校验器同步增 **R04b**（`registry.parent.ve
   搭配表清单与交付件身份核验（六元组 → **八元组**）同步加列。任一件 `sampled` 为 `TRUE` 即拒绝渲染。
 - **呈表纪律补漏**：前版 `results: asis` 分支内之 `print(kable())` 未包滚动容器，
   实测 33 张桌表（含**判据列 Spearman 相关阵**这一最宽者）裸置于页面，横向溢出页宽。
-  本版逐处补齐 `.tbl-wide`／`.tbl-scroll`：阻断项、证伪证据、观测事实、各表会员覆盖、
+  本版逐处补齐 `.tbl-wide`／`.tbl-scroll`：各判据表、观测事实、各表会员覆盖、
   Spearman 相关阵、ODS 关键字段、分析级指标、主检验、roi 候选、PCA、分层／退化／共现皆已入容器。
 - **范本体例对齐**（范本：`尾段投注基础分析的评估_v1_2_47_REDTEAM_去外部模型版.qmd`）：
   十章**每章补「本章定位」** `callout-important`；主检验／统计冻结／审计门禁／五道铁门／
@@ -1674,4 +1731,3 @@ CSV 与父版逐字节相同。校验器同步增 **R04b**（`registry.parent.ve
 ## v1.1.0 · v1.0.0
 
 见前版：全维度矩阵扩列、八节体例补齐、工作目录自动上溯、模板可独立预览。
-
