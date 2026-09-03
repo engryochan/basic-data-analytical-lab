@@ -1,11 +1,11 @@
 ---
-title: "T-15 · 静默复活／账户接管 · 风险会员判据商业方案"
-subtitle: "十五类风险会员判据商业方案 · T-15 · 登记册同源现算（版本与全配套六元组见第十部分血统表 · 渲染时现取）"
+title: "T-09 · 代理线自打／养号 · 风险会员判据商业方案"
+subtitle: "十五类风险会员判据商业方案 · T-09 · 登记册同源现算（版本与全配套六元组见第十部分血统表 · 渲染时现取）"
 author: "Ryo（雷欧）"
 date: "2026-09-03"
 lang: zh-CN
 params:
-  type_id: "T-15"
+  type_id: "T-09"
 format:
   html:
     theme: cosmo
@@ -30,7 +30,13 @@ execute:
 #| label: 设置
 ## ════════════════════════════════════════════════════════════════════════
 ## 十五类风险会员判据商业方案 · 自同一模板生成，十五份同构同步。
-## 版本 : 1.9.0
+## 版本 : 1.10.0
+## 变更 : 1.10.0（N-15 · 承先生「一切依照先生之见进行」之令）——
+##   ① `.TR_HOLD_DEF` 已移入配置册，改调 `tr_hold_def()`（增【理论 house_edge_theoretical】行
+##      与视角／极性二栏）；并增极性登记册表——⛔ 极性陷阱两轮各中一次，故必须登记。
+##   ② 第三部分增「五 · 加权口径与权重诊断」：双口径并列 ＋ ESS／集中度 ＋ 加权登记册 ＋ 六条铁律。
+##   ③ 第九部分增「五 · 经济语义闸十五条」与「六 · 四状态分离」。
+##   其余各章一字未改。
 ## 变更 : 1.9.0（N-14 · 承先生「实测并证实处理前后之风险；以顶级统计概念灵活搭配，
 ##   择最低亏损最高回酬之组合」与《参考.txt》之校对）——
 ##   ⛔ 病根：模板 v1.8.0 及以前从不接 §13.2／§13.3／§15／§16，故：口径不正名（hold 三义混称）、
@@ -724,8 +730,10 @@ SELECT-only 五闸探针见 `函数/HE_house_edge_SELECT_only_探针_v1.0.0.sql`
 ::: {.tbl-wide}
 ```{r}
 #| label: hold正名
-kable(tr_no(.TR_HOLD_DEF), align = "l", escape = FALSE,
-      caption = "hold 族口径正名（四量并存，分母各异；⛔ 引用一律带分母，禁裸称 hold）")
+kable(tr_no(tr_hold_def()), align = "l", escape = FALSE,
+      caption = "hold 族口径正名（五量并存，分母与视角各异；⛔ 引用一律带分母，禁裸称 hold；⛔ `house_edge` 一名永久保留予【理论】优势）")
+kable(tr_no(tr_polarity_registry()), align = "l", escape = FALSE,
+      caption = "极性登记册（指标 × 视角 × 经济极性）——⛔ 禁由代码默认「越大越好」；本项目极性陷阱两轮各中一次")
 ```
 :::
 
@@ -750,6 +758,90 @@ if (is.null(me)) cat("○ 待表：`", TR_EDGE_PATH, "` 不在位 —— 已实�
 ",
               100*sum(me$profit)/sum(me$valid_bet), 100*sum(me$profit)/sum(me$stake),
               100*sum(me$valid_bet)/sum(me$stake)))
+}
+```
+
+## 五、加权口径与权重诊断 {#sec-weight}
+
+::: {.callout-important}
+## 本节定位与六条铁律
+
+先生令：「任何可以或需要加权才能增加真实性与可行性和可靠性甚至预测的精准度比率的话，
+都一律加权；不过务必查证并实测，务必确保加权不会出现任何异常值。」本节即以实测作答。
+
+**总包加权现状**（2026-09-03 逐行静态审计）：全档 `weight`／`weighted`／`sample_weight`／
+`ipw`／`propensity`／`decay`／`precision` 命中 **0**；唯一双口径先例为 `p_base_round_w`（注额加权）
+与 `p_base_round_unw`（等权），2026-08-11 增，注明「供两种 estimand 对照」。
+**★ 本报告一切加权皆循此例：并列双口径，禁替换原值。**
+
+⛔ **三估计非三精度，而是三个 estimand**：暴露加权答「一元钱一票」，单元等权答「一人一票」，
+精度加权答「按信息量投票」。三者并列，不得择优呈报，更不得互冒。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 加权铁律
+kable(tr_no(tr_weight_iron_rules()), align = "l", escape = FALSE,
+      caption = "加权六铁律（KILL-W01~W05 ＋ 一条实测所得）")
+```
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 加权登记册
+kable(tr_no(tr_weight_registry()), align = "l", escape = FALSE,
+      caption = "加权候选登记册（2026-09-03 实测；⛔ 证明不了者一律不加）")
+```
+:::
+
+```{r}
+#| label: 双口径与权重诊断
+#| results: asis
+.wsrc <- NA_character_
+for (.f in rec$files) {
+  .t <- ld$tabs[[.f]]
+  if (!is.null(.t) && isTRUE(.t$ok) && isTRUE(tr_money_admissible(.f)$ok) &&
+      all(c("profit", "stake") %in% names(.t$dt))) { .wsrc <- .f; break }
+}
+if (is.na(.wsrc)) cat("○ NOT_RUN：本类无【可信度 OK 且含 profit／stake】之交付件，加权层拒算（⛔ 不以广播件充数）。
+
+") else {
+  .dt <- ld$tabs[[.wsrc]]$dt
+  cat(sprintf("料源：`%s`（可信度 OK）。
+
+", .wsrc))
+  de <- tr_dual_estimand(.dt, "profit", "stake", "hold_rate")
+  cat("::: {.tbl-wide}
+")
+  print(kable(tr_no(de[, .(量, 口径, 百分比, 判读)]), align = "l", escape = FALSE, caption = sprintf(
+    "双口径并列（%s · hold_rate）：单元等权 ÷ 暴露加权 ＝ %.4f 倍；方向%s",
+    .wsrc, attr(de, "等权比暴露"), if (isTRUE(attr(de, "同号"))) "同号（无 Simpson 反转）" else "⛔ 反转，须入 REDTEAM")))
+  cat("
+:::
+
+")
+  .num <- function(c) suppressWarnings(as.numeric(.dt[[c]]))
+  .pw <- tr_precision_weight(.num("profit"), .num("stake"))
+  .wd <- rbindlist(list(
+    tr_weight_diag(.num("stake"), "暴露权 stake"),
+    if ("valid_bet" %in% names(.dt)) tr_weight_diag(.num("valid_bet"), "洗码权 valid_bet") else NULL,
+    if ("n_bets" %in% names(.dt)) tr_weight_diag(.num("n_bets"), "证据权 n_bets") else NULL,
+    if (isTRUE(.pw$ok)) tr_weight_diag(.pw$w, "精度权 1/(τ²＋s²/stake)") else NULL,
+    tr_weight_diag(rep(1, nrow(.dt)), "等权（对照）")), fill = TRUE)
+  cat("::: {.tbl-wide}
+")
+  print(kable(tr_no(.wd), align = "l", escape = FALSE, caption = sprintf(
+    "权重诊断：ESS ＝ (Σw)²/Σw²、集中度、极值（%s；⛔ ESS/n ＜ %.0f%% 即 THIN_WEIGHTED_EVIDENCE）",
+    if (isTRUE(.pw$ok)) .pw$说明 else "精度权 NOT_RUN", 100 * CFG$weight_registry$ess_thin_ratio)))
+  cat("
+:::
+
+")
+  cat(paste0("⛔ **判读**：暴露加权虽系「钱的真相」，然其 ESS 远低于 n —— 有效样本即 ESS，",
+             "**禁以 n 大冒充证据强**。精度权与暴露权同向（全平台实测 Spearman ＝ 1.000000），",
+             "系其收缩稳定版；⛔ 二者【择一】，并用即重复计权（KILL-W01）。
+
+"))
 }
 ```
 
@@ -1359,6 +1451,44 @@ kable(tr_no(tr_rl_bench()), align = "l", escape = FALSE,
 ```
 :::
 
+## 五、经济语义闸 ECONOMIC_SEMANTIC_GATE v1.0 {#sec-esg}
+
+::: {.callout-important}
+## 本闸定位：十五条全过，方准全量重导 P5D
+
+本闸把「已实现 ≠ 理论」「玩家视角 ≠ 平台视角」「配对存活 ≠ 总体因果」「盈亏平衡上限 ≠ 实际成本」
+等**语义**层面之误，一次钉死为机检条款。⛔ 语义错不会报错，只会安静地把结论带偏——
+故须以闸，不以人记。任一条 FAIL 即停止全量重导。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 经济语义闸
+esg <- tr_economic_semantic_gate(rec, ld)
+kable(tr_no(esg), align = "l", escape = FALSE,
+      caption = sprintf("ECONOMIC_SEMANTIC_GATE v1.0（%d 条机检；实测栏一律现算或取自登记册之实测值）", nrow(esg)))
+esgv <- tr_economic_semantic_verdict(esg)
+kable(tr_no(esgv), align = "l", escape = FALSE, caption = "经济语义闸总裁定")
+```
+:::
+
+## 六、四状态分离：工程 · 统计 · 因果 · 商业 {#sec-status}
+
+::: {.callout-important}
+## 本节定位：⛔ 禁以单一 PASS 混淆四义
+
+「统计显著」不等于「因果成立」，「因果成立」不等于「商业准入」。四者混为一个 `PASS`，
+下游必误读成「可以处置」。故本节把状态拆为四层，逐层独立裁定，**禁跨层升格**。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 四状态矩阵
+kable(tr_no(tr_status_matrix(tr_prepost_verdict(pp_pf, pp_mb), esgv)), align = "l", escape = FALSE,
+      caption = "四状态矩阵（本轮取值皆现算；⛔ 因果层未立即商业层 BLOCKED）")
+```
+:::
+
 # 第十部分：血统与身份 {#sec-lineage}
 
 ::: {.callout-important}
@@ -1544,4 +1674,3 @@ CSV 与父版逐字节相同。校验器同步增 **R04b**（`registry.parent.ve
 ## v1.1.0 · v1.0.0
 
 见前版：全维度矩阵扩列、八节体例补齐、工作目录自动上溯、模板可独立预览。
-

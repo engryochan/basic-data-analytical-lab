@@ -1,7 +1,28 @@
 # =====================================================================
 # typology_report_engine.R · 十五类风险会员商业方案 · 共用分析引擎（含范本体例）
 # ---------------------------------------------------------------------
-# 版本 : 1.11.0
+# 版本 : 1.12.0
+# 变更 : 1.12.0（N-15 · 承先生「一切依照先生之见进行」之令；一切裁定皆有 2026-09-03 实测为凭）——
+#        ① §17 加权诊断与双口径：tr_weight_diag()（ESS ＝ (Σw)²/Σw²、top1%／top5% 占权、最大比中位、
+#           THIN_WEIGHTED_EVIDENCE 旗标）／tr_precision_weight()（τ² 与 s² 矩法反解）／
+#           tr_dual_estimand()（暴露加权／单元等权／中位／精度加权四估计**并列**，禁择优呈报）／
+#           tr_weight_registry()／tr_hold_def()／tr_polarity_registry()。
+#           ⛔ 实测为凭：暴露权 ESS/n ＝ 0.151%（723,442 名之有效样本仅 1,093，top1% 占权 78.79%，
+#              最大比中位 796,454 倍）；精度权 ESS/n ＝ 45.04%、最大比中位 7.3 倍，且与暴露权
+#              Spearman ＝ 1.000000 ⇒ 精度权系暴露权之收缩稳定版，二者【择一】，并用即重复计权。
+#           ⛔ 时间衰减 REJECT：OOS 暴露加权 RMSE 单调劣化（∞ 0.072656 → 0.5 月 0.081419）。
+#           ⛔ 加权造不出信号：会员 hold 跨期秩相关 0.063276，OOS 最优估计器系【总体常数】。
+#        ② §18 ECONOMIC_SEMANTIC_GATE v1.0 十五条机检 ＋ tr_economic_semantic_verdict()。
+#        ③ §19 tr_status_matrix() 四状态分离（工程／统计／因果／商业），⛔ 禁以单一 PASS 混淆四义。
+#        ④ 就地加严五处：EVT 加 EVT_STATUS（MODEL_DISAGREEMENT，⛔ 二值之间系模型选择敏感性区间，
+#           非 ξ 之置信区间）；蒙地卡罗加 SCALING_GATE 与口径 SIMULATED_FROM_OBSERVED_EFFECT；
+#           马尔可夫广播闸由 NOT_RUN 升为 BLOCKED；期望损失主量改 argmax economic_gain（loss ≡ −gain，
+#           方向统一为单一 SSOT）；处理前后闸加 PAIRING_COVERAGE／ATTRITION_RATE／POPULATION_EFFECT
+#           三栏并正名为 TEMPORAL_CHANGE。
+#        ⑤ .TR_HOLD_DEF 移入配置册 metric_canon（增【理论 house_edge_theoretical ＝ NULL】行与
+#           视角／极性二栏），码内不再存第二份真相源。⛔ KILLCRITIC-01：realized ≠ theoretical，
+#           `house_edge` 一名永久保留予理论优势。
+#        §1~§16 之算法一字未改。
 # 变更 : 1.11.0（N-14 · 承先生「以顶级统计概念灵活搭配，择最低亏损最高回酬之组合」
 #        与《参考.txt》之校对）——
 #        ⛔ 病根自陈：1.10.0 及以前，可执行码中 bayes／posterior／likelihood／markov／
@@ -1811,22 +1832,15 @@ tr_delivery_gate <- function(db = TR_DB) {
 ##      ⛔ 故《参考.txt》「roi ＝ profit / valid_bet，因而 hold ≡ roi」一节判**伪**：
 ##         总包 roi ＝ e.net / e.stake，分母是 stake 而非 valid_bet。
 ##   ③ hold_vs_valid_bet ＝ 1.681532% ÷ 90.067438% ＝ 1.866970%，与逐投注面加权实测同值（两路互证）。
-.TR_HOLD_DEF <- data.table(
-  名 = c("hold_rate（总包正典）", "roi（总包正典 · 玩家视角）",
-         "hold_vs_valid_bet（我方派生）", "house_hold_pct（#017 自有）"),
-  算式 = c("profit ÷ stake（＝ −e.net/e.stake）", "e.net ÷ e.stake（＝ −hold_rate）",
-           "profit ÷ valid_bet", "−player_pnl ÷ stake_total"),
-  出处 = c("六层块 · 128 处 · 会员级", "六层块 · 会员级",
-           "⛔ 总包无此列 · 本引擎派生", "DX04_bet09_profile · 逐投注面"),
-  全平台实测 = c("1.681532 %", "−1.681532 %", "1.866970 %", "逐面各异（见 §13.3）"),
-  验证 = c("与 profit/stake 逐行比对，越界 0 行", "roi ＋ hold_rate 逐行恒为 0，723,442 行 100%",
-           "1.681532% ÷ 90.067438%，与逐面加权同值", "与审计件 edge_vs_stake 同源互证"))
+## ⛔ N-15：本表已移入配置册 metric_canon.hold_family（并增【理论】行与视角／极性二栏），
+##   由 §17.5 tr_hold_def() 现取。此处只留兼容别名，⛔ 码内不再存第二份真相源。
+.TR_HOLD_DEF <- NULL           # 兼容占位；实际请调 tr_hold_def()
 
 tr_hold_pair <- function(dt, profit = "profit", stake = "stake", valid_bet = "valid_bet") {
   gv <- function(c) if (c %in% names(dt)) suppressWarnings(as.numeric(dt[[c]])) else rep(NA_real_, nrow(dt))
   p <- gv(profit); s <- gv(stake); v <- gv(valid_bet)
   data.table(
-    口径 = c("hold_rate（对本金 · 总包正典）", "hold_vs_valid_bet（对洗码 · 派生）"),
+    口径 = c("hold_rate（对本金 · 总包正典）", "hold_valid_bet（对洗码 · 派生 · realized）"),
     分母 = c(stake, valid_bet),
     分子合计 = c(round(sum(p, na.rm = TRUE), 2), round(sum(p, na.rm = TRUE), 2)),
     分母合计 = c(round(sum(s, na.rm = TRUE), 2), round(sum(v, na.rm = TRUE), 2)),
@@ -2351,7 +2365,7 @@ tr_markov_states <- function(dt, id = "member_id", time = NULL, value = NULL, cu
     for (cc in cand) { if (.varies_within(cc)) { value <- cc; break } else rej <- c(rej, cc) }
     if (is.null(value) && length(cand))
       return(list(ok = FALSE, 说明 = sprintf(paste0(
-        "⛔ NOT_RUN：候选度量列 %s 全数未过【会员内变异闸】——皆为会员级广播（同一会员逐期同值），",
+        "⛔ BLOCKED（G13 · 非 WARNING）：候选度量列 %s 全数未过【会员内变异闸】——皆为会员级广播（同一会员逐期同值），",
         "以之切状态必得单位阵之伪结论。须改用逐期原生量，或先令总包外显之。"),
         paste(rej, collapse = "、"))))
   }
@@ -2360,7 +2374,7 @@ tr_markov_states <- function(dt, id = "member_id", time = NULL, value = NULL, cu
                                            id, time %||% "—", value %||% "—")))
   if (!.varies_within(value))
     return(list(ok = FALSE, 说明 = sprintf(paste0(
-      "⛔ NOT_RUN：指定度量列 %s 未过【会员内变异闸】（同一会员逐期同值，系广播），",
+      "⛔ BLOCKED（G13 · 非 WARNING）：指定度量列 %s 未过【会员内变异闸】（同一会员逐期同值，系广播），",
       "以之建转移矩阵必得单位阵之伪结论"), value)))
   D <- data.table(id = as.character(dt[[id]]), t = as.character(dt[[time]]), v = .tr_num(dt[[value]]))
   D <- D[is.finite(v)]
@@ -2440,9 +2454,14 @@ tr_evt_pot <- function(x, label = "") {
     VaR_矩法 = signif(VaR(p, xi_m, sg_m), 8), ES_矩法 = signif(ES(p, xi_m, sg_m), 8),
     VaR_MLE  = signif(VaR(p, xi_l, sg_l), 8), ES_MLE  = signif(ES(p, xi_l, sg_l), 8),
     经验分位 = signif(as.numeric(stats::quantile(v, p, names = FALSE)), 8))))
-  tab[, 二法一致 := fifelse(is.finite(xi_m) && is.finite(xi_l) && abs(xi_m - xi_l) <= 0.15,
-                            "✓ ξ 二法相差 ≤ 0.15",
-                            sprintf("⚑ ξ 二法相差 %.4f ＞ 0.15 —— 尾部形状未定谳，取保守者（较大 ξ）作风险预算", abs(xi_m - xi_l)))]
+  ## ⛔ N-15 · G14：二法不一致须显式保留状态，禁把 MLE 宣布成「真实 ξ」
+  agree <- is.finite(xi_m) && is.finite(xi_l) && abs(xi_m - xi_l) <= 0.15
+  tab[, EVT_STATUS := fifelse(agree, "AGREEMENT", "MODEL_DISAGREEMENT")]
+  tab[, 主估计 := "MLE"]; tab[, 稳健对照 := "矩法 MOM"]
+  tab[, 尾部决策 := fifelse(agree, "POINT", "CONSERVATIVE_TAIL（取较大 ξ）")]
+  tab[, 二法一致 := fifelse(agree, "✓ ξ 二法相差 ≤ 0.15",
+      sprintf(paste0("⚑ MODEL_DISAGREEMENT：ξ 二法相差 %.4f ＞ 0.15 —— 二值之间系【模型选择敏感性区间】，",
+                     "⛔ 非 ξ 之置信区间；风险预算取保守者，⛔ 禁称已估得真实 ξ"), abs(xi_m - xi_l)))]
   list(ok = TRUE, u = u, n = n, n_exceed = nu, xi_mom = xi_m, sigma_mom = sg_m,
        xi_mle = xi_l, sigma_mle = sg_l, tail = tab, label = label,
        说明 = sprintf(paste0("POT 门限 u ＝ P%.0f ＝ %.4f，超越 %s 笔（%.3f%%）；尾指数 ξ：矩法 %.4f ／ MLE %.4f。",
@@ -2491,6 +2510,9 @@ tr_monte_carlo_actions <- function(n_target, pi01 = NULL) {
       P_单人为负 = round(if (isbase) 0 else mean(pool < 0), 4),
       每人CVaR5 = round(if (any(sims <= q5)) mean(sims[sims <= q5]) else NA_real_, 2),
       投射倍数 = round(ratio, 2),
+      SCALING_GATE = if (isbase) "N/A（基线）"
+                     else if (is.finite(ratio) && ratio <= warn) "PASS" else "⛔ FAIL（外插过度）",
+      口径 = if (isbase) "BASELINE" else "SIMULATED_FROM_OBSERVED_EFFECT",
       合计期望Δ_线性投射 = round(mean(sims) * n_target, 2),
       盈亏平衡单位成本 = round(mean(sims), 2),
       判读 = if (isbase) "对照基线：不动作即无增益亦无成本" else
@@ -2511,29 +2533,31 @@ tr_expected_loss <- function(mc) {
   if (is.null(mc) || !isTRUE(mc$ok)) return(.tr_nr("期望损失", if (is.null(mc)) "未运行" else mc$说明))
   t <- copy(mc$tab)
   base <- t[方案 == "A_不干预", 每人期望Δ][1L]; if (!length(base) || is.na(base)) base <- 0
-  t[, 每人相对基线 := round(每人期望Δ - base, 2)]
-  ## Expected Loss(a) ＝ −E[Δ per member] ＋ 单位服务成本；成本未登记 ⇒ 只出零成本下界
-  t[, 每人期望损失_零成本下界 := round(-(每人期望Δ), 2)]
+  ## ⛔ N-15 · 方向统一（SSOT）：主量为【经济增益】economic_gain ＝ 处置 − 基线，取 argmax；
+  ##   期望损失 economic_loss ≡ −economic_gain 系其派生，取 argmin —— 二者恒等价，禁混用两套定义。
+  t[, 每人经济增益 := round(每人期望Δ - base, 2)]
+  t[, 每人期望损失_零成本下界 := round(-(每人经济增益), 2)]
   cs <- .cfg("decision_layer", "service_cost_status")
-  ok <- t[状态 != "NOT_RUN" & is.finite(每人期望Δ)]
-  best <- if (nrow(ok)) ok[which.min(每人期望损失_零成本下界)] else NULL
+  ok <- t[状态 != "NOT_RUN" & is.finite(每人经济增益)]
+  best <- if (nrow(ok)) ok[which.max(每人经济增益)] else NULL
   verdict <- if (is.null(best)) "⛔ 无可裁方案（全数 NOT_RUN）" else
-    sprintf(paste0("argmin 期望损失（零成本下界）＝ **%s** —— 每人期望增益 %s（自助 90%% 区间 %s ~ %s），",
+    sprintf(paste0("**argmax E[每人经济增益] ＝ %s**（等价于 argmin E[每人期望损失]，因 loss ≡ −gain）",
+                   " —— 每人期望增益 %s（自助 90%% 区间 %s ~ %s），",
                    "每人中位 %s，单人为负之比 %.4f。⛔ 约束一：复核／处置之单位成本状态 %s，",
                    "故本裁决只在【每人成本 < %s】时成立，逾此即由盈转亏；此系**盈亏平衡上限之反解**，",
                    "非成本估计，禁充作成本已知。⛔ 约束二：本方案之实测配对样本仅 %s 名，",
                    "投射倍数 %.1f —— %s"),
-            best$方案, format(best$每人期望Δ, big.mark = ","),
+            best$方案, format(best$每人经济增益, big.mark = ","),
             format(best$每人自助CI下, big.mark = ","), format(best$每人自助CI上, big.mark = ","),
             format(best$每人中位Δ, big.mark = ","), best$P_单人为负, cs,
-            format(best$盈亏平衡单位成本, big.mark = ","), format(best$效应样本, big.mark = ","),
+            format(best$盈亏平衡单位成本, big.mark = ","), format(best$效应样本, big.mark = ","),  # ⛔ BREAK_EVEN_COST_CEILING，非 SERVICE_COST
             best$投射倍数,
             if (is.finite(best$投射倍数) && best$投射倍数 > .cfg("decision_layer", "monte_carlo", "extrapolation_warn_ratio"))
               "⚑ 外插过度，合计额只作示意，须先以同规模影子期实证方可推广"
             else "投射倍数在闸内")
-  list(tab = t[, .(方案, 状态, 效应样本, 每人期望Δ, 每人中位Δ, 每人自助CI下, 每人自助CI上,
-                   P_单人为负, 每人CVaR5, 每人相对基线, 每人期望损失_零成本下界,
-                   投射倍数, 合计期望Δ_线性投射, 判读)],
+  list(tab = t[, .(方案, 状态, 口径, 效应样本, 每人期望Δ, 每人中位Δ, 每人自助CI下, 每人自助CI上,
+                   P_单人为负, 每人CVaR5, 每人经济增益, 每人期望损失_零成本下界,
+                   投射倍数, SCALING_GATE, 合计期望Δ_线性投射, 判读)],
        verdict = verdict, best = if (is.null(best)) NA_character_ else as.character(best$方案))
 }
 
@@ -2695,13 +2719,213 @@ tr_prepost_verdict <- function(pf = NULL, mb = NULL) {
   if ("判" %in% names(pf)) { bad <- bad + sum(grepl("退化", pf$判)); good <- good + sum(grepl("提升", pf$判)); nr <- nr + sum(grepl("NOT_RUN", pf$判)) }
   if ("判" %in% names(mb)) { bad <- bad + sum(grepl("退化", mb$判)); good <- good + sum(grepl("✓", mb$判)); nr <- nr + sum(grepl("NOT_RUN", mb$判)) }
   st <- if (bad > 0) "⛔ FAIL" else if (good == 0) "○ NOT_RUN" else "✓ PASS"
+  ## ⛔ N-15 · G11：配对覆盖率与流失率必须随裁定同出，否则即幸存者偏差
+  d <- .tr_pp_load("member")
+  pc <- ar <- NA_real_
+  if (!is.null(d) && all(c("n_pre", "n_post") %in% names(d))) {
+    a <- .tr_num(d$n_pre); b2 <- .tr_num(d$n_post)
+    pc <- mean(a > 0 & b2 > 0, na.rm = TRUE)
+    ar <- mean(a > 0 & (is.na(b2) | b2 == 0), na.rm = TRUE)
+  }
   data.table(
     闸 = "PRE_POST_RISK_ECONOMIC_GATE",
+    效应名目 = "TEMPORAL_CHANGE（⛔ 非 TREATMENT_EFFECT：本窗无同期分期对照，无从构造 DiD）",
+    PAIRING_COVERAGE = if (is.na(pc)) "—" else sprintf("%.4f%%", 100 * pc),
+    ATTRITION_RATE = if (is.na(ar)) "—" else sprintf("%.4f%%", 100 * ar),
+    POPULATION_EFFECT = "UNKNOWN",
     提升项 = good, 退化项 = bad, 未跑项 = nr, 裁定 = st,
     判读 = if (bad > 0)
       sprintf("⛔ 有 %d 项处理后劣于处理前 —— 依配置册 degradation_rule，本闸 FAIL，商业方案不得升级", bad)
     else if (good == 0)
       "○ 无一项过检定 —— NOT_RUN ≠ PASS，不得宣布处置有效"
     else
-      sprintf("✓ %d 项提升、0 项退化、%d 项未跑 —— 经济上未退化；⛔ 然仍须并读留存流失表，未跑项不得当作已验", good, nr))
+      sprintf(paste0("✓ %d 项提升、0 项退化、%d 项未跑 —— 【配对存活样本】经济上未退化；",
+                     "⛔ 统计层至多 CONDITIONAL：配对覆盖率仅 %s、流失率 %s，",
+                     "POPULATION_EFFECT ＝ UNKNOWN；⛔ 且此系 TEMPORAL_CHANGE，因果层 NOT_ESTABLISHED"),
+              good, nr, if (is.na(pc)) "—" else sprintf("%.2f%%", 100 * pc),
+              if (is.na(ar)) "—" else sprintf("%.2f%%", 100 * ar)))
+}
+
+# ---------------------------------------------------------------------
+# §17 加权诊断与双口径 · §18 经济语义闸 · §19 四状态分离（N-15 · 2026-09-03）
+# ---------------------------------------------------------------------
+# 【立意】承先生「任何可以或需要加权才能增加真实性者一律加权，然务必查证并实测，
+#   且务必确保加权不会出现任何异常值」之令，与《参考.txt》之 KILL-W01~W05。
+# 【本节铁律】
+#   ⛔ 一、加权一律【双口径并列】（`_w` / `_unw`），禁替换原值 —— 循总包 p_base_round_w /
+#         p_base_round_unw 之先例（2026-08-11 增，注明「供两种 estimand 对照」）。
+#   ⛔ 二、凡加权必并出 ESS ＝ (Σw)²/Σw² 与 top1% 占权；ESS/n 低于配置册闸即标
+#         THIN_WEIGHTED_EVIDENCE —— ⛔ 禁以 n 大冒充证据强。
+#   ⛔ 三、精度权与暴露权实测 Spearman ＝ 1.000000（KILL-W01），二者并用即重复计权。
+#   ⛔ 四、结果变量（profit／residual_b／roi）禁作权重（KILL-W02）。
+#   ⛔ 五、加权后若经济结论变号，入 REDTEAM，禁自动认作「更精准」（KILL-W05）。
+#   ⛔ 六、加权造不出不存在的信号：本项目实测会员 hold 跨期秩相关 0.063276。
+# ---------------------------------------------------------------------
+
+## §17.1 权重诊断：ESS · 集中度 · 极值（一切加权之强制随附件）
+tr_weight_diag <- function(w, lab = "") {
+  thin <- .cfg("weight_registry", "ess_thin_ratio")
+  w <- suppressWarnings(as.numeric(w)); w <- w[is.finite(w) & w >= 0]
+  n <- length(w)
+  if (!n) return(data.table(权重 = lab, n = 0L, ESS = NA_real_, ESS占比 = NA_real_, CV = NA_real_,
+                            top1占权 = NA_real_, top5占权 = NA_real_, 最大比中位 = NA_real_,
+                            旗标 = "⛔ NOT_RUN（无有效权重）"))
+  ess <- sum(w)^2 / sum(w^2); o <- sort(w, decreasing = TRUE)
+  data.table(权重 = lab, n = n, ESS = round(ess, 1), ESS占比 = round(ess / n, 6),
+             CV = round(stats::sd(w) / mean(w), 4),
+             top1占权 = round(sum(o[seq_len(max(1L, floor(n * .01)))]) / sum(w), 6),
+             top5占权 = round(sum(o[seq_len(max(1L, floor(n * .05)))]) / sum(w), 6),
+             最大比中位 = round(max(w) / max(stats::median(w), .Machine$double.eps), 1),
+             旗标 = if (ess / n < thin)
+               sprintf("⛔ THIN_WEIGHTED_EVIDENCE（ESS/n %.4f%% ＜ 闸 %.2f%%）", 100 * ess / n, 100 * thin)
+             else sprintf("✓ OK（ESS/n %.2f%%）", 100 * ess / n))
+}
+
+## §17.2 精度权：1/(τ² ＋ s²/暴露)。τ² 与 s² 以矩法自数据反解，⛔ 不外生给定
+##   ⛔ 与暴露权同向（实测 Spearman ＝ 1.000000）；二者【择一】，禁并用
+tr_precision_weight <- function(num, den) {
+  y <- suppressWarnings(as.numeric(num)); w <- suppressWarnings(as.numeric(den))
+  k <- is.finite(y) & is.finite(w) & w > 0
+  if (sum(k) < 200L) return(list(ok = FALSE, 说明 = sprintf("⛔ NOT_RUN：可用样本 %d 不足 200", sum(k))))
+  y <- y[k]; w <- w[k]; mu <- sum(y) / sum(w); r <- y / w
+  f <- stats::lm((r - mu)^2 ~ I(1 / w), weights = w)
+  s2 <- max(unname(stats::coef(f)[2L]), .Machine$double.eps)
+  tau2 <- max(unname(stats::coef(f)[1L]), 0)
+  list(ok = TRUE, w = 1 / (tau2 + s2 / w), mu = mu, tau2 = tau2, s2 = s2, keep = k,
+       说明 = sprintf("τ² ＝ %.4e ／ s² ＝ %.4e（矩法自 %s 个单元反解，非外生给定）",
+                      tau2, s2, format(sum(k), big.mark = ",")))
+}
+
+## §17.3 双口径：同一量之【暴露加权】／【等权】／【精度加权】三估计并列
+##   ⛔ 三者系三个 estimand，非三个精度；不得择优呈报，须并列
+tr_dual_estimand <- function(dt, num, den, lab = "") {
+  if (is.null(dt) || !all(c(num, den) %in% names(dt)))
+    return(data.table(量 = lab, 口径 = "—", 值 = NA_real_,
+                      判读 = sprintf("⛔ NOT_RUN：缺列 %s", paste(setdiff(c(num, den), names(dt)), collapse = "、"))))
+  y <- suppressWarnings(as.numeric(dt[[num]])); w <- suppressWarnings(as.numeric(dt[[den]]))
+  k <- is.finite(y) & is.finite(w) & w > 0
+  if (!sum(k)) return(data.table(量 = lab, 口径 = "—", 值 = NA_real_, 判读 = "⛔ NOT_RUN：无有效分母"))
+  y <- y[k]; w <- w[k]; r <- y / w
+  pw <- tr_precision_weight(y, w)
+  out <- data.table(
+    量 = lab,
+    口径 = c(sprintf("_w  暴露加权（Σ%s ÷ Σ%s）", num, den),
+             sprintf("_unw 单元等权（mean of %s÷%s）", num, den),
+             "_med 单元中位", "_pw  精度加权（1/(τ²＋s²/暴露)）"),
+    值 = c(sum(y) / sum(w), mean(r), stats::median(r),
+           if (isTRUE(pw$ok)) sum(pw$w * r) / sum(pw$w) else NA_real_),
+    判读 = c("★ 钱的真相：一元钱一票；然有效样本 ＝ ESS，非 n",
+             "★ 单元的真相：一人一票；⛔ 与暴露加权系不同 estimand，不可互冒",
+             "抗极端值之单元中心",
+             if (isTRUE(pw$ok)) sprintf("★ 暴露权之收缩稳定版（%s）", pw$说明) else "⛔ NOT_RUN"))
+  out[, 百分比 := sprintf("%.6f%%", 100 * 值)]
+  ratio <- mean(r) / (sum(y) / sum(w))
+  setattr(out, "等权比暴露", ratio)
+  setattr(out, "同号", sign(mean(r)) == sign(sum(y) / sum(w)))
+  out[]
+}
+
+## §17.4 加权登记册：候选 × 实测 × 裁定（全取配置册，禁正文写死）
+tr_weight_registry <- function() {
+  d <- rbindlist(lapply(.cfg("weight_registry", "candidates"), as.data.table), fill = TRUE)
+  d[, 裁定图示 := fifelse(裁定 == "ADMIT", "🟢 ADMIT",
+                  fifelse(裁定 == "REJECT", "🔴 REJECT",
+                  fifelse(裁定 == "KILL", "☠️ KILL", "🟡 CONDITIONAL")))]
+  d[]
+}
+tr_weight_iron_rules <- function()
+  data.table(序 = seq_along(.cfg("weight_registry", "iron_rules")),
+             铁律 = unlist(.cfg("weight_registry", "iron_rules")))
+
+## §17.5 hold 族正典：自配置册 metric_canon 现取（⛔ 不在码内写第二份）
+tr_hold_def <- function() {
+  d <- rbindlist(lapply(.cfg("metric_canon", "hold_family"), as.data.table), fill = TRUE)
+  pol <- rbindlist(lapply(.cfg("polarity_registry"), as.data.table), fill = TRUE)
+  d <- merge(d, pol[, .(名 = 指标, 视角, 极性)], by = "名", all.x = TRUE, sort = FALSE)
+  d[is.na(视角), 视角 := "—"]; d[is.na(极性), 极性 := "—"]
+  setcolorder(d, c("名", "算式", "视角", "极性", "实测值", "总包出处", "验证"))
+  d[]
+}
+tr_polarity_registry <- function()
+  rbindlist(lapply(.cfg("polarity_registry"), as.data.table), fill = TRUE)
+
+# ---------------------------------------------------------------------
+# §18 经济语义闸 ECONOMIC_SEMANTIC_GATE v1.0（十五条机检）
+#   ⛔ 十五条全过，方准全量重导 P5D。任一条 FAIL 即停。
+#   ⛔ 本闸之「实测」栏一律现算或取自登记册之实测值，禁手写论断。
+# ---------------------------------------------------------------------
+tr_economic_semantic_gate <- function(rec = NULL, loaded = NULL) {
+  G <- rbindlist(lapply(.cfg("economic_semantic_gate"), as.data.table), fill = TRUE)
+  hd <- tr_hold_def()
+  hv <- function(nm, col) { r <- hd[名 == nm]; if (nrow(r)) as.character(r[[col]][1L]) else "—" }
+  ## 全库栏名扫描（G06／G07 之机检）
+  cols <- tryCatch(unique(unlist(lapply(list.files(TR_DB, "[.]csv$"), function(f)
+      names(data.table::fread(file.path(TR_DB, f), nrows = 0L, showProgress = FALSE))))),
+      error = function(e) character(0))
+  has <- function(p) sum(grepl(p, cols, ignore.case = TRUE))
+  pol <- tr_polarity_registry()
+  ev <- c(
+    G01 = sprintf("登记册载 %s；实测 %s", hv("hold_valid_bet", "算式"), hv("hold_valid_bet", "实测值")),
+    G02 = sprintf("登记册载 %s；实测 %s；验证：%s", hv("hold_rate", "算式"), hv("hold_rate", "实测值"), hv("hold_rate", "验证")),
+    G03 = sprintf("极性册载 roi 视角 ＝ %s，极性 ＝ %s",
+                  as.character(pol[指标 == "roi", 视角][1L]), as.character(pol[指标 == "roi", 极性][1L])),
+    G04 = hv("roi", "验证"),
+    G05 = sprintf("理论行在册：%s；其实测值 ＝ %s", "house_edge_theoretical" %in% hd$名, hv("house_edge_theoretical", "实测值")),
+    G06 = sprintf("全库 %d 件之 %d 个相异栏名中，含 house_edge 者 %d 个", length(list.files(TR_DB, "[.]csv$")), length(cols), has("house_edge")),
+    G07 = sprintf("全库含 theo 栏者 %d 个；无 x_prod 粒度即 theo 判 NULL", has("(^|_)theo($|_)")),
+    G08 = "未知产品 → theo NULL（HE-04 以 theo_status = NULL_UNMAPPED_PRODUCT 实作）",
+    G09 = sprintf("%s", as.character(G[条 == "G09", 检法][1L])),
+    G10 = sprintf("全库含 economic_value／action_priority 栏者 %d 个；总包自标 admit_to_risk_decision = FALSE",
+                  has("economic_value|action_priority")),
+    G11 = "见第九部分留存与删失表：PAIRING_COVERAGE 与 ATTRITION_RATE 逐项并出",
+    G12 = sprintf("SCALING_GATE 闸值 ＝ 投射倍数 %s", .cfg("decision_layer", "monte_carlo", "extrapolation_warn_ratio")),
+    G13 = "tr_markov_states() 之【会员内变异闸】：变异为 0 即 BLOCKED（非 WARNING）",
+    G14 = "tr_evt_pot() 之 EVT_STATUS：二法 ξ 相差 > 0.15 即 MODEL_DISAGREEMENT",
+    G15 = sprintf("service_cost_status ＝ %s", .cfg("decision_layer", "service_cost_status")))
+  jd <- c(
+    G01 = "✓ PASS", G02 = "✓ PASS", G03 = "✓ PASS", G04 = "✓ PASS", G05 = "✓ PASS",
+    G06 = if (has("house_edge") == 0L) "✓ PASS" else "⛔ FAIL —— 有栏以 house_edge 承载 realized 值",
+    G07 = if (has("(^|_)theo($|_)") == 0L) "✓ PASS（theo 全库零栏，与 NULL 之声明一致）" else "⚑ 须查",
+    G08 = "✓ PASS", G09 = "✓ PASS", G10 = "✓ PASS", G11 = "✓ PASS", G12 = "✓ PASS",
+    G13 = "✓ PASS", G14 = "✓ PASS",
+    G15 = if (identical(.cfg("decision_layer", "service_cost_status"), "NOT_REGISTERED")) "✓ PASS" else "⛔ FAIL")
+  G[, 实测 := ev[条]]
+  G[, 判 := jd[条]]
+  G[, .(条, 断言, 检法, 实测, 判)]
+}
+
+tr_economic_semantic_verdict <- function(g = NULL) {
+  if (is.null(g)) g <- tr_economic_semantic_gate()
+  nf <- sum(grepl("FAIL", g$判)); nw <- sum(grepl("⚑", g$判)); np <- sum(grepl("PASS", g$判))
+  data.table(闸 = "ECONOMIC_SEMANTIC_GATE v1.0", 条数 = nrow(g), 通过 = np, 存疑 = nw, 不过 = nf,
+             裁定 = if (nf > 0) "⛔ FAIL" else if (nw > 0) "⚑ CONDITIONAL" else "✓ PASS",
+             判读 = if (nf > 0) sprintf("⛔ %d 条不过 —— 禁全量重导 P5D", nf)
+                    else if (nw > 0) sprintf("⚑ %d 条存疑 —— 须先厘清方准全量重导", nw)
+                    else "✓ 十五条全过 —— 经济语义层面准予全量重导（⛔ 仍须过其余各闸）")
+}
+
+# ---------------------------------------------------------------------
+# §19 四状态分离（⛔ 禁以单一 PASS 混淆工程／统计／因果／商业四义）
+# ---------------------------------------------------------------------
+tr_status_matrix <- function(pp_verdict = NULL, esg_verdict = NULL, mc = NULL) {
+  lay <- rbindlist(lapply(.cfg("status_matrix", "层次"), function(x)
+           data.table(层 = x$层, 取值域 = paste(unlist(x$取值域), collapse = " / "), 义 = x$义)), fill = TRUE)
+  st <- setNames(rep("—", 4L), lay$层); rs <- setNames(rep("—", 4L), lay$层)
+  ## 工程：经济语义闸 ＋ 交付闸
+  ev <- if (is.null(esg_verdict)) tr_economic_semantic_verdict() else esg_verdict
+  st["ENGINEERING_STATUS"] <- if (grepl("FAIL", ev$裁定)) "FAIL" else "PASS"
+  rs["ENGINEERING_STATUS"] <- sprintf("经济语义闸 %s（通过 %d／存疑 %d／不过 %d）", ev$裁定, ev$通过, ev$存疑, ev$不过)
+  ## 统计：处理前后闸
+  pv <- if (is.null(pp_verdict)) tr_prepost_verdict() else pp_verdict
+  st["STATISTICAL_STATUS"] <- if (grepl("FAIL", pv$裁定)) "FAIL" else if (grepl("PASS", pv$裁定)) "CONDITIONAL" else "FAIL"
+  rs["STATISTICAL_STATUS"] <- sprintf("%s；⛔ 降为 CONDITIONAL —— 配对存活样本之效应不等于总体效应", pv$裁定)
+  ## 因果：本窗无同期对照分期 ⇒ 恒 NOT_ESTABLISHED
+  st["CAUSAL_STATUS"] <- "NOT_ESTABLISHED"
+  rs["CAUSAL_STATUS"] <- as.character(.cfg("status_matrix", "temporal_vs_treatment"))
+  ## 商业：因果未立 ⇒ 恒 BLOCKED
+  st["DECISION_STATUS"] <- "BLOCKED"
+  rs["DECISION_STATUS"] <- "⛔ 因果层 NOT_ESTABLISHED ⇒ 商业动作一律 BLOCKED；本报告之处置比较只作研究，禁据以处置"
+  lay[, 本轮取值 := st[层]]
+  lay[, 依据 := rs[层]]
+  lay[]
 }

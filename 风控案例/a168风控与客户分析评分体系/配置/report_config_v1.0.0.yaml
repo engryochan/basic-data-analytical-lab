@@ -1,9 +1,16 @@
 config:
   name: typology_report_config
-  version: 1.8.0
+  version: 1.9.0
   issued: '2026-09-03'
   parent: registry_risk_typology_v1.5.004
   changelog_1_4_0: N-7（2026-09-03）——parent 改指 v1.5.004（追加 OQ-13／OQ-14 与 id_namespace_registry）。其余一字未改。
+  changelog_1_9_0: N-15（2026-09-03 · 承先生「一切依照先生之见进行」之令，并据 Superset 实测回执）——
+    ① 命名双轨：realized 一律称 hold_valid_bet／hold_rate／edge_realized；house_edge 一名永久保留予
+    【理论】优势，现状 NULL。⛔ 病根自陈：我方 v1.0.0 探针以 house_edge 命名 realized 量，虽处处标
+    realized，命名本身即污染源。② metric_canon 增 视角／极性 二栏——⛔ 极性陷阱两轮各中一次
+    （首轮 d_roi、次轮 游戏输赢贡献），故极性必须登记，禁由代码默认「越大越好」。
+    ③ 新增 weight_registry：六候选权重之实测 ESS／集中度／裁定；唯精度权 ADMIT，时间衰减 REJECT。
+    ④ 新增 economic_semantic_gate 十五条与 status_matrix 四状态分离。
   changelog_1_8_0: N-14b（2026-09-03 · 实测后斧正）——① 新增 prepost_member_metrics：
     会员层差额栏之【方向】必须登记。⛔ 病根：前一版无此表，引擎默认「越大越好」，遂把
     d_roi 中位 −0.0724（玩家 ROI 下降 ＝ 平台得利）误判为「退化」，令 PRE_POST 总闸 FAIL 反向；
@@ -84,12 +91,18 @@ metric_canon:
       实测值: −1.681532 %
       验证: roi ＋ hold_rate 逐行求和，723,442 行 100.000000% 恒为 0，max|·| ＝ 0 ⇒ roi ≡ −hold_rate
       注: ⛔ roi 之分母是 stake 而非 valid_bet；《参考.txt》称 hold ≡ roi 者，其 roi 定义有误
-    - 名: hold_vs_valid_bet
+    - 名: hold_valid_bet
       算式: profit ÷ valid_bet
       总包出处: ⛔ 总包无此列 —— 本引擎派生
       实测值: 1.866970 %
       验证: 1.681532% ÷ (valid_bet/stake ＝ 90.067438%) ＝ 1.866970%，与逐面加权实测同值
       注: 引用时必带分母；与上二者分母不同，禁互换、禁直接比较
+    - 名: house_edge_theoretical
+      算式: 规则理论概率下之庄家优势（非任何 profit/valid_bet 之比值）
+      总包出处: ⛔ 全库 131 件零栏在位；总包 house_edge = NULL
+      实测值: NULL —— ⛔ 不得以 realized 值顶替
+      验证: 授权未下；且 #017 探针 R3 实测 overdispersion Q/(k−1) = 9.3~42.6，单一常数 edge 架构已 KILL
+      注: ⛔ KILLCRITIC-01：realized hold ≠ theoretical house edge；混称即污染 theo／ADT／NMPT／ESI 全链
     - 名: house_hold_pct
       算式: −player_pnl ÷ stake_total
       总包出处: DX04_bet09_profile 自有栏 · 逐投注面
@@ -104,6 +117,93 @@ metric_canon:
     加权实测: {对洗码: 1.866970 %, 对本金: 1.681532 %}
     阻断: 总包所阻断者系【理论】edge 之授权与 bet09 级 valid_bet 分解；realized edge 不在阻断之列
     禁令: 未知产品码 → theo NULL，⛔ 禁 fallback = 1（NULL ≠ 0）；免佣与一般桌禁共用同一静态 edge
+
+# ── 极性登记册：指标 × 视角 × 经济极性（⛔ 禁由代码默认「越大越好」）──────
+#   ⛔ 立此册之由：极性陷阱两轮各中一次 ——
+#     N-14 首轮：d_roi 系玩家视角，其下降即平台得利，引擎默认「越大越好」遂判「退化」，总闸 FAIL 反向。
+#     N-14 次轮：游戏输赢贡献 系【平台】视角，我方 OOS 脚本按玩家视角取负，算出 hold = −1.5048%。
+#   实测定谳（S05 · 168,103 会员）：逐会员 Σ游戏输赢贡献 ÷ profit 中位 = 1.000000（相关 0.9874）；
+#     ÷ roi_numerator 中位 = −1.000000 ⇒ 游戏输赢贡献 ＝ 平台视角。
+#     Σ流水贡献 ÷ stake 中位 = 0.897810 ⇒ 流水贡献 ≈ 洗码（valid_bet），非本金（stake）。
+polarity_registry:
+  - {指标: profit, 视角: 平台, 极性: 越大越好, 注: 平台牌桌毛赢}
+  - {指标: hold_rate, 视角: 平台, 极性: 越大越好, 注: profit ÷ stake}
+  - {指标: hold_valid_bet, 视角: 平台, 极性: 越大越好, 注: profit ÷ valid_bet（我方派生，总包无此列）}
+  - {指标: ngr, 视角: 平台, 极性: 越大越好, 注: profit − rebate_cost}
+  - {指标: residual_b, 视角: 平台, 极性: 越大越好, 注: ngr − agent_cost ＝ 净利金额}
+  - {指标: roi, 视角: 玩家, 极性: 越小越好, 注: ⛔ roi ≡ −hold_rate；玩家 roi 下降即平台得利}
+  - {指标: 游戏输赢贡献, 视角: 平台, 极性: 越大越好, 注: ⛔ 名似玩家而实为平台；实测 ÷ profit 中位 = 1.000000}
+  - {指标: house_edge_theoretical, 视角: 平台, 极性: 越大越好, 注: ⛔ 理论优势；现状 NULL，禁以 realized 顶替}
+  - {指标: house_hold_pct, 视角: 平台, 极性: 越大越好, 注: 逐投注面口径，非会员级}
+  - {指标: 流水贡献, 视角: 规模, 极性: 不直接判好坏, 注: ⛔ ≈ 洗码 valid_bet，非本金 stake（÷ stake 中位 0.8978）}
+  - {指标: stake, 视角: 规模, 极性: 不直接判好坏, 注: 暴露量，非绩效}
+  - {指标: n_bets, 视角: 证据, 极性: 不直接判好坏, 注: 证据量，非绩效}
+
+# ── 加权登记册：候选 × 实测 × 裁定（⛔ 证明不了者一律不加）──────────────
+#   实测日 2026-09-03 · 料源 S01_player_score.csv（723,442 会员）与 S05 月面板（OOS 对照）
+#   总包加权现状：全档 weight／weighted／sample_weight／ipw／propensity／decay／precision 命中 0；
+#     唯一双口径先例 p_base_round_w（注额加权）vs p_base_round_unw（等权），2026-08-11 增，
+#     注明「供两种 estimand 对照」——★ 本册一切加权皆循此例：**并列双口径，不替换**。
+weight_registry:
+  iron_rules:
+    - ⛔ KILL-W01 重复计权：精度权与暴露权实测 Spearman = 1.000000，二者并用即同一信息计两次
+    - ⛔ KILL-W02 结果变量泄漏：profit／residual_b／roi 等结果量禁作权重
+    - ⛔ KILL-W03 处理后泄漏：T0 之决策禁用 POST 期信息作权
+    - ⛔ KILL-W04 极端权重：须并报 ESS 与 top1% 占权；ESS/n < 1% 标 THIN_WEIGHTED_EVIDENCE
+    - ⛔ KILL-W05 方向反转：加权后若经济结论变号，须入 REDTEAM，禁自动认作「更精准」
+    - ⛔ 加权造不出不存在的信号：本项目实测会员 hold 跨期秩相关 0.063276，任何加权皆不能提升其可预测性
+  ess_thin_ratio: 0.01          # ESS/n 低于此即 THIN_WEIGHTED_EVIDENCE
+  candidates:
+    - {候选: 暴露权 stake, ESS占比: 0.001511, top1占权: 0.787906, 最大比中位: 796454.3,
+       裁定: CONDITIONAL, 理由: 系「钱的真相」，然 723,442 名之有效样本仅 1,093，须并报 ESS}
+    - {候选: 洗码权 valid_bet, ESS占比: 0.001515, top1占权: 0.787481, 最大比中位: 788503.8,
+       裁定: CONDITIONAL, 理由: 同暴露权}
+    - {候选: 证据权 n_bets, ESS占比: 0.012325, top1占权: 0.556954, 最大比中位: 69149.4,
+       裁定: CONDITIONAL, 理由: 较暴露权稍缓，仍高度集中}
+    - {候选: 精度权 1/(tau2+s2/stake), ESS占比: 0.450397, top1占权: 0.034312, 最大比中位: 7.3,
+       裁定: ADMIT, 理由: ★ 唯一同时改善真实性与稳定性者——与暴露权同向（Spearman 1.000000）
+         而集中度由 796454 倍降至 7.3 倍，ESS 由 0.15% 升至 45.04%；系暴露权之收缩稳定版}
+    - {候选: 时间衰减 半衰期, ESS占比: null, top1占权: null, 最大比中位: null,
+       裁定: REJECT, 理由: ⛔ OOS 实测单调劣化——暴露加权 RMSE 不衰减 0.072656 → 3 月 0.073421
+         → 2 月 0.073933 → 1 月 0.075927 → 0.5 月 0.081419}
+    - {候选: 流失 IPW, ESS占比: 0.992300, top1占权: null, 最大比中位: 1.22,
+       裁定: CONDITIONAL, 理由: 无权重爆炸（倾向分 0.354880~0.517890），然仅移动均值 −4.37%、
+         中位不变 ⇒ 可观测量解释不了流失，⛔ 不足以把配对效应升为总体因果}
+    - {候选: 产品混合标准化, ESS占比: null, top1占权: null, 最大比中位: null,
+       裁定: CONDITIONAL, 理由: 逐面等权 8.042081% vs 暴露加权 1.866970% ＝ 4.31 倍，须声明标准人口}
+  dual_estimand_policy: 一切加权量一律以 `_w`／`_unw` 双栏并列出示（循总包 p_base_round_w／_unw 先例），
+    ⛔ 禁以加权值替换原值；并须同出 ess_* 与 w_top1_share_* 二诊断栏。
+
+# ── 经济语义闸 ECONOMIC_SEMANTIC_GATE v1.0（十五条机检，全过方准全量重导）──
+economic_semantic_gate:
+  - {条: G01, 断言: hold_valid_bet ＝ profit ÷ valid_bet, 检法: 与 1.866970% 对账}
+  - {条: G02, 断言: hold_rate ＝ profit ÷ stake, 检法: 逐行比对，越界须为 0 行}
+  - {条: G03, 断言: roi 之视角为【玩家】, 检法: 极性登记册须载明}
+  - {条: G04, 断言: roi ≡ −hold_rate, 检法: 逐行求和须恒为 0}
+  - {条: G05, 断言: realized hold ≠ theoretical house edge, 检法: 二者须分栏分名，禁同名}
+  - {条: G06, 断言: house_edge 不得等于任何 profit 比值, 检法: 扫全库不得有 house_edge 栏承载 realized 值}
+  - {条: G07, 断言: theo 须有产品级 edge 方可算, 检法: 无 x_prod 粒度即 theo NULL}
+  - {条: G08, 断言: 未知产品 edge → NULL, 检法: ⛔ 禁 fallback = 1（NULL ≠ 0）}
+  - {条: G09, 断言: residual_b 系【经济分层】主轴而非【风控赏罚】主轴,
+     检法: 实测 Spearman(residual_b, profit) = 0.998910；总包自标 admit_to_risk_decision = FALSE}
+  - {条: G10, 断言: 相对排名栏（economic_value／action_priority／vip_tier）只供 DISPLAY, 检法: 禁入判据输入}
+  - {条: G11, 断言: 配对存活效应 ≠ 总体因果效应, 检法: 须并出 PAIRING_COVERAGE 与 ATTRITION_RATE}
+  - {条: G12, 断言: 蒙地卡罗未过 SCALING_GATE 不得人口外推, 检法: 投射倍数逾闸即只报每人效应}
+  - {条: G13, 断言: 马尔可夫须有会员内变异, 检法: within-member variance = 0 → BLOCKED（非 WARNING）}
+  - {条: G14, 断言: EVT 二法不一致须显式保留, 检法: EVT_STATUS = MODEL_DISAGREEMENT}
+  - {条: G15, 断言: 盈亏平衡成本上限 ≠ 实际服务成本, 检法: service_cost_status 须为 NOT_REGISTERED}
+
+# ── 四状态分离：⛔ 禁以单一 PASS 混淆工程／统计／因果／商业四义 ──────────
+status_matrix:
+  层次:
+    - {层: ENGINEERING_STATUS, 取值域: [PASS, FAIL], 义: 码能跑、闸能过、对账能闭合}
+    - {层: STATISTICAL_STATUS, 取值域: [PASS, CONDITIONAL, FAIL], 义: 检定与区间是否支持所称之效应}
+    - {层: CAUSAL_STATUS, 取值域: [ESTABLISHED, NOT_ESTABLISHED], 义: 是否已排除选择与时间之混杂}
+    - {层: DECISION_STATUS, 取值域: [ADMISSIBLE, BLOCKED], 义: 是否准入商业动作}
+  escalation_rule: ⛔ 统计显著 ≠ 因果成立 ≠ 商业准入；四层须逐层独立裁定，禁跨层升格。
+  temporal_vs_treatment: ⛔ PRE → POST 之改善只证【时间上的变化 TEMPORAL_CHANGE】；
+    未有同期对照或反事实设计前，不得称 TREATMENT_EFFECT。实测：PI02 之 UNTREATED 无 PRE／POST 分期，
+    故本窗**无法**构造双重差分（DiD），因果层一律 NOT_ESTABLISHED。
 
 # ── 决策统计层：以期望损失最小、风险调整回酬最大择方案 ──────────────
 decision_layer:
