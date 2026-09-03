@@ -1,0 +1,20 @@
+﻿scope,row_key,field,v1.5.001,v1.5.002,verdict,judgement
+YAML_LINE,3,registry.version,1.5.001,1.5.002,MODIFIED,身份递增
+YAML_LINE,18,registry.version_semver,1.5.1,1.5.2,MODIFIED,随身份递增
+YAML_LINE,4,registry.git_anchor,(不存在),7f713dc,ADDED,✓ 只增（R05 Git 锚）
+YAML_TYPOLOGY_BLOCKS,T-01..T-15,treatment_ids/capability_dim_ids/linkage_status/economic_linkage_ref,(不存在),+60 行（15 块×4）,ADDED,✓ 只增（提案，带 PROPOSED 标记，待裁）
+YAML_RETRACTION,W-82,retraction_register.entries,(不存在),+1 条（撤回『限红方向仅 TIGHTEN』）,ADDED,✓ 只增
+YAML_TOPKEY,-,（父版 60 顶层键）,保留,保留（逐字节）,UNCHANGED,✓ 保留
+YAML_TOPKEY,-,v1_5_002_upgrade,(不存在),(新增),ADDED,✓ 只增
+YAML_TOPKEY,-,platform_accounting_measured,(不存在),(新增),ADDED,✓ 只增
+YAML_TOPKEY,-,deliverable_metric_inventory,(不存在),(新增),ADDED,✓ 只增
+YAML_TOPKEY,-,metric_combinations,(不存在),(新增),ADDED,✓ 只增
+YAML_TOPKEY,-,treatment_economic_effects,(不存在),(新增),ADDED,✓ 只增
+YAML_TOPKEY,-,economic_levers_measured,(不存在),(新增),ADDED,✓ 只增
+YAML_TOPKEY,-,economic_metric_gate_status,(不存在),(新增),ADDED,✓ 只增
+YAML_TOPKEY,-,typology_economic_linkage,(不存在),(新增),ADDED,✓ 只增
+YAML_TOPKEY,-,metric_semantics_ruling,(不存在),(新增),ADDED,✓ 只增
+YAML_TOPKEY,-,economic_gap_register,(不存在),(新增),ADDED,✓ 只增
+CSV_COLUMN,-,（56 栏）,56,56,UNCHANGED,✓ 一栏未增未删
+CSV_CELL,66 行,treatment_ids / capability_dim_ids,空,空（提案不入投影，待裁后回填）,UNCHANGED,CSV 与父版逐字节相同
+CSV_ROWS,-,行数,66,66,UNCHANGED,✓

@@ -22,7 +22,7 @@ TR_FULL_SCAN <- TRUE          # 全量铁律：恒为 TRUE；置 FALSE 即报错
 TR_WARN_MB   <- getOption("tr.warn_mb", 300)      # 巨档【告警】阈，非截行阈
 TR_RC_VERIFY <- TRUE          # 全量核验：文件换行数 ↔ 载入行数对账
 TR_RC_MAX_MB <- getOption("tr.rc_max_mb", 4096)   # 逾此不作换行数核验，登记 SKIPPED
-TR_DB        <- "数据库"
+TR_DB        <- "数据表"   # N-2A 2026-09-03：承 7f713dc 目录改名；_ext.R 以配置册 namespaces.delivery 覆写
 
 .tr_key_alias <- c("member_id", "uid", "player_id", "mem", "member_login")
 

@@ -1,7 +1,10 @@
 # =====================================================================
 # rule_registry_loader.R · 规则册载入器与对 v1.5.0 之一致性门闸
 # ---------------------------------------------------------------------
-# 版本 : 0.1.0        日期 : 2026-08-22        适配 : typology 1.5.0 / rules 0.1.0
+# 版本 : 0.1.2        日期 : 2026-09-03        适配 : typology 1.5.002 / rules 0.1.1
+# 变更 : N-2A —— 版本串 1.5.001 → 1.5.002；RULES_PATH 改指 rule_registry_v0.1.1.yaml
+#        （该册仅 registry 头块 parent/version 递增，规则本体一字未改）。闸门 G1~G6 逻辑未动。
+# 变更 : N-1A —— 四处版本串 1.5.0 → 1.5.001（L21~L24 区），闸门 G1~G4 逻辑一字未改。
 # ---------------------------------------------------------------------
 # 【门闸】任一不合即 stop()：
 #   G1 rule.type_id 须在 v1.5.0（或显式 null 并标 NOT_DEFINED）
@@ -13,15 +16,15 @@
 # =====================================================================
 suppressPackageStartupMessages({ library(data.table); library(yaml) })
 
-RULES_PATH <- file.path("规范", "rule_registry_v0.1.0.yaml")
+RULES_PATH <- file.path("规范", "rule_registry_v0.1.1.yaml")
 RISKEYE_PATH <- file.path("规范", "risk_eye_schema_v0.1.0.yaml")
 
 rules_load <- function(REG, path = RULES_PATH) {
   y <- yaml::read_yaml(path)
-  if (!identical(y$registry$parent, "registry_risk_typology_v1.5.0"))
-    stop("规则册 parent 非 v1.5.0", call. = FALSE)
-  if (!identical(as.character(REG$meta$registry$version), "1.5.0"))
-    stop("载入之登记册非 v1.5.0", call. = FALSE)
+  if (!identical(y$registry$parent, "registry_risk_typology_v1.5.002"))
+    stop("规则册 parent 非 v1.5.002", call. = FALSE)
+  if (!identical(as.character(REG$meta$registry$version), "1.5.002"))
+    stop("载入之登记册非 v1.5.002", call. = FALSE)
   `%||%` <- function(a, b) if (is.null(a)) b else a
   rt <- rbindlist(lapply(y$rules, function(r) data.table(
     rule_id = r$rule_id, layer = r$layer, label_zh = r$label_zh,

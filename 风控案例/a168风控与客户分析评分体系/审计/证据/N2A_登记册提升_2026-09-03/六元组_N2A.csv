@@ -1,0 +1,9 @@
+﻿file,bytes,lines,crlf,bom,md5
+规范/registry_risk_typology_v1.5.002.yaml,365791,10677,0,FALSE,b396a762a2d1079f7bfbfdf6f5176f4f
+规范/registry_risk_typology_v1.5.002.csv,57961,67,0,TRUE,deedd98255bd7a70fe9b25375ae07ddd
+规范/rule_registry_v0.1.1.yaml,19985,450,0,FALSE,471c889b021a64d6bb55c2d2659198fc
+函数/registry_loader.R,28745,513,0,FALSE,5b24265f41722fbdde5555c99328a3f7
+函数/rule_registry_loader.R,4848,78,0,FALSE,0387199a8323b09f967998c8d5bda646
+函数/verify_registry_dual.R,21106,344,0,FALSE,dc1f0f909a4c8cb1f056f8922c8d4446
+函数/typology_report_engine.R,14482,252,0,FALSE,e5b2859af08318a137dbc15d1221589c
+配置/report_config_v1.0.0.yaml,13819,190,0,FALSE,d4d6408485bdf307d195b6b3cb07ff06

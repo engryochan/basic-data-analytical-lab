@@ -1,0 +1,9 @@
+﻿source,numerator,denominator,hold_pct
+S01 profit/stake (NGR 口径，块 hold_rate),225932201.6256,13436093473.8042,1.6815
+S01 (profit+rebate)/stake (毛利 GGR，本金口径),234152957.5302,13436093473.8042,1.7427
+S01 (profit+rebate)/valid_bet (毛利，洗码口径),234152957.5302,12101545165.175,1.9349
+PI04 Σsum_revenue/Σsum_stake,234152975.98,13436093493.96,1.7427
+PI04 Σsum_revenue/Σsum_validbet,234152975.98,12101545184.49,1.9349
+P12a Σggr_sum/Σstake_sum,234152957.1035,13436093473.3328,1.7427
+P12a Σggr_sum/Σvalidbet_sum,234152957.1035,12101545164.644,1.9349
+DX05 product 101 house_hold_pct,234152957.1044,13436093473.3333,1.7427

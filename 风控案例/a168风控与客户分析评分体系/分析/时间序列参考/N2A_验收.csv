@@ -1,0 +1,11 @@
+﻿step,status,detail
+registry_load() · 函数/registry_loader.R → v1.5.002 双档,PASS,PASS
+registry.version,PASS,1.5.002
+registry_counts(REG) YAML↔CSV 互证,PASS,total_criterion_rows=66 risk_typology_count=15 value_axis_count=1 risk_criterion_count=65 stat_directional_rows=42 direction_enum_size=4
+dict rows × cols,INFO,66 × 56
+types axis=R,INFO,15
+rules_load(REG) · rule_registry_v0.1.1.yaml,PASS,PASS rules = 26
+verify_registry_dual() 双跑,PASS,NOT_RUN=3 PASS=23
+test_r24b() 三态自测,PASS,PASS
+配置 namespaces.delivery,PASS,数据表
+配置 version / parent,INFO,1.2.0 registry_risk_typology_v1.5.002

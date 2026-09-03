@@ -1,11 +1,11 @@
 ---
-title: "{{TITLE}}"
-subtitle: "十五类风险会员判据商业方案 · {{TYPE_ID}} · 登记册 v1.5.002 同源现算"
+title: "同桌聚集"
+subtitle: "十五类风险会员判据商业方案 · T-01 · 登记册 v1.5.001 同源现算"
 author: "Ryo（雷欧）"
-date: "{{DATE}}"
+date: "2026-09-02"
 lang: zh-CN
 params:
-  type_id: "{{TYPE_ID}}"
+  type_id: "T-01"
 format:
   html:
     theme: cosmo
@@ -31,7 +31,7 @@ execute:
 ## ════════════════════════════════════════════════════════════════════════
 ## 十五类风险会员判据商业方案 · 自同一模板生成，十五份同构同步。
 ##
-## 【单一真相源】规范/registry_risk_typology_v1.5.002.{yaml,csv}
+## 【单一真相源】规范/registry_risk_typology_v1.5.001.{yaml,csv}
 ## 【软配置册】  配置/report_config_v1.0.0.yaml —— 一切阈值、分位、置信、样本门、
 ##   命名空间、字段别名、呈表尺寸、模型名册、管线定义、措施文字一律取自该册；
 ##   本档与引擎不硬写任何业务数值或业务字符（硬码铁律）。
@@ -741,15 +741,15 @@ kable(tr_no(data.table(计数项 = names(CNT), 现算 = unlist(CNT))), align = "
 #| label: 血统件
 kable(tr_no(data.table(
   件 = c("登记册", "软配置册", "术语库", "主引擎", "扩充引擎", "生成器", "模板"),
-  版本 = c(reg_ver, CFG$config$version, "v1.0.0", "1.1.0", "1.3.0", "1.3.1", "1.4.1"),
-  路径 = c("规范/registry_risk_typology_v1.5.002.{yaml,csv}", "配置/report_config_v1.0.0.yaml",
+  版本 = c(reg_ver, CFG$config$version, "v1.0.0", "1.1.0", "1.3.0", "1.3.0", "1.4.0"),
+  路径 = c("规范/registry_risk_typology_v1.5.001.{yaml,csv}", "配置/report_config_v1.0.0.yaml",
            "规范/glossary_a168_v1.0.0.{yaml,csv}", "函数/typology_report_engine.R",
            "函数/typology_report_engine_ext.R", "函数/build_typology_reports.R",
            "模板/风险会员商业方案_模板.qmd"))),
   align = "l", caption = "本档所消费之全部规范件与执行件（路径一律现列，禁散落）")
 ```
 
-- 登记册血统：v1.3.0（前版）→ v1.4.0（锚点 `1e13c774`）→ v1.5.0（G-1 三向变换 `e030613e`）→ v1.5.001（加法升级 · 父版 40×66=2,640 格逐位未改 · 机器派生）→ **v1.5.002**（加法升级 · 锚 `7f713dc` · 父版 3,943 行仅版本号两行改、追加经济实测十节 · CSV 与父版逐字节相同 · 双跑 23 PASS/0 FAIL/3 NOT_RUN）
+- 登记册血统：v1.3.0（前版）→ v1.4.0（锚点 `1e13c774`）→ v1.5.0（G-1 三向变换 `e030613e`）→ **v1.5.001**（加法升级 · 父版 40×66=2,640 格逐位未改 · 机器派生）
 - 规范范本：`尾段投注基础分析的评估_v1_2_47_REDTEAM_去外部模型版.qmd`（章体与体例）
 - ⛔ **不入血统者**：`r paste(sprintf("《%s》", unlist(CFG$lineage_blacklist$files)), collapse = "")`——仅供人阅读参考；引擎于产出后自检其 token，命中即停止渲染
 
@@ -763,16 +763,6 @@ cat(sprintf("✔ 血统自检通过：本类登记册文本未含黑名单 token
 ```
 
 # 变更记录
-
-## v1.4.1（{{DATE}}）· N-2B 血统层升版：指向 registry v1.5.002 · 命名空间 数据表
-
-::: {.callout-note}
-## 本版只改血统与命名空间，不改语义
-
-四处指针自 `v1.5.001` 改指 `v1.5.002`（副标题、单一真相源注记、血统件路径表、血统链），模板版号 `1.4.0 → 1.4.1`，生成器 `1.3.0 → 1.3.1`。判据渲染逻辑、章体、表格、统计口径、软配置消费方式一字未改。
-
-**同批修复之根因**：软配置册 `namespaces.delivery` 与引擎常量原书「数据库」，而 commit `7f713dc` 已将交付件目录改名「数据表」，致 v1.4.0 金丝雀 T-01 十件交付件皆「待表（档不在位）」；本批改软配置册 `1.1.0 → 1.2.0`、载入器 `db_dir`、引擎常量三处，交付件自此复归在位。`registry v1.5.002` 之新增十节（`platform_accounting_measured`／`deliverable_metric_inventory`／`metric_combinations`／`economic_levers_measured`／`economic_metric_gate_status` 等）主引擎与扩充引擎**现未消费**，内容层升级仍俟引擎改造；十五类之 `linkage_status` 皆 `PROPOSED_BY_AUDIT · 待先生裁定 · 非 SSOT`，本模板不据以出任何判语。
-:::
 
 ## v1.4.0（2026-09-02）· N-1C 血统层升版：指向 registry v1.5.001
 

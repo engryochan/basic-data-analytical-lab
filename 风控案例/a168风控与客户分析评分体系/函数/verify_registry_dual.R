@@ -1,7 +1,12 @@
 # =============================================================================
 # verify_registry_dual.R  ——  registry 双档双跑校验器
-# 版本 : 1.0.0        立册 : 2026-09-02        Owner : Ryo Eng
-# 对象 : registry_risk_typology_v1.5.001.{yaml,csv}  （父版 v1.5.0 为对照锚）
+# 版本 : 1.1.0        立册 : 2026-09-02        Owner : Ryo Eng
+# 变更 : 1.1.0（N-2A · 2026-09-03）target 1.5.001 → 1.5.002、parent 1.5.0 → 1.5.001；
+#        父版路径改指 规范/ 根（前版所指 规范/_superseded/…v1.5.0 于盘上不存在，致 R04 前置对照落空）。
+#        R01–R25 与 R24b 之判定逻辑与文字一字未改。
+# 变更 : 1.0.1（N-1B）新增 .r24b_core() 与 rule_id "R24b" 一条 —— 负向保证【有效性】闸；
+#        另附 test_r24b() 三态自测 fixture。R01–R25 判定逻辑与文字一字未改（只增不减）。
+# 对象 : registry_risk_typology_v1.5.002.{yaml,csv}  （父版 v1.5.001 为对照锚）
 # -----------------------------------------------------------------------------
 # 【本档立意】SC-26 实证：所谓「R01–R25 校验器」从未作为可执行档存在，
 #   故上一轮「25/25 PASS」已撤销 TESTED_PASS，改判 UNKNOWN。
@@ -22,13 +27,13 @@ suppressPackageStartupMessages({
 
 # ---- 0. 参数（集中式常量，承 SC-31 之教训：禁散写路径）-----------------------
 VRD <- list(
-  version        = "1.0.0",
-  target_version = "1.5.001",
-  parent_version = "1.5.0",
-  yaml_path      = "规范/registry_risk_typology_v1.5.001.yaml",
-  csv_path       = "规范/registry_risk_typology_v1.5.001.csv",
-  parent_yaml    = "规范/_superseded/registry_risk_typology_v1.5.0.yaml",
-  parent_csv     = "规范/_superseded/registry_risk_typology_v1.5.0.csv",
+  version        = "1.1.0",
+  target_version = "1.5.002",
+  parent_version = "1.5.001",
+  yaml_path      = "规范/registry_risk_typology_v1.5.002.yaml",
+  csv_path       = "规范/registry_risk_typology_v1.5.002.csv",
+  parent_yaml    = "规范/registry_risk_typology_v1.5.001.yaml",
+  parent_csv     = "规范/registry_risk_typology_v1.5.001.csv",
   csv_encoding   = "UTF-8-BOM",   # 承 SC-25 役所定形制
   csv_eol        = "LF"
 )
@@ -161,7 +166,7 @@ verify_invariants <- function(Y, D) {
 # =============================================================================
 # 域 D · v1.5.001 新增段（R21–R25）
 # =============================================================================
-verify_v1_5_001 <- function(Y) {
+verify_v1_5_001 <- function(Y, D) {
   cr <- Y$capability_registry
   n <- length(cr$dims %||% list())
   chk("R21", "57 维齐备（CORE 35 + EXTENDED 22）",
@@ -184,6 +189,8 @@ verify_v1_5_001 <- function(Y) {
       if (!any(na_missing)) "PASS" else "FAIL",
       sprintf("缺 %d 条", sum(na_missing)), "0", sprintf("%d 条", length(na_missing)),
       "禁令若无检出手段，等于没有禁令")
+  .r24b_core(Y, D)                     # ← N-1B 新增：负向保证有效性闸（详见档末 .r24b_core）
+
   tp <- Y$treatment_status$policy_extension
   s34 <- c(Y$treatment_status$levels[[3]]$status, Y$treatment_status$levels[[4]]$status)
   ok <- all(vapply(tp$policies %||% list(),
@@ -212,7 +219,7 @@ verify_registry_dual <- function(yaml_path = VRD$yaml_path, csv_path = VRD$csv_p
   verify_lineage(Y, ft_y, ft_c)
   verify_dual(Y, D)
   verify_invariants(Y, D)
-  verify_v1_5_001(Y)
+  verify_v1_5_001(Y, D)
   res <- rbindlist(.RES$rows, fill = TRUE)
   res[]
 }
@@ -231,3 +238,107 @@ report_verify <- function(res) {
 # 用法：
 #   res <- verify_registry_dual(); report_verify(res)
 #   fwrite(res, "审计/verify_registry_dual_报告.csv", bom = TRUE, eol = "\n")
+
+# =============================================================================
+# .r24b_core —— 负向保证之【有效性】闸（N-1B · 2026-09-02 新增）
+# -----------------------------------------------------------------------------
+# 【与 R24 之分工】R24 检 negative_assurance_evidence 之【存在性】（有无该栏）；
+#   本闸检其【有效性】（该 evidence 所声明之机检，其被检集合是否非空）。二者不可互替。
+# 【立意】本档头部已立铁律「coverage_observed 一栏必填，防『零对象空跑得 PASS』」，
+#   然该铁律从未施于禁令册自身。实测：P-16（禁以实现输赢符号定罚，S1，由 G-07／
+#   PI02／X_combo 三条独立实证支撑）其唯一检出手段为
+#   「criterion_family 栏机检：OUTCOME_BASED 者 admit_to_risk_decision 恒 FALSE」，
+#   而全册 criterion_family 无一 OUTCOME_BASED（51 STRUCTURAL + 15 REFERENCE_ONLY）
+#   ⇒ 被检集合为空 ⇒ 该机检恒真而无内容 ⇒ 全项目最重之禁令，执行机制形同虚设。
+# 【三态】PASS：凡有绑定者 coverage 皆 > 0
+#         FAIL：至少一条绑定之 coverage == 0（即 VACUOUS_ASSURANCE）
+#         NOT_RUN：有禁令声明「机检」却无绑定，或绑定所指之栏不存在 —— 无从判定
+#         ⛔ NOT_RUN 不得计入 PASS（承本档头部铁律）。
+# 【禁退化保证】本函数只新增 rule_id "R24b" 一行，R01–R25 之判据、状态与文字一字未改；
+#   总判 gate 由 report_verify() 依 (FAIL == 0 && NOT_RUN == 0) 现算，故本闸结果
+#   无从被总表吞没——此即 参考稿 §三所要求之「独立结果／独立失败状态／纳入总验收」。
+# 【待迁】.nab 绑定表系过渡物。应于 N-5 判据语义裁决后，迁入 YAML 之
+#   prohibited_action_registry[].negative_assurance_binding{column,value}，届时删除本表。
+#   在迁入前，新增禁令若声明「机检」而未在此登记，本闸一律判 NOT_RUN，不默认放行。
+# =============================================================================
+.r24b_core <- function(Y, D) {
+  .nab <- list(
+    list(id = "P-15", col = "window_scope",     val = "FULL_WINDOW"),
+    list(id = "P-16", col = "criterion_family", val = "OUTCOME_BASED"),
+    list(id = "P-18", col = "ranking",          val = "FALSE")
+  )
+  ## 形制注记：YAML 之 prohibited_action_registry 系 dict（note／iron_rule／
+  ## inherited_from_global_prohibitions／prohibitions 四键），禁令本体在 $prohibitions。
+  ## 若日后改为裸 list，下式亦兼容。此形制已于 2026-09-02 对真实双档实测确认。
+  par0 <- Y$prohibited_action_registry %||% list()
+  par  <- if (!is.null(par0$prohibitions)) par0$prohibitions else par0
+  if (!length(par)) {
+    chk("R24b", "负向保证之有效性（防 VACUOUS_ASSURANCE）", "NOT_RUN",
+        "禁令册为空或未载入", "禁令册非空", "0 条",
+        "无禁令可检；NOT_RUN 不得计入 PASS")
+    return(invisible(NULL))
+  }
+  ids  <- vapply(par, function(p) p$id %||% NA_character_, character(1))
+  decl <- vapply(par, function(p) grepl("机检", p$negative_assurance_evidence %||% ""), logical(1))
+  bnd  <- vapply(.nab, function(b) b$id, character(1))
+  cols <- vapply(.nab, function(b) b$col, character(1))
+  vals <- vapply(.nab, function(b) b$val, character(1))
+  cov  <- vapply(seq_along(.nab), function(i) {
+    if (!cols[i] %in% names(D)) return(NA_integer_)
+    as.integer(sum(trimws(as.character(D[[cols[i]]])) == vals[i], na.rm = TRUE))
+  }, integer(1))
+  unbound    <- setdiff(ids[decl], bnd)      # 声明机检却未绑定
+  vacuous    <- bnd[!is.na(cov) & cov == 0L] # 绑定成立但被检集合为空
+  unresolved <- bnd[is.na(cov)]              # 绑定所指之栏不存在
+  status <- if (length(unbound) || length(unresolved)) "NOT_RUN" else
+            if (length(vacuous))                        "FAIL"    else "PASS"
+  chk("R24b",
+      "负向保证之有效性：声明机检者其被检集合须非空（防 VACUOUS_ASSURANCE）",
+      status,
+      sprintf("%s ｜ VACUOUS %d：%s ｜ 未绑定 %d：%s ｜ 栏缺 %d：%s",
+              paste(sprintf("%s[%s=%s]cov=%s", bnd, cols, vals,
+                            ifelse(is.na(cov), "列不存在", cov)), collapse = " · "),
+              length(vacuous),    paste(vacuous,    collapse = ","),
+              length(unbound),    paste(unbound,    collapse = ","),
+              length(unresolved), paste(unresolved, collapse = ",")),
+      "每条声明机检之禁令，其被检集合皆 > 0",
+      sprintf("已绑定 %d 条 ／ 声明机检 %d 条 ／ 禁令总 %d 条",
+              length(.nab), sum(decl), length(par)),
+      "R24 检存在性，R24b 检有效性；禁令若只检空集，等于没有禁令")
+  invisible(NULL)
+}
+
+# =============================================================================
+# test_r24b —— R24b 三态自测 fixture（N-1B · 不入主流程，须单独调用）
+# 用法：test_r24b()   回 TRUE 表示三态皆可复现，否则 stop()
+# 立意：承 参考稿 §三——R24b 不得因自身实现错误而只见 PASS 一态。
+#   本 fixture 以合成资料分别触发 FAIL／PASS／NOT_RUN，证明三态皆真可达。
+# =============================================================================
+test_r24b <- function() {
+  mk <- function(fam_vals, extra = NULL) {
+    D <- data.table(window_scope     = rep("FULL_WINDOW", length(fam_vals)),
+                    criterion_family = fam_vals,
+                    ranking          = rep("FALSE", length(fam_vals)))
+    Y <- list(prohibited_action_registry = c(
+      list(list(id = "P-15", negative_assurance_evidence = "window_scope 栏机检"),
+           list(id = "P-16", negative_assurance_evidence = "criterion_family 栏机检"),
+           list(id = "P-18", negative_assurance_evidence = "ranking 四栏机检")), extra))
+    list(Y = Y, D = D)
+  }
+  keep <- .RES$rows; on.exit(.RES$rows <- keep, add = TRUE)
+  .RES$rows <- list()
+  f1 <- mk(c("STRUCTURAL", "REFERENCE_ONLY"))                        # ① 期 FAIL
+  .r24b_core(f1$Y, f1$D)
+  f2 <- mk(c("STRUCTURAL", "OUTCOME_BASED"))                         # ② 期 PASS
+  .r24b_core(f2$Y, f2$D)
+  f3 <- mk(c("STRUCTURAL", "OUTCOME_BASED"),                         # ③ 期 NOT_RUN
+           list(list(id = "P-99", negative_assurance_evidence = "某新栏 栏机检")))
+  .r24b_core(f3$Y, f3$D)
+  got <- vapply(.RES$rows, function(r) r$status, character(1))
+  exp <- c("FAIL", "PASS", "NOT_RUN")
+  if (!identical(unname(got), exp))
+    stop(sprintf("R24b 三态自测不符：期望 %s，实得 %s",
+                 paste(exp, collapse = "/"), paste(got, collapse = "/")), call. = FALSE)
+  cat("✓ R24b 三态自测通过：FAIL ／ PASS ／ NOT_RUN 皆可复现\n")
+  invisible(TRUE)
+}

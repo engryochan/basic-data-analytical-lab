@@ -1,8 +1,10 @@
 config:
   name: typology_report_config
-  version: 1.1.0
-  issued: '2026-08-22'
-  parent: registry_risk_typology_v1.5.0
+  version: 1.2.0
+  issued: '2026-09-03'
+  parent: registry_risk_typology_v1.5.002
+  changelog_1_2_0: N-2A（2026-09-03）——namespaces.delivery 由 数据库 改 数据表（承 commit 7f713dc 目录改名；
+    原值致引擎十件交付件「待表（档不在位）」）；parent 改指 v1.5.002。其余阈值、分位、管线、名册一字未改。
   purpose: 十五类风险会员判据商业方案之【软配置册】——一切阈值、分位、样本门、命名空间、
     字段别名、呈表尺寸、模型名册、管线定义一律登记于此，引擎与模板只取本册，
     不得在代码或正文内硬写。改参数只改本册，十五份重跑即同步。
@@ -10,7 +12,7 @@ config:
 
 # ── 命名空间（与 配置/paths_a168.R 同源；改布局只改此处） ──────────────
 namespaces:
-  delivery: 数据库          # 交付件 CSV
+  delivery: 数据表          # 交付件 CSV（2026-09-03 起；前名 数据库）
   exec: 函数                # R／SQL 执行件
   spec: 规范                # 登记册、术语库
   config: 配置              # 本册与导出参数

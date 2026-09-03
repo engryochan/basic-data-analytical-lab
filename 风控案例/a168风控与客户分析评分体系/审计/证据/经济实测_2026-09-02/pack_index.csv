@@ -1,0 +1,133 @@
+﻿no,file,mcode,domain,entity,grain,ncol_pack,credibility,usage
+001,A_anchor.csv,M06,C,IP,g.ip,68,OK,SCREENING
+002,B01_bt_panel.csv,M15,B,会员,member_id × bet_date,77,WRONG_GRAIN,NOT_FOR_DECISION
+003,B01_bt_panel_delta.csv,M15,B,会员,member_id × bet_date,77,WRONG_GRAIN,NOT_FOR_DECISION
+004,B4_2b_funnel_and_mu0.csv,M14,C,全窗/元数据,n_raw × n_g1 × n_g2,89,INVALID,NOT_FOR_DECISION
+005,B4_5b_tip_nature.csv,M14,C,IP,TRIM(bet09),79,OK,SCREENING
+006,B_online_base.csv,Z00,F,桌台,table_id × sec_elapsed,70,WRONG_GRAIN,NOT_FOR_DECISION
+007,C01_ip_chain.csv,M04,A,IP,bet_ip,71,OK,SCREENING
+008,C06_hedge_pairs.csv,M02,A,IP,bet_ip × m_a × m_b,70,WRONG_GRAIN,SCREENING
+009,C06d_hedge_pairs_dated.csv,M02,A,会员,a.bet_ip × a.member_id,72,WRONG_GRAIN,NOT_FOR_DECISION
+010,C08_subnet_all.csv,M04,A,网段,1,71,INVALID,SCREENING
+011,C08_subnet_sparse.csv,M04,A,网段,1,71,INVALID,SCREENING
+012,D03S_daily_roi_diff.csv,M15,B,日期,bet_date,70,OK,REFERENCE
+013,DICT_01a_bet41_tri.csv,M05,A,全窗/元数据,scope × n_rows × sum_s,77,INVALID,NOT_FOR_DECISION
+014,DICT_01b_roundkey_card.csv,Z00,F,全窗/元数据,scope × n_rows × nd_be,77,INVALID,NOT_FOR_DECISION
+015,DICT_01c_dimension.csv,Z00,F,全窗/元数据,scope × n_rows × avg_v,75,INVALID,NOT_FOR_DECISION
+016,DICT_01d_bet_latency.csv,Z00,F,全窗/元数据,TRIM(bet39),77,OK,REFERENCE
+017,DX04_bet09_profile.csv,M14,C,产品,bet_side,72,OK,SUPPORT
+018,DX05_product_panorama.csv,M14,C,产品,product_code,77,OK,SUPPORT
+019,E02_segment_econ.csv,M05,A,全窗/元数据,m.rebate_rate_bkt × m.,72,INVALID,NOT_FOR_DECISION
+020,EV01_disposal_events.csv,M09,D,日期,event_id × event_time,76,WRONG_GRAIN,NOT_FOR_DECISION
+021,EV02_member_disposal.csv,M09,D,会员,event_id × event_date,0,WRONG_GRAIN,NOT_FOR_DECISION
+022,I_ip_agg.csv,M04,A,IP,bet_ip,77,OK,SCREENING
+023,I_ip_player.csv,M04,A,会员,b.bet_ip × b.member_id,77,WRONG_GRAIN,NOT_FOR_DECISION
+024,K01_risk_feature_matrix.csv,M11,A,会员,member_id × is_seed ×,78,WRONG_GRAIN,NOT_FOR_DECISION
+025,K01b_seed_goldip.csv,M04,A,会员,member_id × seed_src,65,WRONG_GRAIN,NOT_FOR_DECISION
+026,K01b_seed_manual.csv,M11,A,会员,member_id × seed_src,65,WRONG_GRAIN,NOT_FOR_DECISION
+027,K01c_seed_dated.csv,M04,A,IP,seed_id × seed_ip × cr,69,WRONG_GRAIN,SCREENING
+028,L_label_dist.csv,M11,A,全窗/元数据,risk × orders,69,INVALID,NOT_FOR_DECISION
+029,P01A_crosstab.csv,M05,A,全窗/元数据,n_rows × bet16_null ×,76,INVALID,NOT_FOR_DECISION
+030,P01B_diff_ratio.csv,M05,A,全窗/元数据,n × diff_min × diff_p5,74,INVALID,NOT_FOR_DECISION
+031,P01C_split_by_dim.csv,M05,A,产品,"DATE_TRUNC('month', dt",77,INVALID,NOT_FOR_DECISION
+032,P01D_vs_validbet.csv,M05,A,全窗/元数据,n × comparable_n × pla,72,INVALID,NOT_FOR_DECISION
+033,P01E_identity_test.csv,M05,A,风控专员,hypothesis × n × exact,71,INVALID,NOT_FOR_DECISION
+034,P02A_lmc_samples.csv,M09,D,全窗/元数据,类别 × 取样端 × 異動時間,72,INVALID,NOT_FOR_DECISION
+035,P02B_changestatus_patterns.csv,M09,D,全窗/元数据,"SUBSTRING(TRIM(lmc05),",69,INVALID,NOT_FOR_DECISION
+036,P02C_key_check.csv,M09,D,全窗/元数据,l.lmc03,71,INVALID,NOT_FOR_DECISION
+037,P02D_events_in_window.csv,M09,D,全窗/元数据,lmc04 × lmc03,67,INVALID,NOT_FOR_DECISION
+038,P0C02_标签口径.csv,Z00,F,全窗/元数据,产品口径 × 正例观测数_会员日 × 正例会,69,INVALID,NOT_FOR_DECISION
+039,P0C03_标记次数分布.csv,Z00,F,全窗/元数据,标记次数,66,INVALID,NOT_FOR_DECISION
+040,P0C04_同日泄漏检验.csv,M05,A,全窗/元数据,d0.mem × d0.mark_day,70,INVALID,NOT_FOR_DECISION
+041,P0C05_标记时点定位.csv,Z00,F,全窗/元数据,mem × mark_day × 首投日,71,INVALID,NOT_FOR_DECISION
+042,P0C06_LabelB骨架.csv,M02,A,全窗/元数据,a.mem × a.anchor_day,71,INVALID,NOT_FOR_DECISION
+043,P0C09_安慰剂检验.csv,M05,A,全窗/元数据,a.mem × a.d × a.注单数 ×,70,INVALID,NOT_FOR_DECISION
+044,P11_阿泽尾段投注总帐.csv,M03,A,全窗/元数据,scope_def × n_orders ×,84,INVALID,NOT_FOR_DECISION
+045,P11_阿泽尾段投注模型会员名单.csv,M03,A,会员,player_id × total_orde,72,WRONG_GRAIN,NOT_FOR_DECISION
+046,P11_雷欧尾段投注总帐.csv,M03,A,全窗/元数据,scope_def × n_orders ×,84,INVALID,NOT_FOR_DECISION
+047,P12a_platform_daily.csv,Z00,F,日期,dt,72,OK,REFERENCE
+048,P12b_member_events.csv,M09,D,会员,uid × first_dt × last_,71,WRONG_GRAIN,NOT_FOR_DECISION
+049,P12c_member_daily_pnl.csv,M15,B,会员,g.uid × g.dt,69,WRONG_GRAIN,NOT_FOR_DECISION
+050,P13_personal_entry.csv,M03,A,会员,uid,70,OK,PRIMARY
+051,PH0_8r1_rg_case.csv,M10,D,日期,dt_day × category × ta,71,WRONG_GRAIN,NOT_FOR_DECISION
+052,PH0_8r2_rg_crosstable.csv,M10,D,桌台,src × n_rows × n_rg_tr,68,INVALID,NOT_FOR_DECISION
+053,PI01_treatment_delta_member.csv,M09,D,会员,member_id × treat_time,84,WRONG_GRAIN,NOT_FOR_DECISION
+054,PI02_treatment_delta_platform.csv,M09,D,全窗/元数据,grp × phase,76,INVALID,NOT_FOR_DECISION
+055,PI03_reinvest_loop.csv,M13,A,全窗/元数据,outcome,76,INVALID,NOT_FOR_DECISION
+056,PI04_member_5d_profile.csv,M15,B,会员,mid,83,OK,PRIMARY
+057,P_player_month.csv,M15,B,会员,member_id × DATE_TRUNC,72,WRONG_GRAIN,NOT_FOR_DECISION
+058,QSB_01a_category_census.csv,M14,C,全窗/元数据,COALESCE(NULLIF(TRIM(c,85,INVALID,NOT_FOR_DECISION
+059,QSB_01c_cat1_contamination.csv,M14,C,产品,TRIM(bet09),73,OK,SUPPORT
+060,QSB_02a_lowcard_fields.csv,M14,C,全窗/元数据,scope × n_rows × nd_be,81,INVALID,NOT_FOR_DECISION
+061,QSB_02b2_lowcard_five_gates.csv,M14,C,全窗/元数据,COALESCE(NULLIF(TRIM(b,82,INVALID,NOT_FOR_DECISION
+062,QSB_02b_state_cross.csv,M14,C,全窗/元数据,COALESCE(NULLIF(TRIM(b,72,INVALID,NOT_FOR_DECISION
+063,QSB_02c_push_by_family.csv,M14,C,会员,CASE WHEN TRIM(bet09),73,INVALID,NOT_FOR_DECISION
+064,R01_late_shoe.csv,M03,A,会员,member_id,78,OK,PRIMARY
+065,R01_late_shoe_w2.csv,M03,A,会员,member_id,78,OK,PRIMARY
+066,R01anm_shoe_anomaly.csv,M03,A,桌台,dt × table_id × shoe_i,74,WRONG_GRAIN,NOT_FOR_DECISION
+067,R01chk_shoe_len_by_table.csv,M03,A,桌台,table_id × table_flag,91,WRONG_GRAIN,NOT_FOR_DECISION
+068,R01inv_shoe_len_census.csv,M03,A,桌台,n_tables × n_shoes × m,82,INVALID,NOT_FOR_DECISION
+069,R02_same_table.csv,M01,A,会员,uid1 × uid2 × n_same_o,75,WRONG_GRAIN,NOT_FOR_DECISION
+070,R03_player_dealer.csv,M07,C,会员,uid × dealer_id × is_s,96,WRONG_GRAIN,NOT_FOR_DECISION
+071,R03b_player_dealer_daily.csv,M07,C,会员,p.bet_date × p.member_,87,WRONG_GRAIN,NOT_FOR_DECISION
+072,R03chk_settlement_form.csv,M07,C,投注面,UPPER(TRIM(bet_side)),69,OK,REFERENCE
+073,R03inv_pair_census.csv,M07,C,会员配对,1 × 2,69,INVALID,SCREENING
+074,R_rebate_dist.csv,M05,A,全窗/元数据,mem003,66,INVALID,NOT_FOR_DECISION
+075,S01_player_score.csv,M15,B,会员,b.member_id,74,OK,PRIMARY
+076,S02_dealer_score.csv,M07,C,荷官,b.dealer_id,72,OK,SUPPORT
+077,S02b_dealer_pace.csv,M07,C,荷官,d.dealer_id,66,OK,SUPPORT
+078,S03_agent_score.csv,M06,C,代理线,b.lv3,72,INVALID,NOT_FOR_DECISION
+079,S04_analyst_score.csv,R01,C,风控专员,COALESCE(NULLIF(TRIM(c,70,NULL,NOT_FOR_DECISION
+080,S05_member_month_panel.csv,M15,B,会员,b.member_id × DATE_TRU,73,WRONG_GRAIN,NOT_FOR_DECISION
+081,S_player_tail.csv,M15,B,会员,member_id,81,OK,PRIMARY
+082,S_second_dist.csv,M15,B,桌台,table_id,71,OK,SUPPORT
+083,T02_daily_roi.csv,M15,B,会员,o.member_id × o.bet_da,68,WRONG_GRAIN,NOT_FOR_DECISION
+084,T03_arbitrage.csv,M02,A,会员,member_id,73,OK,PRIMARY
+085,TL00_table_inventory.csv,Z00,F,桌台,c.TABLE_NAME,68,INVALID,NOT_FOR_DECISION
+086,TL02_config_change.csv,M09,D,全窗/元数据,变更列,67,INVALID,NOT_FOR_DECISION
+087,TL03_pseudo_treatment.csv,M09,D,会员,member_id × change_dat,69,WRONG_GRAIN,NOT_FOR_DECISION
+088,TL03b_pseudo_treatment.csv,M09,D,会员,member_id × cate × pre,71,WRONG_GRAIN,NOT_FOR_DECISION
+089,TL04_log_schema.csv,Z00,F,桌台,TABLE_NAME × ORDINAL_P,68,INVALID,NOT_FOR_DECISION
+090,TL06_log_mem_change.csv,Z00,F,日期,dt,65,OK,REFERENCE
+091,TL07_mem_change_shape.csv,M09,D,全窗/元数据,1,73,INVALID,NOT_FOR_DECISION
+092,TL08_treatment_events.csv,M09,D,会员,member_id × action_dat,72,WRONG_GRAIN,NOT_FOR_DECISION
+093,TL09_member_schema.csv,Z00,F,会员,ORDINAL_POSITION × COL,67,INVALID,NOT_FOR_DECISION
+094,TL10_treatment_ledger.csv,M09,D,会员,member_id × action_dat,73,WRONG_GRAIN,NOT_FOR_DECISION
+095,TL11_treatment_episode.csv,M09,D,会员,member_id × field_name,87,WRONG_GRAIN,NOT_FOR_DECISION
+096,TL11c_population_reconcile.csv,M09,D,全窗/元数据,lvl × level_name × n_a,70,INVALID,NOT_FOR_DECISION
+097,TL14_limit_treatment.csv,M09,D,会员,member_id × action_dat,78,WRONG_GRAIN,NOT_FOR_DECISION
+098,T_table_span.csv,M15,B,桌台,gi011,69,OK,SUPPORT
+099,VB_00_validbet_contract.csv,M05,A,全窗/元数据,scope × n_rows × n_vb_,76,INVALID,NOT_FOR_DECISION
+100,VB_00b_zero_five_rates.csv,M05,A,会员,scope × n_base_rows ×,81,INVALID,NOT_FOR_DECISION
+101,VB_41_identity_global.csv,M05,A,风控专员,test × n_rows × n_both,80,INVALID,NOT_FOR_DECISION
+102,VB_41b_identity_strata.csv,M05,A,产品,TRIM(bet09) × TRIM(com,73,WRONG_GRAIN,NOT_FOR_DECISION
+103,VB_41b_identity_strata_v18b.csv,M05,A,风控专员,g × comm,81,WRONG_GRAIN,NOT_FOR_DECISION
+104,VB_41c1_964_detail.csv,M05,A,会员,grp × bet01 × member_i,85,WRONG_GRAIN,NOT_FOR_DECISION
+105,VB_41c2_concentration.csv,M05,A,全窗/元数据,t.grp,83,INVALID,NOT_FOR_DECISION
+106,VB_41c2_concentration_v2.csv,M05,A,会员,grp × n_rows × n_membe,83,INVALID,NOT_FOR_DECISION
+107,V_ipmatch.csv,M04,A,会员,ip × n_member_log × co,68,WRONG_GRAIN,NOT_FOR_DECISION
+108,V_recon.csv,Z00,F,全窗/元数据,n_matched_round × mae_,75,INVALID,NOT_FOR_DECISION
+109,V_table_counts.csv,Z00,F,桌台,表名 × 行数,65,INVALID,NOT_FOR_DECISION
+110,X_combo.csv,M06,C,全窗/元数据,1 × 2,69,INVALID,NOT_FOR_DECISION
+111,Z01_table_inventory.csv,Z00,F,桌台,表名 × 表类型 × 估计行数,68,INVALID,NOT_FOR_DECISION
+112,Z02_excluded_tables.csv,Z00,F,桌台,表名 × 估计行数 × 表注释,67,INVALID,NOT_FOR_DECISION
+113,Z03_column_dictionary.csv,Z00,F,全窗/元数据,表名 × 列序 × 列名,71,INVALID,NOT_FOR_DECISION
+114,Z04_name_collision.csv,Z00,F,全窗/元数据,COLUMN_NAME,69,INVALID,NOT_FOR_DECISION
+115,Z05_missing_typehint.csv,Z00,F,全窗/元数据,表名 × 列序 × 列名,69,INVALID,NOT_FOR_DECISION
+116,Z06_generated_probe_sql.csv,Z00,F,全窗/元数据,表名 × 列序 × 列名,68,INVALID,NOT_FOR_DECISION
+117,Z07_probe_bet02.csv,Z00,F,全窗/元数据,3,68,INVALID,NOT_FOR_DECISION
+118,Z08_roundkey_integrity.csv,Z00,F,全窗/元数据,注单行数 × 局键数 × 单局最大注单行数,72,INVALID,NOT_FOR_DECISION
+119,Z09_time_axis_recon.csv,Z00,F,日期,行数 × dt等于账务日 × dt等于下注日,80,INVALID,NOT_FOR_DECISION
+120,Z11_sentinel_impact.csv,M09,D,全窗/元数据,未处置_注单行数 × 已处置_注单行数 ×,76,INVALID,NOT_FOR_DECISION
+121,Z14_zero_month_diagnosis.csv,M12,D,会员,member_id × bet_month,86,WRONG_GRAIN,NOT_FOR_DECISION
+122,_P12b-pre.csv,M09,D,会员,member_id × action × c,67,WRONG_GRAIN,NOT_FOR_DECISION
+123,_PH0_1b_table_inventory.csv,Z00,F,会员,table_name × h_src × h,73,INVALID,NOT_FOR_DECISION
+124,_PH0_2b_column_inventory.csv,Z00,F,桌台,table_name × col_pos ×,70,INVALID,NOT_FOR_DECISION
+125,_PH0_3_lmc_category.csv,M10,D,全窗/元数据,COALESCE(NULLIF(TRIM(l,75,INVALID,NOT_FOR_DECISION
+126,_PH0_4L1_member_columns.csv,Z00,F,会员,table_name × col_pos ×,68,INVALID,NOT_FOR_DECISION
+127,_PH0_4b_rg_keyword.csv,M10,D,全窗/元数据,COALESCE(NULLIF(TRIM(l,74,INVALID,NOT_FOR_DECISION
+128,_PH0_4w2_balance_points.csv,M12,D,日期,dt_slice × n_user_acti,75,INVALID,NOT_FOR_DECISION
+129,_PH0_6b_member_daily.csv,Z00,F,会员,dt,69,OK,PRIMARY
+130,DICT_ALL_columns.csv,DIC,Z,元数据,table × column,26,N/A,DICTIONARY
+131,DICT_ALL_tables.csv,DIC,Z,元数据,table,25,N/A,DICTIONARY
+132,DICT_SEMANTIC_ruling.csv,DIC,Z,元数据,column_name,21,N/A,DICTIONARY

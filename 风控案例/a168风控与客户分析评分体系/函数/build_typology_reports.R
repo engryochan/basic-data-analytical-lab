@@ -1,7 +1,10 @@
 # =====================================================================
 # build_typology_reports.R · 十五类风险会员商业方案 · 生成器
 # ---------------------------------------------------------------------
-# 版本 : 1.3.0        日期 : 2026-08-22        适配登记册 : 1.5.0
+# 版本 : 1.3.1        日期 : 2026-09-03        适配登记册 : 1.5.002（登记册版本自 registry_load() 现取，本器不写死）
+# 变更 : 1.3.1（N-2B）① version 默认 v1.3.0 → v1.4.1（模板 v1.4.1）；② _清单.csv 由五栏改十栏
+#        （承 N-1C 体例：type_id 主键 · gate/severity 自登记册现取 · instantiation_state/blocked_reason 由参数
+#        render_ids/blocked_reason 机器写出，禁手写）；③ 渲染脚本只列 render_ids。铸件逻辑一字未改。
 # 身份 : 执行件（函数/）
 # ---------------------------------------------------------------------
 # 【职责】自 模板/风险会员商业方案_模板.qmd 为登记册 v1.5.0 之每一 axis=R 类型
@@ -15,7 +18,8 @@ suppressPackageStartupMessages(library(data.table))
 
 build_typology_reports <- function(out_dir = file.path("分析", "风险会员商业方案"),
                                    template = file.path("模板", "风险会员商业方案_模板.qmd"),
-                                   version = "v1.3.0", date = format(Sys.Date(), "%Y-%m-%d")) {
+                                   version = "v1.4.1", date = format(Sys.Date(), "%Y-%m-%d"),
+                                   render_ids = NULL, blocked_reason = "") {
   source("函数/registry_loader.R")
   REG <- registry_load()
   tpl <- readChar(template, file.size(template), useBytes = TRUE); Encoding(tpl) <- "UTF-8"
@@ -40,18 +44,25 @@ build_typology_reports <- function(out_dir = file.path("分析", "风险会员�
     cat(sprintf("  + %s\n", fn))
   }
   ## 渲染脚本（GBK 控制台兼容：只用 ASCII 命令，文件名经 Quarto 以 UTF-8 处理）
+  rend <- if (is.null(render_ids)) rep(TRUE, length(files)) else types$type_id %in% render_ids
   bat <- c("@echo off", "chcp 65001 >nul", "cd /d \"%~dp0\"",
            "set \"QUARTO=\"",
            "where quarto >nul 2>nul && set \"QUARTO=quarto\"",
            "if not defined QUARTO if exist \"C:\\Program Files\\RStudio\\resources\\app\\bin\\quarto\\bin\\quarto.exe\" set \"QUARTO=C:\\Program Files\\RStudio\\resources\\app\\bin\\quarto\\bin\\quarto.exe\"",
            "if not defined QUARTO ( echo [ERR] quarto not found & pause & exit /b 1 )",
-           sprintf("\"%%QUARTO%%\" render \"%s\" --to html || echo [FAIL] %s", files, files),
+           sprintf("\"%%QUARTO%%\" render \"%s\" --to html || echo [FAIL] %s", files[rend], files[rend]),
            "echo DONE", "pause")
   con <- file(file.path(out_dir, "渲染_十五类.bat"), open = "wb")
   writeBin(charToRaw(enc2utf8(paste0(paste(bat, collapse = "\r\n"), "\r\n"))), con); close(con)
-  ## 清单（供审计对账：生成数 = 登记册 axis=R 类型数）
-  idx <- data.table(type_id = types$type_id, name_zh = types$name_zh, file = files,
-                    registry_version = REG$meta$registry$version, generated = date)
+  ## 清单（供审计对账：生成数 = 登记册 axis=R 类型数；十栏，承 N-1C 体例，type_id 主键）
+  gs <- unique(REG$dict[axis == "R", .(type_id, gate = as.character(gate), severity = as.character(severity))])[, .SD[1L], by = type_id]
+  idx <- data.table(type_id = types$type_id, name_zh = types$name_zh, file_stem = safe(types$name_zh), filename = files,
+                    template_version = sub("^v", "", version), registry_version = REG$meta$registry$version)
+  idx <- merge(idx, gs, by = "type_id", all.x = TRUE, sort = FALSE)
+  idx[, instantiation_state := ifelse(rend, "CAST_AND_RENDERED", "CAST_NOT_RENDERED")]
+  idx[, blocked_reason := ifelse(rend, "", blocked_reason)]
+  idx[, generated := date]
+  setorder(idx, type_id)
   fwrite(idx, file.path(out_dir, "_清单.csv"), bom = TRUE)
   cat(sprintf("\n生成 %d 份（登记册 axis=R 类型数 = %d）→ %s\n", length(files), nrow(types), out_dir))
   invisible(idx)

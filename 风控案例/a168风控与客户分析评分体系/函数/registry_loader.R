@@ -1,9 +1,23 @@
 # =====================================================================
 # registry_loader.R · a168 风险类型登记册载入器与门闸
 # ---------------------------------------------------------------------
-# 载入器版本 : 1.5.0        适配登记册 : 1.5.0        日期 : 2026-08-22
-# 配套     : 规范/registry_risk_typology_v1.5.0.yaml（单一真相源，UTF-8 无 BOM/LF）
-#            规范/registry_risk_typology_v1.5.0.csv （派生字典，UTF-8-BOM/LF）
+# 载入器版本 : 1.5.002      适配登记册 : 1.5.002      日期 : 2026-09-03
+# 变更     : N-2A（2026-09-03）——三处实质改动：
+#            ① 路径指向 v1.5.002 双档（CSV 与 v1.5.001 逐字节相同 md5 deedd982…；
+#               YAML 系加法升级：父版仅第 3/18 行版本号改、第 4 行新增 git_anchor，
+#               余 3,940 行逐位存续，另追加十节；红队四支 + 完整性批评已过）；
+#            ② .expect 递增 1.5.001 → 1.5.002；
+#            ③ db_dir 由「数据库」改「数据表」——承 commit 7f713dc 之目录改名，
+#               原名致 P-01 禁读档存在性检查与引擎交付件路径落空（T-01 金丝雀十件「待表」之根因）。
+# 变更     : N-1A（2026-09-02）——仅三处实质改动：
+#            ① 路径 L105/L106 指向 v1.5.001 双档；② .expect 递增 1.5.0 → 1.5.001；③ 本头注记。
+#            登记册 40→56 栏系加法；R01 之 need 为白名单式缺列检查，不受新增栏影响。
+#            R03 类型集合／gate／admit_to_scoring／判据列集合，及 registry_counts
+#            七项计数，合计十四条断言已于 patch 前逐条机器预演，全数通过。
+#            身份名 1.5.001 为唯一权威（承 SC-29：盘上唯点号）；YAML 另立
+#            version_semver=1.5.1 仅供 SemVer 工具链解析，本载入器不取用。
+# 配套     : 规范/registry_risk_typology_v1.5.002.yaml（单一真相源，UTF-8 无 BOM/LF）
+#            规范/registry_risk_typology_v1.5.002.csv （派生字典，UTF-8-BOM/LF）
 # 变更     : 1.5.0 适配登记册 1.5.0（G-1 三向变换之产物）——
 #            ① 路径常量改指 规范/（五命名空间归化；数据库/ 只放交付件 CSV）；
 #            ② .expect 递增至 1.5.0；
@@ -100,10 +114,10 @@ REGISTRY_ROOT <- getOption("registry.root", "")
 ## ---------------------------------------------------------------------
 REGISTRY_PATHS <- list(
   fn_dir   = .rp("函数"),
-  db_dir   = .rp("数据库"),
+  db_dir   = .rp("数据表"),
   spec_dir = .rp("规范"),
-  yaml     = .rp("规范", "registry_risk_typology_v1.5.0.yaml"),
-  csv      = .rp("规范", "registry_risk_typology_v1.5.0.csv"),
+  yaml     = .rp("规范", "registry_risk_typology_v1.5.002.yaml"),
+  csv      = .rp("规范", "registry_risk_typology_v1.5.002.csv"),
   sql_main = .rp("a168_取数与核验_SQL总包_v10.sql")   # 08acdbc5 起驻项目根（冻结件）
 )
 
@@ -113,7 +127,7 @@ REGISTRY_PATHS <- list(
   "  ├─ 函数/",
   "  │  ├─ registry_loader.R",
   sprintf("  │  └─ %s", basename(REGISTRY_PATHS$sql_main)),
-  "  └─ 数据库/",
+  "  └─ 数据表/",
   sprintf("     ├─ %s", basename(REGISTRY_PATHS$yaml)),
   sprintf("     ├─ %s", basename(REGISTRY_PATHS$csv)),
   "     ├─ R01_late_shoe.csv",
@@ -201,7 +215,7 @@ registry_load <- function(yaml_path = REGISTRY_PATHS$yaml,
         stop(sprintf("%s 之判据列集合不一致", t$type_id))
     }
     ## 版本号亦须同源（登记册与载入器同进同退，杜绝版本身份碰撞）
-    .expect <- "1.5.0"
+    .expect <- "1.5.002"
     if (!identical(as.character(ymeta$registry$version), .expect))
       stop(sprintf("YAML registry.version=%s，载入器预期 %s —— 请同步递增版本号后重跑",
                    ymeta$registry$version, .expect))

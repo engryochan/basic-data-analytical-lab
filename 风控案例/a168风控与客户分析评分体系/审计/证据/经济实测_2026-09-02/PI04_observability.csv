@@ -1,0 +1,4 @@
+﻿verdict_observability,n,stake,revenue,hold_pct
+SHORT_SPAN —— 跨度不足七日，指标不稳,531715,887620853,29042353,3.272
+OBSERVABLE,187088,10848591557,179942877,1.659
+LEFT_CENSORED —— 首注即窗首，真实起点在窗外（禁解为新会员）,4639,1699881085,25167746,1.481

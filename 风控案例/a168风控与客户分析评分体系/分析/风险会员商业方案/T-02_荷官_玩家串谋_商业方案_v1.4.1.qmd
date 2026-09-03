@@ -1,11 +1,11 @@
 ---
-title: "{{TITLE}}"
-subtitle: "十五类风险会员判据商业方案 · {{TYPE_ID}} · 登记册 v1.5.002 同源现算"
+title: "T-02 · 荷官—玩家串谋 · 风险会员判据商业方案"
+subtitle: "十五类风险会员判据商业方案 · T-02 · 登记册 v1.5.002 同源现算"
 author: "Ryo（雷欧）"
-date: "{{DATE}}"
+date: "2026-09-03"
 lang: zh-CN
 params:
-  type_id: "{{TYPE_ID}}"
+  type_id: "T-02"
 format:
   html:
     theme: cosmo
@@ -764,7 +764,7 @@ cat(sprintf("✔ 血统自检通过：本类登记册文本未含黑名单 token
 
 # 变更记录
 
-## v1.4.1（{{DATE}}）· N-2B 血统层升版：指向 registry v1.5.002 · 命名空间 数据表
+## v1.4.1（2026-09-03）· N-2B 血统层升版：指向 registry v1.5.002 · 命名空间 数据表
 
 ::: {.callout-note}
 ## 本版只改血统与命名空间，不改语义

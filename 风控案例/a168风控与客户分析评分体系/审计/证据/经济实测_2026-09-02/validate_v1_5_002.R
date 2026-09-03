@@ -1,0 +1,51 @@
+options(warn = 1, width = 200)
+proj <- "C:/Users/engry/Documents/GitHub/basic-data-analytical-lab/风控案例/a168风控与客户分析评分体系"; setwd(proj)
+SP <- Sys.getenv("SP"); CAND <- file.path(SP, "registry_v1.5.002")
+Y2 <- file.path(CAND, "registry_risk_typology_v1.5.002.yaml"); C2 <- file.path(CAND, "registry_risk_typology_v1.5.002.csv")
+suppressPackageStartupMessages({ library(data.table); library(yaml) })
+sec <- function(t) cat("\n==================== ", t, " ====================\n", sep = "")
+
+sec("V1 yaml::read_yaml(candidate)")
+y <- yaml::read_yaml(Y2)
+cat("top-level keys:", length(names(y)), "\n"); cat("version:", y$registry$version, " semver:", y$registry$version_semver, "\n")
+cat("new sections present:", paste(intersect(names(y), c("v1_5_002_upgrade","platform_accounting_measured","deliverable_metric_inventory","metric_combinations","treatment_economic_effects","economic_levers_measured","economic_metric_gate_status","typology_economic_linkage","metric_semantics_ruling","economic_gap_register")), collapse=","), "\n")
+cat("inventory items:", length(y$deliverable_metric_inventory$items), " combos:", length(y$metric_combinations$items), " gaps:", length(y$economic_gap_register), " gate items:", length(y$economic_metric_gate_status$items), "\n")
+cat("typology T-01 treatment_ids:", paste(y$typologies[[1]]$treatment_ids, collapse=","), " T-03:", paste(y$typologies[[3]]$treatment_ids, collapse=","), "\n")
+cat("registry_counts unchanged:", identical(y$registry_counts$total_criterion_rows, 66L) || y$registry_counts$total_criterion_rows == 66, "\n")
+
+sec("V2 patched loader copy (.expect 1.5.002) -> registry_load(candidate)")
+src <- readLines("函数/registry_loader.R", encoding = "UTF-8")
+src <- sub('.expect <- "1.5.001"', '.expect <- "1.5.002"', src, fixed = TRUE)
+src <- gsub("registry_risk_typology_v1.5.001", "registry_risk_typology_v1.5.002", src, fixed = TRUE)
+writeLines(src, file.path(CAND, "registry_loader_patched_for_1_5_002.R"), useBytes = TRUE)
+source(file.path(CAND, "registry_loader_patched_for_1_5_002.R"))
+REG <- tryCatch(registry_load(yaml_path = Y2, csv_path = C2), error = function(e) { cat("ERROR:", conditionMessage(e), "\n"); NULL })
+if (!is.null(REG)) {
+  cat("mode:", REG$mode, "\n"); print(REG$identity)
+  cat("dict dim:", dim(REG$dict), "\n")
+  print(str(registry_counts(REG)))
+  print(registry_typology(REG, "T-01"))
+  print(registry_type_scalars(REG, "T-03"))
+  cat("CSV treatment_ids for T-01:", unique(REG$dict[type_id == "T-01", treatment_ids]), "\n")
+}
+
+sec("V3 verify_registry_dual (target 1.5.002, candidate paths)")
+v <- readLines("函数/verify_registry_dual.R", encoding = "UTF-8")
+v <- sub('target_version = "1.5.001"', 'target_version = "1.5.002"', v, fixed = TRUE)
+v <- sub('yaml_path      = "规范/registry_risk_typology_v1.5.001.yaml"', paste0('yaml_path      = "', Y2, '"'), v, fixed = TRUE)
+v <- sub('csv_path       = "规范/registry_risk_typology_v1.5.001.csv"', paste0('csv_path       = "', C2, '"'), v, fixed = TRUE)
+v <- sub('parent_yaml    = "规范/_superseded/registry_risk_typology_v1.5.0.yaml"', 'parent_yaml    = "规范/registry_risk_typology_v1.5.001.yaml"', v, fixed = TRUE)
+v <- sub('parent_csv     = "规范/_superseded/registry_risk_typology_v1.5.0.csv"', 'parent_csv     = "规范/registry_risk_typology_v1.5.001.csv"', v, fixed = TRUE)
+writeLines(v, file.path(CAND, "verify_registry_dual_patched_for_1_5_002.R"), useBytes = TRUE)
+source(file.path(CAND, "verify_registry_dual_patched_for_1_5_002.R"))
+cat("test_r24b:", test_r24b(), "\n")
+res <- tryCatch(verify_registry_dual(), error = function(e) { cat("ERROR:", conditionMessage(e), "\n"); NULL })
+if (!is.null(res)) {
+  out <- if (is.data.frame(res)) res else res$rows
+  if (!is.null(out)) { fwrite(out, file.path(CAND, "verify_dual_result_1_5_002.csv"), bom = TRUE); print(out[, .(rule_id, status, observed = substr(observed, 1, 70))], nrows = 100) }
+}
+sec("V4 parent-vs-candidate line accounting")
+p <- readLines("规范/registry_risk_typology_v1.5.001.yaml", encoding = "UTF-8"); q <- readLines(Y2, encoding = "UTF-8")
+cat("parent lines:", length(p), " candidate lines:", length(q), " parent lines missing in candidate:", sum(!(p %in% q)), "\n")
+cat("which parent lines changed:", which(!(p %in% q)), "\n")
+sec("DONE")

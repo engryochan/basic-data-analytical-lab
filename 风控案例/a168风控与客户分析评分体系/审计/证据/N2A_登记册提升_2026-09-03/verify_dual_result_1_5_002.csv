@@ -1,0 +1,27 @@
+﻿rule_id,rule_name,status,observed,expected,coverage_observed,evidence
+R01,YAML 六元组齐备,PASS,365791 B / 10677 行 / LF / BOM=FALSE / b396a762a2d1079f7bfbfdf6f5176f4f,六项皆非空,1 档,""
+R02,CSV 形制符 SC-25 役所定（含 BOM + LF）,PASS,BOM=TRUE / LF,BOM=TRUE / LF,1 档,★ 与 F-44（CRLF 无 BOM）冲突，OQ-09 待裁；本闸暂以 SC-25 役为准
+R03,版本号自洽,PASS,1.5.002,1.5.002,1 档,""
+R04,父版锚齐备（version + yaml_md5 + csv_md5）,PASS,1.5.0 f9eb7af3771cf5684dd9da8c01fe7e4a,非空,1 档,""
+R05,Git 锚已登记,PASS,7f713dc,非空 commit sha,1 档,SC-32：v1.3.0/v1.4.0/v1.5.0 皆无锚，回滚点不存在
+R06,判据层行数 YAML == CSV(风险轴),PASS,YAML 65 / CSV 65,相等,65 行,""
+R07,判据层主键集合双档同一,PASS,仅YAML 0 / 仅CSV 0,两侧差集皆 0,65 键,""
+R08_criterion_role,判据层 criterion_role 双档逐行同一,PASS,不符 0,0,65 行,""
+R08_threshold_status,判据层 threshold_status 双档逐行同一,PASS,不符 0,0,65 行,""
+R08_direction,判据层 direction 双档逐行同一,PASS,不符 0,0,65 行,""
+R11,嵌套键未伪扁平上载 CSV（承 csv_scope）,PASS,"",空集,11 键,""
+R12,CSV 新栏皆已入白名单（白名单式，非计数式 · §6 SR-5）,NOT_RUN,—,每一新栏须见于 field_scope_registry,—,须与父版栏名并集比对后方可判定；本版留待人工核
+R13,15 类 + V 轴 = 66 判据,PASS,66,66,全册,""
+R14,criterion_role 十枚举合计闭环,PASS,66,66,10 枚举,""
+R15,admit_to_risk_decision 全 FALSE（B-6 / P-19）,PASS,FALSE,全 FALSE,66 行,""
+R16,T-03 四禁令布尔全 false（B-5 / P-18，永不复活）,PASS,FALSE,全 false,T-03 4 行,""
+R17,五门状态与 global_gate_status 自洽,PASS,FAIL/FAIL/PARTIAL/RENDER_COMPUTED/FAIL,全 PASS 时 global 方可 PASS,5 门,""
+R18,解锁谓词四项皆未满足时无一对象解锁,PASS,(gates.G01=='PASS') AND (gates.G02=='PASS') AND (gates.G03==,谓词在册,1 谓词,""
+R19,MCID 成本锚状态在册,PASS,BLOCKED（待 Treatment Ledger 完成）,非空,1 栏,""
+R20,SUPERSEDED 证据未被援引为 TESTED_PASS（血统防复活）,NOT_RUN,SUPERSEDED 1 条,须逐条追溯援引处,2 条证据,""
+R21,57 维齐备（CORE 35 + EXTENDED 22）,PASS,57 = 35 + 22,57 = 35 + 22,57 维,""
+R22,CORE 35 维一维未删（先生所列 10/8/7/10）,PASS,CORE 35 EXTENDED 22,CORE=35,57 维,""
+R23,global_prohibitions 九条全数承接入禁令册,PASS,承接 9 / 原有 9,全数承接,20 条禁令,""
+R24,每条禁令皆配 negative_assurance_evidence,PASS,缺 0 条,0,20 条,禁令若无检出手段，等于没有禁令
+R24b,负向保证之有效性：声明机检者其被检集合须非空（防 VACUOUS_ASSURANCE）,NOT_RUN,"P-15[window_scope=FULL_WINDOW]cov=66 · P-16[criterion_family=OUTCOME_BASED]cov=0 · P-18[ranking=FALSE]cov=4 ｜ VACUOUS 1：P-16 ｜ 未绑定 2：P-17,P-20 ｜ 栏缺 0：",每条声明机检之禁令，其被检集合皆 > 0,已绑定 3 条 ／ 声明机检 5 条 ／ 禁令总 20 条,R24 检存在性，R24b 检有效性；禁令若只检空集，等于没有禁令
+R25,S3/S4 未闭合时全部 Treatment 挂 BLOCKED（P-20 防偷渡）,PASS,S3=OPEN S4=OPEN,S3/S4 非 CLOSED 时须逐条 blocked_until,13 类,""
