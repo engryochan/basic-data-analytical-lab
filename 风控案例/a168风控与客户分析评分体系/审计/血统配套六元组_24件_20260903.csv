@@ -1,0 +1,25 @@
+﻿类别,角色,件,内容版本,档名版本,身份自洽,字节,行数,换行,BOM,MD5,在位,路径,版本
+在役·规范,登记册 YAML（SSOT）,registry_risk_typology_v1.5.004.yaml,1.5.004,1.5.004,✓,377327,10804,LF,无,113cf8d1e3d96ecb4790c5434e3897cb,✓,规范/registry_risk_typology_v1.5.004.yaml,1.5.004
+在役·规范,登记册 CSV（派生字典）,registry_risk_typology_v1.5.004.csv,1.5.004,1.5.004,✓,57961,67,LF,有,deedd98255bd7a70fe9b25375ae07ddd,✓,规范/registry_risk_typology_v1.5.004.csv,1.5.004
+在役·规范,规则册,rule_registry_v0.1.3.yaml,0.1.3,0.1.3,✓,20442,454,LF,无,1c49ca470eb950a309b0d56b88e3a719,✓,规范/rule_registry_v0.1.3.yaml,0.1.3
+在役·规范,风险之眼 schema,risk_eye_schema_v0.1.0.yaml,0.1.0,0.1.0,✓,5404,122,LF,无,de9e9dfccf62d1cd1fea15ea27a0bd2a,✓,规范/risk_eye_schema_v0.1.0.yaml,0.1.0
+在役·规范,术语库 YAML,glossary_a168_v1.0.0.yaml,1.0.0,1.0.0,✓,192182,5880,LF,无,a2b1e0f59723ce31253c4da689f765e3,✓,规范/glossary_a168_v1.0.0.yaml,1.0.0
+在役·规范,术语库 CSV,glossary_a168_v1.0.0.csv,1.0.0,1.0.0,✓,109200,317,CRLF,有,1dde6a728c5663aa999b82787c268723,✓,规范/glossary_a168_v1.0.0.csv,1.0.0
+在役·规范,软配置册,report_config_v1.0.0.yaml,1.4.0,1.0.0,✗ 档名≠内容,14114,192,LF,无,b7cfcf9eb370936751431702cce16bee,✓,配置/report_config_v1.0.0.yaml,1.4.0
+在役·执行,登记册载入器,registry_loader.R,1.5.004,—,—（单层身份）,29570,520,LF,无,bfe5c7f9ccadf97ad952a4a335ed4dd6,✓,函数/registry_loader.R,1.5.004
+在役·执行,规则册载入器,rule_registry_loader.R,0.1.4,—,—（单层身份）,5127,80,LF,无,7ca6e9058bbd5ad954348dc6db5acf87,✓,函数/rule_registry_loader.R,0.1.4
+在役·执行,双档校验器,verify_registry_dual.R,1.3.0,—,—（单层身份）,22317,355,LF,无,10799200fd8eef8b2f5e8e4fd5d3dd5d,✓,函数/verify_registry_dual.R,1.3.0
+在役·执行,分析引擎（含范本体例）,typology_report_engine.R,1.5.0,—,—（单层身份）,76542,1263,LF,无,0e8bd0583c6a8915c9e98c83d0b0f0c6,✓,函数/typology_report_engine.R,1.5.0
+在役·执行,术语引擎,glossary_engine.R,1.0.0,—,—（单层身份）,14163,265,LF,无,4c0285ab0cbc54585f0a730a4f5ebe03,✓,函数/glossary_engine.R,1.0.0
+在役·执行,生成器,build_typology_reports.R,1.3.4,—,—（单层身份）,5631,72,LF,无,ee0de4dbfbad96956f60c73a27d6e752,✓,函数/build_typology_reports.R,1.3.4
+在役·执行,判据坐标表导出器,export_criterion_atlas.R,1.2.0,—,—（单层身份）,20350,342,LF,无,5b8d737a7ba027f49afde2ac633cb6c7,✓,函数/export_criterion_atlas.R,1.2.0
+在役·执行,模板,风险会员商业方案_模板.qmd,1.4.4,—,—（单层身份）,47232,899,LF,无,99de5bb0da79f6928db4c2296545974e,✓,模板/风险会员商业方案_模板.qmd,1.4.4
+在役·SQL源,SQL 总包,a168_SQL总包_v12_0_0_HF9g-P5D_分批作业版1万_六层商业版_OPT.sql,—,12.0.0,—（单层身份）,4625308,50005,CRLF,无,83949619c7b4b115d0cd09e60f3a8559,✓,函数/a168_SQL总包_v12_0_0_HF9g-P5D_分批作业版1万_六层商业版_OPT.sql,—
+在役·SQL源,SQL 总包,a168_SQL总包_v12_0_0_HF9g-P5D_分批作业版_六层商业版_OPT.sql,—,12.0.0,—（单层身份）,4626361,49974,CRLF,无,8918905c34515a05853fe754b36fc040,✓,函数/a168_SQL总包_v12_0_0_HF9g-P5D_分批作业版_六层商业版_OPT.sql,—
+在役·SQL源,SQL 总包,a168_SQL总包_v12_0_0_HF9g-P5D_原版审计版_六层商业版_OPT.sql,—,12.0.0,—（单层身份）,4228521,44886,CRLF,无,09de37420e9735fb0ed3147c6277b670,✓,函数/a168_SQL总包_v12_0_0_HF9g-P5D_原版审计版_六层商业版_OPT.sql,—
+在役·SQL源,行数实测探针,RK01_行数实测探针_v2_0_1.sql,—,2.0.1,—（单层身份）,32759,391,LF,无,ee91b91744e5e6202c308ee019a2e5fd,✓,函数/RK01_行数实测探针_v2_0_1.sql,—
+参照,规范件（无代码消费者）,capability_registry_v1.5.001.csv,—,1.5.001,—（单层身份）,8491,58,LF,有,f8a1aaff2aa50df5e7ee1c87cf1f8e45,✓,规范/capability_registry_v1.5.001.csv,—
+参照,规范件（无代码消费者）,prohibited_action_registry_v1.5.001.csv,—,1.5.001,—（单层身份）,4793,21,LF,有,715ce1a6da60c802f2f202f420fc6541,✓,规范/prohibited_action_registry_v1.5.001.csv,—
+参照,规范件（无代码消费者）,treatment_policy_v1.5.001.csv,—,1.5.001,—（单层身份）,2809,14,LF,有,fa4642f68152753dd2bdbe1b86acd5a6,✓,规范/treatment_policy_v1.5.001.csv,—
+参照,规范件（无代码消费者）,constants_a168.yaml,—,—,—（单层身份）,4267,90,LF,无,79b6e5972571e6aebfa294ecc4d27368,✓,配置/constants_a168.yaml,—
+参照,规范件（无代码消费者）,paths_a168.R,1.1.0,—,—（单层身份）,9212,164,LF,无,af37a7120e7163f98416e3343b0175f4,✓,配置/paths_a168.R,1.1.0

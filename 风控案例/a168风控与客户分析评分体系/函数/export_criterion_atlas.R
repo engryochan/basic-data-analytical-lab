@@ -1,7 +1,11 @@
 # =====================================================================
 # export_criterion_atlas.R · 判据坐标表 · 只读实测导出器
 # ---------------------------------------------------------------------
-# 版本 : 1.1.0        日期 : 2026-09-03        适配登记册 : 1.5.003
+# 版本 : 1.2.0        日期 : 2026-09-03        适配登记册 : 自 registry_load() 现取（本档不写死）
+# 变更 : 1.2.0（N-8b · 承先生指出本档漏随 N-8 同步）四处硬写退场：① 档头「适配登记册 1.5.003」
+#        已随版漂移；② atlas_version 写死 "1.0.0" 而档头自称 1.1.0——**自相矛盾且已落盘**；
+#        ③ sql_package 写死件数「133 件」；④ 输出无登记册六元组，无从自证系哪一版所出。
+#        现皆改现取：版本自本档档头、件数自总包实数、另出登记册与总包六元组入每一行（见 §L）。
 # 变更 : 1.1.0（N-6 · 承红队评审）① 四级链扩为五级，新增 L1b OUTPUT_EXPOSED —— 只认真实
 #        CSV 表头，封住「总包算过即视为有」之漏；② 新增 silent_drop_detected 与 evidence_level
 #        二栏；③ 首因 COLUMN_ABSENT_IN_SOURCE 正名 OUTPUT_NOT_EXPOSED。
@@ -40,6 +44,53 @@
 #   atlas <- export_criterion_atlas(deep_fanout = TRUE)  # 深层：另算对齐键扇出（须全量读，慢）
 # =====================================================================
 suppressPackageStartupMessages({ library(data.table) })
+
+## ---------------------------------------------------------------------
+## §L 本件之血统（N-8b · 2026-09-03）—— 承 N-8 之铁律：版本与件数一律现取，不手写
+## ---------------------------------------------------------------------
+## 【本节所治之病】1.1.0 之四处硬写，皆与 N-8 所扫除者同类：
+##   ① 档头「适配登记册 : 1.5.003」——登记册已至 1.5.004，此串随版漂移且不报错；
+##   ② atlas_version 写死 "1.0.0"，而档头自称 1.1.0 —— **自相矛盾，且已随输出落盘**；
+##   ③ sql_package 写死「…P5D_*版…（133 件）」——件数若变即成谎；
+##   ④ 无登记册六元组 —— 一份判据坐标表拿在手上，无从自证系哪一版登记册所出。
+## 【处置】版本自本档档头现取；件数自总包实数；另出登记册与总包之六元组入每一行。
+ATLAS_SELF <- file.path("函数", "export_criterion_atlas.R")
+
+## 自本档档头现取版本（单一真相源即上方「# 版本 : x.y.z」一行）
+.atlas_self_version <- function(path = ATLAS_SELF) {
+  if (!file.exists(path)) return(NA_character_)
+  h <- tryCatch(readLines(path, n = 12L, warn = FALSE, encoding = "UTF-8"),
+                error = function(e) character(0))
+  hit <- regmatches(h, regexpr("版本[[:space:]]*[:：][[:space:]]*v?[0-9]+([.][0-9]+)+", h, perl = TRUE))
+  if (!length(hit)) return(NA_character_)
+  v <- regmatches(hit[1L], regexpr("[0-9]+([.][0-9]+)+", hit[1L]))
+  if (length(v)) v[1L] else NA_character_
+}
+
+## 六元组（与引擎 §9 之 tr_sixtuple 同法；本档不 source 引擎，故就地实作，形制刻意一致）
+.atlas_sixtuple <- function(path) {
+  if (is.na(path) || !nzchar(path) || !file.exists(path))
+    return(list(bytes = NA_real_, lines = NA_integer_, eol = "—", bom = "—", md5 = "—"))
+  raw    <- readBin(path, "raw", file.size(path))
+  n_lf   <- sum(raw == as.raw(10L)); n_cr <- sum(raw == as.raw(13L))
+  n_crlf <- if (length(raw) > 1L) sum(raw[-length(raw)] == as.raw(13L) & raw[-1L] == as.raw(10L)) else 0L
+  list(bytes = length(raw), lines = n_lf,
+       eol = if (n_lf > 0L && n_crlf == n_lf && n_cr == n_lf) "CRLF" else if (n_cr == 0L) "LF" else "MIXED",
+       bom = if (length(raw) >= 3L && identical(as.integer(raw[1:3]), c(239L, 187L, 191L))) "有" else "无",
+       md5 = unname(tools::md5sum(path)))
+}
+
+## 总包身份：档名与件数皆自盘上现取，不手写
+.atlas_sql_package <- function() {
+  cands <- Sys.glob(file.path("函数", "a168_SQL总包_v12_0_0_HF9g-P5D_原版审计版_六层商业版_OPT.sql"))
+  if (!length(cands)) return(list(path = NA_character_, name = "—", n_modules = NA_integer_))
+  p <- cands[1L]
+  n <- tryCatch({
+    ln <- readLines(p, warn = FALSE, encoding = "UTF-8")
+    sum(grepl("^--[[:space:]]+[0-9]{1,3}[.][[:space:]]+[^[:space:]]+[.]csv", ln))
+  }, error = function(e) NA_integer_)
+  list(path = p, name = basename(p), n_modules = n)
+}
 
 ATLAS_OUT_DIR   <- file.path("审计")
 ATLAS_DB_DIR    <- file.path("数据表")
@@ -232,7 +283,8 @@ export_criterion_atlas <- function(deep_fanout = FALSE,
   ##        凭据：该名不见于任何 audit_rn 排序键（总包自定之「输出列集」凭据）。
   ##        ⇒ 登记册误把【总包内部计算名】当【交付件输出列】。须改判据列名或令总包外显该列。
   ##     NEVER_BUILT —— 总包全档零次出现。⇒ 真未建（如 S03 三列，承 F-21 BLOCKED UNTIL DECISION_RULE）。
-  sqlp <- Sys.glob(file.path("函数", "a168_SQL总包_v12_0_0_HF9g-P5D_原版审计版_六层商业版_OPT.sql"))
+  .pk  <- .atlas_sql_package()
+  sqlp <- if (is.na(.pk$path)) character(0) else .pk$path
   A[, absence_class := NA_character_]
   if (length(sqlp) == 1L && any(A$source_column_exists %in% FALSE)) {
     raw  <- readLines(sqlp[1L], warn = FALSE, encoding = "UTF-8")
@@ -263,10 +315,19 @@ export_criterion_atlas <- function(deep_fanout = FALSE,
         fifelse(absence_class %in% "NEVER_BUILT", "L0_NOT_BUILT", "UNKNOWN")))), "L0_SOURCE_UNAVAILABLE")]
 
   ## 血统（防维表漂移）
-  A[, `:=`(registry_version = reg_ver,
-           sql_package      = "a168_SQL总包_v12_0_0_HF9g-P5D_*版_六层商业版_OPT（133 件）",
-           atlas_version    = "1.0.0",
-           atlas_generated_at = format(Sys.time(), "%Y-%m-%d %H:%M:%S"))]
+  ## ── 血统（N-8b：一律现取，不手写；登记册与总包之六元组入每一行，供逐份自证）──
+  .ry <- .atlas_sixtuple(if (exists("REGISTRY_PATHS")) REGISTRY_PATHS$yaml else NA_character_)
+  .rc <- .atlas_sixtuple(if (exists("REGISTRY_PATHS")) REGISTRY_PATHS$csv  else NA_character_)
+  .ps <- .atlas_sixtuple(.pk$path)
+  A[, `:=`(registry_version    = reg_ver,
+           registry_yaml_md5   = .ry$md5,  registry_yaml_bytes = .ry$bytes,
+           registry_yaml_lines = .ry$lines, registry_yaml_eol  = .ry$eol,
+           registry_csv_md5    = .rc$md5,  registry_csv_bytes  = .rc$bytes,
+           sql_package         = .pk$name,
+           sql_package_modules = .pk$n_modules,
+           sql_package_md5     = .ps$md5,
+           atlas_version       = .atlas_self_version(),
+           atlas_generated_at  = format(Sys.time(), "%Y-%m-%d %H:%M:%S"))]
   setorder(A, type_id, criterion_column)
 
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)

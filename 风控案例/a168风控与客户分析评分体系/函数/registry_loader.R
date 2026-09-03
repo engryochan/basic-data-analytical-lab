@@ -21,8 +21,10 @@
 #            七项计数，合计十四条断言已于 patch 前逐条机器预演，全数通过。
 #            身份名 1.5.001 为唯一权威（承 SC-29：盘上唯点号）；YAML 另立
 #            version_semver=1.5.1 仅供 SemVer 工具链解析，本载入器不取用。
-# 配套     : 规范/registry_risk_typology_v1.5.003.yaml（单一真相源，UTF-8 无 BOM/LF）
-#            规范/registry_risk_typology_v1.5.003.csv （派生字典，UTF-8-BOM/LF）
+# 配套     : 规范/registry_risk_typology_v1.5.004.yaml（单一真相源，UTF-8 无 BOM/LF）
+#            规范/registry_risk_typology_v1.5.004.csv （派生字典，UTF-8-BOM/LF）
+#            ⚠ 本行系手写字面量，历来随版漂移（N-7 即曾遗漏）。唯一权威为下方
+#              REGISTRY_PATHS$yaml／$csv 与 .expect 三处；本注只作人读，机器不取。
 # 变更     : 1.5.0 适配登记册 1.5.0（G-1 三向变换之产物）——
 #            ① 路径常量改指 规范/（五命名空间归化；数据库/ 只放交付件 CSV）；
 #            ② .expect 递增至 1.5.0；
