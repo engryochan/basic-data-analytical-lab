@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
--- ★ a168 SQL 总包 v12.0.0-HF9g-P5 · 模块索引【分批作业版 · 1 万行/批】（132 件 · 132 张 CSV · 含 #130~#132 字典三件）★
+-- ★ a168 SQL 总包 v12.0.0-HF9g-P5 · 模块索引【分批作业版 · 1 万行/批】（133 件 · 133 张 CSV · 含 #130~#132 字典三件 · #133 局级事实表）★
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- ★★ HF9g-P5 · D-14 斧正（全窗基线族之六层退化）· Ryo Eng 授权 2026-08-29 ★★
@@ -409,6 +409,9 @@
 -- 131 DICT_ALL_tables.csv                DIC  Z 元数据      table                   25 N/A         DICTIONARY
 -- 132 DICT_SEMANTIC_ruling.csv           DIC  Z 元数据      column_name             21 N/A         DICTIONARY
 --     ★ #130~#132 为字典补件（元数据），循 #078 之例不套六层商业块；net_margin 栏恒 N/A，用法 DICTIONARY。
+-- 133 RK01_round_fact.csv                RK   E 局        round_key = bet03|bet04|bet39  24 N/A         FACT_BASE
+--     ★ #133 为局级事实表（2026-09-03 新建，只出事实不出判定），不套六层商业块；「局」非可处置实体。
+--       列数 24 含审计三栏（audit_rn／run_id／snapshot_sync_time）；分批版另加 batch_id 为 25。
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- 【异常 IP → 风险会员 · 三段证据链（本包已具备，勿另建大一统 JOIN）】
 --   ① 筛查  #022 I_ip_agg → #007 C01_ip_chain → #010/#011 C08_subnet → #107 V_ipmatch
@@ -49787,4 +49790,146 @@ FROM (
 WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键与分批作业版**逐字同一**（锁一），故两版可逐行对账。
+
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- 133. RK01_round_fact.csv   [局级事实表 · 新建 · 无六层商业块]
+--     典型学：ROUND 局键事实　粒度：round_key = bet03|bet04|bet39　说明：同局共现之唯一事实地基
+--     ★ 本件循 #078 S03_agent_score / #132 DICT_SEMANTIC_ruling 之例，**不套六层商业模板** ——
+--       「局」非可处置实体（不可限红、不可冻结、不可给退水），施以 NTILE / PERCENT_RANK
+--       即重蹈 D-14 覆辙（相对刻度施于非实体行）。局之赏罚一律回落至会员／荷官／桌台三实体。
+--     ★ 2026-09-03 校对斧正（三版同步，以 DICT_ALL_columns.csv 与本包正典逐栏核对）：
+--       ① 测试线 CTE 原书 agent_id／is_test 二栏，于 ods_a168_agent（51 栏）皆不存在 ⇒ 改正典 age001／age022='1'（与 x_testagent 同）；
+--       ② 荷官栏原取 bet06，字典注「開局時間」（datetime）⇒ 改 eid（字典注「荷官」，正典 x_bs0 之 x_dealer）；
+--       ③ validbet 缺者回落 bet13（承 ord 层 COALESCE(vb_raw, stake_raw)）；
+--       ④ 闸门去 bet13>0（正典无）、补 bet05>0（正典有），六锁自此与 round_key 族逐字同一；
+--       ⑤ ggr 系【庄家视角】= (bet13 − bet14)/bet11 = −game_pnl（本包 game_pnl 为会员视角 payout−stake），hold_pct 为洗码口径。
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- 【本件立意】填补一项结构空白：round_key 已证为【真同局键】（跨桌局键 0 · 单局最大会员 256 ·
+--   P999 = 93.2 · 全窗 6,048,725 局），却在既有 132 件中**无任何一件以其为主键**。
+--   而 T-01 同桌聚集 / T-04 跨账户对打 / T-05 自我对冲 三类之核心证据皆为「同局共现」，
+--   其零模型（共现基率）无处可算 ⇒ 三类之统计显著性至今无从判定。
+--   ★ 本件只出【事实】，不出【判定】：无旗标、无分档、无 action，一切下游自行现算。
+--
+-- 【口径六锁 · 与全包逐字同一，勿改】
+--   ① 窗口   dt >= '2026-03-21' AND dt < '2026-08-07'（139 营运日；dt 系账务日，Z09 已证 100%）
+--   ② 产品   bet02 = '101'（百家乐）
+--   ③ 快照   sync_time <= '2026-08-27 09:00:00'
+--   ④ 去重   PARTITION BY bet01 取 rn = 1
+--   ⑤ 基础闸 category = '1' · UPPER(bet38) = 'N' · 非测试线（五级代理左连取 NULL）
+--            · bet05 > 0（会员号为正）· bet11 > 0（汇率为正）
+--   ⑥ 归一   一切金额除以 bet11（汇率），与本包 round_key 族 ord 层（#075 S01 之 x_bs0 同）逐字同法
+--
+-- 【禁令遵循】
+--   · P-07 禁 OFFSET —— 本件用 audit_rn 键集分批，非 OFFSET
+--   · P-08 禁以 DATE(bet08) 切日 —— 本件一律用 dt（账务日）
+--   · 只用行注释，无块注释（分号／斜线在块注释内会被误判为语句终止）
+--   · 一切 ID 比较 CAST 至 BIGINT（全库 ID 存为 varchar(65533)）
+--   · 一切除法以 NULLIF 护零；NULL ≠ 0，未观测者留 NULL 不写 0
+--
+-- 【规模警示】预期 T_true ≈ 6,048,725 行（口诀已实测之 round_key 去重数）。
+--   ROW_NUMBER() 全局排序系 blocking 算子，须全量物化后方生效，LIMIT 不能提前截断（D-14 案同理）。
+--   原版审计版一次导全者，须确认 query_mem_limit 足量；否则改走分批作业版。
+--
+-- 【经济用途 —— 本件之所以值得建】
+--   ① 零模型地基：共现基率 = f(每局人数分布)。无此分布，「两人同局 N 次」之显著性不可判，
+--      T-01/T-04/T-05 三类之一切 lift / jaccard 皆缺分母 ⇒ 现状是有分子无分母。
+--   ② 局级 hold 之离散：桌×靴×局三层方差分解之输入。S02b 双峰已证「桌台解释 95.9%、
+--      荷官仅 69.1%」，但那是【局速】；局级 hold 之方差归属至今未测。
+--   ③ 靴内位置效应：round_seq 与 hold 之关系（T-03 尾投已 FATAL 证伪，但那是【会员行为】，
+--      本件测的是【牌局本身】，二者不同问，不受 T-03 禁令约束）。
+--   ★ 以上三项皆为【可算而未算】，非【已证有效】。本件只提供地基，不承诺增益。
+-- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── ① T_true 预期 6,048,725 行（口诀已实测之 round_key 去重数）；实跑须以本件回值复核。
+--      本批实际返回行数 < 10000 即判定为末批；预期共 605 批，末批 8,725 行。
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
+--      审计字段二（四锁）：audit_rn 全局观测坐标（排序键与原版逐字同一，两版可逐行对账）；
+--      batch_id 物理分批信息（由 audit_rn 算得，非引擎所赋）。
+--      ★ 锁三：二者皆为审计字段，不得进入任何业务指标计算。
+--      ★ 锁四：两版经 audit_rn 逐行字段核验后，方可宣布输出完全一致。
+SELECT z.*,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT) AS batch_id
+FROM (
+SELECT w.*,
+       ROW_NUMBER() OVER (ORDER BY w.`biz_date`, w.`table_id`, w.`shoe_key`, w.`round_seq`, w.`round_key`) AS audit_rn,
+       'A168_HF9F_20260827_0900' AS run_id,
+       '2026-08-27 09:00:00' AS snapshot_sync_time
+FROM (
+    WITH ta AS (
+      SELECT DISTINCT CAST(NULLIF(TRIM(age001), '') AS BIGINT) AS aid
+      FROM ods_mariadb_2b.ods_a168_agent
+      WHERE age022 = '1'
+    ),
+    rk AS (
+      SELECT b.*,
+             ROW_NUMBER() OVER (PARTITION BY b.bet01 ORDER BY b.sync_time DESC) AS rn
+      FROM ods_mariadb_2b.ods_a168_bet02 b
+      WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+        AND b.bet02 = '101'
+        AND b.sync_time <= '2026-08-27 09:00:00'
+    ),
+    base AS (
+      SELECT CONCAT_WS('|', TRIM(r.bet03), TRIM(r.bet04), TRIM(r.bet39))        AS round_key,
+             TRIM(r.bet39)                                                      AS table_id,
+             TRIM(r.bet03)                                                      AS shoe_key,
+             TRIM(r.bet04)                                                      AS round_seq,
+             r.dt                                                               AS biz_date,
+             CAST(NULLIF(TRIM(r.bet05), '') AS BIGINT)                          AS member_id,
+             TRIM(r.eid)                                                        AS dealer_id,
+             TRIM(r.bet09)                                                      AS bet_family,
+             CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS stake,
+             COALESCE(CAST(NULLIF(TRIM(r.validbet), '') AS DECIMAL(20,8)),
+                      CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8)))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS vbet,
+             (CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8))
+            - CAST(NULLIF(TRIM(r.bet14), '') AS DECIMAL(20,8)))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS ggr,
+             CAST(NULLIF(TRIM(r.bet16), '') AS DECIMAL(20,8))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS rebate
+      FROM rk r
+      LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(r.bet18), '') AS BIGINT)
+      LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(r.bet19), '') AS BIGINT)
+      LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(r.bet20), '') AS BIGINT)
+      LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(r.bet21), '') AS BIGINT)
+      LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(r.bet22), '') AS BIGINT)
+      WHERE r.rn = 1
+        AND r.category = '1'
+        AND UPPER(TRIM(r.bet38)) = 'N'
+        AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+        AND CAST(NULLIF(TRIM(r.bet05), '') AS BIGINT) > 0
+        AND CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)) > 0
+    )
+    SELECT b.round_key,
+           b.table_id,
+           b.shoe_key,
+           b.round_seq,
+           MIN(b.biz_date)                                                      AS biz_date,
+           COUNT(DISTINCT b.dealer_id)                                          AS n_dealer_id,
+           MIN(b.dealer_id)                                                     AS dealer_id_min,
+           COUNT(DISTINCT b.member_id)                                          AS n_members,
+           COUNT(*)                                                             AS n_bets,
+           COUNT(DISTINCT b.bet_family)                                         AS n_bet_family,
+           ROUND(SUM(b.stake), 4)                                               AS stake,
+           ROUND(SUM(b.vbet), 4)                                                AS validbet,
+           ROUND(SUM(b.ggr), 4)                                                 AS ggr,
+           ROUND(SUM(b.rebate), 4)                                              AS rebate,
+           ROUND(SUM(b.ggr) * 100.0 / NULLIF(SUM(b.vbet), 0), 6)                AS hold_pct,
+           ROUND(SUM(b.stake) / NULLIF(COUNT(*), 0), 4)                         AS stake_per_bet,
+           ROUND(SUM(b.stake) / NULLIF(COUNT(DISTINCT b.member_id), 0), 4)      AS stake_per_member,
+           ROUND(COUNT(*) * 1.0 / NULLIF(COUNT(DISTINCT b.member_id), 0), 4)    AS bets_per_member,
+           SUM(CASE WHEN b.vbet = 0 THEN 1 ELSE 0 END)                          AS n_zero_validbet,
+           CASE WHEN COUNT(DISTINCT b.member_id) >= 2 THEN 1 ELSE 0 END         AS is_multiparty,
+           CAST(COUNT(DISTINCT b.member_id) * (COUNT(DISTINCT b.member_id) - 1) / 2 AS BIGINT)
+                                                                                AS n_member_pairs
+    FROM base b
+    GROUP BY b.round_key, b.table_id, b.shoe_key, b.round_seq
+) w
+) z
+WHERE z.audit_rn >        0 AND z.audit_rn <= 10000   -- 第 1 批
+ORDER BY z.audit_rn;
+--     ★ audit_rn 之排序键与分批作业版**逐字同一**（锁一），故两版可逐行对账。
+--     ★ n_member_pairs 系【零模型之分子基数】：全窗 Σ n_member_pairs 即同局共现之总对次，
+--       T-01 之 lift 分母应由此现算，而非以「两两皆可能同局」之均匀假设充数。
+--     ★ n_dealer_id > 1 者须查：同一局键若出现多个荷官，或系桌台字段污染，或系换班切局，
+--       与 G3 十三张桌（900~913）之疑似电子桌占位标识同属待裁项。
 

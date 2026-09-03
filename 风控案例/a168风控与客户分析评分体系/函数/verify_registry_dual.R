@@ -1,12 +1,15 @@
 # =============================================================================
 # verify_registry_dual.R  ——  registry 双档双跑校验器
-# 版本 : 1.1.0        立册 : 2026-09-02        Owner : Ryo Eng
+# 版本 : 1.2.0        立册 : 2026-09-02        Owner : Ryo Eng
+# 变更 : 1.2.0（N-3 · 2026-09-03）target 1.5.002 → 1.5.003、parent 1.5.001 → 1.5.002；新增 rule_id "R04b" 一条——
+#        父版身份自洽闸：YAML registry.parent.version 须等于 VRD$parent_version（v1.5.002 之 parent 曾指祖父 v1.5.0，
+#        R04 只检非空故未捕）。R01–R25 与 R24b 之判定逻辑与文字一字未改（只增不减）。裁定：Ryo Eng 2026-09-03。
 # 变更 : 1.1.0（N-2A · 2026-09-03）target 1.5.001 → 1.5.002、parent 1.5.0 → 1.5.001；
 #        父版路径改指 规范/ 根（前版所指 规范/_superseded/…v1.5.0 于盘上不存在，致 R04 前置对照落空）。
 #        R01–R25 与 R24b 之判定逻辑与文字一字未改。
 # 变更 : 1.0.1（N-1B）新增 .r24b_core() 与 rule_id "R24b" 一条 —— 负向保证【有效性】闸；
 #        另附 test_r24b() 三态自测 fixture。R01–R25 判定逻辑与文字一字未改（只增不减）。
-# 对象 : registry_risk_typology_v1.5.002.{yaml,csv}  （父版 v1.5.001 为对照锚）
+# 对象 : registry_risk_typology_v1.5.003.{yaml,csv}  （父版 v1.5.002 为对照锚）
 # -----------------------------------------------------------------------------
 # 【本档立意】SC-26 实证：所谓「R01–R25 校验器」从未作为可执行档存在，
 #   故上一轮「25/25 PASS」已撤销 TESTED_PASS，改判 UNKNOWN。
@@ -27,13 +30,13 @@ suppressPackageStartupMessages({
 
 # ---- 0. 参数（集中式常量，承 SC-31 之教训：禁散写路径）-----------------------
 VRD <- list(
-  version        = "1.1.0",
-  target_version = "1.5.002",
-  parent_version = "1.5.001",
-  yaml_path      = "规范/registry_risk_typology_v1.5.002.yaml",
-  csv_path       = "规范/registry_risk_typology_v1.5.002.csv",
-  parent_yaml    = "规范/registry_risk_typology_v1.5.001.yaml",
-  parent_csv     = "规范/registry_risk_typology_v1.5.001.csv",
+  version        = "1.2.0",
+  target_version = "1.5.003",
+  parent_version = "1.5.002",
+  yaml_path      = "规范/registry_risk_typology_v1.5.003.yaml",
+  csv_path       = "规范/registry_risk_typology_v1.5.003.csv",
+  parent_yaml    = "规范/registry_risk_typology_v1.5.002.yaml",
+  parent_csv     = "规范/registry_risk_typology_v1.5.002.csv",
   csv_encoding   = "UTF-8-BOM",   # 承 SC-25 役所定形制
   csv_eol        = "LF"
 )
@@ -77,6 +80,12 @@ verify_lineage <- function(Y, ft_y, ft_c) {
   chk("R04", "父版锚齐备（version + yaml_md5 + csv_md5）",
       if (!is.null(Y$registry$parent$yaml_md5) && !is.null(Y$registry$parent$csv_md5)) "PASS" else "FAIL",
       paste(Y$registry$parent$version, Y$registry$parent$yaml_md5), "非空", "1 档")
+  ## R04b（1.2.0 新增 · Ryo Eng 2026-09-03 裁定）：父版身份自洽——R04 只检 md5 非空，v1.5.002 之 parent 指祖父 v1.5.0 而未捕
+  .pv <- if (is.null(Y$registry$parent$version)) "(缺)" else as.character(Y$registry$parent$version)
+  chk("R04b", "父版身份自洽：YAML registry.parent.version 须等于校验器 VRD$parent_version",
+      if (identical(.pv, VRD$parent_version)) "PASS" else "FAIL",
+      .pv, VRD$parent_version, "1 档",
+      "祖父锚冒充父锚即血统断裂：md5 非空 ≠ 指向正确；本闸与 R03（自身版本）成对，父子两端皆须对上校验器常量")
   chk("R05", "Git 锚已登记",
       if (!is.null(Y$registry$git_anchor)) "PASS" else "FAIL",
       if (is.null(Y$registry$git_anchor)) "(缺)" else Y$registry$git_anchor,

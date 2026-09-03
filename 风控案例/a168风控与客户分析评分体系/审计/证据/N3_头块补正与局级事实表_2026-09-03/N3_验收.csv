@@ -1,0 +1,11 @@
+﻿step,status,gate_second_stage
+source registry_loader.R (1.5.003),PASS,NOT_PASS
+registry_load() → v1.5.003,PASS,NOT_PASS
+registry_counts(REG),PASS,NOT_PASS
+source rule_registry_loader.R (0.1.3),PASS,NOT_PASS
+rules_load(REG) → rule_registry_v0.1.2,PASS,NOT_PASS
+source verify_registry_dual.R (1.2.0),PASS,NOT_PASS
+verify_registry_dual() 双跑 → v1.5.003,PASS,NOT_PASS
+test_r24b() 三态自测,PASS,NOT_PASS
+负向证明：R04b 对 v1.5.002 判 FAIL,PASS,NOT_PASS
+source typology_report_engine.R + ext,PASS,NOT_PASS

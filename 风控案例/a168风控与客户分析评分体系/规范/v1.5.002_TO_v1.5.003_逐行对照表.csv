@@ -1,0 +1,17 @@
+﻿scope,row_key,field,v1.5.002,v1.5.003,verdict,judgement
+YAML_LINE,3,registry.version,version: 1.5.002,version: 1.5.003,MODIFIED,身份递增
+YAML_LINE,4,registry.git_anchor,git_anchor: 7f713dc,git_anchor: 24b8d8d,MODIFIED,锚改指提升 v1.5.002 之提交（R05）
+YAML_LINE,5,registry.issued,issued: '2026-09-02',issued: '2026-09-03',MODIFIED,签发日
+YAML_LINE,18,registry.version_semver,version_semver: 1.5.2,version_semver: 1.5.3,MODIFIED,随身份递增
+YAML_LINE,6,registry.revision_note,"revision_note: ""v1.1.0：原 candidates 五项（多账户共享设备／机器人脚本／夜间异常／限红试探／静默复活） 全部提升为正…","revision_note: ""v1.1.0：原 candidates 五项（多账户共享设备／机器人脚本／夜间异常／限红试探／静默复活） 全部提升为正…",APPENDED,补 v1.5.002 条目 ＋ v1.5.003 条目（原文一字未删）
+YAML_LINE,19,registry.version_note,version_note: 身份名 1.5.001 为唯一权威；version_semver 仅供 git tag / renv 等须 SemVer …,version_note: 身份名 1.5.003 为唯一权威；version_semver 仅供 git tag / renv 等须 SemVer …,MODIFIED,身份名由 1.5.001（陈旧）改 1.5.003
+YAML_LINE,21,registry.parent.version,version: 1.5.0,version: 1.5.002,MODIFIED,父版由祖父 v1.5.0 改指真正父版 v1.5.002
+YAML_LINE,22,registry.parent.yaml_md5,yaml_md5: f9eb7af3771cf5684dd9da8c01fe7e4a,yaml_md5: b396a762a2d1079f7bfbfdf6f5176f4f,MODIFIED,自盘上实读
+YAML_LINE,23,registry.parent.csv_md5,csv_md5: d2b7904569475625e7968bc921674bea,csv_md5: deedd98255bd7a70fe9b25375ae07ddd,MODIFIED,自盘上实读
+YAML_LINE,24,registry.parent.yaml_bytes,yaml_bytes: 57938,yaml_bytes: 365791,MODIFIED,自盘上实读
+YAML_LINE,25,registry.parent.csv_bytes,csv_bytes: 50110,csv_bytes: 57961,MODIFIED,自盘上实读
+YAML_LINE,26,registry.parent.derivation,derivation: 加法升级 · 机器派生 · 只增不减,derivation: 头块补正 · 机器派生（gen_registry_v1_5_003.py）· 只增不减 · 判据层与已追加十节一字未改,MODIFIED,派生方式
+YAML_SECTION,tail,v1_5_003_upgrade,(不存在),+34 行,ADDED,✓ 只增（头块补正登记）
+YAML_TYPOLOGY_BLOCKS,T-01..T-15,*,逐字节保留,逐字节保留,UNCHANGED,✓
+YAML_SECTIONS,v1_5_002_upgrade..economic_gap_register,*,逐字节保留,逐字节保留,UNCHANGED,✓
+CSV,*,*,deedd98255bd7a70fe9b25375ae07ddd,deedd98255bd7a70fe9b25375ae07ddd,IDENTICAL,✓ 与父版逐字节相同

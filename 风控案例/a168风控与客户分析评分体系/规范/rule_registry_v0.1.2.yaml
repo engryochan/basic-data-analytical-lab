@@ -1,0 +1,452 @@
+registry:
+  name: rule_registry
+  version: 0.1.2
+  issued: '2026-09-03'
+  parent: registry_risk_typology_v1.5.003
+  parent_previous: registry_risk_typology_v1.5.002
+  changelog_0_1_2: N-3（2026-09-03）——仅 registry 头块递增：parent v1.5.002 → v1.5.003（头块补正版，判据层逐位未改）；
+    rules 本体一字未改。前版 rule_registry_v0.1.1.yaml 原地保留。
+  changelog_0_1_1: N-2A（2026-09-03）——仅 registry 头块递增：parent v1.5.0 → v1.5.002（v1.5.001/v1.5.002 皆为加法升级，
+    15 类型、判据列集合与 threshold_status 逐位未改）；rules 本体一字未改。前版 rule_registry_v0.1.0.yaml 原地保留。
+  parent_rule: 本册只消费 v1.5.003；不得自创类型、不得改写 v1.5.003 之 threshold_status。
+  scope: 把业务方截图（预警提示／达到条件即风控／通知代理自行处置／风险评定内容）与后台需求文本
+    （风险告警→报告→评级→人审）逐项映射为 Rule-ID，补齐 numerator/denominator/sample_gate/
+    observation_window/threshold/evidence_level/trigger_source，并标明与 v1.5.0 之冲突。
+  sources:
+    - image_2026-08-22_15-25-39.png（业务方四列表）
+    - 新建文本文档 (2).txt（风险之眼需求）
+    - 参考文献/玩家风险等级判定设计.md（PLAYER_RISK_V1）
+    - 参考文献/百家乐同桌对打风控分析报告.md
+    - 参考文献/风控平台第一版权限设计.md
+
+enums:
+  layer: [SIGNAL, RULE, EVIDENCE, ACTION]
+  trigger_source: [RULE, SEARCH, WATCHLIST]
+  threshold_status:
+    PROPOSED_BUSINESS: 业务方给出之数字，未经反解与回测；只可作 SIGNAL，不可作 LEVEL
+    PENDING_INVERSE: 继承 v1.5.0；待逐指标反解（含 n_eff）
+    REJECTED_BY_REGISTRY: v1.5.0 明令禁设阈值（T-03 四禁令）或 BLOCKED；本册不得启用
+    REFERENCE_DOC: 取自参考文献之分位阈值（P90/P95/P99），可作观察层，仍须本库复算
+    NOT_DEFINED: 指标本身尚无操作化定义（EV／好路／开牌）
+  evidence_level:
+    E0: 无样本或样本不足 → UNKNOWN/REVIEW
+    E1: 单信号命中（绝对值或单比例）
+    E2: 同类多判据互证 或 单判据跨窗口持续
+    E3: 跨类多信号组合（≥3 类）
+    E4: 跨类组合 + 关系证据（同IP/同桌/同荷官）+ 持续
+  risk_level: [UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL]
+  action_tier:
+    LOW: 通知/观察
+    MEDIUM: 通知代理 + 持续监控
+    HIGH: 人工审核
+    CRITICAL: 高优先级人工审核 + 是否执行限制
+
+sample_gate_policy:
+  rule: 比例型指标之最低样本量以 Wilson 95% CI 宽度 ≤ 0.15 反解，禁手写「一律 5 局」（P-06）。
+  fallback_until_inverse: 沿用 PLAYER_RISK_V1 之 sample_round_count_30d >= 5 或 (bet_count_30d >= 20 AND valid_bet_30d >= 1000) 仅作过渡门，并标 INTERIM。
+  insufficient: {risk_score: 0, risk_level: UNKNOWN, action: REVIEW, data_status: INSUFFICIENT_SAMPLE}
+
+rules:
+# ───────── 第一层 SIGNAL：预警提示（截图左栏 + 文本「風控告警項目」） ─────────
+- rule_id: S-01
+  layer: SIGNAL
+  label_zh: 会员单笔投注量过高
+  source_item: 预警提示·會員單筆投注量過高 15,000 ／ 文本·單筆注單額警告
+  type_id: T-07
+  criterion_column: stake_p90_p50
+  mapping_note: v1.5.0 以 P90/P50 比衡量注额结构；单笔绝对额为 NEW_CANDIDATE（stake_max_single），v1.6.0 候选
+  numerator: max(stake) per member
+  denominator: null（绝对额）
+  observation_window: 24h
+  sample_gate: n_orders >= 1（绝对触发，不设比例门）
+  threshold: 15000
+  threshold_status: PROPOSED_BUSINESS
+  evidence_level: E1
+  trigger_source: [RULE, SEARCH]
+- rule_id: S-02
+  layer: SIGNAL
+  label_zh: EV 值匹配告警
+  source_item: 预警提示·EV值匹配告警 连续匹配笔数 5 ／ 文本·EV值匹配告警
+  type_id: T-07
+  criterion_column: null
+  mapping_note: 「EV 匹配」在本库无操作化定义（何谓匹配？匹配谁的 EV？）；NEW_CANDIDATE ev_match_streak，定义未立前不得启用
+  numerator: 连续匹配笔数
+  denominator: null
+  observation_window: 会话/24h（待定）
+  sample_gate: 待定义后以 Wilson 反解
+  threshold: 5
+  threshold_status: NOT_DEFINED
+  evidence_level: E0
+  trigger_source: [SEARCH]
+- rule_id: S-03
+  layer: SIGNAL
+  label_zh: 达到连赢
+  source_item: 预警提示·達到連贏 连赢 5 次 平均投注 5000 ／ 文本·達到連贏
+  type_id: T-07
+  criterion_column: win_rate_all
+  mapping_note: v1.5.0 以胜率衡量；连赢次数为序列统计，NEW_CANDIDATE win_streak_max；平均注额 5000 为第二门
+  numerator: 最长连赢段长度；该段平均注额
+  denominator: null
+  observation_window: 24h / 7d
+  sample_gate: 连赢段内注数 >= 5 且 7d 注数 >= 20（INTERIM）
+  threshold: {streak: 5, avg_stake: 5000}
+  threshold_status: PROPOSED_BUSINESS
+  evidence_level: E1
+  trigger_source: [RULE, SEARCH]
+- rule_id: S-04
+  layer: SIGNAL
+  label_zh: 关注 IP 上线提示
+  source_item: 预警提示·關注 IP 上線提示
+  type_id: T-06
+  criterion_column: null
+  mapping_note: 名单型触发（WATCHLIST），非度量；IP 键在 v1.5.0 归 T-04/T-11 之 bet_ip（JOIN_KEY），T-06 以 I_ip_agg 聚合计；须记 watchlist_id 与加入理由
+  numerator: 名单 IP 出现
+  denominator: null
+  observation_window: 实时
+  sample_gate: 不适用（名单）
+  threshold: null
+  threshold_status: NOT_DEFINED
+  evidence_level: E1
+  trigger_source: [WATCHLIST]
+- rule_id: S-05
+  layer: SIGNAL
+  label_zh: 关注会员上线提示
+  source_item: 预警提示·關注會員上線提示
+  type_id: T-15
+  criterion_column: 生命周期阶段
+  mapping_note: 名单型触发；若名单会员为「静默后复活」则与 T-15 silent_days 联动
+  numerator: 名单会员登录/下注
+  denominator: null
+  observation_window: 实时
+  sample_gate: 不适用（名单）
+  threshold: null
+  threshold_status: NOT_DEFINED
+  evidence_level: E1
+  trigger_source: [WATCHLIST]
+- rule_id: S-06
+  layer: SIGNAL
+  label_zh: 同桌同 IP 投注
+  source_item: 预警提示·同桌同 IP 投注 ／ 文本·同桌同IP
+  type_id: T-11
+  criterion_column: jaccard
+  mapping_note: 同桌（T-01/T-11 jaccard，R02）× 同 IP（T-11 bet_ip，I_ip_player）之交；两判据皆 PENDING_INVERSE
+  numerator: 同桌且同 IP 之局数
+  denominator: 会员总局数
+  observation_window: 7d
+  sample_gate: 共同同桌局 >= 100（REFERENCE_DOC）
+  threshold: null
+  threshold_status: PENDING_INVERSE
+  evidence_level: E2
+  trigger_source: [RULE, SEARCH]
+- rule_id: S-07
+  layer: SIGNAL
+  label_zh: 单桌投注量过高
+  source_item: 预警提示·單桌投注量過高（附桌号／笔数／投注金额表）
+  type_id: T-01
+  criterion_column: n_tables
+  mapping_note: 截图给出逐桌笔数与金额，为桌台级监控，非会员级；NEW_CANDIDATE table_stake_share（会员在单桌注额占比）
+  numerator: 会员在单桌注额
+  denominator: 会员总注额
+  observation_window: 24h
+  sample_gate: n_orders >= 20（INTERIM）
+  threshold: null
+  threshold_status: NOT_DEFINED
+  evidence_level: E1
+  trigger_source: [RULE, SEARCH]
+- rule_id: S-08
+  layer: SIGNAL
+  label_zh: 达到盈利金额
+  source_item: 文本·達到盈利金額 ／ PLAYER_RISK_V1·PROFIT_SURGE_24H
+  type_id: T-07
+  criterion_column: 索提诺稳定性
+  mapping_note: PLAYER_RISK_V1 已定 profit_24h >= 5000 或 (bet_count>=20 AND valid_bet>=1000 AND roi>=0.3)，分值 10
+  numerator: profit_24h
+  denominator: valid_bet_24h（roi 分支）
+  observation_window: 24h
+  sample_gate: bet_count_24h >= 20 AND valid_bet_24h >= 1000（roi 分支）
+  threshold: {profit: 5000, roi: 0.3}
+  threshold_status: REFERENCE_DOC
+  evidence_level: E1
+  trigger_source: [RULE, SEARCH]
+
+# ───────── 第二层 RULE：达到条件即风控（截图中栏） ─────────
+- rule_id: R-01
+  layer: RULE
+  label_zh: 百家对押
+  source_item: 達到條件即風控·對押占比 20% 以及 對押金額 ±5%（A 下庄100笔 / B 下闲100笔 平均金额 105/100 ±5%）
+  type_id: T-04
+  criterion_column: opposite_rate
+  mapping_note: v1.5.0 T-04 opposite_rate/n_opposite_round/hedge_coverage 皆 PENDING_INVERSE；业务 20% 可作 SIGNAL 门，不可作 LEVEL；注额 ±5% 对应 dir_stake（REFERENCE）
+  numerator: 对押局数；对押注额
+  denominator: 会员总局数；会员总注额
+  observation_window: 7d
+  sample_gate: 共同同桌局 >= 100（参考文献：两名玩家总局数 ≥100 且共同同桌 ≥100）
+  threshold: {opposite_share: 0.20, stake_tolerance: 0.05, min_orders_each: 100}
+  threshold_status: PROPOSED_BUSINESS
+  evidence_level: E2
+  trigger_source: [RULE, SEARCH]
+  reference_tiers:
+    观察: {same_rate: 0.20, opposite_rate: 0.62, common_rounds: 100}
+    重点审核: {same_rate: 0.30, opposite_rate: 0.75, common_rounds: 100}
+    极高异常: {same_rate: 0.50, opposite_rate: 0.90, common_rounds: 300}
+  reference_conflict: 参考文献摘要写对打率 ≥60% 为重点审核，正文表写 ≥75%；以正文表为准并登记矛盾
+- rule_id: R-02
+  layer: RULE
+  label_zh: 25 局后投注占比 70% 以上（拟调 30 局后）
+  source_item: 達到條件即風控·25局後投注占比70%以上 對外不公開 調整為30局後
+  type_id: T-03
+  criterion_column: late_share
+  mapping_note: v1.5.0 T-03 门禁 FATAL、四禁令 ranking/scoring/trigger/enforcement 全 FALSE、threshold_status 禁设阈值；信息优势假说已四重证伪（F-A..F-D，late_share AUC 0.3828 方向反转）；「round_no>=40/50 视为最后一手」亦在 rejected_variants。本规则不得启用，只可作画像字段展示。
+  numerator: 第 N 局后注数
+  denominator: 总注数
+  observation_window: 靴/会话
+  sample_gate: 不适用（禁用）
+  threshold: {after_round: 25→30, share: 0.70}
+  threshold_status: REJECTED_BY_REGISTRY
+  evidence_level: E0
+  trigger_source: [SEARCH]
+- rule_id: R-03
+  layer: RULE
+  label_zh: 70% 以上内容为庄或闲（拟调 80%）
+  source_item: 達到條件即風控·70%以上內容 莊或閒 對外不公開 調整為80%以上
+  type_id: T-12
+  criterion_column: side_entropy
+  mapping_note: v1.5.0 以 side_entropy（low 方向）衡量单边集中；T-05 亦用同列；单边占比 = 1 − 熵之单调变换，须统一口径
+  numerator: 庄（或闲）注数
+  denominator: 庄+闲 注数（须剔和局，见 v1.5.0 阈值注）
+  observation_window: 7d
+  sample_gate: 注数 >= Wilson 反解（p≈0.7–0.8 时约 ≥ 40）
+  threshold: {side_share: 0.70→0.80}
+  threshold_status: PROPOSED_BUSINESS
+  evidence_level: E1
+  trigger_source: [RULE, SEARCH]
+- rule_id: R-04
+  layer: RULE
+  label_zh: 同 IP 同桌下注内容相同
+  source_item: 達到條件即風控·同IP同桌下注內容相同 對外不公開 目前暫時不風控
+  type_id: T-11
+  criterion_column: bet_ip
+  mapping_note: 同 IP（T-11）× 同桌（T-01 jaccard）× 同向（T-04 dir_stake 反向为对押，同向为跟注）；业务方现不风控，登记为 SEARCH-only
+  numerator: 同 IP 同桌同向局数
+  denominator: 同 IP 同桌局数
+  observation_window: 7d
+  sample_gate: 共同同桌局 >= 100
+  threshold: null
+  threshold_status: PENDING_INVERSE
+  evidence_level: E2
+  trigger_source: [SEARCH]
+- rule_id: R-05
+  layer: RULE
+  label_zh: 会员自己对押
+  source_item: 達到條件即風控·會員自己對押 對外不公開 目前暫時不風控
+  type_id: T-05
+  criterion_column: is_self_hedge
+  mapping_note: v1.5.0 T-05 is_self_hedge 为 FLAG（布尔，NO_THRESHOLD_BY_DESIGN）；hedge_rate 为 PENDING_INVERSE；T-05 门禁 ADVISORY、SHADOW_MODEL；367 行标注正例在册
+  numerator: 等额对押局数
+  denominator: 总局数
+  observation_window: 月
+  sample_gate: n_orders >= 5 且 n_hedge_eq > 0（§Z-14 口径）
+  threshold: null
+  threshold_status: PENDING_INVERSE
+  evidence_level: E2
+  trigger_source: [RULE, SEARCH]
+
+# ───────── 第三层 EVIDENCE：风险评定内容（截图右栏 + 文本搜索条件） ─────────
+- rule_id: E-01
+  layer: EVIDENCE
+  label_zh: 回报率 RTP 大于 20%
+  source_item: 風險評定內容·回報率RTP大於 20%
+  type_id: T-07
+  criterion_column: 索提诺稳定性
+  mapping_note: 「RTP > 20%」语义存疑——RTP 通常指返还率（≈97%），此处应为 ROI > 20%；登记为 roi 并注明术语须校正
+  numerator: game_pnl
+  denominator: valid_bet
+  observation_window: 7d / 30d
+  sample_gate: valid_bet_30d >= 1000 AND bet_count_30d >= 20
+  threshold: 0.20
+  threshold_status: PROPOSED_BUSINESS
+  evidence_level: E1
+  trigger_source: [SEARCH]
+- rule_id: E-02
+  layer: EVIDENCE
+  label_zh: 胜率大于 65%
+  source_item: 風險評定內容·勝率大於 65%
+  type_id: T-07
+  criterion_column: win_rate_all
+  mapping_note: 百家乐须剔和局后计胜率（v1.5.0 阈值注）；65% 于 n<40 时 Wilson 下界可低至 0.5
+  numerator: 赢局数
+  denominator: 非和局数
+  observation_window: 7d / 30d
+  sample_gate: 非和局数 >= Wilson 反解（p=0.65, 宽≤0.15 → 约 ≥ 39）
+  threshold: 0.65
+  threshold_status: PROPOSED_BUSINESS
+  evidence_level: E1
+  trigger_source: [SEARCH]
+- rule_id: E-03
+  layer: EVIDENCE
+  label_zh: 投注金额模式（等比、等倍）
+  source_item: 風險評定內容·投注金額模式 (等比、等倍) ／ 通知代理·加碼倍投
+  type_id: T-12
+  criterion_column: stake_cv
+  mapping_note: 等额 → stake_cv low；等比/倍投 → 相邻注额比之方差 low（NEW_CANDIDATE stake_ratio_cv）
+  numerator: 相邻注额比之变异系数
+  denominator: null
+  observation_window: 会话 / 7d
+  sample_gate: n_orders >= 20
+  threshold: null
+  threshold_status: PENDING_INVERSE
+  evidence_level: E1
+  trigger_source: [SEARCH]
+- rule_id: E-04
+  layer: EVIDENCE
+  label_zh: 只投注好路
+  source_item: 風險評定內容·只投注好路 ／ 文本·好路投注/占比
+  type_id: T-07
+  criterion_column: null
+  mapping_note: 「好路」无操作化定义（长龙？单跳？需路单状态机）；NEW_CANDIDATE good_road_share；定义未立前不得启用
+  numerator: 好路局下注数
+  denominator: 总下注数
+  observation_window: 7d
+  sample_gate: 待定义
+  threshold: null
+  threshold_status: NOT_DEFINED
+  evidence_level: E0
+  trigger_source: [SEARCH]
+- rule_id: E-05
+  layer: EVIDENCE
+  label_zh: 软件投注
+  source_item: 風險評定內容·軟體投注 ／ 通知代理·軟體投注 大量下注
+  type_id: T-12
+  criterion_column: 下注时点延迟方差
+  mapping_note: v1.5.0 T-12 该列 BLOCKED（待建 bet08 − gi004 之会员内方差）；stake_cv/side_entropy 可作弱证据
+  numerator: 下注时点延迟之方差
+  denominator: null
+  observation_window: 会话
+  sample_gate: n_orders >= 50
+  threshold: null
+  threshold_status: REJECTED_BY_REGISTRY
+  evidence_level: E0
+  trigger_source: [SEARCH]
+- rule_id: E-06
+  layer: EVIDENCE
+  label_zh: All-in 胜率／次数
+  source_item: 風險評定內容·All in 勝率/次數
+  type_id: T-14
+  criterion_column: 注额贴顶率
+  mapping_note: v1.5.0 T-14 注额贴顶率 BLOCKED（待建 bet13/限红上限）；All-in 需余额口径，亦待建
+  numerator: 贴顶注数
+  denominator: 总注数
+  observation_window: 7d
+  sample_gate: n_orders >= 20
+  threshold: null
+  threshold_status: REJECTED_BY_REGISTRY
+  evidence_level: E0
+  trigger_source: [SEARCH]
+- rule_id: E-07
+  layer: EVIDENCE
+  label_zh: 固定桌投注
+  source_item: 風險評定內容·固定桌投注
+  type_id: T-01
+  criterion_column: n_tables
+  mapping_note: v1.5.0 T-01 n_tables low 方向（锁桌行为）PENDING_INVERSE
+  numerator: 主桌注数
+  denominator: 总注数
+  observation_window: 7d
+  sample_gate: n_orders >= 20
+  threshold: null
+  threshold_status: PENDING_INVERSE
+  evidence_level: E1
+  trigger_source: [SEARCH]
+- rule_id: E-08
+  layer: EVIDENCE
+  label_zh: 固定荷官
+  source_item: 風險評定內容·固定荷官 ／ 文本·荷官編號/勝率
+  type_id: T-02
+  criterion_column: 特定玩家复现率
+  mapping_note: v1.5.0 T-02 门禁 BLOCK（B-02 R03b 导出截断）；荷官胜率对应 delta_z/delta_p；PLAYER_RISK_V1 SHARED_DEALER_GAME_EVIDENCE 分值 25
+  numerator: 在该荷官下注数
+  denominator: 总注数
+  observation_window: 7d
+  sample_gate: 在该荷官下注数 >= 30
+  threshold: null
+  threshold_status: PENDING_INVERSE
+  evidence_level: E2
+  trigger_source: [SEARCH]
+- rule_id: E-09
+  layer: EVIDENCE
+  label_zh: 开牌机率／占比
+  source_item: 文本·開牌機率/占比
+  type_id: null
+  criterion_column: null
+  mapping_note: 「开牌」于本库无对应字段与定义；不映射任何 T-ID；登记为待澄清
+  numerator: null
+  denominator: null
+  observation_window: null
+  sample_gate: 待定义
+  threshold: null
+  threshold_status: NOT_DEFINED
+  evidence_level: E0
+  trigger_source: [SEARCH]
+
+# ───────── 第四层 ACTION：通知代理自行处置（截图第三栏）→ 两级化 ─────────
+- rule_id: A-01
+  layer: ACTION
+  label_zh: 批量对押（会员一对多）
+  source_item: 通知代理自行處置·批量對押 會員 一對多
+  type_id: T-04
+  criterion_column: hedge_coverage
+  mapping_note: 不得 ALERT→自动处罚；按 action_tier 两级化
+  action_by_level: {LOW: 观察, MEDIUM: 通知代理+监控, HIGH: 人工审核, CRITICAL: 高优先级人审+限制评估}
+  threshold_status: PENDING_INVERSE
+  evidence_level: E2
+  trigger_source: [RULE]
+- rule_id: A-02
+  layer: ACTION
+  label_zh: 大额投注（短期获利高波动）
+  source_item: 通知代理自行處置·大額投注 短期獲利高波動
+  type_id: T-07
+  criterion_column: stake_p90_p50
+  mapping_note: 与 S-01/S-08 同源；两级化
+  action_by_level: {LOW: 观察, MEDIUM: 通知代理+监控, HIGH: 人工审核, CRITICAL: 高优先级人审+限制评估}
+  threshold_status: PROPOSED_BUSINESS
+  evidence_level: E1
+  trigger_source: [RULE]
+- rule_id: A-03
+  layer: ACTION
+  label_zh: 连赢多日（加码倍投）
+  source_item: 通知代理自行處置·連贏多日 加碼倍投
+  type_id: T-07
+  criterion_column: win_rate_all
+  mapping_note: 与 S-03/E-03 同源；「多日」对应 PERSISTENT_SIGNAL_30D signal_day_count_30d >= 3
+  action_by_level: {LOW: 观察, MEDIUM: 通知代理+监控, HIGH: 人工审核, CRITICAL: 高优先级人审+限制评估}
+  threshold_status: REFERENCE_DOC
+  evidence_level: E2
+  trigger_source: [RULE]
+- rule_id: A-04
+  layer: ACTION
+  label_zh: 软件投注（大量下注）
+  source_item: 通知代理自行處置·軟體投注 大量下注
+  type_id: T-12
+  criterion_column: 下注时点延迟方差
+  mapping_note: 与 E-05 同源；该判据 BLOCKED，ACTION 不得启用
+  action_by_level: {LOW: 观察, MEDIUM: 通知代理+监控, HIGH: 人工审核, CRITICAL: 高优先级人审+限制评估}
+  threshold_status: REJECTED_BY_REGISTRY
+  evidence_level: E0
+  trigger_source: [RULE]
+
+new_candidates_for_v1_6_0:
+  note: 以上仅为候选，须经登记册变更单入 v1.6.0 后方可被 Rule 引用；本册不得先行启用。
+  items:
+  - {column: stake_max_single, type_id: T-07, from: S-01}
+  - {column: ev_match_streak, type_id: T-07, from: S-02, blocker: EV 未定义}
+  - {column: win_streak_max, type_id: T-07, from: S-03}
+  - {column: table_stake_share, type_id: T-01, from: S-07}
+  - {column: stake_ratio_cv, type_id: T-12, from: E-03}
+  - {column: good_road_share, type_id: T-07, from: E-04, blocker: 好路未定义}
+  - {column: 开牌占比, type_id: null, from: E-09, blocker: 开牌未定义}
+
+composition_rules:
+  note: 分级由组合决定，不由单规则决定；与 PLAYER_RISK_V1 相容（LOW 0–14 / MEDIUM 15–39 / HIGH 40–69 / CRITICAL 70–100），但分值为手设、总和恰 100，第二阶段须以 P(confirmed|signal) 重估。
+  HIGH_example: [后段投注异常(仅画像), 高盈利 S-08, EV 匹配 S-02]
+  HIGH_example_note: 后段投注为 T-03 FATAL，只可作画像展示，不计入分数
+  CRITICAL_example: [同IP S-06, 同桌 E-07, 对押 R-01, 持续 PERSISTENT_SIGNAL_30D]
