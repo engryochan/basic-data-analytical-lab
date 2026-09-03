@@ -1,9 +1,24 @@
 config:
   name: typology_report_config
-  version: 1.6.0
+  version: 1.8.0
   issued: '2026-09-03'
   parent: registry_risk_typology_v1.5.004
   changelog_1_4_0: N-7（2026-09-03）——parent 改指 v1.5.004（追加 OQ-13／OQ-14 与 id_namespace_registry）。其余一字未改。
+  changelog_1_8_0: N-14b（2026-09-03 · 实测后斧正）——① 新增 prepost_member_metrics：
+    会员层差额栏之【方向】必须登记。⛔ 病根：前一版无此表，引擎默认「越大越好」，遂把
+    d_roi 中位 −0.0724（玩家 ROI 下降 ＝ 平台得利）误判为「退化」，令 PRE_POST 总闸 FAIL 反向；
+    而 d_hold_pct ＋8.29pp 与 d_roi −0.0724 本系同一事实之两面（roi ≡ −hold_rate）。
+    ② markov 增 time_candidates／value_candidates：S05 之时间轴实为 bet_date、度量实为 流水贡献，
+    英文候选全数落空致 NOT_RUN。③ monte_carlo 增 extrapolation_warn_ratio：合计增益系
+    每人效应之线性投射，投射倍数逾此即挂 ⚑，禁以外插总额充作已验证之商业收益。
+  changelog_1_7_0: N-14（2026-09-03 · 承先生「以顶级统计概念灵活搭配、择最低亏损最高回酬之组合」
+    与《参考.txt》之校对）——新增二节。① metric_canon：hold 族三口径正名，逐条附实测值与
+    2026-09-03 之验证方法；⛔《参考.txt》称「roi ＝ profit / valid_bet，故 hold ≡ roi」经 S01
+    七十二万行实测判伪——总包 roi ＝ e.net / e.stake，hold_rate ＝ −e.net / e.stake，
+    二者恒为相反数（实测 723,442 行 100.000000% 严格相等，max|roi＋hold_rate| ＝ 0）。
+    ② decision_layer：贝叶斯收缩、MLE、马尔可夫、极值 POT／GPD、蒙地卡罗、期望损失最小化
+    之一切参数与方案名册；⛔ 复核成本未登记者一律反解【盈亏平衡成本上限】，禁臆造成本。
+    ⛔ 强化学习在 S3 处置映射／S4 结果连结二闸未开前一律 BENCHED，只准模拟，禁控商业动作。
   changelog_1_6_0: N-13（2026-09-03 · 承先生问「为何十五份一律遗漏 SQL 原文与维度指标」）——
     新增 sql_pack 节：SQL 总包三版（原版审计版_OPT／分批作业版_OPT／分批作业版1万_OPT，各 133 模块）
     之档名、目录、默认溯源口径与内嵌行上限一律登记于此。病根：引擎 1.9.0 之 .tr_sql_pack_path()
@@ -51,6 +66,96 @@ sql_pack:
       档: a168_SQL总包_v12_0_0_HF9g-P5D_分批作业版1万_六层商业版_OPT.sql
       用途: 每批一万行之分批落盘；节点吃紧时用
   deliverable_credibility: 规范/deliverable_credibility_v1.0.0.csv   # 逐件可信度清单（派生自总包档头 133 行）
+
+# ── 口径正名：hold 族三量并存，分母各异，禁裸称 hold ──────────────────
+#   ⛔ 2026-09-03 全档实测（S01_player_score.csv · 723,442 会员 · 可信度 OK）：
+#     Σstake 13,436,093,473.804 ／ Σvalid_bet 12,101,545,165.175 ／ Σprofit 225,932,201.626
+metric_canon:
+  hold_family:
+    - 名: hold_rate
+      算式: profit ÷ stake
+      总包出处: 六层块 ROUND(-e.net/NULLIF(e.stake,0),8) AS hold_rate · 128 处
+      实测值: 1.681532 %
+      验证: 与 profit/stake 逐行比对 723,442 行，偏离全数落在 ROUND(·,4) 之舍入上界内，越界 0 行 ⇒ 恒等
+      注: 平台对【本金】之已实现毛利率；总包正典列
+    - 名: roi
+      算式: net ÷ stake（玩家视角，正＝玩家赚）
+      总包出处: 六层块 ROUND(e.net/NULLIF(e.stake,0),8) AS roi
+      实测值: −1.681532 %
+      验证: roi ＋ hold_rate 逐行求和，723,442 行 100.000000% 恒为 0，max|·| ＝ 0 ⇒ roi ≡ −hold_rate
+      注: ⛔ roi 之分母是 stake 而非 valid_bet；《参考.txt》称 hold ≡ roi 者，其 roi 定义有误
+    - 名: hold_vs_valid_bet
+      算式: profit ÷ valid_bet
+      总包出处: ⛔ 总包无此列 —— 本引擎派生
+      实测值: 1.866970 %
+      验证: 1.681532% ÷ (valid_bet/stake ＝ 90.067438%) ＝ 1.866970%，与逐面加权实测同值
+      注: 引用时必带分母；与上二者分母不同，禁互换、禁直接比较
+    - 名: house_hold_pct
+      算式: −player_pnl ÷ stake_total
+      总包出处: DX04_bet09_profile 自有栏 · 逐投注面
+      实测值: 逐面各异（Banker 1.238% … Super6 20.656%）
+      验证: 与 审计/实测庄家优势_逐投注面 之 edge_vs_stake 同源互证
+      注: 逐投注面口径，非会员级；不得与会员级 hold_rate 混算
+  house_edge:
+    口径: realized（已实现，含运气）· ⛔ 非理论 edge
+    权限: SELECT-only 即可现算 —— 无须 CREATE／APPEND／DELETE
+    探针: 函数/HE_house_edge_SELECT_only_探针_v1.0.0.sql
+    落盘: 审计/实测庄家优势_逐投注面_v1.0.0_20260903.csv
+    加权实测: {对洗码: 1.866970 %, 对本金: 1.681532 %}
+    阻断: 总包所阻断者系【理论】edge 之授权与 bet09 级 valid_bet 分解；realized edge 不在阻断之列
+    禁令: 未知产品码 → theo NULL，⛔ 禁 fallback = 1（NULL ≠ 0）；免佣与一般桌禁共用同一静态 edge
+
+# ── 决策统计层：以期望损失最小、风险调整回酬最大择方案 ──────────────
+decision_layer:
+  seed: 20260903                 # 一切随机过程之种子；改此即改全部模拟结果，故登记在册
+  monte_carlo_draws: 10000       # 蒙地卡罗前瞻抽样次数
+  bootstrap_draws: 2000          # 自助法重抽次数（处理前后差之置信区间）
+  min_paired_n: 20               # 处理前后配对之最低样本；不足即 NOT_RUN，⛔ 不降为 PASS
+  bayes:
+    method: empirical_bayes_normal      # 经验贝叶斯正态收缩；τ² 与 s² 由矩法自数据反解，不外生给定
+    shrink_min_members: 200             # 反解 τ²／s² 之最低会员数
+    posterior_prob_question: P(会员真实 hold < 0 | 观测)  # 即「长期占优」之后验概率
+  mle:
+    dist: [normal, exponential]  # 现阶段只认二族；他族须先登记再实作
+    ci_level: 0.95
+  markov:
+    time_candidates: [bet_date, ym, month, bet_month, dt, date, day, 月份, 营业日]
+    value_candidates: [stake, valid_bet, profit, n_bets, 流水贡献, 游戏输赢贡献, 洗码贡献]
+    state_cuts: [0.25, 0.50, 0.75, 0.90]   # 以分位切状态：低／中低／中高／高／极高 五态
+    min_transitions: 100                   # 转移样本不足即 NOT_RUN
+  evt:
+    threshold_quantile: 0.95     # POT 门限分位
+    min_exceed: 50               # 超越样本不足即 NOT_RUN
+    tail_var_levels: [0.99, 0.995]
+    estimator: [pwm, mle]        # 概率加权矩 ＋ 极大似然，二法并报；不一致即标 ⚑
+  actions:                       # 处置方案名册：一律取自实测台账之动作宇宙，禁凭空拟方案
+    - {方案: A_不干预, 来源: 对照组（UNTREATED）, 台账映射: —, 服务成本: NOT_REGISTERED}
+    - {方案: B_限额调整, 来源: TL10 action_class=edit, 台账映射: mem015 族, 服务成本: NOT_REGISTERED}
+    - {方案: C_下注权限, 来源: TL11 enforcement_type=CANBET_下注权限, 台账映射: mem016, 服务成本: NOT_REGISTERED}
+    - {方案: D_账户启停, 来源: TL11 enforcement_type=ENABLE_账户启停, 台账映射: mem017, 服务成本: NOT_REGISTERED}
+  service_cost_status: NOT_REGISTERED   # ⛔ 复核／处置之单位成本未登记
+  service_cost_policy: 未登记者一律反解【盈亏平衡成本上限】并标 NOT_REGISTERED，⛔ 禁臆造成本充数
+  prepost_member_metrics:        # 会员层差额栏之方向；⛔ 未登记者不入退化裁定，只作描述
+    - {差额栏: d_stake, 方向: up, 释义: 处置后本金规模}
+    - {差额栏: d_validbet, 方向: up, 释义: 处置后洗码规模}
+    - {差额栏: d_revenue, 方向: up, 释义: 处置后平台毛赢}
+    - {差额栏: d_hold_pct, 方向: up, 释义: 处置后实收率（平台视角）}
+    - {差额栏: d_roi, 方向: down, 释义: 处置后玩家回报率 —— ⛔ roi ≡ −hold_rate，下降即平台得利，
+        与 d_hold_pct 上升系同一事实之两面，不得重复计入}
+    - {差额栏: d_bets_per_day, 方向: neutral, 释义: 日均注单 —— 行为量，非经济指标，不入退化裁定}
+  monte_carlo:
+    extrapolation_warn_ratio: 10   # 投射倍数 ＝ 候选人数 ÷ 实测处置样本；逾此即挂 ⚑ 外插过度
+  prepost_metrics:               # 处理前后回归闸之必比指标（方向：up＝越大越好，down＝越小越好）
+    - {指标: sum_revenue 平台毛赢, 方向: up}
+    - {指标: hold_pct 实收率, 方向: up}
+    - {指标: sum_stake 本金规模, 方向: up}
+    - {指标: sum_validbet 洗码规模, 方向: up}
+    - {指标: revenue_per_member 人均毛赢, 方向: up}
+    - {指标: 留存率（处置后仍投注）, 方向: up}
+  degradation_rule: 任一【经济】指标处理后劣于处理前且差异过检定者，本闸判 FAIL —— 只增不减，严禁退化
+  rl_status: BENCHED
+  rl_reason: S3 处置映射与 S4 结果连结二闸未开（登记册 open_questions）；RL 只准 simulation／policy research，
+    ⛔ 禁直接驱动商业动作。解锁条件：二闸转 CLOSED 且处置—结果连结经样本外验证。
 
 # ── 字段软定义：会员键别名、时间轴候选、ODS 字典表 ──────────────────────
 fields:

@@ -1,7 +1,27 @@
 # =====================================================================
 # typology_report_engine.R · 十五类风险会员商业方案 · 共用分析引擎（含范本体例）
 # ---------------------------------------------------------------------
-# 版本 : 1.10.0
+# 版本 : 1.11.0
+# 变更 : 1.11.0（N-14 · 承先生「以顶级统计概念灵活搭配，择最低亏损最高回酬之组合」
+#        与《参考.txt》之校对）——
+#        ⛔ 病根自陈：1.10.0 及以前，可执行码中 bayes／posterior／likelihood／markov／
+#          transition／monte／simulat／GPD／expected_loss 命中**皆为 0**。报表只描述【现状】，
+#          从不预测「若如此处置将如何」，更无处理前后之经济回归闸——故「实测并证实处理前后
+#          之风险」一令，历十五份从未落地。
+#        ① §15 决策统计层：tr_type_members()（本类候选人群）／tr_bayes_edge()＋tr_bayes_panel()
+#           （经验贝叶斯收缩，τ² 与 s² 以矩法自数据反解，答「真实 hold < 0 之后验概率」而非
+#           已实现输赢）／tr_mle_fit()／tr_markov_states()＋tr_markov_panel()（状态自持与稳态，
+#           答「异常是否持续」）／tr_evt_pot()（POT／GPD 尾指数、VaR、ES，矩法与 MLE 并报）／
+#           tr_monte_carlo_actions()（效应分布一律自 PI01 实测 d_revenue 自助重抽，禁臆造）／
+#           tr_expected_loss()（成本未登记则**反解盈亏平衡成本上限**，禁臆造成本）／
+#           tr_rl_bench()（RL 明令 BENCHED，就地出示禁赛理由与解锁条件）。
+#           ⛔ 各器各答各问，**禁揉成单一风险总分**——「一个数字 ＝ 风险」系本项目已否决之谬。
+#        ② §16 PRE_POST_RISK_ECONOMIC_GATE：tr_prepost_platform()／tr_prepost_member()
+#           （配对之符号检验＋Wilcoxon＋自助 CI）／tr_prepost_retention()（留存流失与删失，
+#           不揭此层者一切「有效」皆幸存者偏差）／tr_prepost_verdict()（任一经济指标退化即 FAIL）。
+#        ③ §13.2 .TR_HOLD_DEF 依 2026-09-03 全量实测更正并加列「验证」栏：hold_rate ≡ profit/stake
+#           越界 0 行；roi ≡ −hold_rate 恒等 723,442 行 100.000000%。
+#        §1~§14 之算法一字未改。
 # 变更 : 1.10.0（N-13 · 承先生问「为何十五份一律遗漏 SQL 原文与维度指标」）——
 #        ⛔ 病根自陈：1.9.0 虽立 tr_sql_of()／tr_dimensions()，然**模板从未接线**
 #          （实测模板 v1.7.0 全档内 tr_sql_of／tr_dimensions／tr_delivery_gate 命中皆为 0）。
@@ -1781,11 +1801,26 @@ tr_delivery_gate <- function(db = TR_DB) {
 ##     house_hold_pct = −player_pnl / stake_total  #017 DX04 自有栏，逐投注面
 ##     （我方 R 侧曾用 profit / valid_bet 而亦称 hold —— **总包无此列，系自造**）
 ##   ⛔ 三者分母各异，同名必致误读。自此一律带分母出名，禁裸称 hold。
+## ⛔ N-14（2026-09-03）实测更正 —— 承先生令「务必实测后更正注释」：
+##   本表四行皆经 S01_player_score.csv（723,442 会员 · 可信度 OK）全量实测：
+##     Σstake 13,436,093,473.804 ／ Σvalid_bet 12,101,545,165.175 ／ Σprofit 225,932,201.626
+##     valid_bet ÷ stake ＝ 90.067438%
+##   ① hold_rate ≡ profit ÷ stake ：逐行比对 723,442 行，偏离**全数**落在 ROUND(·,4) 之
+##      舍入上界 5e-5/stake ＋ 5e-5·|profit|/stake² 内，越界 0 行 ⇒ 恒等成立。
+##   ② roi ≡ −hold_rate ：逐行 roi ＋ hold_rate 求和，723,442 行 100.000000% 恒为 0，max|·| ＝ 0。
+##      ⛔ 故《参考.txt》「roi ＝ profit / valid_bet，因而 hold ≡ roi」一节判**伪**：
+##         总包 roi ＝ e.net / e.stake，分母是 stake 而非 valid_bet。
+##   ③ hold_vs_valid_bet ＝ 1.681532% ÷ 90.067438% ＝ 1.866970%，与逐投注面加权实测同值（两路互证）。
 .TR_HOLD_DEF <- data.table(
-  名 = c("hold_rate（总包正典）", "hold_vs_valid_bet（我方派生）", "house_hold_pct（#017 自有）"),
-  算式 = c("profit ÷ stake", "profit ÷ valid_bet", "−player_pnl ÷ stake_total"),
-  出处 = c("六层块 · 128 处 · 会员级", "总包无此列 · 本引擎派生", "DX04_bet09_profile · 逐投注面"),
-  全平台实测 = c("1.681532 %", "1.866970 %", "逐投注面各异（见 §13.3）"))
+  名 = c("hold_rate（总包正典）", "roi（总包正典 · 玩家视角）",
+         "hold_vs_valid_bet（我方派生）", "house_hold_pct（#017 自有）"),
+  算式 = c("profit ÷ stake（＝ −e.net/e.stake）", "e.net ÷ e.stake（＝ −hold_rate）",
+           "profit ÷ valid_bet", "−player_pnl ÷ stake_total"),
+  出处 = c("六层块 · 128 处 · 会员级", "六层块 · 会员级",
+           "⛔ 总包无此列 · 本引擎派生", "DX04_bet09_profile · 逐投注面"),
+  全平台实测 = c("1.681532 %", "−1.681532 %", "1.866970 %", "逐面各异（见 §13.3）"),
+  验证 = c("与 profit/stake 逐行比对，越界 0 行", "roi ＋ hold_rate 逐行恒为 0，723,442 行 100%",
+           "1.681532% ÷ 90.067438%，与逐面加权同值", "与审计件 edge_vs_stake 同源互证"))
 
 tr_hold_pair <- function(dt, profit = "profit", stake = "stake", valid_bet = "valid_bet") {
   gv <- function(c) if (c %in% names(dt)) suppressWarnings(as.numeric(dt[[c]])) else rep(NA_real_, nrow(dt))
@@ -2151,4 +2186,522 @@ tr_dim_metric_summary <- function(rec, loaded, panel = NULL) {
              else if (nd + nm + nf == nc) sprintf("✓ %d ＋ %d ＋ %d ＝ %d 列，逐栏闭合，零省略", nd, nm, nf, nc)
              else sprintf("⚑ %d ＋ %d ＋ %d ≠ %d 列——须查", nd, nm, nf, nc))
   }), fill = TRUE)
+}
+
+# ---------------------------------------------------------------------
+# §15 决策统计层 · 贝叶斯 · MLE · 马尔可夫 · 极值 · 蒙地卡罗 · 期望损失（N-14 · 2026-09-03）
+# ---------------------------------------------------------------------
+# 【本节所治之病】
+#   先生令：「以顶级统计概念灵活搭配来预测并评估风险，于所有处置选项中择
+#   最低亏损风险而最高回酬之组合」。⛔ 然本引擎 1.10.0 及以前，可执行码中
+#   bayes／posterior／likelihood／markov／transition／monte／simulat／GPD／
+#   expected_loss 命中皆为 0 —— 报表只会描述【现状】，从不预测【若如此处置将如何】。
+#
+# 【铁律 · 承《参考.txt》之 KILLCRITIC 并加严】
+#   ⛔ 一、统计方法不是装饰品：每一器须回答一个具体风险问题，答不出即 NOT_RUN，不摆样子。
+#   ⛔ 二、禁把 Bayes ＋ MLE ＋ Markov ＋ MC ＋ EVT 揉成一个总分 —— 「一个数字 ＝ 风险」正是
+#         本项目已否决之谬。各器各答各问，分列呈现，禁合成单一风险分。
+#   ⛔ 三、一切先验与参数由数据反解（矩法／极大似然），禁外生塞入好看的常数。
+#   ⛔ 四、成本未登记者反解【盈亏平衡成本上限】，禁臆造成本以凑出「划算」。
+#   ⛔ 五、强化学习 BENCHED：S3 处置映射与 S4 结果连结二闸未开，RL 只准模拟，禁驱动动作。
+#   ⛔ 六、NOT_RUN ≠ PASS；NULL ≠ 0；样本不足一律标出，禁降级为「正常」。
+# ---------------------------------------------------------------------
+
+.tr_num  <- function(x) suppressWarnings(as.numeric(x))
+.tr_fin  <- function(x) { v <- .tr_num(x); v[is.finite(v)] }
+.tr_nr   <- function(器, 因) data.table(器 = 器, 状态 = "NOT_RUN", 判读 = 因)
+.tr_seed <- function() set.seed(.cfg("decision_layer", "seed"))
+
+## §15.0 本类候选人群：判据尾部命中 ≥ 1 条者（方向依登记册，low 者取下尾）
+tr_type_members <- function(rec, mj, q = NULL) {
+  if (is.null(mj) || is.null(mj$panel) || !nrow(mj$panel)) return(NULL)
+  if (is.null(q)) q <- .cfg("statistics", "tail_quantile_high")
+  d <- rec$dict; P <- mj$panel
+  hit <- rep(0L, nrow(P)); used <- character(0)
+  for (cc in setdiff(names(P), "member_id")) {
+    base <- sub("@.*$", "", cc)
+    dir  <- tolower(trimws(as.character(d[criterion_column == base, direction][1L])))
+    x <- .tr_num(P[[cc]])
+    if (all(is.na(x)) || uniqueN(x[!is.na(x)]) < 3L) next
+    low <- identical(dir, "low"); qq <- if (low) 1 - q else q
+    thr <- as.numeric(stats::quantile(x, qq, na.rm = TRUE, names = FALSE))
+    h <- if (low) (!is.na(x) & x <= thr) else (!is.na(x) & x >= thr)
+    hit <- hit + as.integer(h); used <- c(used, cc)
+  }
+  if (!length(used)) return(NULL)
+  out <- data.table(member_id = P$member_id, 命中数 = hit)[命中数 > 0]
+  setattr(out, "判据列数", length(used)); out[]
+}
+
+## §15.1 贝叶斯：把【已实现输赢】与【潜在真实优势】分开
+##   问：某会员之真实 hold 是否为负（即长期占优）？——不是问他这窗赢了多少。
+##   法：经验贝叶斯正态收缩。τ²（会员间真差异）与 s²（单位本金之抽样方差）
+##       皆以矩法自数据反解：E[(r_i − μ)²] ＝ τ² ＋ s²/w_i，以 stake 为权作回归。
+##   ⛔ 先验不外生给定；⛔ 小分母之极端 ROI 必被收缩，此正为其用。
+tr_bayes_edge <- function(dt, profit = "profit", stake = "stake", id = "member_id") {
+  nmin <- .cfg("decision_layer", "bayes", "shrink_min_members")
+  if (is.null(dt) || !all(c(profit, stake) %in% names(dt)))
+    return(list(ok = FALSE, 说明 = sprintf("⛔ NOT_RUN：缺列 %s",
+      paste(setdiff(c(profit, stake), names(dt)), collapse = "、")), tab = NULL))
+  p <- .tr_num(dt[[profit]]); w <- .tr_num(dt[[stake]])
+  ids <- if (id %in% names(dt)) as.character(dt[[id]]) else as.character(seq_len(nrow(dt)))
+  k <- is.finite(p) & is.finite(w) & w > 0
+  if (sum(k) < nmin)
+    return(list(ok = FALSE, tab = NULL,
+      说明 = sprintf("⛔ NOT_RUN：可用会员 %s 名，不足配置册 shrink_min_members ＝ %s（NOT_RUN ≠ PASS）",
+                     format(sum(k), big.mark = ","), format(nmin, big.mark = ","))))
+  p <- p[k]; w <- w[k]; ids <- ids[k]
+  mu <- sum(p) / sum(w)                       # 总体 hold_rate（加权）
+  r  <- p / w
+  y  <- (r - mu)^2; x <- 1 / w
+  fit  <- stats::lm(y ~ x, weights = w)
+  s2   <- max(unname(stats::coef(fit)[2L]), .Machine$double.eps)
+  tau2 <- max(unname(stats::coef(fit)[1L]), 0)
+  if (!is.finite(s2) || !is.finite(tau2))
+    return(list(ok = FALSE, tab = NULL, 说明 = "⛔ NOT_RUN：τ²／s² 反解不收敛"))
+  B  <- tau2 / (tau2 + s2 / w)                # 收缩系数：1 全信个体，0 全归总体
+  pm <- mu + B * (r - mu)
+  ps <- sqrt(pmax(B * s2 / w, 0))
+  z  <- .cfg("statistics", "z_two_sided")
+  tab <- data.table(member_id = ids, stake = w, profit = p,
+                    观测hold = r, 收缩系数B = round(B, 6),
+                    后验hold = pm, 后验SD = ps,
+                    后验下界 = pm - z * ps, 后验上界 = pm + z * ps,
+                    P_玩家长期占优 = stats::pnorm(0, pm, pmax(ps, .Machine$double.eps)))
+  list(ok = TRUE, mu = mu, tau2 = tau2, s2 = s2, n = sum(k), tab = tab[],
+       说明 = sprintf(paste0("经验贝叶斯正态收缩：总体 hold ＝ %.6f%%；τ²（会员间真差异）＝ %.4e；",
+                             "s²（单位本金抽样方差）＝ %.4e —— 二者皆以矩法自 %s 名会员反解，非外生给定。",
+                             "收缩系数 B 之中位 ＝ %.4f（B 越小者其观测 ROI 越不可信，被拉回总体）"),
+                      100 * mu, tau2, s2, format(sum(k), big.mark = ","), stats::median(B)))
+}
+
+## 贝叶斯之报表面：不出个人名单（禁点名处置），只出分布与高后验概率之群体规模
+tr_bayes_panel <- function(bz) {
+  if (is.null(bz) || !isTRUE(bz$ok))
+    return(.tr_nr("贝叶斯收缩", if (is.null(bz)) "未运行" else bz$说明))
+  t <- bz$tab
+  cut <- c(0.50, 0.75, 0.90, 0.95, 0.99)
+  rbindlist(c(
+    list(data.table(项 = "总体 hold（加权）", 取值 = sprintf("%.6f%%", 100 * bz$mu),
+                    判读 = "一切个体后验之收缩靶心")),
+    list(data.table(项 = "τ²（会员间真差异）", 取值 = sprintf("%.4e", bz$tau2),
+                    判读 = if (bz$tau2 <= 0) "⛔ 反解为 0：数据不支持「会员间存在真实 hold 差异」——观测差异全可由抽样解释" else "＞0：会员间确有真实差异，可作收缩")),
+    list(data.table(项 = "s²（单位本金抽样方差）", 取值 = sprintf("%.4e", bz$s2),
+                    判读 = "本金越小者其观测 ROI 之方差越大，收缩越重")),
+    list(data.table(项 = "收缩系数 B 中位", 取值 = sprintf("%.4f", stats::median(t$收缩系数B)),
+                    判读 = "B → 1 者观测可信；B → 0 者观测几乎全系噪声")),
+    lapply(cut, function(cc) data.table(
+      项 = sprintf("P(玩家长期占优) ≥ %.0f%% 之会员数", 100 * cc),
+      取值 = sprintf("%s 名（%.4f%%）", format(sum(t$P_玩家长期占优 >= cc), big.mark = ","),
+                     100 * mean(t$P_玩家长期占优 >= cc)),
+      判读 = "⛔ 此系【后验概率】而非处置名单；处置仍须过门禁与人工复核")),
+    list(data.table(项 = "观测 hold < 0 之会员数（未收缩）",
+                    取值 = sprintf("%s 名（%.4f%%）", format(sum(t$观测hold < 0), big.mark = ","),
+                                   100 * mean(t$观测hold < 0)),
+                    判读 = "与上列后验之差，即【运气】被剥离之量——直接用观测者必大幅误伤"))), fill = TRUE)
+}
+
+## §15.2 MLE：估真实参数，不直接给风险分
+tr_mle_fit <- function(x, dist = "normal", label = "") {
+  v <- .tr_fin(x); n <- length(v)
+  if (n < 30L) return(.tr_nr(sprintf("MLE·%s", dist), sprintf("样本 %d 不足 30", n)))
+  lv <- .cfg("decision_layer", "mle", "ci_level")
+  z  <- stats::qnorm(1 - (1 - lv) / 2)
+  if (identical(dist, "normal")) {
+    m <- mean(v); s <- sqrt(mean((v - m)^2))
+    ll <- sum(stats::dnorm(v, m, s, log = TRUE)); kk <- 2L
+    est <- c(mu = m, sigma = s); se <- c(s / sqrt(n), s / sqrt(2 * n))
+  } else if (identical(dist, "exponential")) {
+    v <- v[v > 0]; n <- length(v)
+    if (n < 30L) return(.tr_nr("MLE·exponential", sprintf("正值样本 %d 不足 30", n)))
+    lam <- 1 / mean(v); ll <- sum(stats::dexp(v, lam, log = TRUE)); kk <- 1L
+    est <- c(lambda = lam); se <- c(lam / sqrt(n))
+  } else return(.tr_nr(sprintf("MLE·%s", dist), "配置册 decision_layer.mle.dist 未登记此族"))
+  data.table(器 = sprintf("MLE·%s%s", dist, if (nzchar(label)) sprintf("（%s）", label) else ""),
+             参数 = names(est), 估计 = signif(unname(est), 8), SE = signif(unname(se), 6),
+             CI下 = signif(unname(est) - z * unname(se), 8),
+             CI上 = signif(unname(est) + z * unname(se), 8),
+             n = n, logLik = round(ll, 3), AIC = round(-2 * ll + 2 * kk, 3),
+             判读 = "⛔ 参数估计而已；未经样本外验证，不得据以处置")
+}
+
+## §15.3 马尔可夫：行为是否【持续】改变，而非一次异常即定终身
+tr_markov_states <- function(dt, id = "member_id", time = NULL, value = NULL, cuts = NULL) {
+  if (is.null(cuts)) cuts <- unlist(.cfg("decision_layer", "markov", "state_cuts"))
+  minn <- .cfg("decision_layer", "markov", "min_transitions")
+  if (is.null(dt) || !nrow(dt)) return(list(ok = FALSE, 说明 = "⛔ NOT_RUN：面板不在位"))
+  if (is.null(time)) {
+    cand <- intersect(unlist(.cfg("decision_layer", "markov", "time_candidates")), names(dt))
+    time <- if (length(cand)) cand[1L] else NULL
+  }
+  ## ⛔【会员内变异闸】（N-14c · 实测揭缺）：度量列若系六层块广播（同一会员内逐期同值），
+  ##   以之切状态必得【单位阵】——自持概率 1.0、转移概率 0，看似「行为极其黏着」，
+  ##   实为口径断裂。2026-09-03 实测：S05_member_month_panel 之 stake 正属此类
+  ##   （x_agg 会员级广播），首版遂产出五阶单位阵。今立闸：候选须过会员内变异方采用。
+  .varies_within <- function(cc) {
+    v <- .tr_num(dt[[cc]]); i <- as.character(dt[[id]])
+    k <- is.finite(v); if (sum(k) < 100L) return(FALSE)
+    x <- data.table(i = i[k], v = v[k])
+    r <- x[, .(nd = uniqueN(v)), by = i]
+    mean(r$nd > 1L) > 0.10          # 逾一成会员在期间内有变化，方认其为逐期原生量
+  }
+  if (is.null(value)) {
+    cand <- intersect(unlist(.cfg("decision_layer", "markov", "value_candidates")), names(dt))
+    rej <- character(0)
+    for (cc in cand) { if (.varies_within(cc)) { value <- cc; break } else rej <- c(rej, cc) }
+    if (is.null(value) && length(cand))
+      return(list(ok = FALSE, 说明 = sprintf(paste0(
+        "⛔ NOT_RUN：候选度量列 %s 全数未过【会员内变异闸】——皆为会员级广播（同一会员逐期同值），",
+        "以之切状态必得单位阵之伪结论。须改用逐期原生量，或先令总包外显之。"),
+        paste(rej, collapse = "、"))))
+  }
+  if (is.null(time) || is.null(value) || !id %in% names(dt))
+    return(list(ok = FALSE, 说明 = sprintf("⛔ NOT_RUN：缺时间轴或度量列（id=%s time=%s value=%s）",
+                                           id, time %||% "—", value %||% "—")))
+  if (!.varies_within(value))
+    return(list(ok = FALSE, 说明 = sprintf(paste0(
+      "⛔ NOT_RUN：指定度量列 %s 未过【会员内变异闸】（同一会员逐期同值，系广播），",
+      "以之建转移矩阵必得单位阵之伪结论"), value)))
+  D <- data.table(id = as.character(dt[[id]]), t = as.character(dt[[time]]), v = .tr_num(dt[[value]]))
+  D <- D[is.finite(v)]
+  if (!nrow(D)) return(list(ok = FALSE, 说明 = "⛔ NOT_RUN：度量列全缺"))
+  br <- unique(c(-Inf, as.numeric(stats::quantile(D$v, cuts, na.rm = TRUE, names = FALSE)), Inf))
+  lab <- c("S1 低", "S2 中低", "S3 中高", "S4 高", "S5 极高")[seq_len(length(br) - 1L)]
+  D[, s := cut(v, breaks = br, labels = lab, include.lowest = TRUE)]
+  setorder(D, id, t)
+  D[, s_next := shift(s, type = "lead"), by = id]
+  D[, id_next := shift(id, type = "lead")]
+  TR <- D[!is.na(s_next) & id == shift(id, type = "lead")]
+  if (nrow(TR) < minn)
+    return(list(ok = FALSE, 说明 = sprintf("⛔ NOT_RUN：转移样本 %s 不足配置册 min_transitions ＝ %s",
+                                           format(nrow(TR), big.mark = ","), format(minn, big.mark = ","))))
+  cnt <- table(factor(TR$s, levels = lab), factor(TR$s_next, levels = lab))
+  P <- sweep(as.matrix(cnt), 1, pmax(rowSums(cnt), 1), "/")
+  ## 稳态：左特征向量（特征值 1）
+  ev <- tryCatch(eigen(t(P)), error = function(e) NULL)
+  pi_ <- if (!is.null(ev)) { w <- Re(ev$vectors[, which.max(Re(ev$values))]); w <- abs(w); w / sum(w) } else rep(NA_real_, nrow(P))
+  soj <- ifelse(diag(P) < 1, 1 / (1 - diag(P)), Inf)
+  list(ok = TRUE, time = time, value = value, n_trans = nrow(TR), counts = cnt, P = P,
+       stationary = pi_, sojourn = soj,
+       说明 = sprintf("状态以 %s 之分位切五档（切点取自配置册），时间轴 %s；转移样本 %s 笔，转移概率系 MLE（计数除以行和）",
+                      value, time, format(nrow(TR), big.mark = ",")))
+}
+
+tr_markov_panel <- function(mk) {
+  if (is.null(mk) || !isTRUE(mk$ok)) return(.tr_nr("马尔可夫", if (is.null(mk)) "未运行" else mk$说明))
+  lab <- rownames(mk$P)
+  out <- data.table(状态 = lab)
+  for (j in seq_along(lab)) data.table::set(out, j = paste0("→", lab[j]), value = round(mk$P[, j], 4))
+  out[, 自持概率 := round(diag(mk$P), 4)]
+  out[, 平均停留期数 := round(mk$sojourn, 3)]
+  out[, 稳态占比 := round(mk$stationary, 4)]
+  dg <- diag(mk$P)
+  out[, 判读 := fifelse(dg >= 0.999,
+                        "⛔ 自持 ≈ 1.000：本行无转移 —— 须查度量列是否仍系广播或时间轴是否失效，禁读作「行为绝对稳定」",
+                fifelse(dg >= 0.5,
+                        "自持 ≥ 50%：本状态【黏着】，一次进入即倾向持续 —— 值得复检",
+                        "自持 < 50%：本状态【易变】，单次命中不足以推断长期性"))]
+  out[]
+}
+
+## §15.4 极值（POT／GPD）：专治「极端亏损」，非 P99 了事
+##   x 须为【损失】序列（对平台而言＝玩家净赢＝−profit）
+tr_evt_pot <- function(x, label = "") {
+  q    <- .cfg("decision_layer", "evt", "threshold_quantile")
+  mex  <- .cfg("decision_layer", "evt", "min_exceed")
+  lev  <- unlist(.cfg("decision_layer", "evt", "tail_var_levels"))
+  v <- .tr_fin(x); n <- length(v)
+  if (n < 200L) return(list(ok = FALSE, 说明 = sprintf("⛔ NOT_RUN：样本 %s 不足 200", format(n, big.mark = ","))))
+  u <- as.numeric(stats::quantile(v, q, na.rm = TRUE, names = FALSE))
+  y <- v[v > u] - u; nu <- length(y)
+  if (nu < mex)
+    return(list(ok = FALSE, 说明 = sprintf("⛔ NOT_RUN：超越 %s 笔，不足配置册 min_exceed ＝ %s", nu, mex)))
+  ## ① 矩法（MOM）
+  m <- mean(y); s2 <- stats::var(y)
+  xi_m  <- 0.5 * (1 - m^2 / s2); sg_m <- 0.5 * m * (m^2 / s2 + 1)
+  ## ② 极大似然（optim · GPD 负对数似然）
+  nll <- function(par) {
+    xi <- par[1L]; sg <- exp(par[2L])
+    if (sg <= 0) return(1e12)
+    z <- 1 + xi * y / sg
+    if (any(z <= 0)) return(1e12)
+    nu * log(sg) + (1 + 1 / xi) * sum(log(z))
+  }
+  fit <- tryCatch(stats::optim(c(if (is.finite(xi_m)) xi_m else 0.1, log(max(sg_m, 1e-8))), nll,
+                               method = "Nelder-Mead", control = list(maxit = 2000)),
+                  error = function(e) NULL)
+  xi_l <- if (!is.null(fit)) fit$par[1L] else NA_real_
+  sg_l <- if (!is.null(fit)) exp(fit$par[2L]) else NA_real_
+  VaR <- function(p, xi, sg) if (!is.finite(xi) || abs(xi) < 1e-8) u + sg * log((n / nu) * (1 - p))
+                             else u + sg / xi * (((n / nu) * (1 - p))^(-xi) - 1)
+  ES  <- function(p, xi, sg) { vq <- VaR(p, xi, sg); if (!is.finite(xi) || xi >= 1) NA_real_ else (vq + sg - xi * u) / (1 - xi) }
+  tab <- rbindlist(lapply(lev, function(p) data.table(
+    分位 = sprintf("%.1f%%", 100 * p),
+    VaR_矩法 = signif(VaR(p, xi_m, sg_m), 8), ES_矩法 = signif(ES(p, xi_m, sg_m), 8),
+    VaR_MLE  = signif(VaR(p, xi_l, sg_l), 8), ES_MLE  = signif(ES(p, xi_l, sg_l), 8),
+    经验分位 = signif(as.numeric(stats::quantile(v, p, names = FALSE)), 8))))
+  tab[, 二法一致 := fifelse(is.finite(xi_m) && is.finite(xi_l) && abs(xi_m - xi_l) <= 0.15,
+                            "✓ ξ 二法相差 ≤ 0.15",
+                            sprintf("⚑ ξ 二法相差 %.4f ＞ 0.15 —— 尾部形状未定谳，取保守者（较大 ξ）作风险预算", abs(xi_m - xi_l)))]
+  list(ok = TRUE, u = u, n = n, n_exceed = nu, xi_mom = xi_m, sigma_mom = sg_m,
+       xi_mle = xi_l, sigma_mle = sg_l, tail = tab, label = label,
+       说明 = sprintf(paste0("POT 门限 u ＝ P%.0f ＝ %.4f，超越 %s 笔（%.3f%%）；尾指数 ξ：矩法 %.4f ／ MLE %.4f。",
+                             "ξ > 0 ＝ 重尾（幂律），ξ 越大极端损失越不可忽略；ξ ≥ 1 者均值不存在，ES 拒算"),
+                      100 * q, u, format(nu, big.mark = ","), 100 * nu / n, xi_m, xi_l))
+}
+
+## §15.5 蒙地卡罗：回答「若如此处置，未来会怎样」
+##   ⛔ 处置效应之分布**不臆造**：一律自 PI01 逐会员实测 d_revenue 按 treat_field 自助重抽。
+##   ⛔ 「不干预」之反事实 Δ ≡ 0（按构造），非模拟出来的乐观值。
+tr_monte_carlo_actions <- function(n_target, pi01 = NULL) {
+  ndraw <- .cfg("decision_layer", "monte_carlo_draws")
+  acts  <- rbindlist(lapply(.cfg("decision_layer", "actions"), as.data.table), fill = TRUE)
+  if (is.null(pi01)) { l <- tr_load("PI01_treatment_delta_member.csv"); pi01 <- if (isTRUE(l$ok)) l$dt else NULL }
+  if (is.null(pi01) || !"d_revenue" %in% names(pi01))
+    return(list(ok = FALSE, 说明 = "⛔ NOT_RUN：PI01_treatment_delta_member.csv 不在位或无 d_revenue 栏"))
+  if (!is.finite(n_target) || n_target < 1) n_target <- 1L
+  .tr_seed()
+  fld <- if ("treat_field" %in% names(pi01)) as.character(pi01$treat_field) else rep(NA_character_, nrow(pi01))
+  dv  <- .tr_num(pi01$d_revenue)
+  out <- rbindlist(lapply(seq_len(nrow(acts)), function(i) {
+    a <- acts[i]
+    map <- as.character(a$台账映射)
+    if (identical(as.character(a$方案), "A_不干预")) {
+      sims <- rep(0, ndraw); nsrc <- NA_integer_
+    } else {
+      key <- regmatches(map, regexpr("mem[0-9]{3}", map))
+      sel <- if (length(key) && nzchar(key)) grepl(key, fld, fixed = TRUE) else rep(FALSE, length(fld))
+      pool <- dv[sel & is.finite(dv)]; nsrc <- length(pool)
+      if (nsrc < 5L) return(data.table(方案 = a$方案, 效应样本 = nsrc, 状态 = "NOT_RUN",
+        E_增益 = NA_real_, SD = NA_real_, P_亏损 = NA_real_, VaR5 = NA_real_, CVaR5 = NA_real_,
+        盈亏平衡单位成本 = NA_real_,
+        判读 = sprintf("⛔ NOT_RUN：台账内本方案之配对样本 %d 不足 5，禁以他方案之效应代入", nsrc)))
+      sims <- replicate(ndraw, mean(sample(pool, size = nsrc, replace = TRUE)))   # 每人效应之自助分布
+    }
+    warn <- .cfg("decision_layer", "monte_carlo", "extrapolation_warn_ratio")
+    ratio <- if (is.na(nsrc) || nsrc <= 0) NA_real_ else n_target / nsrc
+    q5 <- as.numeric(stats::quantile(sims, 0.05, names = FALSE))
+    isbase <- identical(as.character(a$方案), "A_不干预")
+    data.table(方案 = a$方案, 效应样本 = nsrc,
+      状态 = if (isbase) "基线（Δ≡0 按构造）" else "✓ 已模拟",
+      每人期望Δ = round(mean(sims), 2),
+      每人中位Δ = round(if (isbase) 0 else stats::median(pool), 2),
+      每人自助CI下 = round(q5, 2),
+      每人自助CI上 = round(as.numeric(stats::quantile(sims, 0.95, names = FALSE)), 2),
+      P_单人为负 = round(if (isbase) 0 else mean(pool < 0), 4),
+      每人CVaR5 = round(if (any(sims <= q5)) mean(sims[sims <= q5]) else NA_real_, 2),
+      投射倍数 = round(ratio, 2),
+      合计期望Δ_线性投射 = round(mean(sims) * n_target, 2),
+      盈亏平衡单位成本 = round(mean(sims), 2),
+      判读 = if (isbase) "对照基线：不动作即无增益亦无成本" else
+        sprintf("自 %d 名实测配对会员之 d_revenue 自助重抽 %s 次；%s",
+                nsrc, format(ndraw, big.mark = ","),
+                if (is.finite(ratio) && ratio > warn)
+                  sprintf("⚑ 投射倍数 %.1f 逾闸 %d —— 合计额系【线性外插】，处置样本本为极端个案之选择性抽样，禁以此总额充作已验证之商业收益", ratio, warn)
+                else sprintf("投射至 %s 名候选（投射倍数 %.1f，在闸内）", format(n_target, big.mark = ","), ratio)))
+  }), fill = TRUE)
+  list(ok = TRUE, n_target = n_target, draws = ndraw, tab = out[],
+       说明 = sprintf(paste0("蒙地卡罗 %s 次；效应分布一律自 PI01 逐会员实测 d_revenue 自助重抽，",
+                             "⛔ 不臆造效应、不外插未观测之方案；种子 %s 登记于配置册，结果可复现"),
+                      format(ndraw, big.mark = ","), .cfg("decision_layer", "seed")))
+}
+
+## §15.6 期望损失最小化：在【成本未登记】之下仍能出裁决——反解盈亏平衡成本
+tr_expected_loss <- function(mc) {
+  if (is.null(mc) || !isTRUE(mc$ok)) return(.tr_nr("期望损失", if (is.null(mc)) "未运行" else mc$说明))
+  t <- copy(mc$tab)
+  base <- t[方案 == "A_不干预", 每人期望Δ][1L]; if (!length(base) || is.na(base)) base <- 0
+  t[, 每人相对基线 := round(每人期望Δ - base, 2)]
+  ## Expected Loss(a) ＝ −E[Δ per member] ＋ 单位服务成本；成本未登记 ⇒ 只出零成本下界
+  t[, 每人期望损失_零成本下界 := round(-(每人期望Δ), 2)]
+  cs <- .cfg("decision_layer", "service_cost_status")
+  ok <- t[状态 != "NOT_RUN" & is.finite(每人期望Δ)]
+  best <- if (nrow(ok)) ok[which.min(每人期望损失_零成本下界)] else NULL
+  verdict <- if (is.null(best)) "⛔ 无可裁方案（全数 NOT_RUN）" else
+    sprintf(paste0("argmin 期望损失（零成本下界）＝ **%s** —— 每人期望增益 %s（自助 90%% 区间 %s ~ %s），",
+                   "每人中位 %s，单人为负之比 %.4f。⛔ 约束一：复核／处置之单位成本状态 %s，",
+                   "故本裁决只在【每人成本 < %s】时成立，逾此即由盈转亏；此系**盈亏平衡上限之反解**，",
+                   "非成本估计，禁充作成本已知。⛔ 约束二：本方案之实测配对样本仅 %s 名，",
+                   "投射倍数 %.1f —— %s"),
+            best$方案, format(best$每人期望Δ, big.mark = ","),
+            format(best$每人自助CI下, big.mark = ","), format(best$每人自助CI上, big.mark = ","),
+            format(best$每人中位Δ, big.mark = ","), best$P_单人为负, cs,
+            format(best$盈亏平衡单位成本, big.mark = ","), format(best$效应样本, big.mark = ","),
+            best$投射倍数,
+            if (is.finite(best$投射倍数) && best$投射倍数 > .cfg("decision_layer", "monte_carlo", "extrapolation_warn_ratio"))
+              "⚑ 外插过度，合计额只作示意，须先以同规模影子期实证方可推广"
+            else "投射倍数在闸内")
+  list(tab = t[, .(方案, 状态, 效应样本, 每人期望Δ, 每人中位Δ, 每人自助CI下, 每人自助CI上,
+                   P_单人为负, 每人CVaR5, 每人相对基线, 每人期望损失_零成本下界,
+                   投射倍数, 合计期望Δ_线性投射, 判读)],
+       verdict = verdict, best = if (is.null(best)) NA_character_ else as.character(best$方案))
+}
+
+## §15.7 强化学习：明令 BENCHED，就地出示禁赛理由与解锁条件（禁默默不提）
+tr_rl_bench <- function() {
+  data.table(
+    项 = c("现状", "禁赛理由", "准许之用途", "解锁条件", "违者后果"),
+    取值 = c(.cfg("decision_layer", "rl_status"),
+             .cfg("decision_layer", "rl_reason"),
+             "simulation ／ policy research —— 只在离线模拟中评估策略，产出供人审阅",
+             "S3 处置映射与 S4 结果连结二闸转 CLOSED，且处置—结果连结经跨窗样本外验证",
+             "⛔ 未解锁而以 RL 驱动处置者，其名单一律作废并留痕"),
+    判读 = c("⛔ 不得驱动任何商业动作", "无可靠 treatment／outcome 连结即无奖励信号，RL 学到的是噪声",
+             "模拟不产生处置，故不伤客", "二闸皆在登记册 open_questions 内，非本引擎可自行宣布",
+             "承本项目「只增不减、严禁退化」之铁律"))
+}
+
+# ---------------------------------------------------------------------
+# §16 处理前后经济回归闸 PRE_POST_RISK_ECONOMIC_GATE（N-14 · 2026-09-03）
+# ---------------------------------------------------------------------
+# 【本闸所答之问】先生令：「务必实测并证实判据与处理前、处理后之风险」。
+#   本闸即以实测台账逐指标对照【处置之前】与【处置之后】，并当场裁定：
+#     只增不减者 PASS；任一经济指标退化且过检定者 FAIL；样本不足者 NOT_RUN。
+#   ⛔ NOT_RUN ≠ PASS。⛔ 不以「均值上升」冒充「有效」——须并呈中位、符号检验、
+#      Wilcoxon、自助置信区间，且必须揭露【留存流失】与【删失】，否则即是幸存者偏差。
+# 【料源】PI02_treatment_delta_platform（平台层）· PI01_treatment_delta_member（会员层配对）
+#         · TL11_treatment_episode（处置事件与删失）· TL10_treatment_ledger（动作宇宙）
+# ---------------------------------------------------------------------
+
+TR_PP_FILES <- c(platform = "PI02_treatment_delta_platform.csv",
+                 member   = "PI01_treatment_delta_member.csv",
+                 episode  = "TL11_treatment_episode.csv",
+                 ledger   = "TL10_treatment_ledger.csv")
+
+.tr_pp_load <- function(key) { l <- tr_load(TR_PP_FILES[[key]]); if (isTRUE(l$ok)) l$dt else NULL }
+
+## §16.1 平台层：TREATED 之 PRE vs POST，另以 UNTREATED 作同期对照
+tr_prepost_platform <- function() {
+  d <- .tr_pp_load("platform")
+  if (is.null(d)) return(.tr_nr("处理前后·平台层", sprintf("⛔ %s 不在位", TR_PP_FILES[["platform"]])))
+  if (!all(c("cohort", "phase") %in% names(d)))
+    return(.tr_nr("处理前后·平台层", "⛔ 缺 cohort／phase 栏"))
+  g <- function(co, ph, cc) { r <- d[cohort == co & (is.na(phase) | phase == ph)]
+    if (!nrow(r) || !cc %in% names(r)) return(NA_real_); .tr_num(r[[cc]])[1L] }
+  gu <- function(cc) { r <- d[cohort == "UNTREATED"]; if (!nrow(r) || !cc %in% names(r)) return(NA_real_); .tr_num(r[[cc]])[1L] }
+  ms <- rbindlist(lapply(.cfg("decision_layer", "prepost_metrics"), as.data.table), fill = TRUE)
+  key <- function(lab) sub("[[:space:]].*$", "", lab)
+  rbindlist(lapply(seq_len(nrow(ms)), function(i) {
+    lab <- as.character(ms$指标[i]); dir <- as.character(ms$方向[i]); cc <- key(lab)
+    if (!cc %in% names(d))
+      return(data.table(指标 = lab, 方向 = dir, 处理前 = NA_real_, 处理后 = NA_real_,
+                        差额 = NA_real_, 变幅 = NA_character_, 未处置对照 = NA_real_,
+                        判 = "○ NOT_RUN（本栏不在 PI02 内）"))
+    a <- g("TREATED", "PRE", cc); b <- g("TREATED", "POST", cc); u <- gu(cc)
+    dd <- b - a
+    imp <- if (!is.finite(dd)) NA else if (identical(dir, "up")) dd > 0 else dd < 0
+    data.table(指标 = lab, 方向 = dir, 处理前 = signif(a, 8), 处理后 = signif(b, 8),
+               差额 = signif(dd, 8),
+               变幅 = if (is.finite(a) && a != 0 && is.finite(dd)) sprintf("%+.2f%%", 100 * dd / abs(a)) else "—",
+               未处置对照 = signif(u, 8),
+               判 = if (is.na(imp)) "○ NOT_RUN" else if (isTRUE(imp)) "✓ 提升" else "⛔ 退化")
+  }), fill = TRUE)
+}
+
+## §16.2 会员层：逐会员配对之处理前后差（符号检验 ＋ Wilcoxon ＋ 自助 CI）
+##   ⛔ 只用【双侧皆有观测】者作配对检定；仅 pre 者系处置后停投，另于留存表揭露，
+##      混入配对即幸存者偏差之反面（把流失当作 0 效应）。
+tr_prepost_member <- function(rec = NULL, mj = NULL) {
+  d <- .tr_pp_load("member")
+  if (is.null(d)) return(.tr_nr("处理前后·会员层", sprintf("⛔ %s 不在位", TR_PP_FILES[["member"]])))
+  minn <- .cfg("decision_layer", "min_paired_n"); nb <- .cfg("decision_layer", "bootstrap_draws")
+  npre <- if ("n_pre" %in% names(d)) .tr_num(d$n_pre) else rep(NA_real_, nrow(d))
+  npos <- if ("n_post" %in% names(d)) .tr_num(d$n_post) else rep(NA_real_, nrow(d))
+  paired <- is.finite(npre) & npre > 0 & is.finite(npos) & npos > 0
+  ## 本类交集（若给了配方与面板）
+  tm <- if (!is.null(rec) && !is.null(mj)) tr_type_members(rec, mj) else NULL
+  inclass <- if (!is.null(tm) && "member_id" %in% names(d))
+    as.character(d$member_id) %in% as.character(tm$member_id) else rep(NA, nrow(d))
+  ## ⛔ 方向必自配置册取：d_roi 系【玩家视角】，下降即平台得利（roi ≡ −hold_rate）。
+  ##   N-14 首版无此表而默认「越大越好」，遂把 d_roi 中位为负误判为退化，令总闸 FAIL 反向。
+  DIRT <- rbindlist(lapply(.cfg("decision_layer", "prepost_member_metrics"), as.data.table), fill = TRUE)
+  cols <- intersect(as.character(DIRT$差额栏), names(d))
+  if (!length(cols)) return(.tr_nr("处理前后·会员层", "⛔ PI01 无已登记之 d_* 差额栏"))
+  .tr_seed()
+  rbindlist(lapply(cols, function(cc) {
+    x <- .tr_num(d[[cc]])[paired]; x <- x[is.finite(x)]
+    n <- length(x)
+    if (n < minn)
+      return(data.table(差额栏 = cc, 配对n = n, 均值 = NA_real_, 中位 = NA_real_,
+                        正 = NA_integer_, 负 = NA_integer_, 符号检验p = NA_real_,
+                        Wilcoxonp = NA_real_, 自助CI下 = NA_real_, 自助CI上 = NA_real_,
+                        本类命中n = NA_integer_,
+                        判 = sprintf("○ NOT_RUN：配对 %d 不足配置册 min_paired_n ＝ %d（NOT_RUN ≠ PASS）", n, minn)))
+    npos_ <- sum(x > 0); nneg <- sum(x < 0)
+    sp <- tryCatch(stats::binom.test(npos_, npos_ + nneg, 0.5)$p.value, error = function(e) NA_real_)
+    wp <- tryCatch(stats::wilcox.test(x, mu = 0, exact = FALSE)$p.value, error = function(e) NA_real_)
+    bs <- replicate(nb, mean(sample(x, n, replace = TRUE)))
+    ci <- as.numeric(stats::quantile(bs, c(0.025, 0.975), names = FALSE))
+    ncls <- if (all(is.na(inclass))) NA_integer_ else sum(paired & inclass, na.rm = TRUE)
+    sig <- is.finite(sp) && sp < 0.05
+    dir <- as.character(DIRT[差额栏 == cc, 方向][1L]); if (!length(dir) || is.na(dir)) dir <- "neutral"
+    med <- stats::median(x)
+    good <- if (identical(dir, "up")) med > 0 else if (identical(dir, "down")) med < 0 else NA
+    data.table(差额栏 = cc, 方向 = dir, 释义 = as.character(DIRT[差额栏 == cc, 释义][1L]),
+               配对n = n, 均值 = signif(mean(x), 6), 中位 = signif(med, 6),
+               正 = npos_, 负 = nneg, 符号检验p = signif(sp, 4), Wilcoxonp = signif(wp, 4),
+               自助CI下 = signif(ci[1L], 6), 自助CI上 = signif(ci[2L], 6), 本类命中n = ncls,
+               判 = if (!sig) "○ 未过 5% 检定：方向不定，禁宣布有效"
+                    else if (identical(dir, "neutral")) "◦ 过检定，然本栏非经济指标，不入退化裁定"
+                    else if (isTRUE(good)) "✓ 依登记方向为提升且过检定"
+                    else "⛔ 依登记方向为退化且过检定")
+  }), fill = TRUE)
+}
+
+## §16.3 留存与删失：处置之后还在不在？——不揭此层者，一切「有效」皆幸存者偏差
+tr_prepost_retention <- function() {
+  d <- .tr_pp_load("member"); e <- .tr_pp_load("episode")
+  out <- list()
+  if (!is.null(d)) {
+    npre <- if ("n_pre" %in% names(d)) .tr_num(d$n_pre) else rep(NA_real_, nrow(d))
+    npos <- if ("n_post" %in% names(d)) .tr_num(d$n_post) else rep(NA_real_, nrow(d))
+    both <- sum(npre > 0 & npos > 0, na.rm = TRUE)
+    only_pre <- sum(npre > 0 & (is.na(npos) | npos == 0))
+    only_post <- sum((is.na(npre) | npre == 0) & npos > 0)
+    tot <- nrow(d)
+    out[[length(out) + 1L]] <- data.table(
+      项 = c("处置样本总数", "处置后仍投注（可配对）", "处置后不再投注（留存流失）", "仅处置后有观测"),
+      取值 = c(sprintf("%d 名", tot), sprintf("%d 名（%.2f%%）", both, 100 * both / max(tot, 1)),
+               sprintf("%d 名（%.2f%%）", only_pre, 100 * only_pre / max(tot, 1)),
+               sprintf("%d 名（%.2f%%）", only_post, 100 * only_post / max(tot, 1))),
+      判读 = c("PI01 逐会员处置台账",
+               "⛔ 只有这批人进得了配对检定——一切「处置后 hold 上升」之结论只对这批人成立",
+               "⛔ 此即【留存损失】：处置后流失者不入配对，若只看配对即系统性高估处置之益",
+               "无处置前观测，配对检定亦排除"))
+  }
+  if (!is.null(e) && "censored" %in% names(e)) {
+    ce <- .tr_num(e$censored)
+    et <- if ("enforcement_type" %in% names(e)) as.character(e$enforcement_type) else rep("—", nrow(e))
+    out[[length(out) + 1L]] <- data.table(
+      项 = c("处置事件总数", "删失（尚未释放）", "已释放", "处置类型"),
+      取值 = c(sprintf("%d 件", nrow(e)),
+               sprintf("%d 件（%.2f%%）", sum(ce == 1, na.rm = TRUE), 100 * mean(ce == 1, na.rm = TRUE)),
+               sprintf("%d 件（%.2f%%）", sum(ce == 0, na.rm = TRUE), 100 * mean(ce == 0, na.rm = TRUE)),
+               paste(sprintf("%s %d 件", names(table(et)), as.integer(table(et))), collapse = "、")),
+      判读 = c("TL11 处置事件台账",
+               "⛔ 删失比例高者，其「处置时长」不可以均值论——须以 Kaplan–Meier 处理，本引擎现只揭露不臆算",
+               "已释放者方有完整处置期",
+               "处置动作之实测宇宙；配置册 actions 名册即以此为据，禁凭空拟方案"))
+  }
+  if (!length(out)) return(.tr_nr("留存与删失", "⛔ PI01／TL11 皆不在位"))
+  rbindlist(out, fill = TRUE)
+}
+
+## §16.4 总裁定：只增不减方 PASS
+tr_prepost_verdict <- function(pf = NULL, mb = NULL) {
+  if (is.null(pf)) pf <- tr_prepost_platform()
+  if (is.null(mb)) mb <- tr_prepost_member()
+  bad <- 0L; good <- 0L; nr <- 0L
+  if ("判" %in% names(pf)) { bad <- bad + sum(grepl("退化", pf$判)); good <- good + sum(grepl("提升", pf$判)); nr <- nr + sum(grepl("NOT_RUN", pf$判)) }
+  if ("判" %in% names(mb)) { bad <- bad + sum(grepl("退化", mb$判)); good <- good + sum(grepl("✓", mb$判)); nr <- nr + sum(grepl("NOT_RUN", mb$判)) }
+  st <- if (bad > 0) "⛔ FAIL" else if (good == 0) "○ NOT_RUN" else "✓ PASS"
+  data.table(
+    闸 = "PRE_POST_RISK_ECONOMIC_GATE",
+    提升项 = good, 退化项 = bad, 未跑项 = nr, 裁定 = st,
+    判读 = if (bad > 0)
+      sprintf("⛔ 有 %d 项处理后劣于处理前 —— 依配置册 degradation_rule，本闸 FAIL，商业方案不得升级", bad)
+    else if (good == 0)
+      "○ 无一项过检定 —— NOT_RUN ≠ PASS，不得宣布处置有效"
+    else
+      sprintf("✓ %d 项提升、0 项退化、%d 项未跑 —— 经济上未退化；⛔ 然仍须并读留存流失表，未跑项不得当作已验", good, nr))
 }

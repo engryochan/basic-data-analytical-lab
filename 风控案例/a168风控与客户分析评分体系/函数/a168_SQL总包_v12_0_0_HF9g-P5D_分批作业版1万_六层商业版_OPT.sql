@@ -84,6 +84,22 @@
 --   F-26 绝对金额阈值 —— 不授权由数据反解。须先定优化目标（ΔP&L）与训练/验证/walk-forward/成本四项，否则不动。
 --   F-5（log_mem_change 未冻结）· F-22~25（theo 族）· 128 件扩张 · HF9f-B 生产判型 —— 全部维持锁死。
 --   house_edge = NULL · theo = NULL。
+--   ── N-14（2026-09-03）实测后更正 · 承先生令「只用 SELECT 即可实测甚至算出 house_edge」──
+--   ⛔ 上行须分两义读，否则误人：
+--     ① 【理论】edge —— 仍 NULL，且不止是「未获授权」：#017 探针 R3 实测 overdispersion
+--        Q/(k−1) = 9.3~42.6，已 KILL single-constant-edge 架构（见下「R3 实测所致之架构裁定」）。
+--        故纵获授权，(bet09 × 免佣标记) 之【单一常数】映射亦不成立，须带分布或分层，禁静态表。
+--     ② 【已实现 realized】edge —— **无须任何授权，亦无须 CREATE／APPEND／DELETE，SELECT 即得**。
+--        2026-09-03 已实测落盘：审计/实测庄家优势_逐投注面_v1.0.0_20260903.csv（bet09 ＝ bet_side，23 面）。
+--        全平台加权：对洗码 profit/valid_bet = 1.866970% ／ 对本金 profit/stake = 1.681532%；
+--        valid_bet/stake = 90.067438%（S01_player_score.csv 723,442 会员全量，与逐面加权两路互证）。
+--        逐面例：Banker 1.301961%、Player 1.351856%、Tie 15.060458%、Super6 20.573010%（皆 vs valid_bet）。
+--        ⛔ 口径 realized（含运气），非理论 edge；n = 1 之七面标「无证据」，禁入任何加权。
+--     ③ theo 仍 NULL —— 其阻断**不在 edge 不可得**，而在 #075 之 x_agg 已折叠产品维：
+--        无 bet09 级 valid_bet 分解，theo = Σ(valid_bet × edge) 无从就地计算。
+--        解法：新增「会员 × 产品」之 x_prod 中间粒度 CTE（本轮未做，须先生裁示）。
+--        ⛔ 未知产品码一律 theo = NULL，禁 fallback = 1（NULL ≠ 0）。
+--   ── SELECT-only 复核探针：函数/HE_house_edge_SELECT_only_探针_v1.0.0.sql（五闸，零写操作）──
 --
 -- 【R3 实测所致之架构裁定 · 记录于此供 F-22~25 重写时引用】
 --   #017 探针 R3 实测 overdispersion_Q/(k−1) = 9.3 ~ 42.6（Banker/0 = 42.6、Player/0 = 40.8）。

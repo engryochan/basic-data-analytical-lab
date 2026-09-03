@@ -1,7 +1,9 @@
 # =====================================================================
 # build_typology_reports.R · 十五类风险会员商业方案 · 生成器
 # ---------------------------------------------------------------------
-# 版本 : 1.3.8        日期 : 2026-09-03        适配登记册 : 自 registry_load() 现取（本器不写死）
+# 版本 : 1.3.9        日期 : 2026-09-03        适配登记册 : 自 registry_load() 现取（本器不写死）
+# 变更 : 1.3.9（N-14）version 默认 v1.8.0 → v1.9.0（模板 v1.9.0：口径正名与已实现 house_edge、
+#        决策统计层、处理前后经济回归闸、期望损失最小之处置组合）。铸件逻辑一字未改。
 # 变更 : 1.3.8（N-13）version 默认 v1.7.0 → v1.8.0（模板 v1.8.0：第二部分增主辅表取数 SQL 原文与输出标准、
 #        第三部分增主辅表全维度与全指标盘点、设置章接上交付命名空间闸）。铸件逻辑一字未改。
 # 变更 : 1.3.4（N-8c）version 默认 v1.4.3 → v1.4.4（模板 v1.4.4：血统配套扩至 24 件 ＋ 双层身份闸）。铸件逻辑一字未改。
@@ -23,7 +25,7 @@ suppressPackageStartupMessages(library(data.table))
 
 build_typology_reports <- function(out_dir = file.path("分析", "风险会员商业方案"),
                                    template = file.path("模板", "风险会员商业方案_模板.qmd"),
-                                   version = "v1.8.0", date = format(Sys.Date(), "%Y-%m-%d"),
+                                   version = "v1.9.0", date = format(Sys.Date(), "%Y-%m-%d"),
                                    render_ids = NULL, blocked_reason = "") {
   source("函数/registry_loader.R")
   REG <- registry_load()
