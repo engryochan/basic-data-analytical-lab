@@ -1,7 +1,8 @@
 # =====================================================================
 # build_typology_reports.R · 十五类风险会员商业方案 · 生成器
 # ---------------------------------------------------------------------
-# 版本 : 1.3.1        日期 : 2026-09-03        适配登记册 : 1.5.002（登记册版本自 registry_load() 现取，本器不写死）
+# 版本 : 1.3.2        日期 : 2026-09-03        适配登记册 : 1.5.003（登记册版本自 registry_load() 现取，本器不写死）
+# 变更 : 1.3.2（N-4）version 默认 v1.4.1 → v1.4.2（模板 v1.4.2：双引擎合档 ＋ 指向 registry v1.5.003）。铸件逻辑一字未改。
 # 变更 : 1.3.1（N-2B）① version 默认 v1.3.0 → v1.4.1（模板 v1.4.1）；② _清单.csv 由五栏改十栏
 #        （承 N-1C 体例：type_id 主键 · gate/severity 自登记册现取 · instantiation_state/blocked_reason 由参数
 #        render_ids/blocked_reason 机器写出，禁手写）；③ 渲染脚本只列 render_ids。铸件逻辑一字未改。
@@ -18,7 +19,7 @@ suppressPackageStartupMessages(library(data.table))
 
 build_typology_reports <- function(out_dir = file.path("分析", "风险会员商业方案"),
                                    template = file.path("模板", "风险会员商业方案_模板.qmd"),
-                                   version = "v1.4.1", date = format(Sys.Date(), "%Y-%m-%d"),
+                                   version = "v1.4.2", date = format(Sys.Date(), "%Y-%m-%d"),
                                    render_ids = NULL, blocked_reason = "") {
   source("函数/registry_loader.R")
   REG <- registry_load()
