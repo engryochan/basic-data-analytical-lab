@@ -30,7 +30,18 @@ execute:
 #| label: 设置
 ## ════════════════════════════════════════════════════════════════════════
 ## 十五类风险会员判据商业方案 · 自同一模板生成，十五份同构同步。
-## 版本 : 1.11.0
+## 版本 : 1.12.0
+## 变更 : 1.12.0（N-17 · 承先生指正；系我方疏漏，非先生理解有误）——
+##   ⛔ 自陈：范本 §3.1.1「关键字段」一节，本模板【实际渲染为空】——tr_ods_fields() 以
+##     【判据列名】比对 ODS 字典，而本套判据列皆系交付件派生量，本不在 ODS 字典内 ⇒
+##     恒命中 0 ⇒ 恒印「○ 本类判据列未见于 ODS 字典」。拿派生列查源字典，方向自始即错。
+##   ① 关键字段改由【总包 SQL 现取本类各件实际取用之 ODS 源字段】，再接 数据库/Z03_column_dictionary.csv
+##     补业务含义与存储类型，并自 SQL 之 AS 别名反标本类用途 —— 与范本四栏同式。
+##   ② 核心指标补【定义（公式 · 取自总包 SQL）】栏，如范本般列公式而非只列名与阈值注。
+##   ③ 模型章移回第二部分之末，并加逐件子节（对应范本 2.3.1）；第三部分遂自「一、源数据」起编号，
+##     与范本 3.1／3.1.1／3.1.2／3.2／3.2.1 之目录逐级对齐。
+##   ④ 去「1.1／1.2／2.1」三处手写编号，免与自动编号叠成「3.2.1 1.1 关键字段」。
+##   其余各章一字未改。
 ## 变更 : 1.11.0（N-16 · 承先生三令）——
 ##   ① 【删】第一部分原第三节（阻断—前置一族之呈现章）整节连同其 chunk 全数删除；
 ##      第一部分标题与本章定位内之相关字样一并去除；第六／九部分二处措辞中性化。
@@ -574,21 +585,10 @@ if (is.null(mj)) cat("**本类搭配表中无会员级表，跨表会员搭配�
 }
 ```
 
-# 第三部分：数据口径 {#sec-caliber}
+## 三、模型：血统 · 契约 · 判据锁 · 导出声明 {#sec-model}
 
 ::: {.callout-important}
-## 本章定位
-
-本章冻结本类之**口径血统**：源数据（ODS 库表层）之关键字段、核心指标之口径原文与术语库定义、
-交付件之八元组身份核验（行／列／字节／MD5／换行符／BOM／文件换行数／全量核验），
-以及分析级核心指标。**口径原文一字取自登记册 `threshold_note`，不改写、不润色**；
-凡当前交付件不支持之量，一律登记「待表」，不冒充实测。
-:::
-
-## 〇、模型：血统 · 契约 · 判据锁 · 导出声明
-
-::: {.callout-important}
-## 本节体例（承范本《风险会员判据之靴尾投注篇 v1.2.55》§模型）
+## 本节体例（承范本《风险会员判据之靴尾投注篇 v1.2.55》§2.3 模型）
 
 范本之模型章，其精髓在「**先亮血统与契约，再谈数字**」。本节逐件落实五事：
 
@@ -607,28 +607,73 @@ kable(tr_no(tr_model_contract(rec, ld)), align = "l", escape = FALSE, caption = 
 ```
 :::
 
+```{r}
+#| label: 模型逐件
+#| results: asis
+#| echo: false
+.mc <- tr_model_contract(rec, ld)
+for (i in seq_len(nrow(.mc))) {
+  .f <- .mc$交付件[i]; .s <- tr_sql_of(.f)
+  .typo <- if (isTRUE(.s$ok) && length(.s$sql) >= 2L && grepl("典型学", .s$sql[2L], fixed = TRUE))
+             sub("^.*典型学：([^　]+).*$", "\\1", .s$sql[2L]) else "—"
+  cat(sprintf("\n### %s · `%s`（%s）\n\n", .mc$角色[i], .f, .typo))
+  cat(sprintf("- **血统告示**：%s\n", if (isTRUE(.s$ok))
+        sprintf("总包模块 #%s · 第 %s~%s 行（%s 行），原文见 @sec-sql-lineage", .s$模块号,
+                tr_f(.s$起), tr_f(.s$迄), tr_f(.s$行数)) else "⛔ 总包内未见本件模块，血统断裂"))
+  cat(sprintf("- **契约保全**：%s\n", .mc$契约保全[i]))
+  cat(sprintf("- **判据锁**：%s\n", .mc$判据锁[i]))
+  cat(sprintf("- **%s**\n", .mc$导出声明[i]))
+  cat(sprintf("- **未纳入**：%s\n\n", .mc$未纳入[i]))
+}
+```
+
+# 第三部分：数据口径 {#sec-caliber}
+
+::: {.callout-important}
+## 本章定位
+
+本章冻结本类之**口径血统**：源数据（ODS 库表层）之关键字段、核心指标之口径原文与术语库定义、
+交付件之八元组身份核验（行／列／字节／MD5／换行符／BOM／文件换行数／全量核验），
+以及分析级核心指标。**口径原文一字取自登记册 `threshold_note`，不改写、不润色**；
+凡当前交付件不支持之量，一律登记「待表」，不冒充实测。
+:::
+
 ## 一、源数据（ODS 库表层）
 
-### 1.1 关键字段
+### 关键字段
 
 ```{r}
 #| label: ODS关键字段
 #| results: asis
+## ⛔ N-17 斧正：此前以【判据列名】反查 ODS 字典，而本套判据列皆系交付件派生量，
+##   本不在 ODS 字典内 ⇒ 恒命中 0 ⇒ 本节恒为空。今改由【总包 SQL 现取源字段】。
+osf <- tr_ods_source_fields(rec)
+if (!is.null(osf) && nrow(osf)) {
+  cat("::: {.tbl-wide}\n")
+  print(kable(tr_no(osf), align = "l", escape = FALSE, caption = sprintf(
+    "本类各件实际取用之 ODS 源字段（%d 栏全列，零省略；库表 %d 张 —— 字段自总包 SQL 现取，业务含义自 %s 现接，本类用途自 SQL 之 AS 别名反标）",
+    nrow(osf), uniqueN(osf$库表), CFG$fields$ods_dictionary_file)))
+  cat(":::\n\n")
+} else cat("○ NOT_RUN：本类各件皆未在总包内寻得取数模块，ODS 源字段无从现取。\n\n")
+## 另呈：判据列之 ODS 血统（多数判据系派生量，命中为空系常态，非缺陷）
 ods <- tr_ods_fields(rec, REG)
 if (!is.null(ods$dt)) {
   cat("::: {.tbl-wide}\n")
-  print(kable(tr_no(ods$dt), align = "l", caption = sprintf("本类所涉 ODS 库表关键字段（%d 行全列，零省略；自 %s 现算）",
-              nrow(ods$dt), CFG$fields$ods_dictionary_file)))
+  print(kable(tr_no(ods$dt), align = "l", caption = sprintf(
+    "另呈 · 判据列于 ODS 字典之直接命中（%d 行；⛔ 判据多为派生量，此表为空系常态）", nrow(ods$dt))))
   cat(":::\n\n")
-} else cat(sprintf("○ %s\n\n本类判据皆为交付件派生量，其 ODS 血统须回溯 SQL 章节 `%s`。\n\n",
+} else cat(sprintf("○ 另呈 · 判据列于 ODS 字典之直接命中：%s —— 本类判据皆为交付件派生量，其血统在上表之源字段与 SQL 章节 `%s`。\n\n",
                    ods$status, rec$dict$sql_section[1L]))
 ```
 
-### 1.2 核心指标
+### 核心指标
 
 ::: {.tbl-wide}
 ```{r}
 #| label: 核心指标
+cmf <- tr_core_metric_formula(rec)
+kable(tr_no(cmf), align = "l", escape = FALSE, caption = sprintf(
+  "%s 核心指标之【定义公式】（%d 条；公式自总包 SQL 之 AS 表达式现取——⛔ 非手写、非转述）", TID, nrow(cmf)))
 kable(tr_no(tr_core_metrics(rec, GL)), align = "l", escape = FALSE,
       caption = sprintf("%s 核心指标口径（%d 条；口径原文取自登记册 threshold_note，一字未改；定义取自术语库）",
                         TID, nrow(rec$dict)))
@@ -645,7 +690,7 @@ kable(tr_no(tr_deliverable_identity(rec, ld)), align = "l",
 ```
 :::
 
-### 2.1 分析级核心指标
+### 分析级核心指标
 
 ```{r}
 #| label: 分析级指标

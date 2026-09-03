@@ -1,0 +1,13 @@
+redteam/ + critic/ + killcritic/ + blindpot/ + actionplan/
+
+* 请查证、核实、校对、审计`a168_SQL总包_v12_0_0_HF9g-P5_*版_六层商业版`与上一个版本`a168_SQL总包_v12_0_0_HF9g-P4_*版_六层商业版`，有什么强化与提升呢？
+* 基于折腾了好几天目前已经从`a168_SQL总包_v12_0_0_HF9g-P4_*版_六层商业版`查询并下载到剩下`R03_player_dealer.csv`与`R03b_player_dealer_daily.csv`两份尚未输出。故此需要先以`a168_SQL总包_v12_0_0_HF9g-P4_*版_六层商业版`版本来升级现有的`registry_risk_typology_v1.5.0`为`registry_risk_typology_v1.5.001`。
+* 请查证、核实、校对刚才规划好的`registry_risk_typology_v1.5.001`会，务必回答需要分类更多风险与优质的四个实体吗？请查证跨数据表灵活搭配各指标的话：
+   * 倘若是靴尾投注的话，判据会员的标准应该是以每个会员各别的派彩金额先分类为负数（min(net_margin)、min(theo)、min(roi)、min(adt)、min(economic value)，ROI、Net Margin、ADT、Theo、Economic Value 等）至零和零至正数（max(net_margin)、max(theo)、max(roi)、max(adt)、max(economic value)，ROI、Net Margin、ADT、Theo、Economic Value 等）达到分位数内的最佳阈值（借鉴极大似然估计的原理）才能判据风险与优质各等级的四个实体吗？请问先生有何良策与高见？可参考各顶级赌场与顶级博彩公司的标准、做法、规范和手段等等，务必行得通、可以落实为公司提高市场份额、会员数、盈利等等业绩。
+   * 倘若是同桌（务必查证是否同局键）对打的话，判据会员的标准应该是以每个会员各别的派彩金额先分类为负数（min(net_margin)、min(theo)、min(roi)、min(adt)、min(economic value)，ROI、Net Margin、ADT、Theo、Economic Value 等）至零和零至正数（max(net_margin)、max(theo)、max(roi)、max(adt)、max(economic value)，ROI、Net Margin、ADT、Theo、Economic Value 等）达到分位数内的最佳阈值（借鉴极大似然估计的原理）才能判据风险与优质各等级的四个实体吗？可参考各顶级赌场与顶级博彩公司的标准、做法、规范和手段等等，务必行得通、可以落实为公司提高市场份额、会员数、盈利等等业绩。
+   * 倘若是荷官与会员串通的话，判据会员与荷官的标准应该是以每个会员各别的派彩金额先分类为负数（min(net_margin)、min(theo)、min(roi)、min(adt)、min(economic value)，ROI、Net Margin、ADT、Theo、Economic Value 等）至零和零至正数（max(net_margin)、max(theo)、max(roi)、max(adt)、max(economic value)，ROI、Net Margin、ADT、Theo、Economic Value 等）达到分位数内的最佳阈值（借鉴极大似然估计的原理）才能判据风险与优质各等级的四个实体吗？可参考各顶级赌场与顶级博彩公司的标准、做法、规范和手段等等，务必行得通、可以落实为公司提高市场份额、会员数、盈利等等业绩。
+   * 倘若是荷官、会员、代理、疯狂共专员四实体中出现任何多维网络（借鉴随机森林、xgboost、聚类分析、贝叶斯理论、Transformer系列、存活分析强化学习、极大似然估计、隐马尔可夫链系列等等灵活搭配）串通的话，判据荷官、会员、代理、风控共专员四实体中出现多维度网络串通的标准应该是以每个实体各别的派彩金额先分类为负数（min(net_margin)、min(theo)、min(roi)、min(adt)、min(economic value)，ROI、Net Margin、ADT、Theo、Economic Value 等）至零和零至正数（max(net_margin)、max(theo)、max(roi)、max(adt)、max(economic value)，ROI、Net Margin、ADT、Theo、Economic Value 等）达到分位数内的最佳阈值（借鉴极大似然估计的原理）才能判据风险与优质各等级的四个实体吗？可参考各顶级赌场与顶级博彩公司的标准、做法、规范和手段等等，务必行得通、可以落实为公司提高市场份额、会员数、盈利等等业绩。
+   * 其余的风险与优质会员、荷官、代理、风控专员各级别分类。判据的标准应该是以每个实体各别的派彩金额先分类为负数（min(net_margin)、min(theo)、min(roi)、min(adt)、min(economic value)，ROI、Net Margin、ADT、Theo、Economic Value 等）至零和零至正数（max(net_margin)、max(theo)、max(roi)、max(adt)、max(economic value)，ROI、Net Margin、ADT、Theo、Economic Value 等）达到分位数内的最佳阈值（借鉴极大似然估计的原理）才能判据风险与优质各等级的四个实体吗？可参考各顶级赌场与顶级博彩公司的标准、做法、规范和手段等等，务必行得通、可以落实为公司提高市场份额、会员数、盈利等等业绩。
+
+请查证十五类风险会员的判据统一坐标：关键指标如ROI、Net Margin、Economic Value、Theo、ADT、game_pnl、hold、NMPT、ESI 、residual_b、effect、expected_gain、最大回撤值、夏普率、索提诺率、APUC、Wilcoxon、符号检验等等任何指标）是否有包含在内？目前有哪些数据表有包含以上指标，请以矩阵方式陈列134张数据表有包含哪些指标？
+

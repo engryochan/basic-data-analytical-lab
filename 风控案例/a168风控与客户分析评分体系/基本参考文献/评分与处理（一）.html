@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>评分与处理（一）</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="评分与处理（一）_files/libs/clipboard/clipboard.min.js"></script>
+<script src="评分与处理（一）_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="评分与处理（一）_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="评分与处理（一）_files/libs/quarto-html/popper.min.js"></script>
+<script src="评分与处理（一）_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="评分与处理（一）_files/libs/quarto-html/anchor.min.js"></script>
+<link href="评分与处理（一）_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="评分与处理（一）_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="评分与处理（一）_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="评分与处理（一）_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="评分与处理（一）_files/libs/bootstrap/bootstrap-efbb37e9afcc02144ebbc7afd12a776f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">评分与处理（一）</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>先生，这一轮我把此前能检索到的<strong>历史方案、两份参考、v1.5.0 registry、HF9f/HF9g 施工审计、商业盈利审计标准、57 维方案以及最近三轮对话</strong>重新交叉核了一遍。结论先定：</p>
+<blockquote class="blockquote">
+<p><strong>这次不是继续“增加几项指标”，而是要把 <code>registry_risk_typology_v1.5.001</code> 从“57维能力登记册”升级成“四实体 × 57维 × 任意组合 × 时间窗口 × 处置方案 × 商业结果”的统一坐标字典。</strong></p>
+<p><strong>57维一维不删；35 CORE 一维不删；22 EXTENDED 一维不删；四实体各自完整拥有自己的57维坐标；实体之间允许任意阶梯组合。</strong></p>
+<p>更重要的是：<strong>能力值、风险判断、处理方式、处理后的商业效果四层必须分开，但必须最终连成可实测闭环。</strong></p>
+</blockquote>
+<p>历史材料也明确支持这个方向：过去已经确定“模型 → Gate → Treatment → Outcome → Causal Evaluation → Incremental NGR → Net Economic Value”的完整闭环，而不能用模型存在本身证明盈利。</p>
+<hr>
+<section id="一先把统一坐标正式钉死" class="level1">
+<h1>一、先把“统一坐标”正式钉死</h1>
+<p>之前最大的问题，是把：</p>
+<blockquote class="blockquote">
+<p>会员16维 + 荷官13维 + 代理13维 + 专员15维</p>
+</blockquote>
+<p>理解成四套<strong>互不相干的小矩阵</strong>。</p>
+<p>先生现在纠正后的意思，我确认如下：</p>
+<section id="四实体不是四个维度集合而是四个坐标系节点" class="level2">
+<h2 class="anchored" data-anchor-id="四实体不是四个维度集合而是四个坐标系节点">四实体不是“四个维度集合”，而是四个坐标系节点</h2>
+<p>即：</p>
+<pre class="text"><code>                         会员 M01~M16
+                              │
+                ┌─────────────┼─────────────┐
+                │             │             │
+          荷官 H01~H13   代理 A01~A13   专员 C01~C15
+                │             │             │
+                └─────────────┼─────────────┘
+                              │
+                       四实体联合空间</code></pre>
+<p>但是每个实体的能力维度<strong>全部保留</strong>。</p>
+<p>因此不是：</p>
+<pre class="text"><code>会员 × 荷官 = 16 × 13</code></pre>
+<p>然后就结束。</p>
+<p>而是：</p>
+<pre class="text"><code>会员16 × 荷官13</code></pre>
+<p>其中每一个组合单元，同时携带：</p>
+<pre class="text"><code>会员全部16维
++
+荷官全部13维</code></pre>
+<p>同理：</p>
+<pre class="text"><code>会员 × 荷官 × 代理
+
+= 16 + 13 + 13
+= 42个实体能力坐标</code></pre>
+<p>而不是只拿其中二维指标。</p>
+<p>最终：</p>
+<pre class="text"><code>会员 × 荷官 × 代理 × 风控专员
+
+= 16 + 13 + 13 + 15
+= 57个实体能力坐标</code></pre>
+<p><strong>一个不遗漏。</strong></p>
+<p>所以先生所谓的“57维”，准确说应升级成：</p>
+<blockquote class="blockquote">
+<p><strong>四实体统一 57-dimensional capability coordinate system。</strong></p>
+</blockquote>
+<p>这点现在正式冻结。</p>
+<hr>
+</section>
+</section>
+<section id="二四实体交叉层级必须全部进入-registry" class="level1">
+<h1>二、四实体交叉层级必须全部进入 registry</h1>
+<p>至少固定以下六级：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>交叉层</th>
+<th style="text-align: right;">必须保留</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>会员</td>
+<td style="text-align: right;">16维</td>
+</tr>
+<tr class="even">
+<td>荷官</td>
+<td style="text-align: right;">13维</td>
+</tr>
+<tr class="odd">
+<td>代理</td>
+<td style="text-align: right;">13维</td>
+</tr>
+<tr class="even">
+<td>风控专员</td>
+<td style="text-align: right;">15维</td>
+</tr>
+<tr class="odd">
+<td>会员 × 荷官</td>
+<td style="text-align: right;"><strong>29维联合向量</strong></td>
+</tr>
+<tr class="even">
+<td>会员 × 代理</td>
+<td style="text-align: right;"><strong>29维联合向量</strong></td>
+</tr>
+<tr class="odd">
+<td>会员 × 风控专员</td>
+<td style="text-align: right;"><strong>31维联合向量</strong></td>
+</tr>
+<tr class="even">
+<td>荷官 × 代理</td>
+<td style="text-align: right;"><strong>26维联合向量</strong></td>
+</tr>
+<tr class="odd">
+<td>荷官 × 风控专员</td>
+<td style="text-align: right;"><strong>28维联合向量</strong></td>
+</tr>
+<tr class="even">
+<td>代理 × 风控专员</td>
+<td style="text-align: right;"><strong>28维联合向量</strong></td>
+</tr>
+<tr class="odd">
+<td>会员 × 荷官 × 代理</td>
+<td style="text-align: right;"><strong>42维联合向量</strong></td>
+</tr>
+<tr class="even">
+<td>会员 × 荷官 × 风控专员</td>
+<td style="text-align: right;"><strong>44维联合向量</strong></td>
+</tr>
+<tr class="odd">
+<td>会员 × 代理 × 风控专员</td>
+<td style="text-align: right;"><strong>44维联合向量</strong></td>
+</tr>
+<tr class="even">
+<td>荷官 × 代理 × 风控专员</td>
+<td style="text-align: right;"><strong>41维联合向量</strong></td>
+</tr>
+<tr class="odd">
+<td>会员 × 荷官 × 代理 × 风控专员</td>
+<td style="text-align: right;"><strong>57维联合向量</strong></td>
+</tr>
+</tbody>
+</table>
+<p>这里有一个非常重要的升级：</p>
+<blockquote class="blockquote">
+<p><strong>不是要求所有组合都必须计算所有 pairwise 数学关系。</strong></p>
+<p>而是要求所有组合一旦进入分析，其成员实体的全部原生能力坐标都必须随之进入。</p>
+</blockquote>
+<p>这避免再次发生“为了二维交叉而把实体本身压缩掉”的退化。</p>
+<hr>
+</section>
+<section id="三再加一层交叉数组不是简单-cartesian-join" class="level1">
+<h1>三、再加一层：交叉数组不是简单 Cartesian Join</h1>
+<p>这是我这次 REDTEAM 特别要挡住的坑。</p>
+<p>如果直接：</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">member</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>× dealer</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>× <span class="kw">agent</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>× <span class="kw">operator</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>很容易产生：</p>
+<blockquote class="blockquote">
+<p>巨型笛卡尔积 + 假关系 + 内存爆炸。</p>
+</blockquote>
+<p>所以正式方案必须定义：</p>
+<pre class="text"><code>ENTITY_LINK_GATE</code></pre>
+<p>只有存在真实业务关系/暴露关系的组合才能进入。</p>
+<p>例如：</p>
+<section id="m-h" class="level3">
+<h3 class="anchored" data-anchor-id="m-h">M × H</h3>
+<p>必须存在：</p>
+<pre class="text"><code>member_id
+dealer_id
+round/shoe/date</code></pre>
+<p>共同暴露。</p>
+</section>
+<section id="m-a" class="level3">
+<h3 class="anchored" data-anchor-id="m-a">M × A</h3>
+<p>必须存在：</p>
+<pre class="text"><code>member_id
+agent_id
+有效代理链</code></pre>
+</section>
+<section id="m-h-a" class="level3">
+<h3 class="anchored" data-anchor-id="m-h-a">M × H × A</h3>
+<p>必须同时满足三者真实连接。</p>
+</section>
+<section id="m-h-a-c" class="level3">
+<h3 class="anchored" data-anchor-id="m-h-a-c">M × H × A × C</h3>
+<p>还必须存在：</p>
+<pre class="text"><code>operator_id
+treatment/event/log</code></pre>
+<p>或者能够证明该专员对该对象产生实际作用。</p>
+<p>因此：</p>
+<blockquote class="blockquote">
+<p><strong>57维是坐标空间；LINK GATE 是组合空间入口。</strong></p>
+</blockquote>
+<p>两者不能混淆。</p>
+<hr>
+</section>
+</section>
+<section id="四此前所有强化升级裁决重新归并成一个总账" class="level1">
+<h1>四、此前所有“强化升级”裁决，重新归并成一个总账</h1>
+<p>我逐项校对后，过去的重要升级可以归成 <strong>11 大类</strong>。</p>
+<hr>
+<section id="u-0135-57永久只增不减" class="level2">
+<h2 class="anchored" data-anchor-id="u-0135-57永久只增不减">U-01：35 → 57，永久只增不减</h2>
+<p>正式冻结：</p>
+<pre class="text"><code>CORE = 35
+EXTENDED = 22
+TOTAL = 57</code></pre>
+<p>不是：</p>
+<pre class="text"><code>先35
+以后有空再57</code></pre>
+<p>而是：</p>
+<pre class="text"><code>Registry 永远登记57
+施工可以按 data_availability 分阶段
+任何阶段不得删除任何维度</code></pre>
+<p>历史审计已经明确指出，“分期施工”本身不是退化；真正禁止的是为了简化而删除维度。这个原则必须保留。</p>
+<hr>
+</section>
+</section>
+<section id="五u-0257维必须三重绑定" class="level1">
+<h1>五、U-02：57维必须三重绑定</h1>
+<p>每一维都必须拥有：</p>
+<pre class="text"><code>domain_id
++
+capability_facet
++
+dimension_class</code></pre>
+<p>即：</p>
+<pre class="text"><code>D01~D12
+×
+F01~F08
+×
+CORE/EXTENDED</code></pre>
+<p>而不是单纯：</p>
+<pre class="text"><code>dimension_name</code></pre>
+<p>同时保留：</p>
+<pre class="text"><code>evidence_ladder
+temporal_admissibility
+leakage_status
+economic_role
+risk_role</code></pre>
+<hr>
+</section>
+<section id="六u-03时间防泄漏从附加说明升级成硬闸" class="level1">
+<h1>六、U-03：时间防泄漏从“附加说明”升级成硬闸</h1>
+<p>这点必须升级到所有57维。</p>
+<p>每一个 capability observation 都必须记录：</p>
+<pre class="text"><code>feature_as_of
+source_max_dt
+source_min_dt
+lookback_window
+prediction_horizon
+label_cutoff
+future_exclusion</code></pre>
+<p>硬条件：</p>
+<pre class="text"><code>source_max_dt &lt;= feature_as_of</code></pre>
+<p>以及：</p>
+<pre class="text"><code>feature_as_of &lt; prediction_horizon</code></pre>
+<p>更进一步，我建议正式增加：</p>
+<pre class="text"><code>asof_entity_key
+asof_population
+asof_relationship
+asof_treatment</code></pre>
+<p>因为仅防止 <code>dt</code> 泄漏还不够。</p>
+<p><strong>人口本身变化也可能泄漏。</strong></p>
+<hr>
+</section>
+<section id="七u-0457维-任意实体阶梯组合" class="level1">
+<h1>七、U-04：57维 → 任意实体阶梯组合</h1>
+<p>这是先生此次要求中最关键的升级。</p>
+<p>registry 必须有：</p>
+<pre class="text"><code>entity_scope</code></pre>
+<p>允许：</p>
+<pre class="text"><code>M
+H
+A
+C
+
+MH
+MA
+MC
+HA
+HC
+AC
+
+MHA
+MHC
+MAC
+HAC
+
+MHAC</code></pre>
+<p>并且：</p>
+<pre class="text"><code>capability_vector</code></pre>
+<p>自动继承参与实体的<strong>全部维度</strong>。</p>
+<hr>
+</section>
+<section id="八u-05能力值与风险值必须彻底分家" class="level1">
+<h1>八、U-05：能力值与风险值必须彻底分家</h1>
+<p>历史 registry 已经明确：</p>
+<blockquote class="blockquote">
+<p><code>OBSERVED ≠ LABEL_VALIDATED ≠ CAUSALLY_ESTABLISHED ≠ ADMITTED_TO_RISK_DECISION</code></p>
+</blockquote>
+<p>而且风险轴不得因为规模大就自动变成风险。</p>
+<p>所以现在升级成四层：</p>
+<pre class="text"><code>L2 Capability
+      ↓
+L3 Risk / Value Evidence
+      ↓
+L4 Decision / Treatment
+      ↓
+L5 Commercial Outcome</code></pre>
+<p>例如：</p>
+<pre class="text"><code>高Theo
+≠ 高风险
+
+高流水
+≠ 高风险
+
+高ROI
+≠ 高风险
+
+高IP关联
+≠ 自动处罚</code></pre>
+<hr>
+</section>
+<section id="九u-06economic-value-不得重复计票" class="level1">
+<h1>九、U-06：Economic Value 不得重复计票</h1>
+<p>此前已经实测：</p>
+<pre class="text"><code>economic_value ≡ net_margin
+Spearman = 1</code></pre>
+<p>所以：</p>
+<pre class="text"><code>economic_value</code></pre>
+<p>继续保留，但必须：</p>
+<pre class="text"><code>equivalent_to = net_margin</code></pre>
+<p>禁止：</p>
+<pre class="text"><code>net_margin + economic_value</code></pre>
+<p>当成两个独立经济轴。</p>
+<p>这属于<strong>信息保留但禁止重复计票</strong>，是强化而非删除。</p>
+<hr>
+</section>
+<section id="十u-07roi-永远不能重新爬回主罚轴" class="level1">
+<h1>十、U-07：ROI 永远不能重新爬回主罚轴</h1>
+<p>这一条必须写成 registry 硬规则。</p>
+<p>此前实测已经发现：</p>
+<ul>
+<li>极端 ROI 经常由极小样本产生；</li>
+<li>ROI 混入综合判型以后表现变差；</li>
+<li><code>roi_weighted_by_stake</code> 在会员粒度数学上退化为 ROI 本身。</li>
+</ul>
+<p>所以：</p>
+<pre class="text"><code>ROI
+→ PROFILE / DESCRIPTIVE / SUPPORT</code></pre>
+<p>而不是：</p>
+<pre class="text"><code>ROI
+→ automatic punishment</code></pre>
+<p>尤其：</p>
+<pre class="text"><code>late_share
+high ROI
+small n</code></pre>
+<p>不能直接变成风险结论。历史数据已经发现极端 <code>late_share</code> 很少，但明确警告“选择条件 ≠ 风险证明”。</p>
+<hr>
+</section>
+<section id="十一u-08ramp_recent-必须从-vs_all-升级成-vs_prior" class="level1">
+<h1>十一、U-08：ramp_recent 必须从 vs_all 升级成 vs_prior</h1>
+<p>这个已经是确定缺陷：</p>
+<pre class="text"><code>ramp_recent</code></pre>
+<p>现有63件的分母包含自身 recent：</p>
+<pre class="text"><code>recent / ALL</code></pre>
+<p>存在机械相关。</p>
+<p>正式升级：</p>
+<pre class="text"><code>recent / prior</code></pre>
+<p>并进入：</p>
+<pre class="text"><code>DF-3
+S2</code></pre>
+<hr>
+</section>
+<section id="十二u-09theo-adt-nmpt-esi-必须进入57维商业强化层" class="level1">
+<h1>十二、U-09：theo / ADT / NMPT / ESI 必须进入57维商业强化层</h1>
+<p>但是不能简单“多加四列”。</p>
+<p><code>theo</code> 必须：</p>
+<pre class="text"><code>member × bet09
+× house_edge</code></pre>
+<p>先产生中间粒度，再汇总。</p>
+<p>历史审计已经明确发现：现有 <code>#075</code> 在会员级只保留产品数量和产品熵，<code>bet09 × valid_bet</code> 已被提前折叠，因此 Theo 实际上需要新增 <code>x_prod</code> CTE，而不是简单增加一列。</p>
+<p>因此升级为：</p>
+<pre class="text"><code>theo
+adt
+nmpt
+esi</code></pre>
+<p>但每一个都必须登记：</p>
+<pre class="text"><code>formula
+source
+grain
+edge_version
+effective_date
+zero_protection
+economic_role</code></pre>
+<hr>
+</section>
+<section id="十三u-10赏罚不能只有一个结果" class="level1">
+<h1>十三、U-10：赏罚不能只有“一个结果”</h1>
+<p>这是此前规划最应该进一步强化的地方。</p>
+<p>正式 registry 必须新增：</p>
+<pre class="text"><code>treatment_policy_dictionary</code></pre>
+<p>一个实体/组合可以有：</p>
+<pre class="text"><code>T00 = NO_ACTION / CONTINUE
+T01 = PROTECT
+T02 = VIP / RETENTION
+T03 = PROMOTION
+T04 = RECRUIT_AS_AGENT
+T05 = MONITOR
+T06 = REVIEW
+T07 = LIMIT
+T08 = REDUCE_COMP
+T09 = MANUAL_REVIEW
+T10 = ESCALATE
+T11 = SUSPEND
+T12 = REMOVE</code></pre>
+<p><strong>不是说每个实体都能使用全部Treatment。</strong></p>
+<p>而是：</p>
+<blockquote class="blockquote">
+<p>registry 必须保存所有可行处理方式，然后由实体类型、风险、价值、证据和业务约束决定哪些 Treatment 可进入。</p>
+</blockquote>
+<hr>
+</section>
+<section id="十四最重要的升级每一种-treatment-都必须计算反事实" class="level1">
+<h1>十四、最重要的升级：每一种 Treatment 都必须计算“反事实”</h1>
+<p>先生之前举的：</p>
+<blockquote class="blockquote">
+<p>高频小额、持续赢钱的会员怎么办？</p>
+</blockquote>
+<p>这正好应该成为标准模板。</p>
+<p>不是：</p>
+<pre class="text"><code>高ROI → 限额</code></pre>
+<p>而是：</p>
+<section id="scenario-a" class="level3">
+<h3 class="anchored" data-anchor-id="scenario-a">Scenario A</h3>
+<pre class="text"><code>继续正常投注</code></pre>
+<p>预测：</p>
+<pre class="text"><code>未来NGR
+未来Theo
+未来ADT
+未来Net Margin
+未来留存
+未来流水
+未来会员贡献</code></pre>
+</section>
+<section id="scenario-b" class="level3">
+<h3 class="anchored" data-anchor-id="scenario-b">Scenario B</h3>
+<pre class="text"><code>限额</code></pre>
+<p>测：</p>
+<pre class="text"><code>Incremental NGR
+Incremental Profit
+Churn
+Turnover loss
+Market-share effect</code></pre>
+</section>
+<section id="scenario-c" class="level3">
+<h3 class="anchored" data-anchor-id="scenario-c">Scenario C</h3>
+<pre class="text"><code>培养成为代理</code></pre>
+<p>测：</p>
+<pre class="text"><code>新增会员
+新增代理
+新增流水
+新增Theo
+新增NGR
+代理留存
+链路质量
+净经济价值</code></pre>
+</section>
+<section id="scenario-d" class="level3">
+<h3 class="anchored" data-anchor-id="scenario-d">Scenario D</h3>
+<pre class="text"><code>VIP / retention</code></pre>
+<p>测：</p>
+<pre class="text"><code>comp cost
+retention uplift
+NGR uplift</code></pre>
+</section>
+<section id="scenario-e" class="level3">
+<h3 class="anchored" data-anchor-id="scenario-e">Scenario E</h3>
+<pre class="text"><code>观察</code></pre>
+<p>测：</p>
+<pre class="text"><code>risk avoided
+cost avoided
+future loss</code></pre>
+<hr>
+</section>
+</section>
+<section id="十五所以正式建立-treatment-counterfactual-matrix" class="level1">
+<h1>十五、所以正式建立 Treatment Counterfactual Matrix</h1>
+<p>核心结构：</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Treatment</th>
+<th>处理前</th>
+<th>处理后</th>
+<th>对照</th>
+<th>增量</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>不处理</td>
+<td>PRE</td>
+<td>POST</td>
+<td>Control</td>
+<td>ΔNGR</td>
+</tr>
+<tr class="even">
+<td>限额</td>
+<td>PRE</td>
+<td>POST</td>
+<td>Control</td>
+<td>ΔNGR</td>
+</tr>
+<tr class="odd">
+<td>VIP</td>
+<td>PRE</td>
+<td>POST</td>
+<td>Control</td>
+<td>ΔNGR</td>
+</tr>
+<tr class="even">
+<td>促活</td>
+<td>PRE</td>
+<td>POST</td>
+<td>Control</td>
+<td>ΔNGR</td>
+</tr>
+<tr class="odd">
+<td>转代理</td>
+<td>PRE</td>
+<td>POST</td>
+<td>Control</td>
+<td>ΔMembers/Agent/NGR</td>
+</tr>
+<tr class="even">
+<td>观察</td>
+<td>PRE</td>
+<td>POST</td>
+<td>Control</td>
+<td>ΔRisk/Profit</td>
+</tr>
+<tr class="odd">
+<td>人工复核</td>
+<td>PRE</td>
+<td>POST</td>
+<td>Control</td>
+<td>ΔCost/Outcome</td>
+</tr>
+<tr class="even">
+<td>暂停</td>
+<td>PRE</td>
+<td>POST</td>
+<td>Control</td>
+<td>ΔLoss avoided</td>
+</tr>
+</tbody>
+</table>
+<p>然后统一计算：</p>
+<pre class="text"><code>Incremental NGR
+Incremental Profit
+Incremental Members
+Incremental Agents
+Incremental Turnover
+Retention Δ
+Churn Δ
+Market-share proxy Δ
+Treatment Cost
+Risk Avoided
+Net Economic Value</code></pre>
+<p>最终：</p>
+<p><span class="math display">\[
+\boxed{
+INEV =
+Incremental\ NGR
+-
+Treatment\ Cost
+-
+Opportunity\ Cost
++
+Risk\ Avoided
+}
+\]</span></p>
+<hr>
+</section>
+<section id="十六u-11商业成功必须从相关升级到因果" class="level1">
+<h1>十六、U-11：商业成功必须从“相关”升级到“因果”</h1>
+<p>历史方案已经把这一点钉死：</p>
+<blockquote class="blockquote">
+<p>模型存在 ≠ 盈利；回测盈利 ≠ 生产盈利；相关 ≠ 因果；NGR增长 ≠ Incremental NGR。</p>
+</blockquote>
+<p>所以每一个 Treatment 都要进入：</p>
+<pre class="text"><code>PRE
+ ↓
+Treatment
+ ↓
+POST
+ ↓
+Control
+ ↓
+PSM / DID / Event Study
+ ↓
+Incremental NGR
+ ↓
+Incremental Profit
+ ↓
+Net Economic Value</code></pre>
+<p>如果能随机：</p>
+<pre class="text"><code>A/B / Randomized Control</code></pre>
+<p>优先。</p>
+<p>不能随机才：</p>
+<pre class="text"><code>PSM
+DID
+Event Study</code></pre>
+<p>并且必须 purge / embargo，避免时间泄漏。</p>
+<hr>
+</section>
+<section id="十七57维不能只是画像要真正证明商业价值" class="level1">
+<h1>十七、57维不能只是“画像”，要真正证明商业价值</h1>
+<p>这就是最终商业闭环：</p>
+<pre class="text"><code>57D Capability Vector
+          ↓
+Cross-Entity Vector
+          ↓
+Risk × Value
+          ↓
+Treatment Candidate
+          ↓
+Treatment Assignment
+          ↓
+Outcome
+          ↓
+Causal Evaluation
+          ↓
+Incremental NGR
+          ↓
+Incremental Profit
+          ↓
+Market Share / Members / Agents
+          ↓
+Net Economic Value</code></pre>
+<p>历史方案已经提出 SOPP：</p>
+<pre class="text"><code>Signal
+→ Operational Threshold
+→ L1/L2
+→ Evidence
+→ L3 Review
+→ Approved Action
+→ Outcome
+→ Gold Label</code></pre>
+<p>并且特别强调作业阈值、评估、经济价值三层不能混合。</p>
+<hr>
+</section>
+<section id="十八最终我建议把-v1.5.001-registry-升级成四本字典-一张总矩阵" class="level1">
+<h1>十八、最终我建议把 v1.5.001 registry 升级成“四本字典 + 一张总矩阵”</h1>
+<p>不是只有：</p>
+<pre class="text"><code>registry_risk_typology</code></pre>
+<p>而是：</p>
+<section id="dictionary-①capability-dictionary" class="level2">
+<h2 class="anchored" data-anchor-id="dictionary-①capability-dictionary">Dictionary ①：Capability Dictionary</h2>
+<pre class="text"><code>57维
+×
+4实体
+×
+domain
+×
+facet
+×
+CORE/EXTENDED
+×
+formula
+×
+source
+×
+grain</code></pre>
+<hr>
+</section>
+<section id="dictionary-②cross-entity-dictionary" class="level2">
+<h2 class="anchored" data-anchor-id="dictionary-②cross-entity-dictionary">Dictionary ②：Cross-Entity Dictionary</h2>
+<pre class="text"><code>M
+H
+A
+C
+MH
+MA
+MC
+HA
+HC
+AC
+MHA
+MHC
+MAC
+HAC
+MHAC</code></pre>
+<p>每一个组合：</p>
+<pre class="text"><code>完整继承参与实体全部能力维
++
+relationship features
++
+exposure
++
+evidence</code></pre>
+<hr>
+</section>
+<section id="dictionary-③treatment-dictionary" class="level2">
+<h2 class="anchored" data-anchor-id="dictionary-③treatment-dictionary">Dictionary ③：Treatment Dictionary</h2>
+<pre class="text"><code>T00~T12</code></pre>
+<p>每个 Treatment：</p>
+<pre class="text"><code>适用实体
+适用风险
+适用价值
+证据门槛
+成本
+预期收益
+副作用
+可逆性
+监管/合规
+实验要求</code></pre>
+<hr>
+</section>
+<section id="dictionary-④outcome-economic-dictionary" class="level2">
+<h2 class="anchored" data-anchor-id="dictionary-④outcome-economic-dictionary">Dictionary ④：Outcome / Economic Dictionary</h2>
+<p>统一：</p>
+<pre class="text"><code>ROI
+Net Margin
+ADT
+Theo
+Economic Value
+NMPT
+ESI
+GGR
+NGR
+Incremental NGR
+Incremental Profit
+Retention
+Churn
+Turnover
+New Members
+New Agents
+Market Share
+Treatment Cost
+Risk Avoided
+Net Economic Value</code></pre>
+<p>并明确：</p>
+<blockquote class="blockquote">
+<p><strong>Outcome 不是 Capability。</strong></p>
+</blockquote>
+<hr>
+</section>
+</section>
+<section id="十九第五张unified-cross-matrix" class="level1">
+<h1>十九、第五张：Unified Cross Matrix</h1>
+<p>最终真正的核心产品其实是：</p>
+<pre class="text"><code>                    价值
+                     ↑
+                     │
+          ┌──────────┼──────────┐
+          │          │          │
+        高价值     高价值      低价值
+        低风险     高风险      高风险
+          │          │          │
+       RETAIN      PROTECT     REVIEW
+       GROW        MONITOR     LIMIT
+       VIP         TEST        ESCALATE
+          │          │          │
+          └──────────┼──────────┘
+                     │
+                     ↓
+                    风险</code></pre>
+<p>但这只是<strong>决策框架</strong>。</p>
+<p>真正进入计算时：</p>
+<pre class="text"><code>57D
++
+Cross Entity
++
+Evidence
++
+Temporal
++
+Treatment
++
+Outcome
++
+Causal
++
+Economic</code></pre>
+<p>全部保留。</p>
+<hr>
+</section>
+<section id="二十我特别建议增加一个treatment-dominance判据" class="level1">
+<h1>二十、我特别建议增加一个“Treatment Dominance”判据</h1>
+<p>这是我认为比单纯比较 ROI 更强的一步。</p>
+<p>对于同一个对象：</p>
+<pre class="text"><code>T0 不处理
+T1 限额
+T2 VIP
+T3 促活
+T4 转代理
+T5 观察
+T6 复核</code></pre>
+<p>分别得到：</p>
+<p><span class="math display">\[
+NEV(T_0),NEV(T_1),...,NEV(T_6)
+\]</span></p>
+<p>然后寻找：</p>
+<p><span class="math display">\[
+T^*=\arg\max_T NEV(T)
+\]</span></p>
+<p>但必须满足：</p>
+<pre class="text"><code>Evidence ≥ required level
++
+Temporal CLEAN
++
+Multiplicity controlled
++
+No material harm</code></pre>
+<p>这样系统最终回答的就不再是：</p>
+<blockquote class="blockquote">
+<p>“这个人危险吗？”</p>
+</blockquote>
+<p>而是：</p>
+<blockquote class="blockquote">
+<p><strong>“在目前证据下，对这个人采取哪一种处理，对公司的增量经济价值最大？”</strong></p>
+</blockquote>
+<p>这才真正接近先生所说的<strong>赏罚分明 + 商业盈利操作系统</strong>。</p>
+<hr>
+</section>
+<section id="二十一但有一条必须狠狠挡住" class="level1">
+<h1>二十一、但有一条必须狠狠挡住</h1>
+<p>不能因为最终目标是：</p>
+<blockquote class="blockquote">
+<p>增加市场份额、会员、代理、利润</p>
+</blockquote>
+<p>就反过来把：</p>
+<pre class="text"><code>未来利润
+未来会员
+未来代理</code></pre>
+<p>偷偷塞回 Feature。</p>
+<p>否则立即发生：</p>
+<pre class="text"><code>OUTCOME_LEAK
+LABEL_LEAK
+FUTURE_DEPENDENCY</code></pre>
+<p>所以：</p>
+<section id="预测阶段" class="level3">
+<h3 class="anchored" data-anchor-id="预测阶段">预测阶段</h3>
+<p>只能：</p>
+<pre class="text"><code>feature_as_of
+→ prediction</code></pre>
+</section>
+<section id="评价阶段" class="level3">
+<h3 class="anchored" data-anchor-id="评价阶段">评价阶段</h3>
+<p>才：</p>
+<pre class="text"><code>prediction
+→ actual outcome</code></pre>
+</section>
+<section id="商业阶段" class="level3">
+<h3 class="anchored" data-anchor-id="商业阶段">商业阶段</h3>
+<p>才：</p>
+<pre class="text"><code>actual outcome
+→ incremental economics</code></pre>
+<p><strong>绝不能反过来。</strong></p>
+<hr>
+</section>
+</section>
+<section id="二十二目前资料能否已经证明方案一定盈利" class="level1">
+<h1>二十二、目前资料能否已经证明“方案一定盈利”？</h1>
+<p>这里我要坚持 REDTEAM 的最高标准：</p>
+<section id="能证明的" class="level3">
+<h3 class="anchored" data-anchor-id="能证明的">能证明的</h3>
+<p>目前资料已经足以证明：</p>
+<ul>
+<li>数据基础比过去完整；</li>
+<li>Treatment Ledger 已经存在；</li>
+<li>处置节已经形成；</li>
+<li>多项经济指标已经存在；</li>
+<li>四实体均有相当规模的结构化数据；</li>
+<li><code>Theo / ADT / NMPT / ESI</code> 有明确升级路径；</li>
+<li>处置前后分析具备实际基础；</li>
+<li>可以建立 PSM/DID/Event Study；</li>
+<li>可以建立 Incremental NGR / Net Economic Value 框架。</li>
+</ul>
+<p>历史方案也明确要求把最终经济评价落在 Incremental NGR 减去全部相关成本。</p>
+</section>
+<section id="目前还不能证明的" class="level3">
+<h3 class="anchored" data-anchor-id="目前还不能证明的">目前还不能证明的</h3>
+<p>但是：</p>
+<blockquote class="blockquote">
+<p><strong>不能仅凭现有静态数据宣布“该商业方案已经证明一定增加市场份额、会员、代理和利润”。</strong></p>
+</blockquote>
+<p>真正必须实测：</p>
+<pre class="text"><code>Treatment
+vs
+Control</code></pre>
+<p>然后：</p>
+<pre class="text"><code>ΔRetention
+ΔMembers
+ΔAgents
+ΔTurnover
+ΔNGR
+ΔProfit</code></pre>
+<p>并扣：</p>
+<pre class="text"><code>Treatment Cost
+Opportunity Cost</code></pre>
+<p>才能得到：</p>
+<p><span class="math display">\[
+\boxed{Incremental\ Net\ Economic\ Value}
+\]</span></p>
+<p>这一点不是保守，而是整个系统最重要的<strong>防自欺闸门</strong>。</p>
+<hr>
+</section>
+</section>
+<section id="二十三因此-v1.5.001-当前正式强化冻结版应包含这些项目" class="level1">
+<h1>二十三、因此 v1.5.001 当前正式“强化冻结版”应包含这些项目</h1>
+<p>我建议登记为：</p>
+<section id="a.-维度体系" class="level3">
+<h3 class="anchored" data-anchor-id="a.-维度体系">A. 维度体系</h3>
+<pre class="text"><code>57维
+CORE 35
+EXTENDED 22
+四实体完整继承</code></pre>
+</section>
+<section id="b.-统一坐标" class="level3">
+<h3 class="anchored" data-anchor-id="b.-统一坐标">B. 统一坐标</h3>
+<pre class="text"><code>D01-D12
+F01-F08
+CORE/EXTENDED</code></pre>
+</section>
+<section id="c.-组合空间" class="level3">
+<h3 class="anchored" data-anchor-id="c.-组合空间">C. 组合空间</h3>
+<pre class="text"><code>M
+H
+A
+C
+MH
+MA
+MC
+HA
+HC
+AC
+MHA
+MHC
+MAC
+HAC
+MHAC</code></pre>
+</section>
+<section id="d.-时间安全" class="level3">
+<h3 class="anchored" data-anchor-id="d.-时间安全">D. 时间安全</h3>
+<pre class="text"><code>temporal_admissibility
+temporal_hard_gate
+future_dependency
+label_dependency
+leakage_status</code></pre>
+</section>
+<section id="e.-统计安全" class="level3">
+<h3 class="anchored" data-anchor-id="e.-统计安全">E. 统计安全</h3>
+<pre class="text"><code>evidence_ladder
+multiplicity_control
+BH_FDR
+Bonferroni
+Permutation
+NONE → 禁 admit</code></pre>
+</section>
+<section id="f.-经济安全" class="level3">
+<h3 class="anchored" data-anchor-id="f.-经济安全">F. 经济安全</h3>
+<pre class="text"><code>Theo
+ADT
+Net Margin
+NMPT
+ESI
+Incremental NGR
+Incremental Profit
+Net Economic Value</code></pre>
+</section>
+<section id="g.-treatment" class="level3">
+<h3 class="anchored" data-anchor-id="g.-treatment">G. Treatment</h3>
+<pre class="text"><code>T00~T12</code></pre>
+</section>
+<section id="h.-counterfactual" class="level3">
+<h3 class="anchored" data-anchor-id="h.-counterfactual">H. Counterfactual</h3>
+<pre class="text"><code>T0 vs T1 ... Tn</code></pre>
+</section>
+<section id="i.-causal" class="level3">
+<h3 class="anchored" data-anchor-id="i.-causal">I. Causal</h3>
+<pre class="text"><code>A/B
+PSM
+DID
+Event Study</code></pre>
+</section>
+<section id="j.-commercial-outcome" class="level3">
+<h3 class="anchored" data-anchor-id="j.-commercial-outcome">J. Commercial Outcome</h3>
+<pre class="text"><code>Members
+Agents
+Turnover
+Retention
+Churn
+Market Share
+NGR
+Profit</code></pre>
+</section>
+<section id="k.-audit" class="level3">
+<h3 class="anchored" data-anchor-id="k.-audit">K. Audit</h3>
+<pre class="text"><code>source
+grain
+formula
+as_of
+snapshot
+MD5
+version
+equivalent_to
+availability
+evidence
+causal_status</code></pre>
+<hr>
+</section>
+</section>
+<section id="二十四最后的总裁决" class="level1">
+<h1>二十四、最后的总裁决</h1>
+<p>我现在正式把前面多轮容易混淆的几个概念彻底统一：</p>
+<blockquote class="blockquote">
+<p><strong>57维不是57个孤立指标。</strong></p>
+</blockquote>
+<p>而是：</p>
+<p><span class="math display">\[
+\boxed{
+\textbf{四实体统一能力坐标系}
+}
+\]</span></p>
+<p>再向外扩展：</p>
+<p><span class="math display">\[
+\boxed{
+57D
+\rightarrow
+15种实体组合
+\rightarrow
+Evidence
+\rightarrow
+Risk\times Value
+\rightarrow
+Treatment
+\rightarrow
+Counterfactual
+\rightarrow
+Causal
+\rightarrow
+Incremental\ NGR
+\rightarrow
+Net\ Economic\ Value
+}
+\]</span></p>
+<p>其中：</p>
+<p><strong>会员16、荷官13、代理13、风控专员15，一维不能少。</strong></p>
+<p>而且：</p>
+<blockquote class="blockquote">
+<p><strong>四实体联合时，不允许为了“交叉”而删掉任何一个参与实体的能力维。</strong></p>
+</blockquote>
+<p>再进一步：</p>
+<blockquote class="blockquote">
+<p><strong>不是寻找“最危险的人”，而是寻找“在证据充分、无信息泄漏的条件下，什么处理方式能够产生最大的增量净经济价值，同时减少不必要的会员、代理和市场流失”。</strong></p>
+</blockquote>
+<p>这才真正把先生一直要求的：</p>
+<p><strong>“只能强化与升级，禁止退化”</strong></p>
+<p>落实成了工程规则，而不是一句口号。</p>
+<p>目前我认为<strong>不应该再动 <code>registry_risk_typology_v1.5.001</code> 成品文件</strong>；应先把以上“57D × 15组合 × Treatment × Outcome × Economic”规格冻结进清单。待 <code>R03_player_dealer.csv</code>、<code>R03b_player_dealer_daily.csv</code> 到位后，再按冻结规格一次性施工。现有审计也明确把这两件列为荷官实体的核心承载，因此此时不提前假造其维度结果，是正确的。</p>
+<p><strong>一句交接总诀：</strong></p>
+<blockquote class="blockquote">
+<p><strong>“四体同坐标，五十七维全；阶梯任意交，原维一不减；先时序，后证据；先价值，后风险；先方案，后处置；处置必对照，结果必因果；NGR扣成本，增量定胜负；未证不称盈，已证方生产。”</strong></p>
+</blockquote>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,1778 @@
+---
+title: "T-09 · 代理线自打／养号 · 风险会员判据商业方案"
+subtitle: "十五类风险会员判据商业方案 · T-09 · 登记册同源现算（版本与全配套六元组见第十部分血统表 · 渲染时现取）"
+author: "Ryo（雷欧）"
+date: "2026-09-03"
+lang: zh-CN
+params:
+  type_id: "T-09"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-expand: 2
+    number-sections: true
+    embed-resources: true
+    page-layout: full
+    code-fold: true
+    code-tools: true
+    code-summary: "查看代码"
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+---
+
+```{r}
+#| label: 设置
+## ════════════════════════════════════════════════════════════════════════
+## 十五类风险会员判据商业方案 · 自同一模板生成，十五份同构同步。
+## 版本 : 1.12.0
+## 变更 : 1.12.0（N-17 · 承先生指正；系我方疏漏，非先生理解有误）——
+##   ⛔ 自陈：范本 §3.1.1「关键字段」一节，本模板【实际渲染为空】——tr_ods_fields() 以
+##     【判据列名】比对 ODS 字典，而本套判据列皆系交付件派生量，本不在 ODS 字典内 ⇒
+##     恒命中 0 ⇒ 恒印「○ 本类判据列未见于 ODS 字典」。拿派生列查源字典，方向自始即错。
+##   ① 关键字段改由【总包 SQL 现取本类各件实际取用之 ODS 源字段】，再接 数据库/Z03_column_dictionary.csv
+##     补业务含义与存储类型，并自 SQL 之 AS 别名反标本类用途 —— 与范本四栏同式。
+##   ② 核心指标补【定义（公式 · 取自总包 SQL）】栏，如范本般列公式而非只列名与阈值注。
+##   ③ 模型章移回第二部分之末，并加逐件子节（对应范本 2.3.1）；第三部分遂自「一、源数据」起编号，
+##     与范本 3.1／3.1.1／3.1.2／3.2／3.2.1 之目录逐级对齐。
+##   ④ 去「1.1／1.2／2.1」三处手写编号，免与自动编号叠成「3.2.1 1.1 关键字段」。
+##   其余各章一字未改。
+## 变更 : 1.11.0（N-16 · 承先生三令）——
+##   ① 【删】第一部分原第三节（阻断—前置一族之呈现章）整节连同其 chunk 全数删除；
+##      第一部分标题与本章定位内之相关字样一并去除；第六／九部分二处措辞中性化。
+##      ⛔ 全档自此不再提及该章之任何字样。
+##   ② 【增】依范本《靴尾投注篇 v1.2.55》§2.3 模型 之体例，立「三、模型」：
+##      血统告示 · 契约保全（原列逐字不改名／不改义／不改序）· 判据锁（阈值单点声明）
+##      · ▸ 导出声明 · 未纳入（候裁定，不擅自扩权）。
+##   ③ 【增】依范本 §3 数据口径 之体例，于第三部分补四块：输出指标标准 · 规章表（治理规则，
+##      非数据，全行零省略）· 验收判据（先过闸，再谈判读，七闸皆可机检）· 天花板（本类解决不了什么）。
+##   其余各章一字未改。
+## 变更 : 1.10.0（N-15 · 承先生「一切依照先生之见进行」之令）——
+##   ① `.TR_HOLD_DEF` 已移入配置册，改调 `tr_hold_def()`（增【理论 house_edge_theoretical】行
+##      与视角／极性二栏）；并增极性登记册表——⛔ 极性陷阱两轮各中一次，故必须登记。
+##   ② 第三部分增「五 · 加权口径与权重诊断」：双口径并列 ＋ ESS／集中度 ＋ 加权登记册 ＋ 六条铁律。
+##   ③ 第九部分增「五 · 经济语义闸十五条」与「六 · 四状态分离」。
+##   其余各章一字未改。
+## 变更 : 1.9.0（N-14 · 承先生「实测并证实处理前后之风险；以顶级统计概念灵活搭配，
+##   择最低亏损最高回酬之组合」与《参考.txt》之校对）——
+##   ⛔ 病根：模板 v1.8.0 及以前从不接 §13.2／§13.3／§15／§16，故：口径不正名（hold 三义混称）、
+##     house_edge 不出数（实则 SELECT 即得）、无任何预测器、更无处理前后之经济对照。
+##   ① 第三部分增「四 · hold 族口径正名与已实现庄家优势实测」；
+##   ② 第七部分增「五 · 决策统计层」（贝叶斯收缩／MLE／马尔可夫／极值 POT-GPD）；
+##   ③ 第九部分增「三 · 处理前后经济回归闸」与「四 · 期望损失最小之处置组合」。
+##   其余各章一字未改。
+## 变更 : 1.8.0（N-13 · 承先生问「为何十五份一律遗漏 SQL 原文与维度指标」）——
+##   ⛔ 病根：引擎 1.9.0 已立 tr_sql_of()／tr_dimensions()／tr_delivery_gate()，
+##     然**本模板从未接线**（v1.7.0 全档内三者命中皆为 0）。器在库中而报表不出，
+##     与无器无异。故第二部分只见交付件清单而不见其取数 SQL，第三部分只见 ODS 字典
+##     与登记册口径，而不见 数据库/ 内主辅表逐栏之维度与指标。二处遗漏历十五份而一律。
+##   ① 设置章接上 tr_delivery_gate()：交付目录不在位或零件即 stop，禁再静默报「待表」。
+##   ② 第二部分增「〇之四 · 主辅表取数 SQL 原文与输出标准」：总包三版名册 ＋ 逐件溯源总览
+##      ＋ 逐件 SQL 全文（一行未截）＋ 原文之后逐项解释该 SQL 所出之表的【标准】。
+##   ③ 第三部分增「三 · 主辅数据表全维度与全指标盘点」：读 数据库/ 之现档，逐栏定性为
+##      维度抑或指标，全栏在册、零省略，并与列数对账；本类判据列就地标星。
+##   其余各章一字未改。
+##
+## 【单一真相源】规范/registry_risk_typology_v*.{yaml,csv}
+##   ★ 版本不写死于本档：以 registry_loader.R 之 REGISTRY_PATHS 与 registry_load() 现取为准；
+##     全配套十四件之版本与六元组，一律于第十部分【血统表】渲染时现算（N-8）。
+## 【软配置册】  配置/report_config_v1.0.0.yaml —— 一切阈值、分位、置信、样本门、
+##   命名空间、字段别名、呈表尺寸、模型名册、管线定义、措施文字一律取自该册；
+##   本档与引擎不硬写任何业务数值或业务字符（硬码铁律）。
+## 【血统铁律】不引三份外来文献之任何数字、阈值或分级；黑名单见配置册，
+##   引擎于产出后自检，命中即停止渲染。
+## 【工作目录】自本档所在处上溯，命中同时含 规范/ 与 函数/ 者为项目根——
+##   本档于 模板/ 与 分析/风险会员商业方案/ 两处皆可直接预览与渲染。
+## ════════════════════════════════════════════════════════════════════════
+suppressPackageStartupMessages({ library(data.table); library(knitr) })
+.root <- local({
+  p <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+  for (i in 0:5) {
+    if (dir.exists(file.path(p, "规范")) && dir.exists(file.path(p, "函数"))) break
+    up <- dirname(p); if (identical(up, p)) break; p <- up
+  }
+  if (!dir.exists(file.path(p, "规范"))) stop("未找到项目根（需同时含 规范/ 与 函数/）")
+  p })
+knitr::opts_knit$set(root.dir = .root); setwd(.root)
+source("函数/registry_loader.R"); source("函数/glossary_engine.R")
+source("函数/rule_registry_loader.R")    # N-10：此前从未接线，致 RULES_PATH／RISKEYE_PATH 不存在、
+                                          #       血统表「规则册」一行为空且不说明何以为空（静默之洞）
+source("函数/typology_report_engine.R")   # N-4：扩充引擎已并入本档，一行即全
+tr_apply_config()                                 # 软配置册覆盖一切守门参数
+invisible(tr_delivery_gate())                     # N-13：交付命名空间闸——目录不在位或零件即 stop，
+                                                  #   禁再以「待表（档不在位）」静默冒充缺数据（呈表见 @sec-sql-lineage）
+REG <- registry_load(); GL <- glossary_load(); glossary_activate(GL)
+tip <- function(k, show = NULL) gtip(k, show)
+CNT <- registry_counts(REG)
+CFG <- tr_cfg()
+TID <- params$type_id
+.is_tpl <- grepl("[{][{][A-Z_]+[}][}]", TID)
+if (.is_tpl) TID <- REG$dict[axis == "R"][order(type_id)][1L, type_id]
+rec <- tr_recipe(REG, TID); typ <- rec$typ
+meta <- Filter(function(x) identical(x$type_id, TID), REG$meta$typologies)[[1]]
+reg_ver <- REG$meta$registry$version
+GATE <- tr_gate2(REG, typ$门禁)
+```
+
+```{r}
+#| label: 资产注入
+#| results: asis
+#| echo: false
+base::cat(glossary_assets(GL))
+base::cat(tr_css())            # 呈表纪律：长表 scroll-y、宽表 scroll-x，尺寸取自配置册
+```
+
+```{r}
+#| label: 开篇定谳
+#| results: asis
+#| echo: false
+.card <- function(lab, val, col) sprintf(
+  '<div style="flex:1;min-width:150px;border:2px solid %s;border-radius:10px;padding:10px 14px;margin:4px">
+   <div style="font-size:0.78em;color:#666">%s</div><div style="font-size:1.4em;font-weight:700;color:%s">%s</div></div>',
+  col, lab, col, val)
+gcol <- c(FATAL = "#c0392b", BLOCK = "#e67e22", CONDITIONAL = "#d4ac0d", ADVISORY = "#27ae60")[typ$门禁]
+cat('<div style="display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 18px 0">',
+  .card("门禁裁定", GATE, gcol), .card("严重度", typ$严重度, gcol),
+  .card("证据层级", typ$证据, "#2c3e50"),
+  .card("准入评分", tr_yn(typ$准入评分), if (isTRUE(typ$准入评分)) "#27ae60" else "#7f8c8d"),
+  .card("准入画像", tr_yn(typ$准入画像), if (isTRUE(typ$准入画像)) "#27ae60" else "#7f8c8d"),
+  .card("生命周期", rec$dict$lifecycle_state[1L], "#2c3e50"),
+  .card("阻断", if (length(typ$阻断)) paste(typ$阻断, collapse = "·") else "无",
+        if (length(typ$阻断)) "#e67e22" else "#27ae60"), '</div>')
+cat(sprintf('<blockquote style="border-left:6px solid %s;padding:8px 14px;font-size:1.05em"><b>一句话裁定（取自登记册 verdict 栏，非正文转录）</b><br>%s</blockquote>\n\n', gcol, typ$裁定))
+if (.is_tpl) cat(sprintf(paste0("::: {.callout-warning}\n## 模板自检模式\n\n本档系**模板本身**，",
+  "占位符未替换，取登记册首类 **%s** 作样例渲染，仅供体例自检。\n:::\n\n"), TID))
+```
+
+::: {.callout-important}
+## 本档定位 · 先看裁定，再看数字
+
+本档是 **`r CNT$risk_typology_count` 类风险会员判据**商业方案之一（`r TID` · `r typ$名称`），
+自同一模板生成，十五份**同构、同源、同步**。一切数字渲染时自 `r tip("登记册")` v`r reg_ver`、
+软配置册 v`r CFG$config$version` 与交付件现算。**门禁覆盖一切实测**：实测再漂亮，门禁说 FATAL 就是 FATAL。
+
+**误判率控制**（本版专项）：一律以 Wilson 下界代点估计；样本未过门者登记 UNKNOWN 而非「正常」；
+尾部命中率逾配置阈值即判退化；多判据共现须与**独立期望**比，提升度 ≈ 1 者叠加不产生新信息。
+:::
+
+# 第一部分：本类判据——灵活搭配与模型 {#sec-typology}
+
+::: {.callout-important}
+## 本章定位
+
+本章以**登记册 v`r reg_ver` 为唯一真相源**，列出本类（`r TID` · `r typ$名称`）之全维度可搭配空间、
+七字段制判据配方与本类模型之契约。维度取自**各自之主表与辅助表表头现算**，零省略、零猜测；
+已登记为判据者以【】标出，其余为未登记之可搭配空间。**门禁覆盖一切实测**——本类门禁 `r GATE`。
+:::
+
+## 一、十五类全维度矩阵：主表维度 × 辅助表 × 辅助表维度
+
+::: {.callout-note}
+本表列出每一类之主表与辅助表的**全部维度，零省略**——已登记为判据者以【】标出，
+其余为**可灵活搭配之未登记维度**。灵活搭配之空间即在此差额。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 全维度矩阵
+dm <- tr_dim_matrix(REG)
+dm[, 本档 := fifelse(序 == TID, "◀ 本档", "")]
+setcolorder(dm, c("本档", "序", "风险类型", "门禁", "主表", "主表维度数", "主表维度",
+                  "辅助表", "辅助表维度数", "辅助表维度", "已登记判据数", "可搭配维度总数"))
+kable(dm, align = "l", escape = FALSE,
+      caption = sprintf("十五类主表／辅助表全维度矩阵（登记册 v%s：%d 类 × %d 条判据；另 V 轴 %d 条，合计 %d 条登记判据；可搭配维度合计 %s 条）",
+                        reg_ver, CNT$risk_typology_count, CNT$risk_criterion_count,
+                        CNT$value_axis_count, CNT$total_criterion_rows, tr_f(sum(dm$可搭配维度总数))))
+```
+:::
+
+```{r}
+#| label: 本档维度小结
+#| results: asis
+me <- dm[序 == TID]
+cat(sprintf("**本档 %s**：主表 `%s` 有 **%d** 维；辅助表 %s 共 **%d** 维；合计 **%d** 个可搭配维度，其中已登记判据 **%d** 条（%.1f%%），余 **%d** 维为**未登记之可搭配空间**。\n\n",
+  TID, me$主表, me$主表维度数, me$辅助表, me$辅助表维度数, me$可搭配维度总数,
+  me$已登记判据数, 100 * me$已登记判据数 / me$可搭配维度总数, me$可搭配维度总数 - me$已登记判据数))
+```
+
+## 二、本类配方：判据维度 × 角色 × 方向 × 阈值状态
+
+::: {.tbl-scroll}
+```{r}
+#| label: 本类判据维度
+kable(typ$判据维度, align = "l", escape = FALSE,
+      caption = sprintf("%s · %s：%d 条判据维度（七字段制；direction 仅 STAT_DIRECTIONAL 有值）",
+                        TID, typ$名称, nrow(typ$判据维度)))
+```
+:::
+
+```{r}
+#| label: 本类摘要
+#| results: asis
+cat(sprintf("- **类别**：%s　**坐标**：%s　**SQL 章节**：%s\n", typ$类别, typ$坐标, rec$dict$sql_section[1L]))
+cat(sprintf("- **主表**：`%s`　**辅助表**：%s\n", typ$主表,
+  if (length(typ$搭配表)) paste(sprintf("`%s`", typ$搭配表), collapse = "、") else "—"))
+cat(sprintf("- **四层纵向证据链**：现象 %s → 标签验证 %s → 因果 %s → 准入风控决策 %s\n",
+  rec$dict$phenomenon_status[1L], rec$dict$label_validation_status[1L],
+  rec$dict$causal_status[1L], tr_yn(rec$dict$admit_to_risk_decision[1L])))
+if (length(rec$scal)) cat("- **型层标量**：",
+  paste(sprintf("`%s` = %s", names(rec$scal), vapply(rec$scal, as.character, "")), collapse = "；"), "\n")
+```
+
+# 第二部分：跨表跨维度实测 {#sec-cross}
+
+::: {.callout-important}
+## 本章定位
+
+本章**各类各读各自之数据表**——主表、辅助表、判据来源表逐件独立载入，不共用、不代用、不互冒；
+表之名册取自登记册 `primary_deliverable`／`supporting_deliverables`／`criterion_source`，非手写。
+**全量铁律**：一切交付件**读全部行**，禁抽样、禁截行、禁 `head`；巨档（逾
+`r format(CFG$guards$large_file_warn_mb, big.mark = ",")` MB）亦全量读入，只登记告警而不截行。
+载入行数与文件换行数逐件对账（见下节），任一件被抽样即 `stop()` 拒绝渲染。
+缺档、缺列一律登记「待表」，不以静态文字冒充结果。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 载入搭配表
+ld <- tr_load_all(rec)
+kable(tr_no(ld$inventory), align = "l", caption = sprintf("本类搭配表清单（%d 件全列，零省略；缺档／缺列一律显示为待表，不以静态文字冒充）", nrow(ld$inventory)))
+```
+:::
+
+## 〇、全量读取核验：禁抽样之实证
+
+::: {.callout-important}
+## 本节定位
+
+本节坐实「**全量**」二字：逐件并呈字节、载入行数、**文件换行数**及两者之差额。
+差额为 `0` 即载入行数恰等于文件逻辑行数（表头一行已扣）；非 `0` 者多因字段内含换行，
+照登不讳，**不得引为截行之借口**。「抽样」列须恒为 `✔ 未抽样`——
+出现 `⛔` 者引擎已于载入阶段停止渲染，本档不可能存在。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 全量读取核验
+fs <- tr_fullscan_audit(rec, ld)
+kable(tr_no(fs), align = "l", escape = FALSE, caption = sprintf(
+  "全量读取核验（%d 件全列，零省略；巨档 %d 件，皆已全量读入；抽样 %d 件——此数须恒为 0）",
+  nrow(fs), sum(fs$巨档 != "—"), sum(fs$抽样 != "✔ 未抽样")))
+```
+:::
+
+## 〇之二、测试线与真实实体之分离 {#sec-testline}
+
+::: {.callout-important}
+## 本节定位
+
+先生历次训示：「测试线与真实实体务必一律区分」。本节坐实之，并如实交代**两种口径并存**：
+
+- **剔除法**（总包侧，多数交付件）：取数时以 `age022 = '1'` 左连取 `NULL` 剔去测试线，
+  交付件内**不留痕**——故本表「标记列 : 无」者，非未处理，而是上游已剔净。
+- **标记法**（`#078 S03_agent_score`）：**保留**测试线并以 `is_test_line` 标记，
+  另出 `stake_testline_audit` / `profit_testline_audit` 供审计对账。
+  ⛔ 此种交付件若不先剔，测试线即混入分位、相关与经济口径。
+
+**2026-09-03 实测揭缺**：本引擎 1.5.0 及以前，可执行码中 `is_test` / `test_line` / `测试线` / `age022`
+命中**皆为 0**，即全无测试线处理；T-08 与 T-09 以 S03 为判据来源，该 13 行测试线**未经分离**
+即入统计。1.6.0 立本闸补之。本章以下各节所用之表集，**皆为剔测试线后之口径**。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 测试线闸
+tlg <- tr_testline_gate(ld)
+kable(tr_no(tlg), align = "l", escape = FALSE, caption = sprintf(
+  "测试线与真实实体之分离（%d 件；采标记法而实含测试线者 %d 件，测试线共 %s 行）",
+  nrow(tlg), sum(tlg$测试线行 > 0, na.rm = TRUE), tr_f(sum(tlg$测试线行, na.rm = TRUE))))
+ld <- tr_drop_testline(ld)   # ★ 自此以下，一律为真实实体口径
+```
+:::
+
+## 〇之三、交付件可信度闸：本类各件之实体金额准用与否 {#sec-credibility}
+
+::: {.callout-important}
+## 本节定位与我方自陈之缺陷
+
+SQL 总包档头自带一份**逐件可信度清单**（133 行），逐件标其连接可信度与用法：
+
+| 级 | 件数 | 含义 | 用法 |
+|---|---|---|---|
+| **OK** | 24 | 连接 1:1，本行金额即本行事实 | **可直接做商业判定** |
+| **WRONG_GRAIN** | 37 | e 侧按上层粒度连接，金额于多行重复 | 仅作背景，**勿算比率** |
+| **INVALID** | 67 | `CROSS JOIN x_agg` 笛卡尔广播，值不相干 | **勿用** |
+| NULL | 1 | `#079` 跨实体未命中 | 只看前 7 列 |
+| N/A | 4 | 三字典 ＋ `#133` 局级事实表 | 本无六层块 |
+
+⛔ **本引擎 1.7.0 及以前，从未读过此清单。** 其广播侦测只验「逐行同值」，
+该法**只抓得住 67 件 `INVALID`，37 件 `WRONG_GRAIN` 全数漏网**——
+上卷广播之值在多行重复而非全表同值，故相异值数 > 1，遂通过检验，
+随后被当作逐行实体金额入账。**此即「看起来完全合理」之最危险一类。**
+
+**2026-09-03 回溯实测**：前两轮所出之判据经济暴露，53 条中仅 **17 条**建于 `OK` 件，
+**28 条 `WRONG_GRAIN`、8 条 `INVALID` 一律撤回**。例：T-01 五条判据源自
+`R02_same_table`（粒度 `uid1 × uid2` 之**对**），会员金额于每一对中重复，
+其 hold 倍数系扇出膨胀所致，不可引用。
+
+1.8.0 立本闸：**实体级金额只准取自 `OK` 件**；其余一律拒出并标成因。
+⛔ `UNKNOWN ≠ PASS`：不在清单内者亦拒出。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 可信度闸
+cp <- tr_credibility_panel(rec, ld)
+kable(tr_no(cp[, .(交付件, 角色, 实体, 粒度, 可信度, 用法, 行数, 实体级金额, 理由)]),
+      align = "l", escape = FALSE, caption = sprintf(
+  "交付件可信度（%d 件；实体级金额准用 %d 件，拒用 %d 件）",
+  nrow(cp), sum(cp$实体级金额 == "✓ 准用"), sum(cp$实体级金额 != "✓ 准用")))
+```
+:::
+
+## 〇之四、主辅表取数 SQL 原文与输出标准 {#sec-sql-lineage}
+
+::: {.callout-important}
+## 本节定位与铁律
+
+先生之训，本节奉为铁律：**数据信息并非无中生有自动生成，而是自 Superset 之
+StarRocks 数据库以 SQL 代码查询并下载**，落盘于 `r TR_DB`/ 而成交付件。
+故本节就地出示三事，缺一即证据链断裂：
+
+1. **总包名册**——`a168_SQL总包_v12_0_0_HF9g-P5D_*版_六层商业版_OPT` 三版之档名、
+   行数、模块数逐版在册（档名取自软配置册 `sql_pack`，**不写死于代码**）；
+2. **逐件 SQL 原文**——本类**主表、辅助表、判据来源表各自**之取数模块全文，
+   **一行未截**，并标其于总包内之行号，可就地复核；
+3. **输出标准**——每段 SQL 之后逐项解释「这段 SQL 出的是一张什么标准的表」：
+   源 ODS 库表、观测窗、快照闸、去重规则、粒度键、测试线处置、全序与批次、
+   六层商业块之连接方式、落盘标识、**声明列数 ↔ 册载列数 ↔ 实测列数三方对账**、
+   实测行数、可信度裁定、落盘路径。
+
+⛔ **2026-09-03 自陈**：本模板 v1.7.0 及以前从未接线本节之三器
+（`tr_sql_of` / `tr_sql_standard` / `tr_delivery_gate` 命中皆为 0），
+故十五份**一律**只见交付件之名而不见其所自出。1.8.0 补之。
+⛔ 总包内查无本件之取数模块者，一律标「**未见于总包**」并列于溯源总览，
+**不得以「系统自动生成」搪塞，亦不得默认已溯源**。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 交付闸与总包名册
+kable(tr_no(tr_delivery_gate()), align = "l", escape = FALSE,
+      caption = sprintf("交付命名空间闸（交付件一律读自 %s/；目录不在位或零件即停止渲染）", TR_DB))
+kable(tr_no(tr_sql_pack_manifest()), align = "l", escape = FALSE,
+      caption = "SQL 总包名册（三版逐版在册；档名、默认溯源口径取自软配置册 sql_pack，代码内不写死）")
+```
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: SQL溯源总览
+sqp <- tr_sql_panel(rec, ld)
+kable(tr_no(sqp[, .(交付件, 角色, SQL溯源, 模块号, 总包行, 模块行数, 源ODS表, 观测窗, 实测行数, 实测列数, 可信度)]),
+      align = "l", escape = FALSE, caption = sprintf(
+  "本类主辅表之 SQL 溯源总览（%d 件；已出示原文 %d 件，未见于总包 %d 件——后者证据链断裂，须另溯）",
+  nrow(sqp), sum(sqp$SQL溯源 == "✓ 已出示原文"), sum(sqp$SQL溯源 != "✓ 已出示原文")))
+```
+:::
+
+```{r}
+#| label: SQL溯源逐件
+#| results: asis
+#| echo: false
+for (.f in rec$files) {
+  .s   <- tr_sql_of(.f)
+  .rl  <- if (.f == rec$primary) "主表" else if (.f %in% rec$supporting) "辅助表" else "判据来源"
+  .std <- tr_sql_standard(.f, ld)
+  cat(sprintf("\n### %s · `%s`%s\n\n", .rl, .f,
+              if (isTRUE(.s$ok)) sprintf("（%s ／ 模块 #%s）", .s$版, .s$模块号) else "（⛔ 总包内未见取数模块）"))
+  if (isTRUE(.s$ok)) {
+    cat(sprintf('::: {.callout-note collapse="true"}\n## 取数 SQL 原文 · 总包第 %s~%s 行 %s\n\n',
+                tr_f(.s$起), tr_f(.s$迄), .s$说明))
+    cat("```sql\n"); cat(.s$sql, sep = "\n"); cat("\n```\n\n:::\n\n")
+  } else {
+    cat(sprintf("::: {.callout-important}\n## ⛔ 本件之取数 SQL 未能就地出示\n\n%s\n:::\n\n", .s$说明))
+  }
+  cat("::: {.tbl-wide}\n")
+  print(kable(tr_no(.std), align = "l", caption = sprintf(
+    "`%s` 之输出标准（%d 项；自 SQL 原文与 %s 之现档双向现算，非手写）", .f, nrow(.std), file.path(TR_DB, .f))))
+  cat("\n:::\n\n")
+}
+```
+
+## 一、逐判据实测：在位 · 缺失 · 分位 · 尾部口径
+
+::: {.tbl-wide}
+```{r}
+#| label: 逐判据实测
+cs <- tr_criterion_stats(rec, ld)
+kable(tr_no(cs), align = "l", escape = FALSE,
+      caption = sprintf("%s 逐判据实测（%d 条）%s", TID, nrow(cs),
+        if (typ$门禁 == "FATAL") "　🔴 本类 FATAL：以下仅作画像，不得据以处置" else ""))
+```
+:::
+
+## 一之二、经济画像：先验广播，后出金额 {#sec-econ}
+
+::: {.callout-important}
+## 本节定位与铁律
+
+先生军令状：任何数据表与报表之任务，是**实测并证实**可提升赌场／公司长期盈利之增减幅度，
+而非「纯粹作秀忽悠渲染成功就以为完事儿」。**2026-09-03 实测揭缺**：本引擎 1.5.0 及以前，
+可执行码中 `net_margin` / `economic_value` / `theo` / `adt` / `nmpt` / `esi` / `drawdown` /
+`sharpe` / `sortino` 命中**皆为 0**——即本报告此前只算**判据**，从不算**钱**。1.6.0 补此缺。
+
+⛔ **然补法须守铁律**：六层商业块 118 栏系 `CROSS JOIN` 之**平台常数广播**（逐行同值复制），
+以广播值充金额即是作秀。故本节**先验广播、后出金额**：凡逐行同值之栏一律**拒出**并标明成因，
+只有本表**原生（逐行相异）**之金额栏方可入账。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 经济画像
+ep <- tr_economic_profile(rec, ld)
+kable(tr_no(ep), align = "l", escape = FALSE, caption = sprintf(
+  "主表 %s 之经济栏（原生 %d 栏可作金额；广播 %d 栏已拒出；缺列 %d 栏）",
+  rec$primary, sum(ep$状态 == "原生（逐行）"),
+  sum(grepl("广播", ep$状态)), sum(ep$状态 == "缺列")))
+```
+:::
+
+## 一之三、判据尾部之经济暴露：本类判据究竟压着多少钱 {#sec-exposure}
+
+::: {.callout-important}
+## 本节定位
+
+本节回答一句话：**本类每条判据所指之尾部人群，占多少洗码、贡献多少 NGR、其 hold 率是全表几倍。**
+
+- **尾部方向依登记册 `direction`**：`high` 者取上十分位（≥P90），`low` 者取**下**十分位（≤P10）。
+  ⛔ 一律取上尾是判断错——2026-09-03 实测 T-07「投注产品结构熵」（`direction = low`）即遭此误，已正。
+- **金额取该判据自身之声明源表**，非一律取主表：全册 65 条判据中 **23 条** `criterion_source ≠
+  primary_deliverable`，若一律取主表，此 23 条永不出数。
+- **`hold 倍数` ＝ 尾部 hold 率 ÷ 全表 hold 率**。＞1 者，该尾部人群单位洗码更出钱；
+  ＜1 者，只走量而不出钱——**此即经济价值之增减幅度所在**。
+
+⛔ **本节只作暴露描述，不作赏罚**：承 **P-15**（禁以全窗百分位定赏罚线）与 **P-16**（禁以实现输赢
+符号定罚）。占比逼近 1.0 者，系该判据于 P90 处分布退化（大量并列），**其判别力近零**，须另立门槛，
+不得据以处置。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 判据尾部经济暴露
+ce <- tr_criterion_exposure(rec, ld)
+if (is.null(ce) || !nrow(ce)) {
+  cat("::: {.callout-warning}\n## 本类无可出之经济暴露\n\n",
+      "本类判据之声明源表或无原生金额栏，或判据列未外显（`OUTPUT_NOT_EXPOSED`）。",
+      "⛔ 留白，不臆造——须经 N-5 裁定改列名或令总包外显该列。\n:::\n", sep = "")
+} else {
+  co <- intersect(c("判据列","声明源表","方向","尾部口径","尾部行数","占比",
+                    "valid_bet_占全表","profit_占全表","hold倍数"), names(ce))
+  kable(tr_no(ce[, ..co]), align = "l", escape = FALSE, caption = sprintf(
+    "%s 判据尾部经济暴露（%d 条；hold 倍数最高 %s，最低 %s）", TID, nrow(ce),
+    if ("hold倍数" %in% names(ce)) tr_f(max(ce$hold倍数, na.rm = TRUE)) else "—",
+    if ("hold倍数" %in% names(ce)) tr_f(min(ce$hold倍数, na.rm = TRUE)) else "—"))
+}
+```
+:::
+
+## 一之四、关键指标可行性清单：何者可算 · 何者阻断 · 卡在何处 {#sec-metrics}
+
+::: {.callout-important}
+## 本节定位
+
+先生列举之各项指标，逐条据实登记。⛔ **不以「未实作」冒充「不适用」，不以「可算」冒充「已证」**：
+
+- `✓` 本类可算且已实作；`✓ 总包已算` 者，R 侧虽无日序不能重算，然总包已出该栏，认之；
+- `△` 可算而本引擎尚未接线，或须先补日序面板；
+- `✗` 阻断——阻断成因逐条书于「阻断与出处」栏，可循之解封。
+
+**theo / adt / nmpt / esi 四者全数阻断**，同一病根：`house_edge` 全 `NULL`，须补
+`member × bet09 × 免佣` 之中间粒度方能解。**Economic Value 系 `PERCENT_RANK` 之秩，非货币**，
+永久不得当金额引用。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 指标可行性
+mi <- tr_metric_inventory(rec, ld)
+kable(tr_no(mi), align = "l", escape = FALSE, caption = sprintf(
+  "%s 关键指标可行性（可算 %d 项；待接线 %d 项；阻断 %d 项）", TID,
+  sum(grepl("^✓", mi$本类可算)), sum(grepl("^△", mi$本类可算)), sum(mi$本类可算 == "✗")))
+```
+:::
+
+## 一之五、有符号阶梯：负侧 · 零点 · 正侧各别分位 {#sec-signed}
+
+::: {.callout-important}
+## 本节定位与三戒
+
+承先生之策：「所有负数至零与零至所有正数需要各别使用分位数」。**此策直中要害**——
+`§一之三` 实测四条判据于 P90 处退化（尾部占比 44 % ~ 100 %），病根正是**零点巨量并列**：
+全域单一分位遇「九成为零」之分布，P90 即落在 0，`x ≥ 0` 遂网住全表，判别力归零。
+于零点两侧**各别**起阶梯，正是此病之对症药。
+
+然须守三戒，否则仍是作秀：
+
+- ⛔ **戒一 · 零点非普适**：`AUC` 之虚无点为 **0.5** 非 0；`economic_value` 系 `PERCENT_RANK`
+  之秩（值域 `[0,1]` 恒非负），零点切分**毫无意义**；`Wilson` 系区间端点，非有符号量；
+  主成分之符号由算法任意定向。**四者明令拒算**。零点须逐指标声明，未声明者拒算，不得默认 0。
+- ⛔ **戒二 · 零质量须单列**：若六成行恰为零，两侧阶梯实只建于四成数据之上，不明书即误导。
+- ⛔ **戒三 · 承 P-15**：本阶梯系全窗百分位，只作**描述与诊断**，不得径充赏罚线。
+
+**⚠ 符号方向之陷阱（2026-09-03 实测揭出）**：`profit` 系**平台视角**（正为庄赢），
+`roi` 系**玩家视角**（正为玩家赢），二者**符号相反**。S01 实测：`profit` 负侧 215,481 人
+恰等于 `roi` 正侧人数。若以「负数即坏」一体适用于两栏，结论将**完全颠倒**。
+本节逐栏标明零点与读法，不作跨栏统一假设。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 指标盘点
+ms <- tr_metric_scan(ld$tabs[[rec$primary]]$dt, rec$primary)
+kable(tr_no(ms[, .(指标栏, 零点, 形态, 可建阶梯, 说明)]), align = "l", escape = FALSE,
+      caption = sprintf("主表 %s 指标盘点（%d 栏；可建阶梯 %d 栏；广播／全 NA／拒算 %d 栏）",
+        rec$primary, nrow(ms), sum(ms$可建阶梯 == "✓"), sum(ms$可建阶梯 == "✗")))
+```
+:::
+
+```{r}
+#| label: 有符号阶梯
+#| output: asis
+.tgt <- ms[可建阶梯 == "✓" & grepl("^profit$|^roi$|^net_margin_bet23_formal_canonical$|^hold_rate$",
+                                   指标栏), 指标栏]
+if (!length(.tgt)) {
+  cat("::: {.callout-warning}\n## 本类主表无可建阶梯之核心指标\n\n",
+      "主表之 `profit` / `roi` / `net_margin` / `hold_rate` 或为广播栏、或全 NA、或缺列。",
+      "⛔ 留白，不臆造。\n:::\n\n", sep = "")
+} else for (.cc in .tgt) {
+  .L <- tr_signed_ladder(ld$tabs[[rec$primary]]$dt, .cc, file = rec$primary)   # ★ §12 可信度闸
+  cat(sprintf("\n### 指标 `%s`（零点 %s）\n\n%s\n\n", .cc,
+              if (.L$ok) format(.L$零点) else "—", .L$说明))
+  if (!.L$ok) next
+  cat("::: {.tbl-wide}\n")
+  print(kable(tr_no(.L$质量), align = "l", escape = FALSE,
+              caption = sprintf("`%s` 三段质量（负侧／零点／正侧；零质量单列，承戒二）", .cc)))
+  cat("\n:::\n\n::: {.tbl-wide}\n")
+  print(kable(tr_no(.L$阶梯), align = "l", escape = FALSE,
+              caption = sprintf("`%s` 两侧各别分位阶梯（每级挂金额占比；⛔ 承 P-15 只作描述，不得充赏罚线）", .cc)))
+  cat("\n:::\n\n")
+}
+```
+
+## 二、跨表搭配：会员级并集 / 交集 / 判据相关阵
+
+```{r}
+#| label: 跨表搭配
+#| results: asis
+mj <- tr_member_join(rec, ld)
+if (is.null(mj)) cat("**本类搭配表中无会员级表，跨表会员搭配不适用。**\n\n") else {
+  cat("::: {.tbl-scroll}\n")
+  print(kable(tr_no(mj$coverage), align = "l", caption = sprintf("各表会员覆盖（%d 件全列，零省略）", nrow(mj$coverage))))
+  cat(":::\n\n")
+  cat(sprintf("\n会员级并集 **%s** 人；全表交集 **%s** 人。\n\n", tr_f(mj$n_union),
+              if (is.na(mj$n_inter)) "—（单表）" else tr_f(mj$n_inter)))
+  cm <- tr_corr(mj$panel)
+  if (!is.null(cm)) { cat("::: {.tbl-wide}\n")
+    print(kable(tr_no(cm), caption = sprintf("判据列 Spearman 相关阵（%d × %d；跨表搭配之可加性看此；宽表横向滚动，禁截列）", nrow(cm), ncol(cm))))
+    cat(":::\n\n") }
+  else cat("判据列不足两条可比数值列，相关阵不适用。\n\n")
+}
+```
+
+## 三、模型：血统 · 契约 · 判据锁 · 导出声明 {#sec-model}
+
+::: {.callout-important}
+## 本节体例（承范本《风险会员判据之靴尾投注篇 v1.2.55》§2.3 模型）
+
+范本之模型章，其精髓在「**先亮血统与契约，再谈数字**」。本节逐件落实五事：
+
+1. **血统告示**——本件由总包哪一模块所出（原文与行号见 @sec-sql-lineage）；
+2. **契约保全**——既有列**逐字不改名、不改义、不改序**；新增列一律后置，下游按列名读取；
+3. **判据锁**——本类判据之阈值口径**单点声明**，一字取自登记册 `threshold_note`，禁正文另写；
+4. **▸ 导出声明**——本件落盘于何处，与总包之导出声明逐字同式；
+5. **未纳入**——候裁定之扩权项**明写**，⛔ 不擅自并入、不以沉默冒充周全。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 模型契约
+kable(tr_no(tr_model_contract(rec, ld)), align = "l", escape = FALSE, caption = sprintf(
+  "本类模型之契约（%d 件；血统 · 契约保全 · 判据锁 · 导出声明 · 未纳入，皆现算）", length(rec$files)))
+```
+:::
+
+```{r}
+#| label: 模型逐件
+#| results: asis
+#| echo: false
+.mc <- tr_model_contract(rec, ld)
+for (i in seq_len(nrow(.mc))) {
+  .f <- .mc$交付件[i]; .s <- tr_sql_of(.f)
+  .typo <- if (isTRUE(.s$ok) && length(.s$sql) >= 2L && grepl("典型学", .s$sql[2L], fixed = TRUE))
+             sub("^.*典型学：([^　]+).*$", "\\1", .s$sql[2L]) else "—"
+  cat(sprintf("\n### %s · `%s`（%s）\n\n", .mc$角色[i], .f, .typo))
+  cat(sprintf("- **血统告示**：%s\n", if (isTRUE(.s$ok))
+        sprintf("总包模块 #%s · 第 %s~%s 行（%s 行），原文见 @sec-sql-lineage", .s$模块号,
+                tr_f(.s$起), tr_f(.s$迄), tr_f(.s$行数)) else "⛔ 总包内未见本件模块，血统断裂"))
+  cat(sprintf("- **契约保全**：%s\n", .mc$契约保全[i]))
+  cat(sprintf("- **判据锁**：%s\n", .mc$判据锁[i]))
+  cat(sprintf("- **%s**\n", .mc$导出声明[i]))
+  cat(sprintf("- **未纳入**：%s\n\n", .mc$未纳入[i]))
+}
+```
+
+# 第三部分：数据口径 {#sec-caliber}
+
+::: {.callout-important}
+## 本章定位
+
+本章冻结本类之**口径血统**：源数据（ODS 库表层）之关键字段、核心指标之口径原文与术语库定义、
+交付件之八元组身份核验（行／列／字节／MD5／换行符／BOM／文件换行数／全量核验），
+以及分析级核心指标。**口径原文一字取自登记册 `threshold_note`，不改写、不润色**；
+凡当前交付件不支持之量，一律登记「待表」，不冒充实测。
+:::
+
+## 一、源数据（ODS 库表层）
+
+### 关键字段
+
+```{r}
+#| label: ODS关键字段
+#| results: asis
+## ⛔ N-17 斧正：此前以【判据列名】反查 ODS 字典，而本套判据列皆系交付件派生量，
+##   本不在 ODS 字典内 ⇒ 恒命中 0 ⇒ 本节恒为空。今改由【总包 SQL 现取源字段】。
+osf <- tr_ods_source_fields(rec)
+if (!is.null(osf) && nrow(osf)) {
+  cat("::: {.tbl-wide}\n")
+  print(kable(tr_no(osf), align = "l", escape = FALSE, caption = sprintf(
+    "本类各件实际取用之 ODS 源字段（%d 栏全列，零省略；库表 %d 张 —— 字段自总包 SQL 现取，业务含义自 %s 现接，本类用途自 SQL 之 AS 别名反标）",
+    nrow(osf), uniqueN(osf$库表), CFG$fields$ods_dictionary_file)))
+  cat(":::\n\n")
+} else cat("○ NOT_RUN：本类各件皆未在总包内寻得取数模块，ODS 源字段无从现取。\n\n")
+## 另呈：判据列之 ODS 血统（多数判据系派生量，命中为空系常态，非缺陷）
+ods <- tr_ods_fields(rec, REG)
+if (!is.null(ods$dt)) {
+  cat("::: {.tbl-wide}\n")
+  print(kable(tr_no(ods$dt), align = "l", caption = sprintf(
+    "另呈 · 判据列于 ODS 字典之直接命中（%d 行；⛔ 判据多为派生量，此表为空系常态）", nrow(ods$dt))))
+  cat(":::\n\n")
+} else cat(sprintf("○ 另呈 · 判据列于 ODS 字典之直接命中：%s —— 本类判据皆为交付件派生量，其血统在上表之源字段与 SQL 章节 `%s`。\n\n",
+                   ods$status, rec$dict$sql_section[1L]))
+```
+
+### 核心指标
+
+::: {.tbl-wide}
+```{r}
+#| label: 核心指标
+cmf <- tr_core_metric_formula(rec)
+kable(tr_no(cmf), align = "l", escape = FALSE, caption = sprintf(
+  "%s 核心指标之【定义公式】（%d 条；公式自总包 SQL 之 AS 表达式现取——⛔ 非手写、非转述）", TID, nrow(cmf)))
+kable(tr_no(tr_core_metrics(rec, GL)), align = "l", escape = FALSE,
+      caption = sprintf("%s 核心指标口径（%d 条；口径原文取自登记册 threshold_note，一字未改；定义取自术语库）",
+                        TID, nrow(rec$dict)))
+```
+:::
+
+## 二、交付件身份核验
+
+::: {.tbl-wide}
+```{r}
+#| label: 交付件身份
+kable(tr_no(tr_deliverable_identity(rec, ld)), align = "l",
+      caption = "交付件八元组身份核验（行数／列数／字节／MD5／换行符／BOM／文件换行数／全量核验；渲染时现算）")
+```
+:::
+
+### 分析级核心指标
+
+```{r}
+#| label: 分析级指标
+#| results: asis
+am <- tr_analytic_metrics(rec, mj)
+if (is.null(am)) cat("本类无会员级面板，分析级核心指标不适用。\n\n") else {
+  cat("::: {.tbl-wide}\n")
+  print(kable(tr_no(am), align = "l", caption = sprintf("分析级核心指标（%d 项全列，零省略；分位取自配置册 P%.0f／P50／P%.0f）",
+    nrow(am), CFG$statistics$tail_quantile_low * 100, CFG$statistics$tail_quantile_high * 100)))
+  cat(":::\n\n")
+}
+```
+
+## 三、主辅数据表之全维度与全指标盘点 {#sec-dim-metric}
+
+::: {.callout-important}
+## 本节定位与铁律
+
+承《风险会员判据之靴尾投注篇》之体例：口径章须**就地读 `r TR_DB`/ 内本类各自之
+主表与辅助表**，逐栏定性、全数列出，而非只列 ODS 字典与登记册口径。本节即落实之：
+
+- **逐件读实档**——主表、辅助表、判据来源表各读各的，全量载入（见本报告第二部分〇节之核验）；
+- **逐栏定性**——每一栏定为【**维度**】（可切分、可分组之标识与分类）抑或【**指标**】
+  （可加总、可求率之量），并列其型别、相异值数、缺失率与实例；
+- **零省略**——`维度 ＋ 指标 ＋ 盘点失败 ＝ 列数` 当场对账，对不上即揭；
+- **判据列标星**——本类判据出自哪一栏，一望即知。
+
+⛔ **2026-09-03 自陈**：本模板 v1.7.0 及以前本章只呈 ODS 字典字段与登记册核心指标，
+**从未逐栏盘点实档**（`tr_dimensions` 命中为 0），故十五份一律不见各表之全维度与全指标。
+1.8.0 补之。⛔ 待表者标「待表」，不以空表冒充「无维度」。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 维度指标小结
+dmp <- tr_dim_metric_panel(rec, ld)
+dms <- tr_dim_metric_summary(rec, ld, dmp)
+kable(tr_no(dms), align = "l", escape = FALSE, caption = sprintf(
+  "主辅数据表盘点小结（%d 件；共 %s 栏 ＝ 维度 %s ＋ 指标 %s ＋ 盘点失败 %s；本类判据列 %d 栏）",
+  nrow(dms), tr_f(sum(dms$列数, na.rm = TRUE)), tr_f(sum(dms$维度)), tr_f(sum(dms$指标)),
+  tr_f(sum(dms$盘点失败)), sum(dms$本类判据列)))
+```
+:::
+
+```{r}
+#| label: 维度指标逐件
+#| results: asis
+#| echo: false
+for (.f in rec$files) {
+  .d <- dmp[交付件 == .f]
+  cat(sprintf("\n### %s · `%s`（%d 栏：维度 %d ／ 指标 %d）\n\n",
+              .d$角色[1L], .f, nrow(.d), sum(.d$类 == "维度"), sum(.d$类 == "指标")))
+  cat("::: {.tbl-scroll}\n")
+  print(kable(tr_no(.d[, .(栏, 类, 本类判据, 型, 相异值, 缺失率, 例)]), align = "l", caption = sprintf(
+    "`%s` 逐栏维度与指标（%d 栏全列，零省略；读 %s 之现档现算）", .f, nrow(.d), file.path(TR_DB, .f))))
+  cat("\n:::\n\n")
+}
+```
+
+## 四、hold 族口径正名与已实现庄家优势（house_edge）实测 {#sec-hold-edge}
+
+::: {.callout-important}
+## 本节定位与 2026-09-03 之实测定谳
+
+本项目历来以「hold」一词统称三个**分母不同**之量，同名必致误读。本节以实测钉死之，
+并就地出示**已实现庄家优势**——⛔ 承先生令：在只有 `SELECT` 权限之下，
+`house_edge` 无须 `CREATE`／`APPEND`／`DELETE`，查询即得。
+
+**恒等式实测（`S01_player_score.csv` · 723,442 会员 · 可信度 OK · 全量）**：
+
+- `hold_rate ≡ profit ÷ stake`：逐行比对，偏离**全数**落在 `ROUND(·,4)` 之舍入上界内，**越界 0 行**；
+- `roi ≡ −hold_rate`：逐行 `roi + hold_rate` 求和，**723,442 行 100.000000% 恒为 0**，`max|·| = 0`；
+- 故 **`roi` 之分母是 `stake` 而非 `valid_bet`**。⛔ 外部文献称「`roi = profit / valid_bet`，因而 `hold ≡ roi`」者，
+  其 `roi` 定义与本总包不符，照收即口径退化。
+- `profit ÷ valid_bet = 1.681532% ÷ 90.067438% = 1.866970%`，与逐投注面加权实测同值（两路互证）。
+
+⛔ **已实现 ≠ 理论**：本节之 edge 系 realized（含运气）。理论 edge 之阻断非仅「授权未下」——
+`#017` 探针 R3 实测 overdispersion `Q/(k−1) = 9.3~42.6`，**单一常数 edge 架构已被 KILL**；
+故纵获授权，`(bet09 × 免佣标记)` 之单一常数映射亦不成立，须带分层或分布。
+SELECT-only 五闸探针见 `函数/HE_house_edge_SELECT_only_探针_v1.0.0.sql`。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: hold正名
+kable(tr_no(tr_hold_def()), align = "l", escape = FALSE,
+      caption = "hold 族口径正名（五量并存，分母与视角各异；⛔ 引用一律带分母，禁裸称 hold；⛔ `house_edge` 一名永久保留予【理论】优势）")
+kable(tr_no(tr_polarity_registry()), align = "l", escape = FALSE,
+      caption = "极性登记册（指标 × 视角 × 经济极性）——⛔ 禁由代码默认「越大越好」；本项目极性陷阱两轮各中一次")
+```
+:::
+
+```{r}
+#| label: 实测庄家优势
+#| results: asis
+me <- tr_measured_edge()
+if (is.null(me)) cat("○ 待表：`", TR_EDGE_PATH, "` 不在位 —— 已实现 edge 未落盘，本节不以静态文字冒充。
+
+", sep = "") else {
+  cat("::: {.tbl-wide}
+")
+  print(kable(tr_no(me), align = "l", escape = FALSE, caption = sprintf(
+    "已实现庄家优势 · 逐投注面（%d 面；有证据 %d 面，n 过小者标无证据且不入加权；口径 realized，⛔ 非理论 edge）",
+    nrow(me), sum(me$证据强度 == "✓"))))
+  cat("
+:::
+
+")
+  cat(sprintf("加权合计：**对洗码 %.6f%%**、**对本金 %.6f%%**，`valid_bet ÷ stake = %.6f%%`。
+
+",
+              100*sum(me$profit)/sum(me$valid_bet), 100*sum(me$profit)/sum(me$stake),
+              100*sum(me$valid_bet)/sum(me$stake)))
+}
+```
+
+## 五、加权口径与权重诊断 {#sec-weight}
+
+::: {.callout-important}
+## 本节定位与六条铁律
+
+先生令：「任何可以或需要加权才能增加真实性与可行性和可靠性甚至预测的精准度比率的话，
+都一律加权；不过务必查证并实测，务必确保加权不会出现任何异常值。」本节即以实测作答。
+
+**总包加权现状**（2026-09-03 逐行静态审计）：全档 `weight`／`weighted`／`sample_weight`／
+`ipw`／`propensity`／`decay`／`precision` 命中 **0**；唯一双口径先例为 `p_base_round_w`（注额加权）
+与 `p_base_round_unw`（等权），2026-08-11 增，注明「供两种 estimand 对照」。
+**★ 本报告一切加权皆循此例：并列双口径，禁替换原值。**
+
+⛔ **三估计非三精度，而是三个 estimand**：暴露加权答「一元钱一票」，单元等权答「一人一票」，
+精度加权答「按信息量投票」。三者并列，不得择优呈报，更不得互冒。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 加权铁律
+kable(tr_no(tr_weight_iron_rules()), align = "l", escape = FALSE,
+      caption = "加权六铁律（KILL-W01~W05 ＋ 一条实测所得）")
+```
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 加权登记册
+kable(tr_no(tr_weight_registry()), align = "l", escape = FALSE,
+      caption = "加权候选登记册（2026-09-03 实测；⛔ 证明不了者一律不加）")
+```
+:::
+
+```{r}
+#| label: 双口径与权重诊断
+#| results: asis
+.wsrc <- NA_character_
+for (.f in rec$files) {
+  .t <- ld$tabs[[.f]]
+  if (!is.null(.t) && isTRUE(.t$ok) && isTRUE(tr_money_admissible(.f)$ok) &&
+      all(c("profit", "stake") %in% names(.t$dt))) { .wsrc <- .f; break }
+}
+if (is.na(.wsrc)) cat("○ NOT_RUN：本类无【可信度 OK 且含 profit／stake】之交付件，加权层拒算（⛔ 不以广播件充数）。
+
+") else {
+  .dt <- ld$tabs[[.wsrc]]$dt
+  cat(sprintf("料源：`%s`（可信度 OK）。
+
+", .wsrc))
+  de <- tr_dual_estimand(.dt, "profit", "stake", "hold_rate")
+  cat("::: {.tbl-wide}
+")
+  print(kable(tr_no(de[, .(量, 口径, 百分比, 判读)]), align = "l", escape = FALSE, caption = sprintf(
+    "双口径并列（%s · hold_rate）：单元等权 ÷ 暴露加权 ＝ %.4f 倍；方向%s",
+    .wsrc, attr(de, "等权比暴露"), if (isTRUE(attr(de, "同号"))) "同号（无 Simpson 反转）" else "⛔ 反转，须入 REDTEAM")))
+  cat("
+:::
+
+")
+  .num <- function(c) suppressWarnings(as.numeric(.dt[[c]]))
+  .pw <- tr_precision_weight(.num("profit"), .num("stake"))
+  .wd <- rbindlist(list(
+    tr_weight_diag(.num("stake"), "暴露权 stake"),
+    if ("valid_bet" %in% names(.dt)) tr_weight_diag(.num("valid_bet"), "洗码权 valid_bet") else NULL,
+    if ("n_bets" %in% names(.dt)) tr_weight_diag(.num("n_bets"), "证据权 n_bets") else NULL,
+    if (isTRUE(.pw$ok)) tr_weight_diag(.pw$w, "精度权 1/(τ²＋s²/stake)") else NULL,
+    tr_weight_diag(rep(1, nrow(.dt)), "等权（对照）")), fill = TRUE)
+  cat("::: {.tbl-wide}
+")
+  print(kable(tr_no(.wd), align = "l", escape = FALSE, caption = sprintf(
+    "权重诊断：ESS ＝ (Σw)²/Σw²、集中度、极值（%s；⛔ ESS/n ＜ %.0f%% 即 THIN_WEIGHTED_EVIDENCE）",
+    if (isTRUE(.pw$ok)) .pw$说明 else "精度权 NOT_RUN", 100 * CFG$weight_registry$ess_thin_ratio)))
+  cat("
+:::
+
+")
+  cat(paste0("⛔ **判读**：暴露加权虽系「钱的真相」，然其 ESS 远低于 n —— 有效样本即 ESS，",
+             "**禁以 n 大冒充证据强**。精度权与暴露权同向（全平台实测 Spearman ＝ 1.000000），",
+             "系其收缩稳定版；⛔ 二者【择一】，并用即重复计权（KILL-W01）。
+
+"))
+}
+```
+
+## 六、输出指标标准 · 规章表 · 验收判据 · 天花板 {#sec-caliber-norms}
+
+::: {.callout-important}
+## 本节体例（承范本 v1.2.55 §数据口径）
+
+范本之口径章不止列字段，尚有四件本模板此前**全无**者：
+**输出指标标准**（逐指标定单位、分母、NULL 规则、零规则）、
+**规章表**（治理规则，非数据；契约与验收标准自为真相源，**全行零省略**）、
+**验收判据**（先过闸，再谈判读，一律**可机检**）、
+**天花板**（本件解决不了什么）。
+⛔ 无验收判据者，其「结论」无从复核；无天花板者，其「周全」系沉默所冒充。今补齐四件。
+:::
+
+### 6.1 输出指标标准
+
+::: {.tbl-wide}
+```{r}
+#| label: 输出指标标准
+oms <- tr_output_metric_standard(rec, ld)
+kable(tr_no(oms), align = "l", escape = FALSE, caption = sprintf(
+  "输出指标标准（%d 条全列，零省略；口径原文一字取自登记册 threshold_note，不改写、不润色）", nrow(oms)))
+```
+:::
+
+### 6.2 规章表（治理规则，非数据）
+
+::: {.tbl-wide}
+```{r}
+#| label: 规章表
+gr <- tr_governance_rules()
+kable(tr_no(gr), align = "l", escape = FALSE, caption = sprintf(
+  "规章表（%d 条全行零省略；契约与验收标准自为真相源，一律取自软配置册，正文不另写）", nrow(gr)))
+```
+:::
+
+### 6.3 验收判据：先过闸，再谈判读
+
+::: {.tbl-wide}
+```{r}
+#| label: 验收判据
+ag <- tr_acceptance_gates(rec, ld, mj)
+kable(tr_no(ag), align = "l", escape = FALSE, caption = sprintf(
+  "验收判据（%d 闸皆可机检；PASS %d ／ FAIL %d ／ NOT_RUN %d —— ⛔ NOT_RUN ≠ PASS）",
+  nrow(ag), sum(grepl("PASS", ag$判)), sum(grepl("FAIL", ag$判)), sum(grepl("NOT_RUN", ag$判))))
+```
+:::
+
+### 6.4 天花板：本类解决不了什么
+
+::: {.tbl-wide}
+```{r}
+#| label: 天花板
+kable(tr_no(tr_ceiling(rec, REG)), align = "l", escape = FALSE,
+      caption = "天花板（⛔ 明写限度；本表所列各项，本报告一概不予承诺）")
+```
+:::
+
+# 第四部分：评估 {#sec-eval}
+
+::: {.callout-important}
+## 本章定位
+
+本章只评估本类之**判据、准入、指标、门禁与局限**，一切数字渲染时现算，
+任何缺少当前交付件支持之量**一律不冒充实测**。评估次第：主检验 → 统计口径冻结 →
+审计门禁五门 → 五道铁门 → `roi` 结算完整性 → 裁定与处置序，末以局限与定位裁定收束。
+**门禁覆盖一切实测**——本类门禁 `r GATE`；五道铁门未全 PASS 之前，措辞禁令永久生效。
+:::
+
+## 一、主检验指标与判读 {#sec-tests}
+
+::: {.callout-important}
+## 本节定位
+
+以**秩法 AUC**（等价 Mann–Whitney U）对外部 L1a 标签判读本类方向判据之**排序效率**，
+并三项同呈：`r tip("Wilson")` 下界代点估计、由 CI 宽度 ≤ `r CFG$statistics$wilson_target_width` 反解之最低样本量、
+以及 `r length(CFG$auc_bands)` 档判读（档界取自软配置册，**禁正文写死**）。
+样本未过门者登记 `UNKNOWN`，**不降为「正常」**。AUC 是特征去留之证据，**不是因果证据、不是处置理由**。
+:::
+
+```{r}
+#| label: 主检验
+#| results: asis
+lc <- if (!is.null(mj)) tr_label_check(mj$panel, rec) else NULL
+mt <- tr_main_tests(rec, mj, lc)
+if (is.null(mt)) cat("本类无方向判据或标签表不可用，主检验不适用。\n\n") else {
+  cat("::: {.tbl-wide}\n")
+  print(kable(tr_no(mt), align = "l", caption = sprintf(
+    "对外部 L1a 标签之秩法 AUC（= Mann–Whitney；%d 条方向判据；判读档 %d 档取自配置册；最低样本量由 Wilson 宽度 ≤ %.2f 反解）",
+    nrow(mt), length(CFG$auc_bands), CFG$statistics$wilson_target_width)))
+  cat(":::\n\n**限定语**：AUC 部分反映「谁被复核得多」而非「谁更危险」（复核强度混杂）；",
+      "本表为排序效率证据，不得作为因果证据或处置理由。\n\n", sep = "")
+}
+```
+
+## 二、统计方法之严谨口径与冻结 {#sec-stat-rigor}
+
+::: {.callout-important}
+## 本节定位
+
+本节把统计口径**冻结成表**：配对单位、判读档数、置信水平、CI 宽度上限、尾部分位、
+退化判定、多重比较校正、p 值显示体例——八项逐条登记，数值全取自软配置册。
+**本表口径优先于任何通俗表述**；二者冲突以本表为准。口径一旦冻结，不得随分析漂移（铁门 G-01）。
+:::
+
+::: {.tbl-scroll}
+```{r}
+#| label: 统计冻结
+kable(tr_no(tr_stat_freeze()), align = "l",
+      caption = "统计口径冻结（本表优先于任何通俗表述；数值全取自软配置册，禁正文写死）")
+```
+:::
+
+## 三、审计门禁与结论 {#sec-gate}
+
+::: {.callout-important}
+## 本节定位
+
+五门（样本门／阈值门／方向门／因果门／处置门）逐门列判定式与本类现况。
+**门是否决项，不是加分项**：任一门 FAIL 即本类不得进入其后之用途，不因其余门 PASS 而抵扣。
+「待表」非「通过」——缺件缺列者登记待表，**不以未检验冒充已通过**。
+:::
+
+::: {.tbl-scroll}
+```{r}
+#| label: 审计门禁
+ag <- tr_audit_gate(rec, mt)
+kable(tr_no(ag), align = "l", caption = sprintf("五门审计（%d 门全列，零省略；PASS %d／FAIL %d／待表 %d）", nrow(ag),
+      sum(ag$通过 == "✔ PASS"), sum(ag$通过 == "✗ FAIL"), sum(ag$通过 == "○ 待表")))
+```
+:::
+
+## 四、铁门：统计验收之硬闸 {#sec-fivegates}
+
+::: {.callout-important}
+## 本节定位与措辞禁令（依五门裁定锁死，永久生效）
+
+五道铁门系**统计验收之硬闸**：口径冻结（G-01）、样本门禁（G-02）、阈值反解（G-03）、
+多重比较校正（G-04）、真样本外验证（G-05）。门之定义取自软配置册，本类状态按实测现判。
+**措辞禁令**：五道铁门未全 PASS 之前，本档及一切下游文件禁止出现
+`r paste(sprintf("「%s」", unlist(CFG$gate_wording_ban)), collapse = "")` 等字样。
+:::
+
+::: {.tbl-scroll}
+```{r}
+#| label: 五道铁门
+sq <- tr_sequence(rec, ld)
+ig <- tr_iron_gates(rec, mt, sq)
+kable(tr_no(ig), align = "l", caption = sprintf("五道铁门状态（%d 门全列，零省略；PASS %d／PARTIAL %d／FAIL %d／N/A %d）",
+      nrow(ig), sum(ig$本类状态 == "PASS"), sum(grepl("PARTIAL", ig$本类状态)),
+      sum(grepl("FAIL", ig$本类状态)), sum(ig$本类状态 == "N/A")))
+```
+:::
+
+## 五、`roi > 阈值` 之结算完整性候选
+
+::: {.callout-important}
+`roi` 异常**不解释为「优势玩家」**。它首先是**结算完整性候选**，须先查九项账务语义：
+`r paste(unlist(CFG$settlement_checklist), collapse = "、")`。查账在先，查人在后。
+:::
+
+```{r}
+#| label: roi候选
+#| results: asis
+rc <- tr_roi_candidates(rec, ld)
+if (!rc$ok) cat("本类交付件无可构成 roi 之分子分母列对，本节不臆造，列入待表。\n\n") else {
+  cat(sprintf("以 `%s` 之 `%s ÷ %s` 现算：总计 **%s** 名会员，其中 `roi > %.1f` 者 **%s** 名。\n\n",
+              rc$file, rc$num, rc$den, tr_f(rc$n_total), rc$thr, tr_f(rc$n_hit)))
+  if (rc$n_hit == 0L) cat("**零行提示**：本类无 roi 越阈会员——零行 ≠ 无异常。\n\n")
+  else { cat("::: {.tbl-wide}\n"); print(kable(tr_no(rc$top), align = "r",
+    caption = sprintf("结算完整性候选前 %d 名（共 %s 名；先查账、后查人）", nrow(rc$top), tr_f(rc$n_hit)))); cat(":::\n\n") }
+}
+```
+
+## 六、本节裁定与处置序
+
+::: {.tbl-scroll}
+```{r}
+#| label: 裁定处置序
+vo <- tr_verdict_order(rec, REG)
+kable(tr_no(vo), align = "l", caption = sprintf("裁定与处置序（%d 步全列，零省略；步序不可倒）", nrow(vo)))
+```
+:::
+
+## 七、局限与定位裁定
+
+```{r}
+#| label: 评估局限与裁定
+#| results: asis
+.el <- tr_eval_limits(rec, mt, sq, mj)
+cat("::: {.callout-caution}\n")
+cat("## 局限（不为其讳）\n\n")
+cat(sprintf("%d. %s\n", seq_along(.el), .el), sep = "")
+cat(":::\n\n")
+.ev <- tr_eval_verdict(rec, REG, mt)
+cat("::: {.callout-important}\n")
+cat("## 定位裁定\n\n")
+cat(sprintf("> %s\n>\n", .ev), sep = "")
+cat(":::\n\n")
+```
+
+# 第五部分：行业实践查证 {#sec-industry}
+
+::: {.callout-important}
+## 本章定位
+
+本章**只取登记册自证之 `standard_basis` 与相关全局禁令**，⛔ 不引任何外部参考文献——
+血统黑名单三份仅供人阅读参考，其数字、阈值与分级一概不入本档；引擎于产出后自检其 token，
+命中即停止渲染。**标准依据合理 ≠ 假说成立**：判据坐标之合理性与其经济判别力是两件事。
+:::
+
+```{r}
+#| label: 行业查证
+#| results: asis
+ind <- tr_industry(rec, REG)
+cat(sprintf("- **标准依据（登记册 standard_basis）**：%s\n", ind$standard_basis))
+cat(sprintf("- **外部标准状态**：%s　**适用性状态**：%s\n\n", ind$external_status, ind$applicability))
+if (!is.null(ind$prohibitions)) { cat("::: {.tbl-wide}\n")
+  print(kable(tr_no(ind$prohibitions), align = "l", caption = sprintf("与本类相关之全局禁令（%d 项全列，零省略）", nrow(ind$prohibitions))))
+  cat(":::\n\n") } else cat("登记册全局禁令中无与本类直接相关者。\n\n")
+cat("**查证纪律**：标准依据合理 ≠ 假说成立。判据坐标之合理性与其经济判别力是两件事，",
+    "后者须由本库独立统计、暴露控制与跨窗口验证决定。\n\n", sep = "")
+```
+
+# 第六部分：模型武器库审计与灵活搭配——把算力调往可验证的风险轴 {#sec-arsenal}
+
+::: {.callout-important}
+## 本章定位
+
+本章审的是**算力投向**，不是模型时髦程度。次第：先正名（防同词异释），
+再逐模审计（谁上场、谁替补、谁禁赛，前置条件按本类数据现判），
+再列四条管线（特征层→模型层→决策层，处置红线随行），
+终以落实前后对照与局限提升收束。**模型名册与管线定义全取自软配置册**，本档不另写一份。
+:::
+
+## 一、名目勘正（先正名，后论剑）
+
+::: {.tbl-scroll}
+```{r}
+#| label: 名目勘正
+nm <- tr_nomenclature()
+kable(tr_no(nm), align = "l", caption = sprintf("名目勘正（%d 项全列，零省略；正名在先，防同词异释；取自软配置册）", nrow(nm)))
+```
+:::
+
+## 二、逐模审计：谁上场、谁替补、谁禁赛
+
+::: {.tbl-wide}
+```{r}
+#| label: 逐模审计
+mr <- tr_model_roster(rec, mj, sq)
+kable(tr_no(mr), align = "l", caption = sprintf("逐模审计（%d 模全列；本类可上场 %d／前置未备 %d／禁赛 %d；名册取自软配置册，前置条件按本类数据现判）",
+      nrow(mr), sum(mr$本类可上场 == "✔ 可上场"), sum(mr$本类可上场 == "— 前置未备"), sum(mr$本类可上场 == "⛔ 禁赛")))
+```
+:::
+
+## 三、灵活搭配：四条管线（特征层→模型层→决策层）
+
+::: {.tbl-wide}
+```{r}
+#| label: 四管线
+ars <- tr_arsenal(rec, REG)
+kable(tr_no(ars), align = "l", escape = FALSE,
+      caption = sprintf("四条管线之适配审计（本类可用 %d 条；层序不可倒，处置红线随行）", sum(ars$本类可用 == "✔ 可用")))
+```
+:::
+
+## 四、商业方案：落实前后对照
+
+::: {.tbl-wide}
+```{r}
+#| label: 前后对照
+ba <- tr_before_after()
+kable(tr_no(ba), align = "l", caption = sprintf("落实前后对照（%d 维全列，零省略）", nrow(ba)))
+```
+:::
+
+## 五、局限与提升
+
+```{r}
+#| label: 局限提升
+#| results: asis
+lr <- tr_limits_roadmap(rec, sq, mt)
+cat("::: {.callout-caution}\n## 局限（不为方案讳）\n\n")
+cat(sprintf("%d. %s\n", seq_along(lr$limits), lr$limits), sep = ""); cat(":::\n\n")
+cat("::: {.callout-note}\n## 提升路线（按证据可得性排序，非按时髦程度）\n\n")
+cat(sprintf("- %s\n", lr$roadmap), sep = ""); cat(":::\n\n")
+```
+
+# 第七部分：灵活搭配实测 {#sec-combat}
+
+::: {.callout-important}
+## 本章定位
+
+本章以本类**实际载入之全量数据**做四块实测：PCA（降维与共线诊断）、
+尾部旗标 × 命中数分层 × **独立期望对照**、序列与事件之待表清偿、线索汇总。
+**误判率控制在此落地**：分层须与独立假设下之期望人数比（提升度），
+提升度 ≈ 1 者叠加不产生新信息；共现之条件概率一律以 Wilson 下界代点估计。
+成分无业务语义，⛔ 禁直接作风险分。
+:::
+
+## 一、PCA：降维与方差解释（先发工兵）
+
+```{r}
+#| label: PCA
+#| results: asis
+pc <- tr_pca(mj)
+if (is.null(pc)) cat(sprintf("本类可比数值判据不足 %d 条或有效样本不足，PCA 不适用，列入待表。\n\n",
+                             CFG$statistics$pca_min_features)) else {
+  cat("::: {.tbl-wide}\n")
+  print(kable(tr_no(pc$var), align = "l", caption = sprintf("PCA 方差解释（%d 成分全列，零省略；n = %s，标准化 = %s）",
+        nrow(pc$var), tr_f(pc$n), CFG$statistics$pca_scale)))
+  print(kable(tr_no(pc$load), align = "l", caption = sprintf("成分载荷（%d 判据 × %d 成分全列，零省略；成分无业务语义，⛔ 禁直接作风险分）", nrow(pc$load), ncol(pc$load) - 1L)))
+  cat(":::\n\n")
+}
+```
+
+## 二、尾部旗标 × 命中数分层 × 独立期望对照
+
+```{r}
+#| label: 灵活搭配实测
+#| results: asis
+cb <- tr_combat(rec, mj)
+if (is.null(cb)) cat("**本类无方向判据或无会员级表，灵活搭配实测不适用；列入待表。**\n\n") else {
+  cat(sprintf("以本类 **%d** 条方向判据构造尾部旗标（high→≥P%.0f，low→≤P%.0f，jump/abnormal→|z|≥P%.0f，皆取自配置册），逐会员计命中数：\n\n",
+    cb$k, CFG$statistics$tail_quantile_high * 100, CFG$statistics$tail_quantile_low * 100,
+    CFG$statistics$tail_quantile_abs_z * 100))
+  cat("::: {.tbl-wide}\n")
+  print(kable(tr_no(cb$layer), align = "l", caption = sprintf(
+    "命中数分层与独立期望对照（N = %s；命中 ≥1 者 %s／≥2 者 %s／全命中 %s。独立期望 = 各判据尾部概率之独立组合；提升度 ≈ 1 者纯属巧合，不产生新信息）",
+    tr_f(cb$N), tr_f(cb$n_any), tr_f(cb$n_multi), tr_f(cb$n_all))))
+  print(kable(tr_no(cb$degenerate), align = "l", caption = sprintf(
+    "退化侦测（尾部命中率 > %.0f%% 者，其分位阈与下界重合，该列近乎常量、尾部无分辨力——须标出，禁以百分之百之尾部冒充异常群）",
+    CFG$statistics$degenerate_flag_rate * 100)))
+  if (!is.null(cb$cooc)) print(kable(tr_no(cb$cooc), align = "l", caption = sprintf(
+    "两两共现提升度（%d 对；P(B|A) 以 Wilson 下界代点估计）", nrow(cb$cooc))))
+  cat(":::\n\n**误判率判读**：提升度显著大于 1 者两判据非独立、搭配可加性强；≈ 1 者互相独立，",
+      "叠加只是各自尾部之乘积。名单应取「实际显著高于独立期望」之层，而非单纯取命中数最多者。\n\n", sep = "")
+}
+```
+
+## 三、序列与事件实测：待表清偿
+
+::: {.tbl-wide}
+```{r}
+#| label: 序列
+kable(tr_no(sq), align = "l", caption = sprintf("时间轴在位核验（%d 件全列，零省略；时间轴以【全列取值形似日期】实证判定——判定基数为该列全部非空取值，非前 N 笔抽样；形似率须 ≥ %.2f 方认；n_days／tenure_months 等计数列不得误认）", nrow(sq), CFG$fields$time_axis_min_match_rate))
+```
+:::
+
+```{r}
+#| label: 序列判读
+#| results: asis
+nok <- sum(sq$可做序列 == "✔")
+if (nok == 0L) {
+  cat("**本类全部交付件皆为截面表，无时间轴——动态基线、生存分析、MDD／Sharpe 序列一律待表，不以静态文字替代。**\n\n")
+} else {
+  cat(sprintf("本类有 **%d / %d** 件交付件具时间轴，可支撑序列与事件实测；其余待表。\n\n", nok, nrow(sq)))
+}
+```
+
+## 四、风险会员线索汇总：模型搭配 × 名单 × 处置 {#sec-leads}
+
+::: {.callout-important}
+## 本节定位
+
+本节把前列实测收束为**复核候选线索**，非处罚名单。每条线索并呈其规模与**独立期望**——
+二者相近者纯属巧合，不产生新信息；名单应取**实际显著高于独立期望**之层。
+处置栏由门禁派生（本类 `r GATE`），**不因线索规模大而升格**。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 线索汇总
+lead <- tr_leads(rec, cb)
+kable(tr_no(lead), align = "l", caption = sprintf("%s 线索汇总（%d 类；皆为复核候选，不是处罚名单；「独立期望」列为误判率对照）", TID, nrow(lead)))
+```
+:::
+
+**合并复核纪律**：同一会员若同时命中多条线索，应以 `r CFG$fields$member_key_canonical` 去重后进入复核队列；
+任何单一行为特征不得直接产生处罚动作。复核记录须留原始注单、时间窗口、口径版本与证据等级。
+
+## 五、决策统计层：贝叶斯 · MLE · 马尔可夫 · 极值 {#sec-decision}
+
+::: {.callout-important}
+## 本节定位与三戒
+
+先生令：以顶级统计概念灵活搭配来**预测**并评估风险。本节即落实之，然立三戒：
+
+1. ⛔ **禁揉成单一风险总分**——「一个数字 ＝ 风险」系本项目已否决之谬；各器各答各问，分列呈现。
+2. ⛔ **先验与参数一律由数据反解**（矩法／极大似然），禁外生塞入好看的常数。
+3. ⛔ **NOT_RUN ≠ PASS**：样本不足、口径断裂者一律标出并说明成因，禁降级为「正常」。
+
+各器所答之问：**贝叶斯**——真实优势之后验概率（把运气从已实现输赢中剥离）；
+**MLE**——真实参数与其区间；**马尔可夫**——异常是否**持续**，抑或一次即散；
+**极值（POT／GPD）**——极端亏损之尾指数、VaR 与 ES。
+:::
+
+### 5.1 贝叶斯收缩：把「已实现」与「真实优势」分开
+
+```{r}
+#| label: 贝叶斯
+#| results: asis
+.bz_src <- NA_character_
+for (.f in rec$files) {
+  .t <- ld$tabs[[.f]]
+  if (!is.null(.t) && isTRUE(.t$ok) && isTRUE(tr_money_admissible(.f)$ok) &&
+      all(c("profit", "stake") %in% names(.t$dt))) { .bz_src <- .f; break }
+}
+if (is.na(.bz_src)) cat("○ NOT_RUN：本类无【可信度 OK 且含 profit／stake】之交付件，贝叶斯层拒算（⛔ 不以广播件充数）。
+
+") else {
+  bz <- tr_bayes_edge(ld$tabs[[.bz_src]]$dt)
+  cat(sprintf("料源：`%s`（可信度 OK）。%s
+
+", .bz_src, if (isTRUE(bz$ok)) bz$说明 else bz$说明))
+  cat("::: {.tbl-wide}
+")
+  print(kable(tr_no(tr_bayes_panel(bz)), align = "l", escape = FALSE,
+              caption = sprintf("经验贝叶斯收缩（料源 %s；τ² 与 s² 皆自数据反解，非外生给定）", .bz_src)))
+  cat("
+:::
+
+")
+}
+```
+
+### 5.2 MLE：真实参数与其区间
+
+```{r}
+#| label: MLE
+#| results: asis
+.mle_done <- FALSE
+for (i in seq_len(min(nrow(rec$dict), 3L))) {
+  .r <- rec$dict[i]; .t <- ld$tabs[[.r$criterion_source]]
+  if (is.null(.t) || !isTRUE(.t$ok) || !.r$criterion_column %in% names(.t$dt)) next
+  .m <- tr_mle_fit(.t$dt[[.r$criterion_column]], "normal", .r$criterion_column)
+  cat("::: {.tbl-wide}
+")
+  print(kable(tr_no(.m), align = "l", escape = FALSE, caption = sprintf(
+    "MLE·正态（判据列 `%s`，取自 `%s`）", .r$criterion_column, .r$criterion_source)))
+  cat("
+:::
+
+"); .mle_done <- TRUE
+}
+if (!.mle_done) cat("○ NOT_RUN：本类判据列皆不在位，MLE 拒算。
+
+")
+```
+
+### 5.3 马尔可夫：异常是否持续
+
+```{r}
+#| label: 马尔可夫
+#| results: asis
+.s05 <- tr_load("S05_member_month_panel.csv")
+mk <- if (isTRUE(.s05$ok)) tr_markov_states(.s05$dt) else list(ok = FALSE, 说明 = "⛔ NOT_RUN：S05_member_month_panel.csv 不在位")
+cat(sprintf("%s
+
+⛔ 本层系**全平台会员月面板**，非本类专属；只答「活跃状态是否黏着」之一般规律，不得据以指认本类会员。
+
+",
+            mk$说明))
+cat("::: {.tbl-wide}
+")
+print(kable(tr_no(tr_markov_panel(mk)), align = "l", escape = FALSE,
+            caption = "会员活跃状态之转移矩阵（MLE：计数除以行和）· 自持概率 · 平均停留期数 · 稳态占比"))
+cat("
+:::
+
+")
+```
+
+### 5.4 极值（POT／GPD）：极端亏损之尾部工程
+
+```{r}
+#| label: 极值
+#| results: asis
+if (is.na(.bz_src)) cat("○ NOT_RUN：无可信金额件，极值层拒算。
+
+") else {
+  ev <- tr_evt_pot(-suppressWarnings(as.numeric(ld$tabs[[.bz_src]]$dt$profit)), .bz_src)
+  cat(sprintf("料源：`%s` 之【平台损失】＝ −profit（即玩家净赢）。%s
+
+", .bz_src, ev$说明))
+  if (isTRUE(ev$ok)) {
+    cat("::: {.tbl-wide}
+")
+    print(kable(tr_no(ev$tail), align = "l", escape = FALSE, caption = sprintf(
+      "尾部风险（POT 门限 P%.0f，超越 %s 笔）· VaR 与 ES 并报矩法与 MLE 二估计",
+      100*CFG$decision_layer$evt$threshold_quantile, tr_f(ev$n_exceed))))
+    cat("
+:::
+
+⛔ 二法不一致者，风险预算一律取保守者（较大 ξ）；ξ ≥ 1 者均值不存在，ES 拒算。
+
+")
+  }
+}
+```
+
+# 第八部分：模型架构与入场行为层 {#sec-arch}
+
+::: {.callout-important}
+## 本章定位
+
+本章列本类于三层架构之落位：**入场行为层（观测）→ 特征与判据层（登记）→ 决策层（门禁）**。
+**层序不可倒**：观测层不得直接产生处置；判据只认登记册，未登记维度是可搭配空间而非判据；
+门禁覆盖一切实测。三层之纪律逐层随行，缺一层即证据链断。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 三层架构
+.arch <- tr_architecture(rec, mj, sq, REG)
+kable(tr_no(.arch), align = "l",
+      caption = sprintf("三层架构之本类落位（%d 层全列，零省略；观测层 → 判据层 → 决策层；层序不可倒）", nrow(.arch)))
+```
+:::
+
+# 第九部分：商业方案 {#sec-biz}
+
+::: {.callout-important}
+## 本章定位
+
+措施分阶、后果可查、限定语在先。**措施由门禁派生**，制度阶之措施**逐字取自登记册**之前置条件与影子要求，
+即刻阶与管线阶取自软配置册，非另写。方案不含处罚性动作——本类
+admit_to_risk_decision = `r tr_yn(rec$dict$admit_to_risk_decision[1L])`。
+:::
+
+::: {.tbl-scroll}
+```{r}
+#| label: 措施三阶
+biz <- tr_biz_plan2(rec)
+biz[, 序 := format(seq_len(.N), big.mark = ",")]; setcolorder(biz, "序")
+kable(biz, align = "l", caption = sprintf("%s 商业措施三阶（%d 条全列，零省略）", TID, nrow(biz)))
+```
+:::
+
+::: {.callout-note}
+## 收益概算与限定语
+
+**收益**：其一，风控侧——取材范围由 `r tip("门闸")` 锁定，误用路径被拦截而非被提醒；
+其二，报表侧——十五份同源同构，任一类裁定变更即全套同步；其三，误判侧——
+Wilson 下界＋最小样本量＋退化侦测＋独立期望对照四锁齐落，误伤面可量化收敛。
+**成本**：近零——登记册、软配置册与引擎已交付，仅需例行复跑。
+
+**限定语（不得省略）**：本类门禁 = **`r GATE`**，生命周期 = **`r rec$dict$lifecycle_state[1L]`**。
+在 label_validation_status 达 TESTED_PASS、causal_status 达 ESTABLISHED 且五门全 PASS 之前，
+**任何基于本类之处置皆不合规**。AUC 不是因果；加权均值不是典型玩家；统计可检不等于经济可用。
+:::
+
+## 三、处理前后经济回归闸（PRE_POST_RISK_ECONOMIC_GATE）{#sec-prepost}
+
+::: {.callout-important}
+## 本节定位：只增不减，严禁退化
+
+先生令：**务必实测并证实判据与处理前、处理后之风险**。本节以实测处置台账逐指标对照，
+并当场裁定：只增不减者 PASS；任一**经济**指标退化且过检定者 **FAIL**；样本不足者 NOT_RUN。
+
+⛔ 三条护栏，缺一即是自欺：
+① **方向须登记**——`d_roi` 系【玩家视角】，其下降即平台得利（`roi ≡ −hold_rate`），
+   与 `d_hold_pct` 上升本系同一事实之两面；无方向表而默认「越大越好」，即会把提升误判为退化。
+② **须并呈中位与检定**——均值受极端个案支配，只看均值即被少数人绑架。
+③ **须揭露留存流失与删失**——处置后不再投注者不入配对，只看配对即系统性高估处置之益（幸存者偏差）。
+
+⛔ 本节之台账系**全平台**处置记录，非本类专属；本类之交集人数于会员层表内并呈。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 前后闸平台层
+pp_pf <- tr_prepost_platform()
+kable(tr_no(pp_pf), align = "l", escape = FALSE,
+      caption = "处理前后 · 平台层（TREATED 之 PRE vs POST，另附 UNTREATED 同期对照）")
+```
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 前后闸会员层
+pp_mb <- tr_prepost_member(rec, mj)
+kable(tr_no(pp_mb), align = "l", escape = FALSE,
+      caption = "处理前后 · 会员层配对（符号检验 ＋ Wilcoxon ＋ 自助 95% 区间；方向取自配置册 prepost_member_metrics）")
+```
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 留存与删失
+kable(tr_no(tr_prepost_retention()), align = "l", escape = FALSE,
+      caption = "留存流失与删失（⛔ 不揭此层者，一切「处置有效」皆幸存者偏差）")
+```
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 前后闸裁定
+kable(tr_no(tr_prepost_verdict(pp_pf, pp_mb)), align = "l", escape = FALSE,
+      caption = "PRE_POST_RISK_ECONOMIC_GATE 总裁定（任一经济指标退化即 FAIL）")
+```
+:::
+
+## 四、期望损失最小之处置组合 {#sec-expected-loss}
+
+::: {.callout-important}
+## 本节定位：不问「谁最危险」，问「哪个动作的风险调整后经济价值最高」
+
+先生令：**于所有处置选项中灵活搭配，择最低亏损风险而最高回酬之组合**。本节以蒙地卡罗
+前瞻模拟各处置方案，再以期望损失取 argmin。四条铁律：
+
+1. ⛔ **方案名册取自实测台账之动作宇宙**（`TL10` `action_class` ／ `TL11` `enforcement_type`），禁凭空拟方案；
+2. ⛔ **效应分布一律自 `PI01` 逐会员实测 `d_revenue` 自助重抽**，禁臆造效应、禁外插未观测之方案；
+3. ⛔ **复核／处置之单位成本未登记** ⇒ 只出零成本下界，并**反解盈亏平衡成本上限**，禁臆造成本以凑「划算」；
+4. ⛔ **合计额系线性外插**——处置样本本为极端个案之选择性抽样，投射倍数逾闸者挂 ⚑，
+   须先以同规模影子期实证方可推广。故本节之主量为**每人效应**，合计只作示意。
+:::
+
+```{r}
+#| label: 蒙地卡罗与期望损失
+#| results: asis
+tm <- tr_type_members(rec, mj)
+.n_target <- if (is.null(tm)) 0L else nrow(tm)
+cat(sprintf("本类候选人群（判据尾部命中 ≥ 1 条）：**%s 名**。
+
+", tr_f(.n_target)))
+if (.n_target < 1L) cat("○ NOT_RUN：本类无候选人群，处置模拟拒算。
+
+") else {
+  mc <- tr_monte_carlo_actions(n_target = .n_target)
+  cat(sprintf("%s
+
+", mc$说明))
+  if (isTRUE(mc$ok)) {
+    el <- tr_expected_loss(mc)
+    cat("::: {.tbl-wide}
+")
+    print(kable(tr_no(el$tab), align = "l", escape = FALSE, caption = sprintf(
+      "各处置方案之前瞻模拟与期望损失（种子 %s；主量为【每人效应】，合计只作示意）",
+      CFG$decision_layer$seed)))
+    cat("
+:::
+
+")
+    cat(sprintf("::: {.callout-warning}
+## 裁决
+
+%s
+:::
+
+", el$verdict))
+  }
+}
+```
+
+::: {.tbl-wide}
+```{r}
+#| label: 强化学习禁赛
+kable(tr_no(tr_rl_bench()), align = "l", escape = FALSE,
+      caption = "强化学习之现状裁定（⛔ BENCHED：二闸未开前只准模拟，禁驱动商业动作）")
+```
+:::
+
+## 五、经济语义闸 ECONOMIC_SEMANTIC_GATE v1.0 {#sec-esg}
+
+::: {.callout-important}
+## 本闸定位：十五条全过，方准全量重导 P5D
+
+本闸把「已实现 ≠ 理论」「玩家视角 ≠ 平台视角」「配对存活 ≠ 总体因果」「盈亏平衡上限 ≠ 实际成本」
+等**语义**层面之误，一次钉死为机检条款。⛔ 语义错不会报错，只会安静地把结论带偏——
+故须以闸，不以人记。任一条 FAIL 即停止全量重导。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 经济语义闸
+esg <- tr_economic_semantic_gate(rec, ld)
+kable(tr_no(esg), align = "l", escape = FALSE,
+      caption = sprintf("ECONOMIC_SEMANTIC_GATE v1.0（%d 条机检；实测栏一律现算或取自登记册之实测值）", nrow(esg)))
+esgv <- tr_economic_semantic_verdict(esg)
+kable(tr_no(esgv), align = "l", escape = FALSE, caption = "经济语义闸总裁定")
+```
+:::
+
+## 六、四状态分离：工程 · 统计 · 因果 · 商业 {#sec-status}
+
+::: {.callout-important}
+## 本节定位：⛔ 禁以单一 PASS 混淆四义
+
+「统计显著」不等于「因果成立」，「因果成立」不等于「商业准入」。四者混为一个 `PASS`，
+下游必误读成「可以处置」。故本节把状态拆为四层，逐层独立裁定，**禁跨层升格**。
+:::
+
+::: {.tbl-wide}
+```{r}
+#| label: 四状态矩阵
+kable(tr_no(tr_status_matrix(tr_prepost_verdict(pp_pf, pp_mb), esgv)), align = "l", escape = FALSE,
+      caption = "四状态矩阵（本轮取值皆现算；⛔ 因果层未立即商业层 BLOCKED）")
+```
+:::
+
+# 第十部分：血统与身份 {#sec-lineage}
+
+::: {.callout-important}
+## 本章定位
+
+⚠ **须辨二事**：入六元组**管辖**者 24 件，然本档实际 `source()` 或读取者远少于此。
+「调用状态」栏逐件言明：`✓` 者本档确实执行或读取；`○` 者**刻意不调用**（校验器须保独立、
+生成器在本档之前运行若反调即成环、坐标表导出器系同辈审计器、SQL 与参照件无 R 消费者）；
+`⛔` 者**应接而未接**，属缺陷须补。⛔ 不得以「已列入六元组」冒充「已被调用」。
+
+本章列本档之**全部血统件与执行件**：登记册六元组身份、`registry_counts` 之
+YAML 声明 ↔ CSV 现算互证、所消费之规范件与执行件路径，及外来文献 token 之自检结果。
+**互证不符即停止渲染**；任何计数禁硬写于正文。范本体例之出处亦列于此，供逐条比对。
+:::
+
+::: {.tbl-scroll}
+```{r}
+#| label: 登记册身份
+kable(tr_no(REG$identity), align = "l", caption = sprintf("登记册六元组身份锚定（v%s；模式=%s）", reg_ver, REG$mode))
+```
+:::
+
+
+```{r}
+#| label: 计数互证
+kable(tr_no(data.table(计数项 = names(CNT), 现算 = unlist(CNT))), align = "l",
+      caption = "registry_counts：YAML 声明 ↔ CSV 现算互证（不符即停止渲染；任何文档禁止硬写）")
+```
+
+```{r}
+#| label: 血统件
+## 【N-8 · 血统配套现算】全配套十四件之版本、六元组、在位状态，一律渲染时自盘上现算。
+## ⛔ 本表内不得再出现任何手写版本号、手写路径或手写 MD5——2026-09-03 实测，旧手写表
+##    六列中五处已陈旧（登记册路径与引擎版本），且漂移不报错。现算即根治。
+LIN <- tr_lineage_manifest(REG)
+kable(tr_no(LIN[, .(类别, 角色, 调用状态, 件, 内容版本, 档名版本, 身份自洽,
+                    字节 = tr_f(字节), 行数 = tr_f(行数), 换行, BOM,
+                    MD5 = substr(MD5, 1, 12), 在位)]),
+  align = "l", caption = sprintf("血统配套六元组 · 共 %d 件（本档实际执行或读取 %d 件；仅指纹 %d 件；未接线 %d 件）· 渲染时现算（%s）",
+                                 nrow(LIN), sum(grepl("^✓", LIN$调用状态)), sum(grepl("^○", LIN$调用状态)),
+                                 sum(grepl("^⛔", LIN$调用状态)),
+                                 format(Sys.time(), "%Y-%m-%d %H:%M:%S")))
+```
+
+```{r}
+#| label: 血统自洽闸
+## 载入器路径所载之版本，须等于 registry_load() 实际载入者；不符即血统断裂，本档数字不可引用。
+kable(tr_no(tr_lineage_gate(REG, LIN)), align = "l",
+      caption = "血统自洽二闸：① 载入器路径版本 ＝ 实载登记册版本；② 双层身份（档名版本 ＝ 内容版本）")
+```
+
+- 登记册血统：v1.3.0（前版）→ v1.4.0（锚点 `1e13c774`）→ v1.5.0（G-1 三向变换 `e030613e`）→ v1.5.001（加法升级 · 父版 40×66=2,640 格逐位未改 · 机器派生）→ v1.5.002（加法升级 · 锚 `7f713dc` · 追加经济实测十节 · CSV 与父版逐字节相同）→ v1.5.003（头块补正 · 锚 `24b8d8d` · 父版 10,677 行只改 12 行：parent 由祖父 v1.5.0 改指真正父版、version_note、revision_note · 校验器增 R04b）→ **v1.5.004**（加法升级 · 追加 OQ-13／OQ-14 与 `id_namespace_registry`；判据层 66 行与 CSV 逐字节未改 · 双跑 24 PASS/0 FAIL/3 NOT_RUN）
+- 规范范本：`尾段投注基础分析的评估_v1_2_47_REDTEAM_去外部模型版.qmd`（章体与体例）
+- ⛔ **不入血统者**：`r paste(sprintf("《%s》", unlist(CFG$lineage_blacklist$files)), collapse = "")`——仅供人阅读参考；引擎于产出后自检其 token，命中即停止渲染
+
+```{r}
+#| label: 血统自检
+#| results: asis
+tr_lineage_check(tr_lineage_scan_text(typ, rec))   # 扫描五源，覆盖面一字未减（见引擎 §20.6）
+cat(sprintf("✔ 血统自检通过：本类登记册文本未含黑名单 token（共查 %d 枚）。\n\n",
+            length(unlist(CFG$lineage_blacklist$tokens))))
+```
+
+# 变更记录
+
+## v1.4.4（2026-09-03）· N-8c 血统配套扩至全在役件 ＋ 双层身份闸
+
+::: {.callout-note}
+## 本版只扩血统之【收录范围】与【闸】，不改语义
+
+**病灶**：v1.4.3 之血统配套只收 14 件，**漏收产出全部 133 件交付件之 SQL 总包三版**、行数实测探针、
+风险之眼 schema，及五件无代码消费者之规范件。血统若不含数据之源，即非完整血统。
+
+**处置**：引擎 1.5.0 将配套扩至 **24 件**，逐件标类别——在役·规范 7 ／ 在役·执行 8 ／
+在役·SQL源 4 ／ 参照 5。「参照」者系规范件而**无代码消费者**，标明以防误认为已接线。
+
+另新增 **双层身份闸**（承《版本编号纪律》§四之四「身份断言须双层：档名 ＋ 内容」）：
+逐件比对档名版本与内容版本。本闸上线即捕获一例——`配置/report_config_v1.0.0.yaml`
+**档名书 v1.0.0 而内容自称 1.4.0**。该闸现判 FAIL，将持续显于每一份报告，直至先生裁定改档名抑或改内容。
+
+判据渲染逻辑、章体、表格、统计口径一字未改。
+:::
+
+## v1.4.3（2026-09-03）· N-8 血统配套现算：手写字面量退场
+
+::: {.callout-note}
+## 本版只改血统之【取值方式】，不改语义
+
+**病灶**：本档之「血统件」表历来以**手写字面量**列版本与路径。2026-09-03 实测，五处已陈旧——
+载入器头注「配套」行、本档副标题、单一真相源注、血统表之登记册路径，皆仍书 `v1.5.003`（实为 `v1.5.004`）；
+血统表之引擎版本书 `1.2.0`（实为 `1.4.0`）。**手写必然随版漂移，且漂移不报错。**
+
+**处置**：引擎 1.4.0 新增 §9 血统配套——`tr_sixtuple()`（正典六元组，一处实作，取代此前四份各写各的副本）、
+`tr_file_version()`（自各档档头现取版本）、`tr_lineage_manifest()`（全配套**十四件**渲染时现算）、
+`tr_lineage_gate()`（载入器路径版本 ＝ 实载版本之自洽闸，不符即停止引用本档任何数字）。
+本档之血统表改取现算，副标题与真相源注去版本号。**该类缺陷自此绝迹，非靠自律。**
+
+判据渲染逻辑、章体、表格、统计口径一字未改——语义 diff 恒为零。
+:::
+
+## v1.4.2（2026-09-03）· N-4 双引擎合档 ＋ 血统指向 registry v1.5.003
+
+::: {.callout-note}
+## 本版只改血统与消费方式，不改语义
+
+**① 双引擎合档**（Ryo Eng 裁定）：`函数/typology_report_engine_ext.R`（扩充引擎 1.3.0，46 函数）整档并入
+`函数/typology_report_engine.R`（1.2.0），该档同时删除。依据：ext 档首 `stopifnot(exists("tr_load"))` 硬依赖主引擎，
+且两档函数名零重叠（主 12 ／ 扩充 46）——非替代关系而系依附扩充，故合为一档方为一物。
+**两档函数本体一字未改**；本模板之 `source()` 由两行并为一行，血统件表由七件并为六件。
+
+**② 血统层升版**：四处指针自 `v1.5.002` 改指 `v1.5.003`（副标题、单一真相源注记、血统件路径表、血统链）。
+`v1.5.003` 系头块补正版——父版 10,677 行只改 12 行（`registry.parent` 由祖父 `v1.5.0` 改指真正父版 `v1.5.002`
+并回填实读 md5、`version_note`、`revision_note` 追加两条目），判据层 66 行与十五 typology 块逐字节未改，
+CSV 与父版逐字节相同。校验器同步增 **R04b**（`registry.parent.version` 须等于校验器 `parent_version`），
+双跑 24 PASS ／ 0 FAIL ／ 3 NOT_RUN（R12／R20／R24b 为既有未竟项，第二阶段闸仍 NOT_PASS）。
+
+判据渲染逻辑、章体、表格、统计口径、软配置消费方式一字未改——语义 diff 恒为零。
+:::
+
+## v1.4.1（2026-09-03）· N-2B 血统层升版：指向 registry v1.5.002 · 命名空间 数据表
+
+::: {.callout-note}
+## 本版只改血统与命名空间，不改语义
+
+四处指针自 `v1.5.001` 改指 `v1.5.002`（副标题、单一真相源注记、血统件路径表、血统链），模板版号 `1.4.0 → 1.4.1`，生成器 `1.3.0 → 1.3.1`。判据渲染逻辑、章体、表格、统计口径、软配置消费方式一字未改。
+
+**同批修复之根因**：软配置册 `namespaces.delivery` 与引擎常量原书「数据库」，而 commit `7f713dc` 已将交付件目录改名「数据表」，致 v1.4.0 金丝雀 T-01 十件交付件皆「待表（档不在位）」；本批改软配置册 `1.1.0 → 1.2.0`、载入器 `db_dir`、引擎常量三处，交付件自此复归在位。`registry v1.5.002` 之新增十节（`platform_accounting_measured`／`deliverable_metric_inventory`／`metric_combinations`／`economic_levers_measured`／`economic_metric_gate_status` 等）主引擎与扩充引擎**现未消费**，内容层升级仍俟引擎改造；十五类之 `linkage_status` 皆 `PROPOSED_BY_AUDIT · 待先生裁定 · 非 SSOT`，本模板不据以出任何判语。
+:::
+
+## v1.4.0（2026-09-02）· N-1C 血统层升版：指向 registry v1.5.001
+
+::: {.callout-note}
+## 本版只改血统，不改语义
+
+本版为**血统层单项升版**，四处指针自 `v1.5.0` 改指 `v1.5.001`（副标题、单一真相源注记、
+血统件路径表、血统链），另模板自身版号 `1.3.0 → 1.4.0`。**判据渲染逻辑、章体、
+表格、统计口径、软配置消费方式一字未改**——语义 diff 恒为零。
+
+**为何只改血统**：`v1.5.001` 新增十六栏（`criterion_family`／`window_scope`／
+`evidence_ladder`／`entity_type`／`economic_path_status` 等），而主引擎与扩充引擎
+对该十六栏之引用**现为零**（2026-09-02 逐栏机检）。故内容层升级须俟引擎改造，
+非模板一档可成。
+
+**为何不趁势重实例化十五件**：`criterion_family` 现存已指认之语义疑点——
+`T-07 / win_rate_all`（胜率，纯结局量）现标 `STRUCTURAL`，而全册 `OUTCOME_BASED` 计 0，
+致 `P-16`（禁以实现输赢符号定罚）之唯一机检落于空集（`R24b` 已判 VACUOUS）。
+在 **N-5 判据语义逐条裁决**完成前批量实例化，等于把该病灶复制十五份。
+故本版只出 **T-01 单件金丝雀**验血统，十五件全量押后（爆炸半径控制）。
+:::
+
+## v1.3.0（前版）· 红队铁律三斧：全量、滚动、范本体例
+
+- **全量铁律（废抽样）**：前版之「巨档守门」逾 300 MB 只读前 150 万行并标 `SAMPLED`，
+  系**抽样出数**，与红队铁律相悖，已整支废除。配置册 `guards` 改为
+  `full_scan_mandatory: true`／`large_file_warn_mb`／`rowcount_verify`——巨档只**告警**，
+  **一行不截**；`tr_load()` 之 `nrows` 恒为 `Inf`，GBK 回退路径之 `readLines(n)` 亦改 `-1L`（全量）。
+  引擎于 `tr_apply_config()` 处设闸：配置册 `full_scan_mandatory` 非 `TRUE` 即 `stop()`，防抽样以配置形式回潜。
+- **全量核验（可查而非可信）**：新增 `tr_file_lines()` 流式数文件换行数、`tr_fullscan_audit()`
+  逐件对账；第二部分新增「〇、全量读取核验」一节，并呈字节／载入行数／文件换行数／差额／抽样标记。
+  搭配表清单与交付件身份核验（六元组 → **八元组**）同步加列。任一件 `sampled` 为 `TRUE` 即拒绝渲染。
+- **呈表纪律补漏**：前版 `results: asis` 分支内之 `print(kable())` 未包滚动容器，
+  实测 33 张桌表（含**判据列 Spearman 相关阵**这一最宽者）裸置于页面，横向溢出页宽。
+  本版逐处补齐 `.tbl-wide`／`.tbl-scroll`：各判据表、观测事实、各表会员覆盖、
+  Spearman 相关阵、ODS 关键字段、分析级指标、主检验、roi 候选、PCA、分层／退化／共现皆已入容器。
+- **范本体例对齐**（范本：`尾段投注基础分析的评估_v1_2_47_REDTEAM_去外部模型版.qmd`）：
+  十章**每章补「本章定位」** `callout-important`；主检验／统计冻结／审计门禁／五道铁门／
+  全量核验／线索汇总**六节补「本节定位」**；评估章末补
+  `callout-caution` **「局限（不为其讳）」**与 `callout-important` **「定位裁定」**二块，
+  内容由 `tr_eval_limits()`／`tr_eval_verdict()` 按本类实测**现算**，不写死。
+  章节锚点补齐（`#sec-tests`／`#sec-stat-rigor`／`#sec-gate`／`#sec-fivegates`／`#sec-leads`）。
+  一切列表型桌表加 `序` 列，用范本原式 `format(seq_len(.N), big.mark = ",")` ＋ `setcolorder`，
+  逐字同式，非另立体例。
+
+## v1.2.0（前版）
+
+- **软代码化**：新增 `配置/report_config_v1.0.0.yaml`，一切阈值／分位／置信／样本门／命名空间／字段别名／呈表尺寸／模型名册／管线／措施／名目勘正全部归册；引擎与模板不再硬写业务数值与业务字符。门禁图标改自登记册 `axes.gate` 现取。
+- **呈表纪律**：长表 scroll-y、宽表 scroll-x，尺寸取自配置册，禁截行截列。
+- **补齐范本章节**：数据口径（ODS 关键字段／核心指标／交付件身份核验／分析级核心指标）、评估（主检验／统计冻结／审计门禁／五道铁门／roi 结算完整性候选／裁定与处置序）、行业实践查证、武器库（名目勘正／逐模审计／四管线／前后对照／局限与提升）、灵活搭配实测（PCA／分层／共现／序列／线索）、模型架构与入场行为层。
+- **误判率控制**：Wilson 下界代点估计、最低样本量反解、退化侦测、独立期望对照四锁。
+- **血统自检**：产出命中外来文献 token 即停止渲染。
+
+## v1.1.0 · v1.0.0
+
+见前版：全维度矩阵扩列、八节体例补齐、工作目录自动上溯、模板可独立预览。

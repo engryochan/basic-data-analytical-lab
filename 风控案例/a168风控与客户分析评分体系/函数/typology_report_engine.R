@@ -1,7 +1,17 @@
 # =====================================================================
 # typology_report_engine.R · 十五类风险会员商业方案 · 共用分析引擎（含范本体例）
 # ---------------------------------------------------------------------
-# 版本 : 1.13.0
+# 版本 : 1.14.0
+# 变更 : 1.14.0（N-17 · 我方自陈疏漏之斧正）——
+#        ⛔ 病根：范本 §3.1.1「关键字段」一节，本模板【实际渲染为空】。tr_ods_fields() 系以
+#          【判据列名】比对 Z03 字典，而本套判据列皆系交付件派生量，本不在 ODS 字典内 ⇒
+#          恒命中 0 ⇒ 恒印「○ 本类判据列未见于 ODS 字典」。拿派生列查源字典，方向自始即错。
+#        ① §21.1 tr_ods_source_fields()：改由【总包 SQL 现取】本类各件实际取用之 ODS 源字段，
+#           再接 数据库/Z03_column_dictionary.csv 补业务含义与存储类型，并自 SQL 之 AS 别名
+#           反标「本类用途」。⇒ 与范本 §3.1.1「库表｜字段｜业务含义｜商业用途」四栏同式。
+#        ② §21.2 tr_core_metric_formula()：自总包 SQL 取判据列之【定义表达式】，令核心指标表
+#           如范本般列【公式】，而非只列名与阈值注。
+#        §1~§20 之算法一字未改。
 # 变更 : 1.13.0（N-16 · 承先生三令）——
 #        ① §20 范本体例移植：把《风险会员判据之靴尾投注篇 v1.2.55》之 §2.3 模型 与 §3 数据口径
 #           二章之规范与格式，落为四器：tr_model_contract()（血统告示 · 契约保全「原列逐字不改名、
@@ -3095,4 +3105,134 @@ tr_lineage_scan_text <- function(typ, rec) {
   f <- function(k) { v <- typ[[k]]; if (is.null(v)) character(0) else unlist(v) }
   paste(c(typ$裁定, f("\u89e3\u9501\u6761\u4ef6"), f("\u5f71\u5b50\u8981\u6c42"),
           rec$dict$threshold_note, rec$dict$standard_basis), collapse = " ")
+}
+
+# ---------------------------------------------------------------------
+# §21 范本 §3.1 之补齐：源数据（ODS 库表层）之【关键字段】与【核心指标公式】
+#     （N-17 · 2026-09-03 · 我方自陈之疏漏）
+# ---------------------------------------------------------------------
+# 【自陈】N-16 虽依范本补了模型章与四块口径规范，然范本 §3.1.1「关键字段」一节
+#   本模板**实际渲染为空**：tr_ods_fields() 系以【判据列名】去 Z03 字典比对，
+#   而本套判据列（late_share／shoe_pos_p50／stake_ramp／tail_share…）皆系交付件
+#   派生量，本就不在 ODS 字典内 ⇒ 恒命中 0 ⇒ 恒印「○ 本类判据列未见于 ODS 字典」。
+#   ⛔ 病根：拿【派生列】去查【源字段】字典，方向自始即错。
+#   ★ 范本之做法是列【该模型 SQL 实际取用之 ODS 源字段】（bet01／bet05／bet11／bet13…），
+#     其血统在 SQL 内，不在交付件表头内。今立本节改由 SQL 现取，并接 Z03 补业务含义。
+# ---------------------------------------------------------------------
+
+.TR_ODS_DICT <- new.env(parent = emptyenv())
+.tr_ods_dict <- function() {
+  if (!is.null(.TR_ODS_DICT$d)) return(.TR_ODS_DICT$d)
+  f <- .cfg("fields", "ods_dictionary_file")
+  p <- file.path(TR_DB, f)
+  if (!file.exists(p)) return(NULL)
+  d <- tryCatch(fread(p, encoding = "UTF-8", showProgress = FALSE,
+                      select = c("表名", "列序", "列名", "存储类型", "原始类型", "业务含义")),
+                error = function(e) NULL)
+  if (is.null(d)) return(NULL)
+  setnames(d, sub("^﻿", "", names(d)))
+  .TR_ODS_DICT$d <- d[]
+  d[]
+}
+
+## §21.1 关键字段：本类各件之 SQL 实际取用之 ODS 源字段（范本 §3.1.1 之体例）
+##   ⛔ 一律自总包 SQL 现取，再接 Z03 字典补业务含义；⛔ 不以判据列名反查源字典（方向错）
+tr_ods_source_fields <- function(rec, variant = NULL) {
+  dict <- .tr_ods_dict()
+  out <- rbindlist(lapply(rec$files, function(f) {
+    s <- tr_sql_of(f, max_lines = 0L, variant = variant)
+    if (!isTRUE(s$ok)) return(NULL)
+    code <- paste(s$sql[!grepl("^[[:space:]]*--", s$sql)], collapse = "\n")
+    tabs <- .tr_rxall("ods_[A-Za-z0-9_]+\\.[A-Za-z0-9_]+", code)
+    if (!length(tabs)) return(NULL)
+    rbindlist(lapply(tabs, function(tb) {
+      short <- sub("^.*[.]", "", tb)
+      cols <- if (!is.null(dict)) dict[表名 == short] else NULL
+      if (is.null(cols) || !nrow(cols)) return(data.table(
+        库表 = tb, 字段 = "—", 存储类型 = "—", 业务含义 = "⛔ Z03 字典内无此表", 本类用途 = "—", 来源件 = f))
+      ## ★ 别名归属（N-17 精修）：先自 FROM／JOIN <本表> <别名> 现取该表之别名，
+      ##   列须以 <别名>.<列> 出现方算「本表之列」——否则 dt／sync_time 一类同名列
+      ##   会被错记到 ods_a168_agent 名下（2026-09-03 实测确有此误）。
+      ## ★ SQL 关键字黑名单：`FROM <表> WHERE …` 之 WHERE 不是别名（2026-09-03 实测之误）
+      .kw <- c("WHERE","ON","GROUP","ORDER","HAVING","LIMIT","LEFT","RIGHT","INNER","OUTER",
+               "JOIN","CROSS","UNION","SELECT","AS","AND","OR","BY","OFFSET","WINDOW","QUALIFY")
+      al_pat <- paste0("(?:FROM|JOIN)[[:space:]]+", gsub("[.]", "[.]", tb),
+                       "[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)")
+      als <- unique(regmatches(code, gregexpr(al_pat, code, perl = TRUE))[[1L]])
+      als <- unique(sub(".*[[:space:]]", "", als))
+      als <- als[!toupper(als) %in% .kw]
+      qual <- length(als) > 0L
+      ## ★ 跨表同名列：无别名之表回退裸名比对时，同名列一律排除，防错记
+      dup <- if (!is.null(dict)) {
+        sh <- sub("^.*[.]", "", tabs)
+        z <- dict[表名 %in% sh, .N, by = 列名][N > 1L, 列名]
+      } else character(0)
+      hit <- vapply(cols$列名, function(cc) {
+        if (qual) any(vapply(als, function(a)
+          grepl(paste0("(^|[^A-Za-z0-9_])", a, "[.]", cc, "([^A-Za-z0-9_]|$)"), code, perl = TRUE), logical(1)))
+        else (!(cc %in% dup)) &&
+             grepl(paste0("(^|[^A-Za-z0-9_])", cc, "([^A-Za-z0-9_]|$)"), code, perl = TRUE)
+      }, logical(1))
+      cc <- cols[hit]
+      if (!nrow(cc)) return(NULL)
+      ## 本类用途：自 SQL 取该列所参与之 `AS <别名>`（同行内），无者标结构用途
+      ## ★ SQL 类型名黑名单（N-17 精修）：CAST(... AS DECIMAL/INT/...) 之类型名不得充作别名
+      .tykw <- c("DECIMAL", "INT", "BIGINT", "STRING", "VARCHAR", "CHAR", "DOUBLE", "FLOAT",
+                 "DATE", "DATETIME", "TIMESTAMP", "BOOLEAN", "SMALLINT", "TINYINT", "LARGEINT")
+      use <- vapply(cc$列名, function(x) {
+        pat <- paste0("[^\n]*(^|[^A-Za-z0-9_])", x, "([^A-Za-z0-9_])[^\n]*?AS[[:space:]]+`?([A-Za-z0-9_]+)`?")
+        m <- regmatches(code, gregexpr(pat, code, perl = TRUE))[[1L]]
+        if (!length(m)) return("结构用途（连接／过滤／分组／排序）")
+        al <- unique(sub(".*AS[[:space:]]+`?([A-Za-z0-9_]+)`?.*", "\\1", m))
+        al <- al[!toupper(al) %in% .tykw]
+        if (!length(al)) return("结构用途（连接／过滤／分组／排序）")
+        paste0("→ ", paste(utils::head(al, 3L), collapse = "、"))
+      }, character(1))
+      data.table(库表 = tb, 字段 = cc$列名, 存储类型 = cc$存储类型,
+                 业务含义 = fifelse(nzchar(cc$业务含义), cc$业务含义, "—"),
+                 本类用途 = unname(use), 来源件 = f)
+    }), fill = TRUE)
+  }), fill = TRUE)
+  if (is.null(out) || !nrow(out)) return(NULL)
+  ## 同一（库表, 字段）跨件合并，来源件并列
+  out <- out[, .(存储类型 = 存储类型[1L], 业务含义 = 业务含义[1L],
+                 本类用途 = paste(unique(本类用途), collapse = " ／ "),
+                 来源件 = paste(unique(sub("[.]csv$", "", 来源件)), collapse = "、")),
+             by = .(库表, 字段)]
+  setorder(out, 库表, 字段)
+  out[]
+}
+
+## §21.2 核心指标之【定义公式】：自总包 SQL 取该判据列之定义表达式（范本 §3.1.2 之体例）
+##   ⛔ 范本之核心指标表列的是【公式】（stake ＝ bet13 ÷ bet11 之类），非只列名与阈值注。
+tr_core_metric_formula <- function(rec, variant = NULL) {
+  d <- rec$dict
+  rbindlist(lapply(seq_len(nrow(d)), function(i) {
+    r <- d[i]; f <- r$criterion_source; cc <- r$criterion_column
+    s <- tr_sql_of(f, max_lines = 0L, variant = variant)
+    expr <- "⛔ 总包内未见本件模块"
+    if (isTRUE(s$ok)) {
+      ## ★ 先剥行尾 `--` 注释：总包每行皆带行尾注释，不剥则「上一行以逗号结尾」恒假，
+      ##   回溯遂多吞数行完整表达式（2026-09-03 实测之误）。
+      L <- s$sql[!grepl("^[[:space:]]*--", s$sql)]
+      L <- sub("[[:space:]]--.*$", "", L)
+      ## 自 SQL 取 `<表达式> AS <列名>`：向上回溯至该语句之起点（逗号或行首）
+      k <- grep(paste0("AS[[:space:]]+`?", cc, "`?[[:space:],]*$"), L, perl = TRUE)
+      if (!length(k)) k <- grep(paste0("AS[[:space:]]+`?", cc, "`?([^A-Za-z0-9_]|$)"), L, perl = TRUE)
+      if (length(k)) {
+        j <- k[1L]; st <- j
+        while (st > 1L && !grepl("[,(]\\s*$", trimws(L[st - 1L]), perl = TRUE) &&
+               !grepl("^(SELECT|,)", trimws(L[st]), perl = TRUE) && j - st < 3L) st <- st - 1L
+        e <- paste(trimws(L[st:j]), collapse = " ")
+        e <- sub(paste0("\\s*AS\\s+`?", cc, "`?\\s*,?\\s*$"), "", e, perl = TRUE)
+        e <- sub("^,\\s*", "", e)
+        expr <- .tr_cut(gsub("\\s+", " ", e), 150L)
+      } else expr <- "⛔ 该列未在本模块以 AS 显式定义（或系上游 CTE 透传）"
+    }
+    data.table(指标 = cc, 取自 = f, 角色 = r$criterion_role,
+               `定义（公式 · 取自总包 SQL）` = expr,
+               口径原文 = .tr_cut(as.character(r$threshold_note), 90L),
+               方向 = fifelse(nzchar(r$direction), r$direction, "—"),
+               阈值状态 = r$threshold_status)
+  }), fill = TRUE)
 }
