@@ -1,0 +1,32 @@
+﻿节,量,值,锚/判读,结论
+§0,n_agent_rows_scanned,215,—,连线通、权限足
+§0,nd_test_agent_id,215,—,测试线名册基数
+§1,t_true_rows,6048562,"≤ 6,048,725（#014 四锁上界）",PASS · #133 观测值定案
+§1,nd_round_key,6048562,= t_true_rows,PASS · 主键唯一
+§1,reduced_by_locks_4to6,163,—,99.9973% 之上界
+§1,n_batches_100k,61,—,回填分批版
+§1,last_batch_rows_100k,48562,—,回填分批版
+§1,n_batches_10k,605,—,回填 1 万版
+§1,last_batch_rows_10k,8562,—,回填 1 万版
+§1,n_bets_total,124713543,= §2 L6_rows,PASS
+§1,nd_table,30,= #014 nd_bet39 30,PASS
+§1,nd_table_shoe,123357,"≤ #014 123,359",PASS
+§1,nd_biz_date,139,= 窗内营运日数,PASS
+§1,n_rounds_multiparty,5863816,—,96.95%
+§1,n_member_pairs_total,1181326647,—,共现零模型分母 · 首次实测
+§1,n_rounds_multi_dealer,6713,—,0.111% · 待辨
+§2,L0_rows / L0_nd_round_key,125654711 / 6048790,三锁,—
+§2,L1_rows / L1_nd_round_key,125649147 / 6048725,= #014 逐位,PASS · 锚合
+§2,L1b_rows_no_trim,125649147,= L1_rows,PASS · category 无空白
+§2,L2_rows / L2_nd_round_key,124726293 / 6048725,局键 = L1,PASS · 去重不减局
+§2,L3_rows / L3_nd_round_key,124725280 / 6048562,"剔 1,013 行 / 163 局",163 局之唯一来源
+§2,L4_rows / L4_nd_round_key,124713543 / 6048562,"剔 11,737 行 / 0 局",—
+§2,L5_rows / L5_nd_round_key,124713543 / 6048562,剔 0 行 / 0 局,VACUOUS_FILTER
+§2,L6_rows / L6_nd_round_key,124713543 / 6048562,= §1 t_true_rows,PASS · 两法互证
+§3,n_rounds_solo,184746,—,3.05%
+§3,n_rounds_ge10,3451005,—,57.05%
+§3,p50/p90/p99/p999_members,11 / 32 / 63 / 94,分位不受 ≤ 约束,判读斧正 v2.0.1
+§3,max_members,256,≤ #118 256,PASS（等值）
+§3,max_bets_in_round,414,≤ #118 414,PASS（等值）
+§3,n_rounds_dealer_null,0,—,无空荷官
+§3,n_rounds_dealer_multi,6713,—,0.111% · 最多 3 荷官

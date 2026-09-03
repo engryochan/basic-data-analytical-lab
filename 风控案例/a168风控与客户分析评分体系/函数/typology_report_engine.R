@@ -1,7 +1,12 @@
 # =====================================================================
 # typology_report_engine.R · 十五类风险会员商业方案 · 共用分析引擎（含范本体例）
 # ---------------------------------------------------------------------
-# 版本 : 1.2.0        日期 : 2026-09-03        适配登记册 : 1.5.003
+# 版本 : 1.3.0        日期 : 2026-09-03        适配登记册 : 1.5.003
+# 变更 : 1.3.0（N-6）新增 KILL RULE —— 封杀 tr_member_join() 之判据静默丢弃：
+#        登记之判据列若不在其声明源表表头内，一律登记 .TR_DROPPED 并经 $dropped／
+#        attr(,"silent_drop") 回报，另发 warning。tr_criterion_stats() 之「缺列」显判不动。
+#        实测动因：登记册 66 条中 13 条（19.7%）之列不在其声明源表内（8 条系总包 CTE
+#        内部别名、1 条系他模块输出、4 条真未建）——此前该 13 条于跨表面板层无声消失。
 # 变更 : 1.2.0（N-4 · 2026-09-03 · Ryo Eng 裁定）——typology_report_engine_ext.R
 #        （扩充引擎 1.3.0，46 函数）整档并入本档 §E0～§E13，该档同时删除。
 #        并档依据：ext 档首 stopifnot(exists("tr_load")) 硬依赖本档，且两档函数名
@@ -163,12 +168,40 @@ tr_criterion_stats <- function(rec, loaded) {
 # ---------------------------------------------------------------------
 # §5 跨表搭配 · 会员级并集／交集 + 判据列相关阵
 # ---------------------------------------------------------------------
+## 【KILL RULE · 判据静默丢弃之封杀（N-6 · 2026-09-03）】
+## 立意：本函数原以 intersect(登记之判据列, 实际表头) 取交集，交集之外者**无声消失**——
+##   程序不报错，报表不缺章，然该条判据实已被删除，人可能永不知情。
+##   较之 SQL 语法错更险：语法错人必见，静默省略人未必见。
+## 处置：凡登记之判据列不在其所声明之源表表头内者，一律登记于 .TR_DROPPED，
+##   并由 tr_member_join() 以 attr(out, "silent_drop") 与 $dropped 双路回报；
+##   模板须显式呈现之。⛔ 不得再有「取交集后照跑」而无痕迹之事。
+## 注：本档 tr_criterion_stats() 早已以「缺列」显判逐条判据，故静默只发生在跨表面板层；
+##   本闸补的正是该层。二者合观，方为全链无声漏。
+.TR_DROPPED <- new.env(parent = emptyenv()); .TR_DROPPED$rows <- list()
+tr_dropped_criteria <- function() {
+  if (!length(.TR_DROPPED$rows)) return(data.table(判据列 = character(0), 声明源表 = character(0),
+                                                   缺列成因 = character(0), 处置 = character(0)))
+  rbindlist(.TR_DROPPED$rows)
+}
+
 tr_member_join <- function(rec, loaded) {
   ml <- Filter(function(t) t$ok && "member_id" %in% names(t$dt), loaded$tabs)
   if (!length(ml)) return(NULL)
   d <- rec$dict
+  .TR_DROPPED$rows <- list()
   parts <- lapply(names(ml), function(f) {
-    cols <- unique(intersect(d[criterion_source == f, criterion_column], names(ml[[f]]$dt)))
+    want <- unique(d[criterion_source == f, criterion_column])
+    have <- names(ml[[f]]$dt)
+    miss <- setdiff(setdiff(want, have), "member_id")
+    if (length(miss)) {                       # ★ KILL RULE：缺列须留痕，不得静默
+      .TR_DROPPED$rows[[length(.TR_DROPPED$rows) + 1L]] <<- data.table(
+        判据列 = miss, 声明源表 = f,
+        缺列成因 = "COLUMN_NOT_IN_DECLARED_SOURCE",
+        处置 = "BLOCKED —— 该判据未入跨表面板；须经 N-5 裁定改列名或令总包外显该列")
+      warning(sprintf("[KILL RULE] %s 之判据列不在其声明源表 %s 内，已登记 BLOCKED：%s",
+                      rec$type_id %||% "?", f, paste(miss, collapse = ", ")), call. = FALSE)
+    }
+    cols <- unique(intersect(want, have))
     cols <- setdiff(cols, "member_id")
     if (!length(cols)) return(NULL)          # 有会员键但本类判据无一取自该表：只计覆盖，不入面板
     x <- ml[[f]]$dt[, c("member_id", cols), with = FALSE]
@@ -182,9 +215,13 @@ tr_member_join <- function(rec, loaded) {
   out <- Reduce(function(a, b) merge(a, b, by = "member_id", all = TRUE), parts)
   cov <- rbindlist(lapply(names(ml), function(f) data.table(
     交付件 = f, 会员数 = uniqueN(ml[[f]]$dt$member_id))))
-  list(panel = out, coverage = cov,
+  drop <- tr_dropped_criteria()
+  res <- list(panel = out, coverage = cov,
        n_union = uniqueN(out$member_id),
-       n_inter = if (length(parts) > 1) uniqueN(Reduce(intersect, lapply(parts, `[[`, "member_id"))) else NA_integer_)
+       n_inter = if (length(parts) > 1) uniqueN(Reduce(intersect, lapply(parts, `[[`, "member_id"))) else NA_integer_,
+       dropped = drop, n_dropped = nrow(drop))
+  attr(res, "silent_drop") <- nrow(drop)     # 0 = 无静默丢弃；> 0 须于报表显式呈现
+  res
 }
 
 tr_corr <- function(panel) {
