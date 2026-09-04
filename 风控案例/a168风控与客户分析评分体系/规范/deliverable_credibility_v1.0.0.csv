@@ -135,3 +135,4 @@
 134,HE01_bet_side_edge.csv,HE,E,投注面,bet_side × is_freecomm,25,N/A,FACT_BASE
 135,RK02_table_day_risk.csv,RK,E,桌台,table_id × biz_date,28,N/A,FACT_BASE
 136,RK03_dealer_day_risk.csv,RK,E,荷官,dealer_id × biz_date,28,N/A,FACT_BASE
+137,RK04_member_econ_by_scope.csv,RK,E,会员,member_id × dealer_class × line_class,26,N/A,FACT_BASE

@@ -73,7 +73,7 @@
 -- 【F-44】交付件导出契约 —— 立约（本档为规范，实施在导出通道）
 --   病灶：#017 DX04 与 #018 DX05 之交付 CSV 为 LF 换行 ＋ UTF-8 BOM（首三字节 EF BB BF）；
 --         #075 S01 为 CRLF 无 BOM。同一总包、同一次导出，三档换行与 BOM 不一致，血统六元组不齐。
---   立约：全部 136 件交付件一律 UTF-8 · 无 BOM · 全 CRLF；每次导出须随件登记六元组：
+--   立约：全部 137 件交付件一律 UTF-8 · 无 BOM · 全 CRLF；每次导出须随件登记六元组：
 --         byte_size · row_count · column_count · newline_type · bom · md5（另加 encoding）。
 --   ★ 本项不改 SQL 一字，改的是导出通道设置；列此以立契约，供导出闸自动校验，免人工肉眼核。
 --
@@ -493,6 +493,8 @@
 -- 135 RK02_table_day_risk.csv            RK   E 桌台       table_id × biz_date           28 N/A         FACT_BASE
 -- 136 RK03_dealer_day_risk.csv           RK   E 荷官       dealer_id × biz_date          28 N/A         FACT_BASE
 --     ★ ＃135／＃136 为【日序风险调整表】（2026-09-03 新建），不套六层商业块；只出事实不出判定。
+-- 137 RK04_member_econ_by_scope.csv      RK   E 会员       member_id × dealer_class × line_class  26 N/A         FACT_BASE
+--     ★ ＃137 为【口径分类表】（2026-09-04 新建），不套六层商业块；把哨兵荷官与测试线自真实荷官中分开摆出。
 --       二件系 UCC 之 TS 轴（sharpe／sortino／mdd）之**唯一无阻断来源**；风险基准恒为 ggr，列 risk_basis 自证。
 --       ⛔ 二件从未执行，全量重导前须先单跑冒烟。
 --       ⛔ caliber 恒 'REALIZED_NOT_THEORETICAL'：本件之 hold_valid_bet / hold_rate 系已实现值，
@@ -564,7 +566,7 @@
 --     会话参数、前置闸、台账、纪律说明，一律归入本 §Z 段，位于全部交付件之前。
 --
 --   ★ 等价性：可执行语句之先后顺序未变 —— 仍为
---     SET × 10  →  PRE-GATE 00A  →  PRE-GATE 00B  →  第 1 件 …… →  第 132 件 →  第 133 件（RK01 局级事实表）→  第 134 件（HE01 投注面级已实现优势表）→  第 135／136 件（RK02／RK03 日序风险调整表）。
+--     SET × 10  →  PRE-GATE 00A  →  PRE-GATE 00B  →  第 1 件 …… →  第 132 件 →  第 133 件（RK01 局级事实表）→  第 134 件（HE01 投注面级已实现优势表）→  第 135／136 件（RK02／RK03 日序风险调整表）→  第 137 件（RK04 会员经济口径分类表）。
 --     本次调整只搬动注释与段落，token 流逐位相同，输出必然一模一样（已由比对证明）。
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
 
@@ -677,7 +679,7 @@
 --   B6 新增 streaming_preaggregation_mode = 'force_streaming' —— 高基数 GROUP BY 跳过本地预聚合
 --   B7 新增 query_mem_limit = 34359738368 —— 把「进程超限（拖垮 BE、触发自动拉黑）」
 --        降级为「查询超限（只终止本查询）」
---   ★ 等价性依据：136 件末段皆 ORDER BY audit_rn；audit_rn 由 ROW_NUMBER() 所生恒唯一；
+--   ★ 等价性依据：137 件末段皆 ORDER BY audit_rn；audit_rn 由 ROW_NUMBER() 所生恒唯一；
 --     #071 之 26 个排序键含其 q 之全部四个粒度键（bet_date/uid/dealer_id/is_sentinel_dealer，
 --     与 GROUP BY 逐字同一）⇒ 排序键组合逐行唯一、无平局 ⇒ 全序确定
 --     ⇒ 输出与并行度、落盘与否、CTE 是否物化**逐位无关**。
@@ -789,7 +791,7 @@ SET query_mem_limit = 34359738368;
 --   ★ 我的错（W-58）：HF9c-fix 只把 NOW() 换成常量【赋值给变量】，
 --     引用处仍是 @变量 —— 跨会话依旧归空，等于没修。
 --     固定常量必须写在【使用处】，不是赋值处。本版全部内联，SQL 中不再出现任何 @ 变量。
---   ★ 二元锚（与六元组同级，全 136 件、一套三份必须完全一致）：
+--   ★ 二元锚（与六元组同级，全 137 件、一套三份必须完全一致）：
 --     snapshot_sync_time = '2026-08-27 09:00:00'
 --     run_id             = 'A168_HF9F_20260827_0900'
 --     batch_size         = 10000
@@ -797,7 +799,7 @@ SET query_mem_limit = 34359738368;
 --       理由：一套三份（原版审计版 / 10 万分批 / 1 万分批）共用同一 snapshot_sync_time 与
 --             run_id，却必然持有不同之 batch_size；若仍列为锚，三份即互相违锚，锚失其义。
 --             且 batch_size 不决定任何业务列之取值，只决定切片方式与 batch_id 之算法。
---       ⇒ 锚由三元降为**二元**：snapshot_sync_time ＋ run_id，二者全 136 件、三份脚本必须完全一致。
+--       ⇒ 锚由三元降为**二元**：snapshot_sync_time ＋ run_id，二者全 137 件、三份脚本必须完全一致。
 --       ★ 锁四扩充（原为「两版」，今为「三版」）：三份之输出，除 batch_id 一列外，
 --         行集、audit_rn 及其余全部列须逐位相同。batch_id 之差异为**预期且必然**：
 --           · 原版审计版 —— 无此列
@@ -50613,3 +50615,169 @@ ORDER BY z.audit_rn;
 --     ★ ⛔ 本件系 2026-09-03 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟：
 --       ① 行数须 ≈ 实体数 × 活跃日数；② mdd_over_ggr_window 之量级须与平台层 0.051923% 可比；
 --       ③ sd_daily_ggr = 0 之实体（单日活跃）其 sharpe_window 须为 NULL 而非 Inf。
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- 137. RK04_member_econ_by_scope.csv   [会员经济 × 荷官类 × 线别 之分类表 · 新建 · 无六层商业块]
+--     典型学：口径分离　粒度：member_id × dealer_class × line_class　说明：哨兵与测试线不得与真实荷官同锅计算
+--     ★ 本件循 ＃078 S03_agent_score ／ ＃130~＃132 字典三件 ／ ＃133 RK01 ／ ＃134 HE01 ／ ＃135~＃136 RK02/RK03 之例，
+--       **不套六层商业模板** —— 无 NTILE／PERCENT_RANK／vip_tier／economic_value／action_priority。
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- 【本件立意 · 2026-09-04 实测所迫】
+--   ⛔ 实测揭出：＃070 R03_player_dealer 之 `WHERE pdw.is_sentinel_dealer = 0` 只剔**行**、不剔**钱**。
+--      因六层块 x_agg 之过滤仅 rn=1 · category='1' · bet38='N' · bet11>0 · is_clean=1 · 会员非空，
+--      **完全不看 eid**，故每行携带之 stake／valid_bet／profit／ngr／residual_b／agent_cost
+--      一律是【该会员全荷官口径】，内含其在哨兵荷官（eid ∈ {'-1','0'}）上之全部注单。
+--   ⛔ 且 q 原生层**完全不排除测试线代理**（区块内 x_testagent／f_testline／is_clean 命中数 ＝ 0），
+--      而 x_agg 排（is_clean = 1）。⇒ 两层过滤方向相反，同一件内自相矛盾。
+--   ⇒ 2026-09-04 实测（＃071 现档 800,000 行）：哨兵行占 4.3104%，却占 stake_amount 之 15.8341%
+--      （376,389,405.8320）；六层 stake 为空之会员（即测试线会员）＃071 计 54 名、＃070 计 3 名。
+--   ★ 本件之职：把这三笔账**分开摆出来**，使下游得以「真实荷官 × 清白线」口径重算经济量，
+--     而**不必改动共享六层块** —— 改之即废 63 件可沿用之交付件，并废 ＃071 已落盘之 80 万行。
+--
+-- 【口径六锁 · 与全包逐字同一，勿改】
+--   ① 窗口 dt >= '2026-03-21' AND dt < '2026-08-07'　② 产品 bet02 = '101'
+--   ③ 快照 sync_time <= '2026-08-27 09:00:00'
+--   ④ 去重 PARTITION BY bet01 ORDER BY updatetime DESC, sync_time DESC, dt DESC 取 rn = 1
+--   ⑤ 基础闸 category='1' · UPPER(bet38)='N' · bet11>0　⑥ 归一 一切金额除以 bet11（汇率）
+--   ★ 本件之 x_ranked／x_testagent／x_bs0 三个 CTE 系【自 ＃071 逐字复制】，故与六层块同源同锁。
+--   ⛔ 本件**不施** is_clean=1、不施 eid 非空、不施 bet05>0、不施排除 TIP —— 因这四者正是待分类之对象。
+--
+-- 【分类轴】
+--   dealer_class  REAL      eid 非空且 ∉ {'-1','0'} —— 真实荷官
+--                 SENTINEL  eid ∈ {'-1','0'}        —— 哨兵值，⛔ 不得与 REAL 同锅
+--                 UNKNOWN   eid 为空                —— q 原生层丢弃、x_agg 保留之那批
+--   line_class    CLEAN     f_testline = 0          —— 清白线
+--                 TEST_LINE f_testline = 1          —— 测试线（age022 = '1' 之代理链），⛔ 不得与 CLEAN 同锅
+--   另出 TIP 注单与 bet05 非正数之计数与金额，使 q 层与 x_agg 层之四道口径差全部可见。
+--
+-- 【⛔ 对账闸（本件之验收硬判据）】
+--   Σ（line_class = 'CLEAN' 之全部 dealer_class）之 n_bets／stake／valid_bet／rebate／net／agent_cost
+--   **须逐会员等于** ＃070／＃071 六层块之 n_bets／stake／valid_bet／rebate_cost／(-profit)／cost_complement_b。
+--   容差：本件金额取 ROUND(…,6)，＃070／＃071 取 ROUND(…,4)，故合计后四舍五入至 4 位再比，
+--   理论最大偏差 3e-6；⛔ 超此即表示本件与六层块已不同源，须停手回报。
+--
+-- 【本件不做之事】
+--   · 不出任何判定：无旗标分档、无 action、无相对排名、无 vip_tier。
+--   · 不代裁「该以何口径为准」—— 剔哨兵与否属商业裁定，本件只把账分开摆出。
+--   · 不改 ＃070／＃071 一字。
+-- ▸ 导出：需要 —— 存为「数据库/RK04_member_econ_by_scope.csv」
+-- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
+SELECT z.*,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT) AS batch_id
+FROM (
+SELECT w.*,
+       ROW_NUMBER() OVER (ORDER BY w.`member_id`, w.`dealer_class`, w.`line_class`) AS audit_rn,
+       'A168_HF9F_20260827_0900' AS run_id,
+       '2026-08-27 09:00:00' AS snapshot_sync_time
+FROM (
+    WITH
+      x_ranked AS (
+    SELECT b.bet01, b.bet03, b.bet04, b.bet05, b.bet09, b.bet11, b.bet13,
+           b.bet15, b.bet16, b.bet17, b.bet18, b.bet19, b.bet20, b.bet21,
+           b.bet22, b.bet23, b.bet24, b.bet25, b.bet26, b.bet27, b.bet38, b.bet39, b.category, b.commission,
+           b.dt, b.eid, b.ip, b.validbet, b.updatetime, b.sync_time,
+           ROW_NUMBER() OVER (
+             PARTITION BY b.bet01
+             ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC)      AS x_rn
+    FROM ods_mariadb_2b.ods_a168_bet02 b
+    WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+      AND b.bet02 = '101'
+      AND b.sync_time <= '2026-08-27 09:00:00'
+  ),
+    x_testagent AS (
+    SELECT age001 AS agent_id FROM ods_mariadb_2b.ods_a168_agent WHERE age022 = '1'
+  ),
+    x_bs0 AS (
+    SELECT b.bet05 AS x_member, b.eid AS x_dealer, b.bet39 AS x_table,
+           b.bet03 AS x_shoe, b.ip AS x_ip, b.bet09 AS x_product, b.dt AS x_date,
+           CONCAT_WS('|', b.bet03, b.bet04, b.bet39)                      AS x_round,
+           CONCAT_WS('|', b.bet39, b.bet03)                               AS x_tblshoe,
+           CAST(NULLIF(TRIM(b.bet04),'') AS INT)                          AS x_rno,
+           CASE WHEN b.dt >= '2026-07-08' THEN 1 ELSE 0 END               AS x_rec,
+           CASE WHEN TRIM(b.commission)='1' THEN 1 ELSE 0 END             AS x_freecomm,
+           CAST(NULLIF(TRIM(b.bet13),'') AS DECIMAL(20,4))
+             / CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8))            AS x_stake,
+           CAST(NULLIF(TRIM(b.validbet),'') AS DECIMAL(20,4))
+             / CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8))            AS x_valid,
+           CAST(NULLIF(TRIM(b.bet16),'') AS DECIMAL(20,4))
+             / CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8))            AS x_rebate,
+           CAST(NULLIF(TRIM(b.bet17),'') AS DECIMAL(20,4))
+             / CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8))            AS x_net,
+           CAST(NULLIF(TRIM(b.bet15),'') AS DECIMAL(20,6))                AS x_rbpct,
+           COALESCE(CAST(NULLIF(TRIM(b.bet23),'') AS DECIMAL(20,6)),0)   AS x_agpct,
+          NULLIF(CAST(NULLIF(TRIM(b.bet23),'') AS DECIMAL(20,6)),0)     AS x_rate1,
+          NULLIF(CAST(NULLIF(TRIM(b.bet24),'') AS DECIMAL(20,6)),0)     AS x_rate2,
+          NULLIF(CAST(NULLIF(TRIM(b.bet25),'') AS DECIMAL(20,6)),0)     AS x_rate3,
+          NULLIF(CAST(NULLIF(TRIM(b.bet26),'') AS DECIMAL(20,6)),0)     AS x_rate4,
+          NULLIF(CAST(NULLIF(TRIM(b.bet27),'') AS DECIMAL(20,6)),0)     AS x_rate5,
+          (CASE WHEN NULLIF(CAST(NULLIF(TRIM(b.bet22),'') AS BIGINT),0) IS NOT NULL THEN 5
+                WHEN NULLIF(CAST(NULLIF(TRIM(b.bet21),'') AS BIGINT),0) IS NOT NULL THEN 4
+                WHEN NULLIF(CAST(NULLIF(TRIM(b.bet20),'') AS BIGINT),0) IS NOT NULL THEN 3
+                WHEN NULLIF(CAST(NULLIF(TRIM(b.bet19),'') AS BIGINT),0) IS NOT NULL THEN 2
+                WHEN NULLIF(CAST(NULLIF(TRIM(b.bet18),'') AS BIGINT),0) IS NOT NULL THEN 1
+                ELSE 0 END)                                             AS x_chain_depth,
+           CASE WHEN COALESCE(t1.agent_id,t2.agent_id,t3.agent_id,
+                              t4.agent_id,t5.agent_id) IS NOT NULL
+                THEN 1 ELSE 0 END                                        AS f_testline
+    FROM x_ranked b
+    LEFT JOIN x_testagent t1 ON t1.agent_id = b.bet18
+    LEFT JOIN x_testagent t2 ON t2.agent_id = b.bet19
+    LEFT JOIN x_testagent t3 ON t3.agent_id = b.bet20
+    LEFT JOIN x_testagent t4 ON t4.agent_id = b.bet21
+    LEFT JOIN x_testagent t5 ON t5.agent_id = b.bet22
+    WHERE b.x_rn = 1
+      AND b.category='1' AND UPPER(TRIM(b.bet38))='N'
+      AND CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8)) > 0
+  ),
+  x_scope AS (
+    SELECT s.*,
+           CASE WHEN NULLIF(TRIM(CAST(s.x_dealer AS STRING)),'') IS NULL THEN 'UNKNOWN'
+                WHEN TRIM(CAST(s.x_dealer AS STRING)) IN ('-1','0')      THEN 'SENTINEL'
+                ELSE 'REAL' END                                            AS dealer_class,
+           CASE WHEN s.f_testline = 0 THEN 'CLEAN' ELSE 'TEST_LINE' END    AS line_class,
+           CASE WHEN UPPER(TRIM(CAST(s.x_product AS STRING))) LIKE 'TIP\_1\_%' THEN 1 ELSE 0 END AS f_tip,
+           CASE WHEN CAST(NULLIF(TRIM(CAST(s.x_member AS STRING)),'') AS BIGINT) > 0 THEN 1 ELSE 0 END AS f_uid_pos
+    FROM x_bs0 s
+  )
+    SELECT s.x_member                                                        AS member_id,
+           s.dealer_class,
+           s.line_class,
+           COUNT(*)                                                          AS n_bets,
+           COUNT(DISTINCT s.x_round)                                         AS n_rounds,
+           COUNT(DISTINCT s.x_dealer)                                        AS n_dealers,
+           COUNT(DISTINCT s.x_date)                                          AS active_days,
+           MIN(s.x_date)                                                     AS first_seen_d,
+           MAX(s.x_date)                                                     AS last_seen_d,
+           ROUND(SUM(s.x_stake), 6)                                          AS stake,
+           ROUND(SUM(s.x_valid), 6)                                          AS valid_bet,
+           ROUND(SUM(s.x_rebate), 6)                                         AS rebate,
+           ROUND(SUM(s.x_net), 6)                                            AS net,
+           ROUND(-SUM(s.x_net), 6)                                           AS profit,
+           ROUND(SUM(-s.x_net * (100.0 - s.x_agpct) / 100.0), 6)             AS agent_cost,
+           ROUND(-SUM(s.x_net) - SUM(s.x_rebate), 6)                         AS ngr,
+           ROUND(-SUM(s.x_net) - SUM(s.x_rebate)
+                 - SUM(-s.x_net * (100.0 - s.x_agpct) / 100.0), 6)           AS residual_b,
+           ROUND(SUM(s.x_net) / NULLIF(SUM(s.x_stake), 0), 8)                AS roi,
+           SUM(s.f_tip)                                                      AS n_bets_tip,
+           ROUND(SUM(CASE WHEN s.f_tip = 1 THEN s.x_stake ELSE 0 END), 6)    AS stake_tip,
+           SUM(CASE WHEN s.f_uid_pos = 0 THEN 1 ELSE 0 END)                  AS n_bets_uid_nonpositive,
+           ROUND(SUM(CASE WHEN s.f_uid_pos = 0 THEN s.x_stake ELSE 0 END), 6) AS stake_uid_nonpositive,
+           'MEMBER_x_DEALERCLASS_x_LINECLASS'                                AS grain_key,
+           'NO_SIX_LAYER_BLOCK'                                              AS six_layer_status,
+           'SCOPE_SEPARATED_NOT_SUMMABLE_ACROSS_CLASSES'                     AS combine_rule,
+           'FALSE'                                                           AS admit_to_risk_decision
+    FROM x_scope s
+    WHERE s.x_member IS NOT NULL AND TRIM(CAST(s.x_member AS STRING)) <> ''
+    GROUP BY s.x_member, s.dealer_class, s.line_class
+) w
+) z
+WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+ORDER BY z.audit_rn;
+--     ★ audit_rn 之排序键 (member_id, dealer_class, line_class) 即本件之 GROUP BY 键，
+--       故【必然唯一】，三版逐行可对账，且无死键。
+--     ★ ⛔ 本件系 2026-09-04 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟：
+--       ① 行数 ≈ 会员数 × 1~6（多数会员只有 REAL × CLEAN 一行）；
+--       ② 对账闸：Σ(line_class='CLEAN') 逐会员 == ＃070／＃071 六层块之同名量（容差 3e-6）；
+--       ③ dealer_class 之相异值须恰为 {REAL, SENTINEL, UNKNOWN}，line_class 恰为 {CLEAN, TEST_LINE}；
+--       ④ SENTINEL 之 stake 占全体之比，须与 2026-09-04 现档实测 15.8341% 同量级
+--          （现档系 residual_b ASC 之头部偏样，仅作量级参照，⛔ 不得作为期望值）。
