@@ -73,7 +73,7 @@
 -- 【F-44】交付件导出契约 —— 立约（本档为规范，实施在导出通道）
 --   病灶：#017 DX04 与 #018 DX05 之交付 CSV 为 LF 换行 ＋ UTF-8 BOM（首三字节 EF BB BF）；
 --         #075 S01 为 CRLF 无 BOM。同一总包、同一次导出，三档换行与 BOM 不一致，血统六元组不齐。
---   立约：全部 134 件交付件一律 UTF-8 · 无 BOM · 全 CRLF；每次导出须随件登记六元组：
+--   立约：全部 136 件交付件一律 UTF-8 · 无 BOM · 全 CRLF；每次导出须随件登记六元组：
 --         byte_size · row_count · column_count · newline_type · bom · md5（另加 encoding）。
 --   ★ 本项不改 SQL 一字，改的是导出通道设置；列此以立契约，供导出闸自动校验，免人工肉眼核。
 --
@@ -490,6 +490,11 @@
 -- 134 HE01_bet_side_edge.csv            HE   E 投注面     bet_side × is_freecomm        25 N/A         FACT_BASE
 --     ★ #134 为投注面级已实现优势表（2026-09-03 新建，只出事实不出判定），不套六层商业块；
 --       「投注面」非可处置实体。列数 25 含审计三栏（audit_rn／run_id／snapshot_sync_time）；分批版另加 batch_id 为 26。
+-- 135 RK02_table_day_risk.csv            RK   E 桌台       table_id × biz_date           28 N/A         FACT_BASE
+-- 136 RK03_dealer_day_risk.csv           RK   E 荷官       dealer_id × biz_date          28 N/A         FACT_BASE
+--     ★ ＃135／＃136 为【日序风险调整表】（2026-09-03 新建），不套六层商业块；只出事实不出判定。
+--       二件系 UCC 之 TS 轴（sharpe／sortino／mdd）之**唯一无阻断来源**；风险基准恒为 ggr，列 risk_basis 自证。
+--       ⛔ 二件从未执行，全量重导前须先单跑冒烟。
 --       ⛔ caliber 恒 'REALIZED_NOT_THEORETICAL'：本件之 hold_valid_bet / hold_rate 系已实现值，
 --         **绝非** house_edge（理论优势，现状 NULL）。混称即污染 theo → ADT → NMPT → ESI 全链。
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -559,7 +564,7 @@
 --     会话参数、前置闸、台账、纪律说明，一律归入本 §Z 段，位于全部交付件之前。
 --
 --   ★ 等价性：可执行语句之先后顺序未变 —— 仍为
---     SET × 10  →  PRE-GATE 00A  →  PRE-GATE 00B  →  第 1 件 …… →  第 132 件 →  第 133 件（RK01 局级事实表）→  第 134 件（HE01 投注面级已实现优势表）。
+--     SET × 10  →  PRE-GATE 00A  →  PRE-GATE 00B  →  第 1 件 …… →  第 132 件 →  第 133 件（RK01 局级事实表）→  第 134 件（HE01 投注面级已实现优势表）→  第 135／136 件（RK02／RK03 日序风险调整表）。
 --     本次调整只搬动注释与段落，token 流逐位相同，输出必然一模一样（已由比对证明）。
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
 
@@ -672,7 +677,7 @@
 --   B6 新增 streaming_preaggregation_mode = 'force_streaming' —— 高基数 GROUP BY 跳过本地预聚合
 --   B7 新增 query_mem_limit = 34359738368 —— 把「进程超限（拖垮 BE、触发自动拉黑）」
 --        降级为「查询超限（只终止本查询）」
---   ★ 等价性依据：134 件末段皆 ORDER BY audit_rn；audit_rn 由 ROW_NUMBER() 所生恒唯一；
+--   ★ 等价性依据：136 件末段皆 ORDER BY audit_rn；audit_rn 由 ROW_NUMBER() 所生恒唯一；
 --     #071 之 26 个排序键含其 q 之全部四个粒度键（bet_date/uid/dealer_id/is_sentinel_dealer，
 --     与 GROUP BY 逐字同一）⇒ 排序键组合逐行唯一、无平局 ⇒ 全序确定
 --     ⇒ 输出与并行度、落盘与否、CTE 是否物化**逐位无关**。
@@ -784,7 +789,7 @@ SET query_mem_limit = 34359738368;
 --   ★ 我的错（W-58）：HF9c-fix 只把 NOW() 换成常量【赋值给变量】，
 --     引用处仍是 @变量 —— 跨会话依旧归空，等于没修。
 --     固定常量必须写在【使用处】，不是赋值处。本版全部内联，SQL 中不再出现任何 @ 变量。
---   ★ 二元锚（与六元组同级，全 134 件、一套三份必须完全一致）：
+--   ★ 二元锚（与六元组同级，全 136 件、一套三份必须完全一致）：
 --     snapshot_sync_time = '2026-08-27 09:00:00'
 --     run_id             = 'A168_HF9F_20260827_0900'
 --     batch_size         = 10000
@@ -792,7 +797,7 @@ SET query_mem_limit = 34359738368;
 --       理由：一套三份（原版审计版 / 10 万分批 / 1 万分批）共用同一 snapshot_sync_time 与
 --             run_id，却必然持有不同之 batch_size；若仍列为锚，三份即互相违锚，锚失其义。
 --             且 batch_size 不决定任何业务列之取值，只决定切片方式与 batch_id 之算法。
---       ⇒ 锚由三元降为**二元**：snapshot_sync_time ＋ run_id，二者全 134 件、三份脚本必须完全一致。
+--       ⇒ 锚由三元降为**二元**：snapshot_sync_time ＋ run_id，二者全 136 件、三份脚本必须完全一致。
 --       ★ 锁四扩充（原为「两版」，今为「三版」）：三份之输出，除 batch_id 一列外，
 --         行集、audit_rn 及其余全部列须逐位相同。batch_id 之差异为**预期且必然**：
 --           · 原版审计版 —— 无此列
@@ -50262,3 +50267,349 @@ ORDER BY z.audit_rn;
 --     ★ caliber 恒为 'REALIZED_NOT_THEORETICAL' —— 硬编码于列内，令下游无从误认作理论 edge。
 --     ★ 下游若欲算 theo：theo = Σ(valid_bet_j × edge_j)，其 edge 须为【理论】值；
 --       以本件之 realized 值代入者，对本窗近乎恒等式（Σtheo ≈ Σprofit），⛔ 只可作分摊，不可称期望。
+
+-- 135. RK02_table_day_risk.csv   [桌台 × 日 之风险调整表 · 新建 · 无六层商业块]
+--     典型学：桌台 日序风险　粒度：table_id × biz_date　说明：Sharpe／Sortino／MDD 之唯一无阻断来源
+--     ★ 本件循 ＃078 S03_agent_score ／ ＃130~＃132 字典三件 ／ ＃133 RK01 ／ ＃134 HE01 之例，
+--       **不套六层商业模板** —— 无 NTILE／PERCENT_RANK／vip_tier／economic_value／action_priority。
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- 【本件立意 · 承 UCC 统一坐标之 TS 轴】
+--   UCC 登记册实测：sharpe ／ sortino ／ mdd 三者全库 **0 栏**，归「② 缺算」而非「① 缺件」——
+--   其所缺者只是【日序粒度】，非授权。而 桌台 系**营运单位**，其收益波动本就该管。
+--   ⇒ 自 ODS 按 桌台 × 日 聚合即得，**不需解 F-47、不需理论 edge、不需 x_prod**。
+--   ★ 这是当前**唯一无须解任何阻断即可补上之风险调整指标**。
+--   ★ 本件只出【事实】，不出【判定】：无旗标分档、无 action、无相对排名。
+--
+-- 【口径六锁 · 与全包逐字同一，勿改】
+--   ① 窗口 dt >= '2026-03-21' AND dt < '2026-08-07'　② 产品 bet02 = '101'
+--   ③ 快照 sync_time <= '2026-08-27 09:00:00'
+--   ④ 去重 PARTITION BY bet01 ORDER BY updatetime DESC, sync_time DESC, dt DESC 取 rn = 1
+--   ⑤ 基础闸 category='1' · UPPER(bet38)='N' · 非测试线 · bet05>0 · bet11>0 · table_id 非空
+--   ⑥ 归一 一切金额除以 bet11（汇率）
+--
+-- 【风险量之基准 —— ⛔ 必读】
+--   本件一切风险量皆以 **ggr（＝(bet13 − bet14)/bet11，牌桌毛赢，庄家视角）** 之【日序】为基，
+--   与 ＃133 RK01 之 ggr 逐字同式。⛔ 承 UCC 引用纪律：**引用 MDD 必带基准**——
+--   2026-09-03 平台层实测：以 ggr_sum 为基 MDD/累计 ＝ 0.051923%%，以 profit 为基 0.086628%%，
+--   以 ngr 为基 0.123954%%，三者相差逾一倍。本件恒以 ggr 为基，故列 risk_basis 一栏自证。
+--
+-- 【定义】（皆于该 桌台 之【全窗】上算，逐日行内重复携带，便于下游直接筛）
+--   mean_daily_ggr  日 ggr 之均值　　sd_daily_ggr  日 ggr 之样本标准差
+--   downside_sd     仅计 ggr < 均值 之下行离差（Sortino 之分母）
+--   sharpe_window   mean_daily_ggr ÷ sd_daily_ggr　　sortino_window  mean_daily_ggr ÷ downside_sd
+--   cum_ggr／peak_cum／drawdown 逐日累计与回撤；mdd_window 全窗最大回撤
+--   mdd_over_ggr_window  mdd_window ÷ |ggr_window| —— 与平台层 0.051923%% 同口径，可直接对照
+--   negative_day_rate    亏损日占比　　evidence_flag  n_active_days < 30 即 THIN_DAYS
+--   ⛔ 无风险利率一律取 0（本口径为【收益波动比】，非金融学之 Sharpe），故不得称年化夏普。
+---- 【G3 桌之处置 —— 只出旗标，不代裁】
+--   桌号 900~913 共 14 张疑非真人（G3 族）。2026-09-03 实测（T_table_span 原生列）：
+--   G3 占 n_rounds **12.1450%**、占 n_bets **15.1820%**；⛔ 外部所称「占 33.2% 局数」系取自
+--   n_rounds_xagg（六层块广播栏，实测 32.4936%），**非本表原生局数**，引用即口径污染。
+--   ⇒ 本件只出 is_g3_table 旗标，**不硬剔** —— 剔与不剔属商业裁定，本件不代裁（承「只出事实」）。
+--   ⇒ 下游若作方差分解，**须先以 is_g3_table = 0 过滤**，否则 14 张伪桌会主导结果。
+--
+-- 【未纳入 · 候裁定】
+--   · 年化与无风险利率：须先定资金成本口径，未裁前不算。
+--   · 会员级 Sharpe／Sortino：会员日序过稀（多数会员活跃日 < 30），⛔ 强行算即以噪声充信号。
+--   · 与 ＃133 RK01 之关系：RK01 系【局级】事实，本件系【日级】风险；二者粒度不同，禁互冒。
+-- ▸ 导出：需要 —— 存为「数据库/RK02_table_day_risk.csv」
+-- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
+SELECT z.*,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT) AS batch_id
+FROM (
+SELECT w.*,
+       ROW_NUMBER() OVER (ORDER BY w.`table_id`, w.`biz_date`) AS audit_rn,
+       'A168_HF9F_20260827_0900' AS run_id,
+       '2026-08-27 09:00:00' AS snapshot_sync_time
+FROM (
+    WITH ta AS (
+      SELECT DISTINCT CAST(NULLIF(TRIM(age001), '') AS BIGINT) AS aid
+      FROM ods_mariadb_2b.ods_a168_agent
+      WHERE age022 = '1'
+    ),
+    rk AS (
+      SELECT b.*,
+             ROW_NUMBER() OVER (
+               PARTITION BY b.bet01
+               ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC)                AS rn
+      FROM ods_mariadb_2b.ods_a168_bet02 b
+      WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+        AND b.bet02 = '101'
+        AND b.sync_time <= '2026-08-27 09:00:00'
+    ),
+    base AS (
+      SELECT TRIM(r.bet39)                                                              AS table_id,
+             r.dt                                                               AS biz_date,
+             CONCAT_WS('|', TRIM(r.bet03), TRIM(r.bet04), TRIM(r.bet39))        AS round_key,
+             CAST(NULLIF(TRIM(r.bet05), '') AS BIGINT)                          AS member_id,
+             CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS stake,
+             COALESCE(CAST(NULLIF(TRIM(r.validbet), '') AS DECIMAL(20,8)),
+                      CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8)))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS vbet,
+             (CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8))
+            - CAST(NULLIF(TRIM(r.bet14), '') AS DECIMAL(20,8)))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS ggr,
+             CAST(NULLIF(TRIM(r.bet16), '') AS DECIMAL(20,8))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS rebate
+      FROM rk r
+      LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(r.bet18), '') AS BIGINT)
+      LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(r.bet19), '') AS BIGINT)
+      LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(r.bet20), '') AS BIGINT)
+      LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(r.bet21), '') AS BIGINT)
+      LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(r.bet22), '') AS BIGINT)
+      WHERE r.rn = 1
+        AND r.category = '1'
+        AND UPPER(TRIM(r.bet38)) = 'N'
+        AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+        AND CAST(NULLIF(TRIM(r.bet05), '') AS BIGINT) > 0
+        AND CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)) > 0
+        AND TRIM(r.bet39) <> ''
+    ),
+    dayagg AS (
+      SELECT b.table_id, b.biz_date,
+             COUNT(*)                                                           AS n_bets,
+             COUNT(DISTINCT b.round_key)                                         AS n_rounds,
+             COUNT(DISTINCT b.member_id)                                          AS n_members,
+             SUM(b.stake)                                                         AS stake,
+             SUM(b.vbet)                                                          AS valid_bet,
+             SUM(b.ggr)                                                           AS ggr,
+             SUM(b.rebate)                                                        AS rebate
+      FROM base b
+      GROUP BY b.table_id, b.biz_date
+    ),
+    w1 AS (
+      SELECT d.*,
+             AVG(d.ggr)          OVER (PARTITION BY d.table_id)                      AS mean_daily_ggr,
+             STDDEV_SAMP(d.ggr)  OVER (PARTITION BY d.table_id)                      AS sd_daily_ggr,
+             COUNT(*)            OVER (PARTITION BY d.table_id)                      AS n_active_days,
+             SUM(d.ggr)          OVER (PARTITION BY d.table_id ORDER BY d.biz_date
+                                       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cum_ggr
+      FROM dayagg d
+    ),
+    w2 AS (
+      SELECT w1.*,
+             MAX(w1.cum_ggr) OVER (PARTITION BY w1.table_id ORDER BY w1.biz_date
+                                   ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)     AS peak_cum,
+             CASE WHEN w1.ggr < w1.mean_daily_ggr
+                  THEN POW(w1.ggr - w1.mean_daily_ggr, 2) ELSE 0 END                     AS dn_sq,
+             CASE WHEN w1.ggr < 0 THEN 1.0 ELSE 0.0 END                                  AS is_neg_day
+      FROM w1
+    ),
+    w3 AS (
+      SELECT w2.*,
+             w2.peak_cum - w2.cum_ggr                                            AS drawdown,
+             MAX(w2.peak_cum - w2.cum_ggr) OVER (PARTITION BY w2.table_id)           AS mdd_window,
+             SQRT(SUM(w2.dn_sq) OVER (PARTITION BY w2.table_id)
+                  / NULLIF(COUNT(*) OVER (PARTITION BY w2.table_id) - 1, 0))          AS downside_sd,
+             AVG(w2.is_neg_day) OVER (PARTITION BY w2.table_id)                       AS negative_day_rate,
+             SUM(w2.ggr) OVER (PARTITION BY w2.table_id)                              AS ggr_window
+      FROM w2
+    )
+    SELECT x.table_id,
+           x.biz_date,
+           x.n_bets,
+           x.n_rounds,
+           x.n_members,
+           ROUND(x.stake, 4)                                                     AS stake,
+           ROUND(x.valid_bet, 4)                                                 AS valid_bet,
+           ROUND(x.ggr, 4)                                                       AS ggr,
+           ROUND(x.rebate, 4)                                                    AS rebate,
+           ROUND(x.ggr / NULLIF(x.valid_bet, 0), 8)                              AS hold_valid_bet_day,
+           ROUND(x.ggr / NULLIF(x.stake, 0), 8)                                  AS hold_rate_day,
+           x.n_active_days,
+           ROUND(x.mean_daily_ggr, 4)                                            AS mean_daily_ggr,
+           ROUND(x.sd_daily_ggr, 4)                                              AS sd_daily_ggr,
+           ROUND(x.downside_sd, 4)                                               AS downside_sd,
+           ROUND(x.mean_daily_ggr / NULLIF(x.sd_daily_ggr, 0), 8)                AS sharpe_window,
+           ROUND(x.mean_daily_ggr / NULLIF(x.downside_sd, 0), 8)                 AS sortino_window,
+           ROUND(x.cum_ggr, 4)                                                   AS cum_ggr,
+           ROUND(x.peak_cum, 4)                                                  AS peak_cum,
+           ROUND(x.drawdown, 4)                                                  AS drawdown,
+           ROUND(x.mdd_window, 4)                                                AS mdd_window,
+           ROUND(x.ggr_window, 4)                                                AS ggr_window,
+           ROUND(x.mdd_window / NULLIF(ABS(x.ggr_window), 0), 8)                 AS mdd_over_ggr_window,
+           ROUND(x.negative_day_rate, 6)                                         AS negative_day_rate,
+           CASE WHEN x.table_id IN ('900','901','902','903','904','905','906','907','908','909','910','911','912','913')
+                THEN 1 ELSE 0 END                                                     AS is_g3_table,
+           CASE WHEN x.n_active_days >= 30 THEN 'OK' ELSE 'THIN_DAYS' END        AS evidence_flag,
+           'GGR_BASED_DAILY_SERIES'                                              AS risk_basis
+    FROM w3 x
+) w
+) z
+WHERE z.audit_rn >        0 AND z.audit_rn <=  10000   -- 第 1 批
+ORDER BY z.audit_rn;
+--     ★ audit_rn 之排序键与分批作业版逐字同一，两版可逐行对账。
+--     ★ ⛔ 本件系 2026-09-03 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟：
+--       ① 行数须 ≈ 实体数 × 活跃日数；② mdd_over_ggr_window 之量级须与平台层 0.051923% 可比；
+--       ③ sd_daily_ggr = 0 之实体（单日活跃）其 sharpe_window 须为 NULL 而非 Inf。
+
+-- 136. RK03_dealer_day_risk.csv   [荷官 × 日 之风险调整表 · 新建 · 无六层商业块]
+--     典型学：荷官 日序风险　粒度：dealer_id × biz_date　说明：Sharpe／Sortino／MDD 之唯一无阻断来源
+--     ★ 本件循 ＃078 S03_agent_score ／ ＃130~＃132 字典三件 ／ ＃133 RK01 ／ ＃134 HE01 之例，
+--       **不套六层商业模板** —— 无 NTILE／PERCENT_RANK／vip_tier／economic_value／action_priority。
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- 【本件立意 · 承 UCC 统一坐标之 TS 轴】
+--   UCC 登记册实测：sharpe ／ sortino ／ mdd 三者全库 **0 栏**，归「② 缺算」而非「① 缺件」——
+--   其所缺者只是【日序粒度】，非授权。而 荷官 系**营运单位**，其收益波动本就该管。
+--   ⇒ 自 ODS 按 荷官 × 日 聚合即得，**不需解 F-47、不需理论 edge、不需 x_prod**。
+--   ★ 这是当前**唯一无须解任何阻断即可补上之风险调整指标**。
+--   ★ 本件只出【事实】，不出【判定】：无旗标分档、无 action、无相对排名。
+--
+-- 【口径六锁 · 与全包逐字同一，勿改】
+--   ① 窗口 dt >= '2026-03-21' AND dt < '2026-08-07'　② 产品 bet02 = '101'
+--   ③ 快照 sync_time <= '2026-08-27 09:00:00'
+--   ④ 去重 PARTITION BY bet01 ORDER BY updatetime DESC, sync_time DESC, dt DESC 取 rn = 1
+--   ⑤ 基础闸 category='1' · UPPER(bet38)='N' · 非测试线 · bet05>0 · bet11>0 · dealer_id 非空
+--   ⑥ 归一 一切金额除以 bet11（汇率）
+--
+-- 【风险量之基准 —— ⛔ 必读】
+--   本件一切风险量皆以 **ggr（＝(bet13 − bet14)/bet11，牌桌毛赢，庄家视角）** 之【日序】为基，
+--   与 ＃133 RK01 之 ggr 逐字同式。⛔ 承 UCC 引用纪律：**引用 MDD 必带基准**——
+--   2026-09-03 平台层实测：以 ggr_sum 为基 MDD/累计 ＝ 0.051923%%，以 profit 为基 0.086628%%，
+--   以 ngr 为基 0.123954%%，三者相差逾一倍。本件恒以 ggr 为基，故列 risk_basis 一栏自证。
+--
+-- 【定义】（皆于该 荷官 之【全窗】上算，逐日行内重复携带，便于下游直接筛）
+--   mean_daily_ggr  日 ggr 之均值　　sd_daily_ggr  日 ggr 之样本标准差
+--   downside_sd     仅计 ggr < 均值 之下行离差（Sortino 之分母）
+--   sharpe_window   mean_daily_ggr ÷ sd_daily_ggr　　sortino_window  mean_daily_ggr ÷ downside_sd
+--   cum_ggr／peak_cum／drawdown 逐日累计与回撤；mdd_window 全窗最大回撤
+--   mdd_over_ggr_window  mdd_window ÷ |ggr_window| —— 与平台层 0.051923%% 同口径，可直接对照
+--   negative_day_rate    亏损日占比　　evidence_flag  n_active_days < 30 即 THIN_DAYS
+--   ⛔ 无风险利率一律取 0（本口径为【收益波动比】，非金融学之 Sharpe），故不得称年化夏普。
+---- 【未纳入 · 候裁定】
+--   · 年化与无风险利率：须先定资金成本口径，未裁前不算。
+--   · 会员级 Sharpe／Sortino：会员日序过稀（多数会员活跃日 < 30），⛔ 强行算即以噪声充信号。
+--   · 与 ＃133 RK01 之关系：RK01 系【局级】事实，本件系【日级】风险；二者粒度不同，禁互冒。
+-- ▸ 导出：需要 —— 存为「数据库/RK03_dealer_day_risk.csv」
+-- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
+SELECT z.*,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT) AS batch_id
+FROM (
+SELECT w.*,
+       ROW_NUMBER() OVER (ORDER BY w.`dealer_id`, w.`biz_date`) AS audit_rn,
+       'A168_HF9F_20260827_0900' AS run_id,
+       '2026-08-27 09:00:00' AS snapshot_sync_time
+FROM (
+    WITH ta AS (
+      SELECT DISTINCT CAST(NULLIF(TRIM(age001), '') AS BIGINT) AS aid
+      FROM ods_mariadb_2b.ods_a168_agent
+      WHERE age022 = '1'
+    ),
+    rk AS (
+      SELECT b.*,
+             ROW_NUMBER() OVER (
+               PARTITION BY b.bet01
+               ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC)                AS rn
+      FROM ods_mariadb_2b.ods_a168_bet02 b
+      WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+        AND b.bet02 = '101'
+        AND b.sync_time <= '2026-08-27 09:00:00'
+    ),
+    base AS (
+      SELECT TRIM(r.eid)                                                              AS dealer_id,
+             r.dt                                                               AS biz_date,
+             CONCAT_WS('|', TRIM(r.bet03), TRIM(r.bet04), TRIM(r.bet39))        AS round_key,
+             CAST(NULLIF(TRIM(r.bet05), '') AS BIGINT)                          AS member_id,
+             CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS stake,
+             COALESCE(CAST(NULLIF(TRIM(r.validbet), '') AS DECIMAL(20,8)),
+                      CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8)))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS vbet,
+             (CAST(NULLIF(TRIM(r.bet13), '') AS DECIMAL(20,8))
+            - CAST(NULLIF(TRIM(r.bet14), '') AS DECIMAL(20,8)))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS ggr,
+             CAST(NULLIF(TRIM(r.bet16), '') AS DECIMAL(20,8))
+               / NULLIF(CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)), 0)    AS rebate
+      FROM rk r
+      LEFT JOIN ta t1 ON t1.aid = CAST(NULLIF(TRIM(r.bet18), '') AS BIGINT)
+      LEFT JOIN ta t2 ON t2.aid = CAST(NULLIF(TRIM(r.bet19), '') AS BIGINT)
+      LEFT JOIN ta t3 ON t3.aid = CAST(NULLIF(TRIM(r.bet20), '') AS BIGINT)
+      LEFT JOIN ta t4 ON t4.aid = CAST(NULLIF(TRIM(r.bet21), '') AS BIGINT)
+      LEFT JOIN ta t5 ON t5.aid = CAST(NULLIF(TRIM(r.bet22), '') AS BIGINT)
+      WHERE r.rn = 1
+        AND r.category = '1'
+        AND UPPER(TRIM(r.bet38)) = 'N'
+        AND COALESCE(t1.aid, t2.aid, t3.aid, t4.aid, t5.aid) IS NULL
+        AND CAST(NULLIF(TRIM(r.bet05), '') AS BIGINT) > 0
+        AND CAST(NULLIF(TRIM(r.bet11), '') AS DECIMAL(20,8)) > 0
+        AND TRIM(r.eid) <> ''
+    ),
+    dayagg AS (
+      SELECT b.dealer_id, b.biz_date,
+             COUNT(*)                                                           AS n_bets,
+             COUNT(DISTINCT b.round_key)                                         AS n_rounds,
+             COUNT(DISTINCT b.member_id)                                          AS n_members,
+             SUM(b.stake)                                                         AS stake,
+             SUM(b.vbet)                                                          AS valid_bet,
+             SUM(b.ggr)                                                           AS ggr,
+             SUM(b.rebate)                                                        AS rebate
+      FROM base b
+      GROUP BY b.dealer_id, b.biz_date
+    ),
+    w1 AS (
+      SELECT d.*,
+             AVG(d.ggr)          OVER (PARTITION BY d.dealer_id)                      AS mean_daily_ggr,
+             STDDEV_SAMP(d.ggr)  OVER (PARTITION BY d.dealer_id)                      AS sd_daily_ggr,
+             COUNT(*)            OVER (PARTITION BY d.dealer_id)                      AS n_active_days,
+             SUM(d.ggr)          OVER (PARTITION BY d.dealer_id ORDER BY d.biz_date
+                                       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cum_ggr
+      FROM dayagg d
+    ),
+    w2 AS (
+      SELECT w1.*,
+             MAX(w1.cum_ggr) OVER (PARTITION BY w1.dealer_id ORDER BY w1.biz_date
+                                   ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)     AS peak_cum,
+             CASE WHEN w1.ggr < w1.mean_daily_ggr
+                  THEN POW(w1.ggr - w1.mean_daily_ggr, 2) ELSE 0 END                     AS dn_sq,
+             CASE WHEN w1.ggr < 0 THEN 1.0 ELSE 0.0 END                                  AS is_neg_day
+      FROM w1
+    ),
+    w3 AS (
+      SELECT w2.*,
+             w2.peak_cum - w2.cum_ggr                                            AS drawdown,
+             MAX(w2.peak_cum - w2.cum_ggr) OVER (PARTITION BY w2.dealer_id)           AS mdd_window,
+             SQRT(SUM(w2.dn_sq) OVER (PARTITION BY w2.dealer_id)
+                  / NULLIF(COUNT(*) OVER (PARTITION BY w2.dealer_id) - 1, 0))          AS downside_sd,
+             AVG(w2.is_neg_day) OVER (PARTITION BY w2.dealer_id)                       AS negative_day_rate,
+             SUM(w2.ggr) OVER (PARTITION BY w2.dealer_id)                              AS ggr_window
+      FROM w2
+    )
+    SELECT x.dealer_id,
+           x.biz_date,
+           x.n_bets,
+           x.n_rounds,
+           x.n_members,
+           ROUND(x.stake, 4)                                                     AS stake,
+           ROUND(x.valid_bet, 4)                                                 AS valid_bet,
+           ROUND(x.ggr, 4)                                                       AS ggr,
+           ROUND(x.rebate, 4)                                                    AS rebate,
+           ROUND(x.ggr / NULLIF(x.valid_bet, 0), 8)                              AS hold_valid_bet_day,
+           ROUND(x.ggr / NULLIF(x.stake, 0), 8)                                  AS hold_rate_day,
+           x.n_active_days,
+           ROUND(x.mean_daily_ggr, 4)                                            AS mean_daily_ggr,
+           ROUND(x.sd_daily_ggr, 4)                                              AS sd_daily_ggr,
+           ROUND(x.downside_sd, 4)                                               AS downside_sd,
+           ROUND(x.mean_daily_ggr / NULLIF(x.sd_daily_ggr, 0), 8)                AS sharpe_window,
+           ROUND(x.mean_daily_ggr / NULLIF(x.downside_sd, 0), 8)                 AS sortino_window,
+           ROUND(x.cum_ggr, 4)                                                   AS cum_ggr,
+           ROUND(x.peak_cum, 4)                                                  AS peak_cum,
+           ROUND(x.drawdown, 4)                                                  AS drawdown,
+           ROUND(x.mdd_window, 4)                                                AS mdd_window,
+           ROUND(x.ggr_window, 4)                                                AS ggr_window,
+           ROUND(x.mdd_window / NULLIF(ABS(x.ggr_window), 0), 8)                 AS mdd_over_ggr_window,
+           ROUND(x.negative_day_rate, 6)                                         AS negative_day_rate,
+           CAST(NULL AS INT)                                                        AS is_g3_table,
+           CASE WHEN x.n_active_days >= 30 THEN 'OK' ELSE 'THIN_DAYS' END        AS evidence_flag,
+           'GGR_BASED_DAILY_SERIES'                                              AS risk_basis
+    FROM w3 x
+) w
+) z
+WHERE z.audit_rn >        0 AND z.audit_rn <=  10000   -- 第 1 批
+ORDER BY z.audit_rn;
+--     ★ audit_rn 之排序键与分批作业版逐字同一，两版可逐行对账。
+--     ★ ⛔ 本件系 2026-09-03 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟：
+--       ① 行数须 ≈ 实体数 × 活跃日数；② mdd_over_ggr_window 之量级须与平台层 0.051923% 可比；
+--       ③ sd_daily_ggr = 0 之实体（单日活跃）其 sharpe_window 须为 NULL 而非 Inf。

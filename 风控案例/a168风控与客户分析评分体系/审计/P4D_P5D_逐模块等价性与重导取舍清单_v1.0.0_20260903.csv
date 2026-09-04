@@ -69,7 +69,7 @@
 68,R01inv_shoe_len_census.csv,异,异,异,是,在位,1,桌台,n_tables × n_shoes × m,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
 69,R02_same_table.csv,同,同,同,是,在位,467723,会员,uid1 × uid2 × n_same_o,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
 70,R03_player_dealer.csv,同,同,同,是,在位,517528,会员,uid × dealer_id × is_s,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
-71,R03b_player_dealer_daily.csv,同,同,同,是,不在位,,会员,p.bet_date × p.member_,WRONG_GRAIN,NOT_FOR_DECISION,须重导（码虽同，然现档不在位）,P4D 输出未以此名落于 数据库/，或系分批改名
+71,R03b_player_dealer_daily.csv,同,同,同,是,在位（改名 _b1_to_b8）,800000,会员,p.bet_date × p.member_,WRONG_GRAIN,NOT_FOR_DECISION,续导（1~800000 已是 P5D 血统 · 只差 audit_rn>800000）,2026-09-04 实测：现档 R03b_player_dealer_daily_b1_to_b8.csv 之 pr_calculation_version=HF9g-P5 · pr_qualified_population=GLOBAL_BASELINE_NO_ENTITY_RANKING · action_priority=X 全窗基线 · economic_value/pr_* 皆 NULL · audit_rn 1~800000 连续无缺号 · run_id 与包内字面逐字同 · 151 栏表头与包内声明逐栏对得上；原判「不在位」系按名比对之漏，非血统之误
 72,R03chk_settlement_form.csv,同,同,同,是,在位,23,投注面,UPPER(TRIM(bet_side)),OK,REFERENCE,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
 73,R03inv_pair_census.csv,异,异,异,是,在位,19,会员配对,1 × 2,INVALID,SCREENING,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
 74,R_rebate_dist.csv,异,异,异,是,在位,37,全窗/元数据,mem003,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
