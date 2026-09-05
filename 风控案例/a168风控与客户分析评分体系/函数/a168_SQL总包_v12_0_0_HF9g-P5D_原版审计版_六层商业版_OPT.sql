@@ -24936,7 +24936,24 @@ ORDER BY audit_rn;
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
 -- ── 原版审计版：六层商业指标 ＋ audit_rn（不切片，一次导全）──
 SELECT w.*,
-       ROW_NUMBER() OVER (ORDER BY w.`residual_b` ASC, w.`roi` DESC, w.`bet_date`, w.`uid`, w.`dealer_id`, w.`is_sentinel_dealer`, w.`stake_amount`, w.`profit_amount`, w.`net_pnl`, w.`win_rate`, w.`n_related_orders`, w.`n_rounds_eff`, w.`p_base_mix_w`, w.`p_base_mix_unw`, w.`z_score_w`, w.`z_score_unw`, w.`z_score`, w.`delta_p`, w.`eligibility_status`, w.`comparison_id`, w.`filter_stage`, w.`filter_rule_version`, w.`cmp_time_window`, w.`cmp_population`, w.`cmp_label`, w.`z_score_alias_status`) AS audit_rn,
+--     ★ 【HF9g-P5D-c · 2026-09-05 排序键裁剪】audit_rn 之排序键由 26 键裁为 5 键。
+--       【何以不改输出】(bet_date, uid, dealer_id) 系 q 之 GROUP BY 粒度，而 is_sentinel_dealer
+--         ＝ f(dealer_id)，且 LEFT JOIN x_agg 按会员聚合不扇出 ⇒ 前 5 键已构成全序，
+--         第 6~26 键永无机会断平手。其中 7 者更是字面常量（comparison_id／filter_stage／
+--         filter_rule_version／cmp_time_window／cmp_population／cmp_label／z_score_alias_status）。
+--       【实证一 · 本地】已落盘 365 万行上，5 键沿 audit_rn 严格递增，违例 0。
+--       【实证二 · 在库】探针 0（2026-09-05，7.800 s）：T_true = 18,139,550，
+--         n_distinct_key3 = 18,139,550 ＝ t_true，n_dup_groups = 0，max_group_size = 1
+--         ⇒ 全域唯一，零平手，裁剪全域安全。
+--       【实证三 · 逐字节】探针 A 取第 100 批（audit_rn 990,001~1,000,000）导出，
+--         与现档 R03b_player_dealer_daily_b100.csv 比对：
+--         二档皆 15,614,711 B，MD5 皆 e1503f6e29f189f9676fd0f7a7ee580f ⇒ 逐字节全同。
+--       【收益】每行省 423.57 B 之排序键材料（8 字串键含 Slice 头 319.57 ＋ 13 数值键 104）；
+--         按 T_true 计，单份排序缓冲省 7.16 GB，排序常需 2~3 份 → 14.31 ~ 21.47 GB。
+--         而本轮 OOM 超限仅 1.53 MB（资源组 default_wg）／ 6 MB（进程）。
+--       【原 26 键逐字留档，可原样恢复】
+       --       原：ROW_NUMBER() OVER (ORDER BY w.`residual_b` ASC, w.`roi` DESC, w.`bet_date`, w.`uid`, w.`dealer_id`, w.`is_sentinel_dealer`, w.`stake_amount`, w.`profit_amount`, w.`net_pnl`, w.`win_rate`, w.`n_related_orders`, w.`n_rounds_eff`, w.`p_base_mix_w`, w.`p_base_mix_unw`, w.`z_score_w`, w.`z_score_unw`, w.`z_score`, w.`delta_p`, w.`eligibility_status`, w.`comparison_id`, w.`filter_stage`, w.`filter_rule_version`, w.`cmp_time_window`, w.`cmp_population`, w.`cmp_label`, w.`z_score_alias_status`) AS audit_rn
+       ROW_NUMBER() OVER (ORDER BY w.`residual_b` ASC, w.`roi` DESC, w.`bet_date`, w.`uid`, w.`dealer_id`) AS audit_rn,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
