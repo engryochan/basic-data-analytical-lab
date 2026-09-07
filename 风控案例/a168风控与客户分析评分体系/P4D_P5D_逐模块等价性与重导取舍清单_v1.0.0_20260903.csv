@@ -1,0 +1,135 @@
+﻿P5序号,交付件,原版审计版,分批作业版,分批作业版1万,三版一致,现档在位,现档行数,实体,粒度,可信度,用法,重导裁定,依据
+1,A_anchor.csv,同,同,同,是,在位,18,IP,g.ip,OK,SCREENING,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+2,B01_bt_panel.csv,同,同,同,是,在位,2150000,会员,member_id × bet_date,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+3,B01_bt_panel_delta.csv,同,同,同,是,在位,50811,会员,member_id × bet_date,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+4,B4_2b_funnel_and_mu0.csv,异,异,异,是,在位,1,全窗/元数据,n_raw × n_g1 × n_g2,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+5,B4_5b_tip_nature.csv,同,同,同,是,在位,3,IP,TRIM(bet09),OK,SCREENING,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+6,B_online_base.csv,同,同,同,是,在位,836,桌台,table_id × sec_elapsed,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+7,C01_ip_chain.csv,同,同,同,是,在位,6752,IP,bet_ip,OK,SCREENING,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+8,C06_hedge_pairs.csv,同,同,同,是,在位,1935,IP,bet_ip × m_a × m_b,WRONG_GRAIN,SCREENING,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+9,C06d_hedge_pairs_dated.csv,同,同,同,是,在位,1935,会员,a.bet_ip × a.member_id,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+10,C08_subnet_all.csv,异,异,异,是,在位,45907,网段,1,INVALID,SCREENING,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+11,C08_subnet_sparse.csv,异,异,异,是,在位,38733,网段,1,INVALID,SCREENING,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+12,D03S_daily_roi_diff.csv,同,同,同,是,在位,138,日期,bet_date,OK,REFERENCE,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+13,DICT_01a_bet41_tri.csv,异,异,异,是,在位,1,全窗/元数据,scope × n_rows × sum_s,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+14,DICT_01b_roundkey_card.csv,异,异,异,是,在位,1,全窗/元数据,scope × n_rows × nd_be,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+15,DICT_01c_dimension.csv,异,异,异,是,在位,1,全窗/元数据,scope × n_rows × avg_v,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+16,DICT_01d_bet_latency.csv,同,同,同,是,在位,30,全窗/元数据,TRIM(bet39),OK,REFERENCE,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+17,DX04_bet09_profile.csv,同,同,同,是,在位,23,产品,bet_side,OK,SUPPORT,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+18,DX05_product_panorama.csv,同,同,同,是,在位,8,产品,product_code,OK,SUPPORT,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+19,E02_segment_econ.csv,异,异,异,是,在位,59,全窗/元数据,m.rebate_rate_bkt × m.,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+20,EV01_disposal_events.csv,同,同,同,是,在位,3753,日期,event_id × event_time,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+21,EV02_member_disposal.csv,同,同,同,是,在位,8707,会员,event_id × event_date,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+22,I_ip_agg.csv,同,同,同,是,在位,8660,IP,bet_ip,OK,SCREENING,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+23,I_ip_player.csv,同,同,同,是,在位,696403,会员,b.bet_ip × b.member_id,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+24,K01_risk_feature_matrix.csv,同,同,同,是,在位,120063,会员,member_id × is_seed ×,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+25,K01b_seed_goldip.csv,同,同,同,是,不在位,,会员,member_id × seed_src,WRONG_GRAIN,NOT_FOR_DECISION,须重导（码虽同，然现档不在位）,P4D 输出未以此名落于 数据库/，或系分批改名
+26,K01b_seed_manual.csv,同,同,同,是,在位,125,会员,member_id × seed_src,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+27,K01c_seed_dated.csv,同,同,同,是,在位,18,IP,seed_id × seed_ip × cr,WRONG_GRAIN,SCREENING,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+28,L_label_dist.csv,异,异,异,是,在位,3,全窗/元数据,risk × orders,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+29,P01A_crosstab.csv,异,异,异,是,在位,1,全窗/元数据,n_rows × bet16_null ×,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+30,P01B_diff_ratio.csv,异,异,异,是,在位,1,全窗/元数据,n × diff_min × diff_p5,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+31,P01C_split_by_dim.csv,异,异,异,是,在位,2999,产品,"DATE_TRUNC('month', dt",INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+32,P01D_vs_validbet.csv,异,异,异,是,在位,1,全窗/元数据,n × comparable_n × pla,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+33,P01E_identity_test.csv,异,异,异,是,在位,2,风控专员,hypothesis × n × exact,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+34,P02A_lmc_samples.csv,异,异,异,是,在位,1200,全窗/元数据,类别 × 取样端 × 異動時間,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+35,P02B_changestatus_patterns.csv,异,异,异,是,在位,49,全窗/元数据,"SUBSTRING(TRIM(lmc05),",INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+36,P02C_key_check.csv,异,异,异,是,在位,7,全窗/元数据,l.lmc03,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+37,P02D_events_in_window.csv,异,异,异,是,在位,18,全窗/元数据,lmc04 × lmc03,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+38,P0C02_标签口径.csv,异,异,异,是,在位,3,全窗/元数据,产品口径 × 正例观测数_会员日 × 正例会,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+39,P0C03_标记次数分布.csv,异,异,异,是,在位,25,全窗/元数据,标记次数,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+40,P0C04_同日泄漏检验.csv,异,异,异,是,在位,125,全窗/元数据,d0.mem × d0.mark_day,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+41,P0C05_标记时点定位.csv,异,异,异,是,在位,125,全窗/元数据,mem × mark_day × 首投日,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+42,P0C06_LabelB骨架.csv,异,异,异,是,在位,3833,全窗/元数据,a.mem × a.anchor_day,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+43,P0C09_安慰剂检验.csv,异,异,异,是,在位,4807,全窗/元数据,a.mem × a.d × a.注单数 ×,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+44,P11_阿泽尾段投注总帐.csv,异,异,异,是,在位,2,全窗/元数据,scope_def × n_orders ×,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+45,P11_阿泽尾段投注模型会员名单.csv,同,同,同,是,在位,2722,会员,player_id × total_orde,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+46,P11_雷欧尾段投注总帐.csv,异,异,异,是,在位,2,全窗/元数据,scope_def × n_orders ×,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+47,P12a_platform_daily.csv,同,同,同,是,在位,139,日期,dt,OK,REFERENCE,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+48,P12b_member_events.csv,同,同,同,是,在位,723442,会员,uid × first_dt × last_,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+49,P12c_member_daily_pnl.csv,同,同,同,是,在位,1595911,会员,g.uid × g.dt,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+50,P13_personal_entry.csv,同,同,同,是,在位,92412,会员,uid,OK,PRIMARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+51,PH0_8r1_rg_case.csv,同,同,同,是,在位,1,日期,dt_day × category × ta,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+52,PH0_8r2_rg_crosstable.csv,异,异,异,是,在位,5,桌台,src × n_rows × n_rg_tr,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+53,PI01_treatment_delta_member.csv,同,同,同,是,在位,186,会员,member_id × treat_time,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+54,PI02_treatment_delta_platform.csv,异,异,异,是,在位,3,全窗/元数据,grp × phase,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+55,PI03_reinvest_loop.csv,异,异,异,是,在位,3,全窗/元数据,outcome,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+56,PI04_member_5d_profile.csv,同,同,同,是,在位,723442,会员,mid,OK,PRIMARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+57,P_player_month.csv,同,同,同,是,在位,1030097,会员,member_id × DATE_TRUNC,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+58,QSB_01a_category_census.csv,异,异,异,是,在位,2,全窗/元数据,COALESCE(NULLIF(TRIM(c,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+59,QSB_01c_cat1_contamination.csv,同,同,同,是,在位,23,产品,TRIM(bet09),OK,SUPPORT,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+60,QSB_02a_lowcard_fields.csv,异,异,异,是,在位,1,全窗/元数据,scope × n_rows × nd_be,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+61,QSB_02b2_lowcard_five_gates.csv,异,异,异,是,在位,29,全窗/元数据,COALESCE(NULLIF(TRIM(b,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+62,QSB_02b_state_cross.csv,异,异,异,是,在位,29,全窗/元数据,COALESCE(NULLIF(TRIM(b,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+63,QSB_02c_push_by_family.csv,异,异,异,是,在位,8,会员,CASE WHEN TRIM(bet09),INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+64,R01_late_shoe.csv,同,同,同,是,在位,92412,会员,member_id,OK,PRIMARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+65,R01_late_shoe_w2.csv,同,同,同,是,在位,16897,会员,member_id,OK,PRIMARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+66,R01anm_shoe_anomaly.csv,同,同,同,是,在位,377,桌台,dt × table_id × shoe_i,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+67,R01chk_shoe_len_by_table.csv,同,同,同,是,在位,30,桌台,table_id × table_flag,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+68,R01inv_shoe_len_census.csv,异,异,异,是,在位,1,桌台,n_tables × n_shoes × m,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+69,R02_same_table.csv,同,同,同,是,在位,467723,会员,uid1 × uid2 × n_same_o,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+70,R03_player_dealer.csv,同,同,同,是,在位,517528,会员,uid × dealer_id × is_s,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+71,R03b_player_dealer_daily.csv,同,同,同,是,不在位,,会员,p.bet_date × p.member_,WRONG_GRAIN,NOT_FOR_DECISION,须重导（码虽同，然现档不在位）,P4D 输出未以此名落于 数据库/，或系分批改名
+72,R03chk_settlement_form.csv,同,同,同,是,在位,23,投注面,UPPER(TRIM(bet_side)),OK,REFERENCE,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+73,R03inv_pair_census.csv,异,异,异,是,在位,19,会员配对,1 × 2,INVALID,SCREENING,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+74,R_rebate_dist.csv,异,异,异,是,在位,37,全窗/元数据,mem003,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+75,S01_player_score.csv,同,同,同,是,在位,723442,会员,b.member_id,OK,PRIMARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+76,S02_dealer_score.csv,同,同,同,是,在位,299,荷官,b.dealer_id,OK,SUPPORT,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+77,S02b_dealer_pace.csv,同,同,同,是,在位,299,荷官,d.dealer_id,OK,SUPPORT,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+78,S03_agent_score.csv,同,同,同,是,在位,4191,代理线,b.lv3,INVALID,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+79,S04_analyst_score.csv,同,同,同,是,在位,6,风控专员,COALESCE(NULLIF(TRIM(c,NULL,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+80,S05_member_month_panel.csv,同,同,同,是,在位,278729,会员,b.member_id × DATE_TRU,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+81,S_player_tail.csv,同,同,同,是,在位,159603,会员,member_id,OK,PRIMARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+82,S_second_dist.csv,同,同,同,是,在位,30,桌台,table_id,OK,SUPPORT,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+83,T02_daily_roi.csv,同,同,同,是,在位,1160259,会员,o.member_id × o.bet_da,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+84,T03_arbitrage.csv,同,同,同,是,在位,80631,会员,member_id,OK,PRIMARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+85,TL00_table_inventory.csv,异,异,异,是,在位,47,桌台,c.TABLE_NAME,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+86,TL02_config_change.csv,异,异,异,是,在位,5,全窗/元数据,变更列,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+87,TL03_pseudo_treatment.csv,同,同,同,是,不在位,,会员,member_id × change_dat,WRONG_GRAIN,NOT_FOR_DECISION,须重导（码虽同，然现档不在位）,P4D 输出未以此名落于 数据库/，或系分批改名
+88,TL03b_pseudo_treatment.csv,同,同,同,是,在位,148,会员,member_id × cate × pre,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+89,TL04_log_schema.csv,异,异,异,是,在位,50,桌台,TABLE_NAME × ORDINAL_P,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+90,TL06_log_mem_change.csv,同,同,同,是,在位,139,日期,dt,OK,REFERENCE,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+91,TL07_mem_change_shape.csv,异,异,异,是,在位,3,全窗/元数据,1,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+92,TL08_treatment_events.csv,同,同,同,是,在位,8707,会员,member_id × action_dat,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+93,TL09_member_schema.csv,异,异,异,是,在位,53,会员,ORDINAL_POSITION × COL,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+94,TL10_treatment_ledger.csv,同,同,同,是,在位,8589,会员,member_id × action_dat,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+95,TL11_treatment_episode.csv,同,同,同,是,在位,315,会员,member_id × field_name,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+96,TL11c_population_reconcile.csv,异,异,异,是,在位,6,全窗/元数据,lvl × level_name × n_a,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+97,TL14_limit_treatment.csv,同,同,同,是,在位,568,会员,member_id × action_dat,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+98,T_table_span.csv,同,同,同,是,在位,147,桌台,gi011,OK,SUPPORT,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+99,VB_00_validbet_contract.csv,异,异,异,是,在位,1,全窗/元数据,scope × n_rows × n_vb_,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+100,VB_00b_zero_five_rates.csv,异,异,异,是,在位,1,会员,scope × n_base_rows ×,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+101,VB_41_identity_global.csv,异,异,异,是,在位,1,风控专员,test × n_rows × n_both,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+102,VB_41b_identity_strata.csv,同,同,同,是,在位,51,产品,TRIM(bet09) × TRIM(com,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+103,VB_41b_identity_strata_v18b.csv,同,同,同,是,在位,51,风控专员,g × comm,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+104,VB_41c1_964_detail.csv,同,同,同,是,在位,964,会员,grp × bet01 × member_i,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+105,VB_41c2_concentration.csv,异,异,异,是,在位,2,全窗/元数据,t.grp,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+106,VB_41c2_concentration_v2.csv,异,异,异,是,在位,2,会员,grp × n_rows × n_membe,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+107,V_ipmatch.csv,同,同,同,是,在位,1668,会员,ip × n_member_log × co,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+108,V_recon.csv,异,异,异,是,在位,1,全窗/元数据,n_matched_round × mae_,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+109,V_table_counts.csv,异,异,异,是,在位,9,桌台,表名 × 行数,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+110,X_combo.csv,异,异,异,是,在位,2,全窗/元数据,1 × 2,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+111,Z01_table_inventory.csv,异,异,异,是,在位,131,桌台,表名 × 表类型 × 估计行数,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+112,Z02_excluded_tables.csv,异,异,异,是,在位,5,桌台,表名 × 估计行数 × 表注释,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+113,Z03_column_dictionary.csv,异,异,异,是,在位,2353,全窗/元数据,表名 × 列序 × 列名,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+114,Z04_name_collision.csv,异,异,异,是,在位,137,全窗/元数据,COLUMN_NAME,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+115,Z05_missing_typehint.csv,异,异,异,是,在位,1370,全窗/元数据,表名 × 列序 × 列名,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+116,Z06_generated_probe_sql.csv,异,异,异,是,在位,1590,全窗/元数据,表名 × 列序 × 列名,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+117,Z07_probe_bet02.csv,异,异,异,是,在位,169059,全窗/元数据,3,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+118,Z08_roundkey_integrity.csv,异,异,异,是,在位,1,全窗/元数据,注单行数 × 局键数 × 单局最大注单行数,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+119,Z09_time_axis_recon.csv,异,异,异,是,在位,1,日期,行数 × dt等于账务日 × dt等于下注日,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+120,Z11_sentinel_impact.csv,异,异,异,是,在位,1,全窗/元数据,未处置_注单行数 × 已处置_注单行数 ×,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+121,Z14_zero_month_diagnosis.csv,同,同,同,是,在位,14060,会员,member_id × bet_month,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+122,_P12b-pre.csv,同,同,同,是,在位,20,会员,member_id × action × c,WRONG_GRAIN,NOT_FOR_DECISION,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+123,_PH0_1b_table_inventory.csv,异,异,异,是,在位,131,会员,table_name × h_src × h,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+124,_PH0_2b_column_inventory.csv,异,异,异,是,在位,667,桌台,table_name × col_pos ×,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+125,_PH0_3_lmc_category.csv,异,异,异,是,在位,3,全窗/元数据,COALESCE(NULLIF(TRIM(l,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+126,_PH0_4L1_member_columns.csv,异,异,异,是,在位,87,会员,table_name × col_pos ×,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+127,_PH0_4b_rg_keyword.csv,异,异,异,是,在位,3,全窗/元数据,COALESCE(NULLIF(TRIM(l,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+128,_PH0_4w2_balance_points.csv,异,异,异,是,在位,1,日期,dt_slice × n_user_acti,INVALID,NOT_FOR_DECISION,必须重导,P5D 将相对刻度栏改为 CAST(NULL) ＋ 全窗基线标记，值必不同
+129,_PH0_6b_member_daily.csv,同,同,同,是,在位,139,会员,dt,OK,PRIMARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+130,DICT_ALL_columns.csv,同,同,同,是,在位,2353,元数据,table × column,N/A,DICTIONARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+131,DICT_ALL_tables.csv,同,同,同,是,在位,131,元数据,table,N/A,DICTIONARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+132,DICT_SEMANTIC_ruling.csv,同,同,同,是,在位,60,元数据,column_name,N/A,DICTIONARY,可省略重导 · 直接沿用 P4D 之现档,三版之可执行码与窗口／快照／run_id 字面量逐字相同
+133,RK01_round_fact.csv,仅P5,仅P5,仅P5,是,不在位,,局,round_key = bet03|bet04|bet39,N/A,FACT_BASE,必须导（P5D 新件）,P4D 无此模块
+134,HE01_bet_side_edge.csv,仅P5,仅P5,仅P5,是,不在位,,投注面,bet_side × is_freecomm,N/A,FACT_BASE,必须导（P5D 新件）,P4D 无此模块
