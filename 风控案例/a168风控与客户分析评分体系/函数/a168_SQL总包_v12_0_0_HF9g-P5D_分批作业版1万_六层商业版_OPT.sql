@@ -1000,6 +1000,7 @@ FROM (
            CONCAT_WS('|', b.bet39, b.bet03)                               AS x_tblshoe,
            CAST(NULLIF(TRIM(b.bet04),'') AS INT)                          AS x_rno,
            CASE WHEN b.dt >= '2026-07-08' THEN 1 ELSE 0 END               AS x_rec,
+           -- CASE WHEN b.dt >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 ELSE 0 END AS x_rec,
            CASE WHEN TRIM(b.commission)='1' THEN 1 ELSE 0 END             AS x_freecomm,
            CAST(NULLIF(TRIM(b.bet13),'') AS DECIMAL(20,4))
              / CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8))            AS x_stake,
@@ -50288,49 +50289,93 @@ ORDER BY z.audit_rn;
 --       以本件之 realized 值代入者，对本窗近乎恒等式（Σtheo ≈ Σprofit），⛔ 只可作分摊，不可称期望。
 
 -- 135. RK02_table_day_risk.csv   [桌台 × 日 之风险调整表 · 新建 · 无六层商业块]
+
 --     典型学：桌台 日序风险　粒度：table_id × biz_date　说明：Sharpe／Sortino／MDD 之唯一无阻断来源
+
 --     ★ 本件循 ＃078 S03_agent_score ／ ＃130~＃132 字典三件 ／ ＃133 RK01 ／ ＃134 HE01 之例，
+
 --       **不套六层商业模板** —— 无 NTILE／PERCENT_RANK／vip_tier／economic_value／action_priority。
+
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
+
 -- 【本件立意 · 承 UCC 统一坐标之 TS 轴】
+
 --   UCC 登记册实测：sharpe ／ sortino ／ mdd 三者全库 **0 栏**，归「② 缺算」而非「① 缺件」——
+
 --   其所缺者只是【日序粒度】，非授权。而 桌台 系**营运单位**，其收益波动本就该管。
+
 --   ⇒ 自 ODS 按 桌台 × 日 聚合即得，**不需解 F-47、不需理论 edge、不需 x_prod**。
+
 --   ★ 这是当前**唯一无须解任何阻断即可补上之风险调整指标**。
+
 --   ★ 本件只出【事实】，不出【判定】：无旗标分档、无 action、无相对排名。
+
 --
+
 -- 【口径六锁 · 与全包逐字同一，勿改】
+
 --   ① 窗口 dt >= '2026-03-21' AND dt < '2026-08-07'　② 产品 bet02 = '101'
+
 --   ③ 快照 sync_time <= '2026-08-27 09:00:00'
+
 --   ④ 去重 PARTITION BY bet01 ORDER BY updatetime DESC, sync_time DESC, dt DESC 取 rn = 1
+
 --   ⑤ 基础闸 category='1' · UPPER(bet38)='N' · 非测试线 · bet05>0 · bet11>0 · table_id 非空
+
 --   ⑥ 归一 一切金额除以 bet11（汇率）
+
 --
+
 -- 【风险量之基准 —— ⛔ 必读】
+
 --   本件一切风险量皆以 **ggr（＝(bet13 − bet14)/bet11，牌桌毛赢，庄家视角）** 之【日序】为基，
+
 --   与 ＃133 RK01 之 ggr 逐字同式。⛔ 承 UCC 引用纪律：**引用 MDD 必带基准**——
+
 --   2026-09-03 平台层实测：以 ggr_sum 为基 MDD/累计 ＝ 0.051923%%，以 profit 为基 0.086628%%，
+
 --   以 ngr 为基 0.123954%%，三者相差逾一倍。本件恒以 ggr 为基，故列 risk_basis 一栏自证。
+
 --
+
 -- 【定义】（皆于该 桌台 之【全窗】上算，逐日行内重复携带，便于下游直接筛）
+
 --   mean_daily_ggr  日 ggr 之均值　　sd_daily_ggr  日 ggr 之样本标准差
+
 --   downside_sd     仅计 ggr < 均值 之下行离差（Sortino 之分母）
+
 --   sharpe_window   mean_daily_ggr ÷ sd_daily_ggr　　sortino_window  mean_daily_ggr ÷ downside_sd
+
 --   cum_ggr／peak_cum／drawdown 逐日累计与回撤；mdd_window 全窗最大回撤
+
 --   mdd_over_ggr_window  mdd_window ÷ |ggr_window| —— 与平台层 0.051923%% 同口径，可直接对照
+
 --   negative_day_rate    亏损日占比　　evidence_flag  n_active_days < 30 即 THIN_DAYS
+
 --   ⛔ 无风险利率一律取 0（本口径为【收益波动比】，非金融学之 Sharpe），故不得称年化夏普。
+
 ---- 【G3 桌之处置 —— 只出旗标，不代裁】
+
 --   桌号 900~913 共 14 张疑非真人（G3 族）。2026-09-03 实测（T_table_span 原生列）：
+
 --   G3 占 n_rounds **12.1450%**、占 n_bets **15.1820%**；⛔ 外部所称「占 33.2% 局数」系取自
+
 --   n_rounds_xagg（六层块广播栏，实测 32.4936%），**非本表原生局数**，引用即口径污染。
+
 --   ⇒ 本件只出 is_g3_table 旗标，**不硬剔** —— 剔与不剔属商业裁定，本件不代裁（承「只出事实」）。
+
 --   ⇒ 下游若作方差分解，**须先以 is_g3_table = 0 过滤**，否则 14 张伪桌会主导结果。
+
 --
+
 -- 【未纳入 · 候裁定】
+
 --   · 年化与无风险利率：须先定资金成本口径，未裁前不算。
+
 --   · 会员级 Sharpe／Sortino：会员日序过稀（多数会员活跃日 < 30），⛔ 强行算即以噪声充信号。
+
 --   · 与 ＃133 RK01 之关系：RK01 系【局级】事实，本件系【日级】风险；二者粒度不同，禁互冒。
+
 -- ▸ 导出：需要 —— 存为「数据库/RK02_table_day_risk.csv」
 -- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
 -- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
@@ -50465,42 +50510,79 @@ ORDER BY z.audit_rn;
 --       ③ sd_daily_ggr = 0 之实体（单日活跃）其 sharpe_window 须为 NULL 而非 Inf。
 
 -- 136. RK03_dealer_day_risk.csv   [荷官 × 日 之风险调整表 · 新建 · 无六层商业块]
+
 --     典型学：荷官 日序风险　粒度：dealer_id × biz_date　说明：Sharpe／Sortino／MDD 之唯一无阻断来源
+
 --     ★ 本件循 ＃078 S03_agent_score ／ ＃130~＃132 字典三件 ／ ＃133 RK01 ／ ＃134 HE01 之例，
+
 --       **不套六层商业模板** —— 无 NTILE／PERCENT_RANK／vip_tier／economic_value／action_priority。
+
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
+
 -- 【本件立意 · 承 UCC 统一坐标之 TS 轴】
+
 --   UCC 登记册实测：sharpe ／ sortino ／ mdd 三者全库 **0 栏**，归「② 缺算」而非「① 缺件」——
+
 --   其所缺者只是【日序粒度】，非授权。而 荷官 系**营运单位**，其收益波动本就该管。
+
 --   ⇒ 自 ODS 按 荷官 × 日 聚合即得，**不需解 F-47、不需理论 edge、不需 x_prod**。
+
 --   ★ 这是当前**唯一无须解任何阻断即可补上之风险调整指标**。
+
 --   ★ 本件只出【事实】，不出【判定】：无旗标分档、无 action、无相对排名。
+
 --
+
 -- 【口径六锁 · 与全包逐字同一，勿改】
+
 --   ① 窗口 dt >= '2026-03-21' AND dt < '2026-08-07'　② 产品 bet02 = '101'
+
 --   ③ 快照 sync_time <= '2026-08-27 09:00:00'
+
 --   ④ 去重 PARTITION BY bet01 ORDER BY updatetime DESC, sync_time DESC, dt DESC 取 rn = 1
+
 --   ⑤ 基础闸 category='1' · UPPER(bet38)='N' · 非测试线 · bet05>0 · bet11>0 · dealer_id 非空
+
 --   ⑥ 归一 一切金额除以 bet11（汇率）
+
 --
+
 -- 【风险量之基准 —— ⛔ 必读】
+
 --   本件一切风险量皆以 **ggr（＝(bet13 − bet14)/bet11，牌桌毛赢，庄家视角）** 之【日序】为基，
+
 --   与 ＃133 RK01 之 ggr 逐字同式。⛔ 承 UCC 引用纪律：**引用 MDD 必带基准**——
+
 --   2026-09-03 平台层实测：以 ggr_sum 为基 MDD/累计 ＝ 0.051923%%，以 profit 为基 0.086628%%，
+
 --   以 ngr 为基 0.123954%%，三者相差逾一倍。本件恒以 ggr 为基，故列 risk_basis 一栏自证。
+
 --
+
 -- 【定义】（皆于该 荷官 之【全窗】上算，逐日行内重复携带，便于下游直接筛）
+
 --   mean_daily_ggr  日 ggr 之均值　　sd_daily_ggr  日 ggr 之样本标准差
+
 --   downside_sd     仅计 ggr < 均值 之下行离差（Sortino 之分母）
+
 --   sharpe_window   mean_daily_ggr ÷ sd_daily_ggr　　sortino_window  mean_daily_ggr ÷ downside_sd
+
 --   cum_ggr／peak_cum／drawdown 逐日累计与回撤；mdd_window 全窗最大回撤
+
 --   mdd_over_ggr_window  mdd_window ÷ |ggr_window| —— 与平台层 0.051923%% 同口径，可直接对照
+
 --   negative_day_rate    亏损日占比　　evidence_flag  n_active_days < 30 即 THIN_DAYS
+
 --   ⛔ 无风险利率一律取 0（本口径为【收益波动比】，非金融学之 Sharpe），故不得称年化夏普。
+
 ---- 【未纳入 · 候裁定】
+
 --   · 年化与无风险利率：须先定资金成本口径，未裁前不算。
+
 --   · 会员级 Sharpe／Sortino：会员日序过稀（多数会员活跃日 < 30），⛔ 强行算即以噪声充信号。
+
 --   · 与 ＃133 RK01 之关系：RK01 系【局级】事实，本件系【日级】风险；二者粒度不同，禁互冒。
+
 -- ▸ 导出：需要 —— 存为「数据库/RK03_dealer_day_risk.csv」
 -- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
 -- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──

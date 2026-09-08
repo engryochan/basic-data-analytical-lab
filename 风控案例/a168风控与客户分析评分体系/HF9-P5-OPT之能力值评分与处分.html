@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>HF9-P5-OPT之能力值评分与处分</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="HF9-P5-OPT之能力值评分与处分_files/libs/clipboard/clipboard.min.js"></script>
+<script src="HF9-P5-OPT之能力值评分与处分_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="HF9-P5-OPT之能力值评分与处分_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="HF9-P5-OPT之能力值评分与处分_files/libs/quarto-html/popper.min.js"></script>
+<script src="HF9-P5-OPT之能力值评分与处分_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="HF9-P5-OPT之能力值评分与处分_files/libs/quarto-html/anchor.min.js"></script>
+<link href="HF9-P5-OPT之能力值评分与处分_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="HF9-P5-OPT之能力值评分与处分_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="HF9-P5-OPT之能力值评分与处分_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="HF9-P5-OPT之能力值评分与处分_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="HF9-P5-OPT之能力值评分与处分_files/libs/bootstrap/bootstrap-efbb37e9afcc02144ebbc7afd12a776f.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">HF9-P5-OPT之能力值评分与处分</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="三件套" class="level1">
+<h1>三件套</h1>
+<ul>
+<li><code>a168_SQL总包_v12_0_0_HF9g-P5D_原版审计版_六层商业版_OPT.sql</code></li>
+<li><code>a168_SQL总包_v12_0_0_HF9g-P5D_分批作业版_六层商业版_OPT.sql</code></li>
+<li><code>a168_SQL总包_v12_0_0_HF9g-P5D_分批作业版1万_六层商业版_OPT.sql</code></li>
+</ul>
+<p>SQL源代码。</p>
+</section>
+<section id="评分相关数据表" class="level1">
+<h1>评分相关数据表</h1>
+<section id="评分与用途一" class="level2">
+<h2 class="anchored" data-anchor-id="评分与用途一">评分与用途（一）</h2>
+<p>这三件套SQL脚本的核心目标，是构建一个以<strong>会员经济价值与风险</strong>为中心的<strong>风控数据仓库</strong>。它并非生成某几张简单的报表，而是将原始杂乱的行为数据，转化为一系列可供业务决策使用的“<strong>评分卡与证据表</strong>”。</p>
+<p>通过对脚本中注释和代码逻辑的梳理，可以提炼出以下核心数据表及其业务定义、用途和揭示的经济效应：</p>
+<section id="核心经济效应评估表会员价值与风险的最终裁决" class="level3">
+<h3 class="anchored" data-anchor-id="核心经济效应评估表会员价值与风险的最终裁决">🎯 核心经济效应评估表：会员价值与风险的最终裁决</h3>
+<ul>
+<li><strong>表名</strong>: <code>S01_player_score.csv</code> (会员评分表)</li>
+<li><strong>业务定义</strong>: 这是整个系统的<strong>核心输出表</strong>，为每个会员生成一个全面的画像，整合了其经济贡献、风险水平和行为模式。它是平台进行精细化运营和风险处置的<strong>最终依据</strong>。</li>
+<li><strong>用途</strong>: 用于<strong>会员分层</strong>（如VIP等级）、<strong>风险定价</strong>、<strong>营销活动目标人群圈选</strong>，以及作为<strong>风控决策引擎</strong>的输入，决定是否对某会员进行干预（如限额、停用）。</li>
+<li><strong>经济效应</strong>: 此表旨在量化每个会员的 <strong>“净经济价值（residual_b）”</strong> 。平台通过此表可以清晰地识别出谁是核心利润贡献者（<code>residual_b</code> 为正且高），谁是亏损源（<code>residual_b</code> 为负），以及谁是潜在的高风险套利者。这为平台<strong>优化营销预算、制定差异化留存策略、以及实施精准风控</strong>提供了数据基础。</li>
+</ul>
+</section>
+<section id="运营实体评估表荷官与代理的绩效与风险" class="level3">
+<h3 class="anchored" data-anchor-id="运营实体评估表荷官与代理的绩效与风险">🎲 运营实体评估表：荷官与代理的绩效与风险</h3>
+<ul>
+<li><p><strong>表名</strong>: <code>S02_dealer_score.csv</code> (荷官评分表)</p></li>
+<li><p><strong>业务定义</strong>: 对<strong>荷官</strong>这一运营实体进行多维度的绩效与风险评估。它不仅关注荷官带来的流水（<code>在桌洗码量</code>），也关注其服务效率（<code>节奏稳定度</code>）和潜在的操作风险（<code>特定玩家复现率</code>）。</p></li>
+<li><p><strong>用途</strong>: 用于<strong>荷官排班管理</strong>、<strong>绩效评估</strong>，以及<strong>识别可能与特定玩家存在不当关联的荷官</strong>。</p></li>
+<li><p><strong>经济效应</strong>: 此表用于<strong>优化人力成本和提升运营效率</strong>。一个“节奏稳定”的荷官能带来更流畅的游戏体验，可能吸引玩家更长时间的游戏，从而间接提升平台收入。同时，识别“特定玩家复现率”过高的荷官，可以有效<strong>防范荷官与玩家合谋作弊的风险</strong>，保护平台资产。</p></li>
+<li><p><strong>表名</strong>: <code>S03_agent_score.csv</code> (代理评分表)</p></li>
+<li><p><strong>业务定义</strong>: 对<strong>代理</strong>（即发展下线玩家的渠道）进行综合评估。</p></li>
+<li><p><strong>用途</strong>: 用于<strong>代理渠道的绩效管理、佣金结算和风险监控</strong>。</p></li>
+<li><p><strong>经济效应</strong>: 代理是平台获取新用户的重要渠道，但也是欺诈和套利的高发区。此表帮助平台<strong>甄别优质代理与高风险代理</strong>，优化渠道成本，防止代理通过“刷流水”等方式套取高额佣金。</p></li>
+</ul>
+</section>
+<section id="风险识别与处置表从异常检测到干预措施" class="level3">
+<h3 class="anchored" data-anchor-id="风险识别与处置表从异常检测到干预措施">⚖️ 风险识别与处置表：从异常检测到干预措施</h3>
+<ul>
+<li><p><strong>表名</strong>: <code>EV01_disposal_events.csv</code> &amp; <code>EV02_member_disposal.csv</code> (处置事件与会员处置表)</p></li>
+<li><p><strong>业务定义</strong>: 记录平台对会员进行<strong>限额、停用、状态变更等风险干预操作</strong>的详细日志。</p></li>
+<li><p><strong>用途</strong>: 用于<strong>审计风控操作</strong>、<strong>评估处置措施的有效性</strong>（例如，处置后该会员的损失是否减少），以及构建<strong>因果推断模型</strong>（如 <code>PI01_treatment_delta_member.csv</code>）。</p></li>
+<li><p><strong>经济效应</strong>: 这些表量化了<strong>风控措施的“止损”效果</strong>。通过对比处置前后的会员行为（<code>PI01_treatment_delta_member.csv</code>），平台可以评估每次干预是否成功降低了风险，从而<strong>优化风控策略，减少坏账和欺诈损失</strong>。</p></li>
+<li><p><strong>表名</strong>: <code>K01_risk_feature_matrix.csv</code> &amp; <code>P0C**</code> 系列 (风险特征与标签检验表)</p></li>
+<li><p><strong>业务定义</strong>: 一系列用于<strong>识别特定风险模式</strong>的中间表和检验表，如同IP多账户（<code>C08_subnet_all.csv</code>）、对打（<code>C06_hedge_pairs.csv</code>）、尾段投注（<code>P11_阿泽尾段投注总帐.csv</code>）等。</p></li>
+<li><p><strong>用途</strong>: 作为<strong>风险模型的原材料</strong>，为 <code>S01_player_score.csv</code> 等最终评分表提供底层特征。</p></li>
+<li><p><strong>经济效应</strong>: 这些表旨在<strong>发现并量化各种作弊和套利行为</strong>对平台造成的直接经济损失。例如，通过对打（Hedging）套取返水（Rebate），平台损失的不仅是返水金额，还有因此产生的无效流水。</p></li>
+</ul>
+</section>
+<section id="证据与刻度层确保决策的科学性与可靠性" class="level3">
+<h3 class="anchored" data-anchor-id="证据与刻度层确保决策的科学性与可靠性">🔍 证据与刻度层：确保决策的科学性与可靠性</h3>
+<ul>
+<li><strong>表名</strong>: 所有表中包含的 <code>evidence_flag</code>, <code>evidence_rate</code>, <code>hold_ci_halfwidth_approx</code> 等字段。</li>
+<li><strong>业务定义</strong>: 这些字段并非直接用于决策，而是为决策提供<strong>证据等级</strong>。它们标明了某个评估结果（如某会员的ROI）的<strong>统计可信度</strong>。例如，<code>evidence_flag</code> 为 <code>THIN_ROUNDS</code> 表示该会员局数太少，其评分不可靠。</li>
+<li><strong>用途</strong>: <strong>防止基于少量样本的误导性决策</strong>。它强制风控人员在进行处置时，必须参考证据等级，避免误伤正常玩家或放跑真正的高风险分子。</li>
+<li><strong>经济效应</strong>: 这是整个风控体系的“<strong>质量保障层</strong>”。它确保了基于数据做出的决策（如冻结账户、调整限额）是稳健和可靠的，从而<strong>避免了因错误决策导致的客户流失（误杀）和财务损失（漏杀）</strong>。</li>
+</ul>
+</section>
+<section id="总结" class="level3">
+<h3 class="anchored" data-anchor-id="总结">💎 总结</h3>
+<p>这三件套SQL脚本构建的是一套逻辑严密、层层递进的风控数据仓库。其最终目的，是通过对<strong>会员、荷官、代理</strong>等核心实体的深度量化，回答几个关键的业务问题：</p>
+<ol type="1">
+<li><strong>谁在为我们赚钱？</strong> -&gt; <code>S01_player_score</code> 的 <code>residual_b</code> (净利)。</li>
+<li><strong>谁在让我们亏钱？</strong> -&gt; <code>S01_player_score</code> 的 <code>residual_b</code> (净亏) 和各类风险特征表。</li>
+<li><strong>我们的运营是否高效、合规？</strong> -&gt; <code>S02_dealer_score</code> 和 <code>S03_agent_score</code>。</li>
+<li><strong>我们的风控措施是否有效？</strong> -&gt; <code>PI01_treatment_delta_member</code> 等处置效果评估表。</li>
+</ol>
+<p>整套脚本的最终输出，就是为平台管理层提供一份关于 <strong>“平台经济健康度”的全面诊断报告</strong>，使其能够基于数据，做出更明智的、能直接提升净利润和降低风险的业务决策。</p>
+<p>您提供的是一份<strong>数据输出文件目录清单</strong>（共137项），而非SQL脚本本身。这份清单定义了每个CSV文件（即查询输出）的<strong>业务口径、粒度、适用性和经济意义</strong>。下面我将基于清单信息，系统梳理与<strong>平台经济效应、收入、增益</strong>直接相关的核心表，并说明它们如何支撑待审核的经济指标。</p>
+<hr>
+</section>
+</section>
+<section id="评分与用途二" class="level2">
+<h2 class="anchored" data-anchor-id="评分与用途二">评分与用途（二）</h2>
+<section id="一清单中的关键字段含义" class="level3">
+<h3 class="anchored" data-anchor-id="一清单中的关键字段含义">📌 一、清单中的关键字段含义</h3>
+<ul>
+<li><strong><code>net_margin</code></strong>：标记该表是否适合用于<strong>净边际（Net Margin）</strong> 计算。<code>OK</code> 表示口径匹配，可直接使用；<code>WRONG_GRAIN</code> 表示粒度错误（如汇总层级不对），不能用于净利润核算；<code>INVALID</code> 表示数据或逻辑不适用。</li>
+<li><strong><code>用法</code></strong>：表示该表在风控或分析中的角色：
+<ul>
+<li><code>PRIMARY</code> —— 核心决策表（如会员评分、尾段分析）</li>
+<li><code>SCREENING</code> —— 初步筛查（如IP风险）</li>
+<li><code>REFERENCE</code> —— 参考对照（如平台日度汇总）</li>
+<li><code>SUPPORT</code> —— 辅助支持（如产品维度）</li>
+<li><code>FACT_BASE</code> —— 事实基础表（无商业判定，仅供底层数据）</li>
+<li><code>DICTIONARY</code> —— 字典元数据</li>
+<li><code>NOT_FOR_DECISION</code> —— 不用于最终决策（通常因粒度或口径问题）</li>
+</ul></li>
+</ul>
+<hr>
+</section>
+<section id="二与经济效应收入增益直接相关的核心表" class="level3">
+<h3 class="anchored" data-anchor-id="二与经济效应收入增益直接相关的核心表">📊 二、与“经济效应、收入、增益”直接相关的核心表</h3>
+<p>以下根据清单中 <code>net_margin=OK</code> 且用法为 <code>PRIMARY</code> / <code>SCREENING</code> / <code>REFERENCE</code> 的表，按实体类型分类：</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 15%">
+<col style="width: 15%">
+<col style="width: 15%">
+<col style="width: 15%">
+<col style="width: 15%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>序号</th>
+<th>表名</th>
+<th>实体</th>
+<th>粒度</th>
+<th>用途</th>
+<th>经济含义</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>001</td>
+<td><code>A_anchor.csv</code></td>
+<td>IP</td>
+<td>单个IP</td>
+<td>SCREENING</td>
+<td>按IP汇总的净边际、ROI，用于识别<strong>异常IP</strong>的经济损失风险</td>
+</tr>
+<tr class="even">
+<td>005</td>
+<td><code>B4_5b_tip_nature.csv</code></td>
+<td>IP</td>
+<td>单个IP</td>
+<td>SCREENING</td>
+<td>基于<code>bet09</code>（玩法）的IP行为画像，辅助判断<strong>盈利稳定性</strong></td>
+</tr>
+<tr class="odd">
+<td>007</td>
+<td><code>C01_ip_chain.csv</code></td>
+<td>IP</td>
+<td>单个IP</td>
+<td>SCREENING</td>
+<td>IP层面的代理链分析，影响<strong>代理成本</strong>与净利</td>
+</tr>
+<tr class="even">
+<td>022</td>
+<td><code>I_ip_agg.csv</code></td>
+<td>IP</td>
+<td>单个IP</td>
+<td>SCREENING</td>
+<td>IP聚合指标（注单数、净输赢），用于<strong>IP级损益</strong>评估</td>
+</tr>
+<tr class="odd">
+<td>050</td>
+<td><code>P13_personal_entry.csv</code></td>
+<td>会员</td>
+<td>单个会员</td>
+<td>PRIMARY</td>
+<td><strong>会员级核心经济表</strong>，包含总投注、净输赢、退水、代理成本等，直接用于<strong>个人净边际（residual_b）</strong></td>
+</tr>
+<tr class="even">
+<td>064</td>
+<td><code>R01_late_shoe.csv</code></td>
+<td>会员</td>
+<td>单个会员</td>
+<td>PRIMARY</td>
+<td>尾段（靴末）下注行为，用于<strong>尾段增益/亏损</strong>分析，判断是否利用末段优势</td>
+</tr>
+<tr class="odd">
+<td>065</td>
+<td><code>R01_late_shoe_w2.csv</code></td>
+<td>会员</td>
+<td>单个会员</td>
+<td>PRIMARY</td>
+<td>同上，可能为不同窗口版本</td>
+</tr>
+<tr class="even">
+<td>075</td>
+<td><code>S01_player_score.csv</code></td>
+<td>会员</td>
+<td>单个会员</td>
+<td>PRIMARY</td>
+<td><strong>会员综合评分</strong>，包含经济价值分、风险分等，直接输出 <code>economic_value</code>（百分位）</td>
+</tr>
+<tr class="odd">
+<td>081</td>
+<td><code>S_player_tail.csv</code></td>
+<td>会员</td>
+<td>单个会员</td>
+<td>PRIMARY</td>
+<td>会员尾段（近30天）活动特征，用于<strong>近期增益</strong>监测</td>
+</tr>
+<tr class="even">
+<td>084</td>
+<td><code>T03_arbitrage.csv</code></td>
+<td>会员</td>
+<td>单个会员</td>
+<td>PRIMARY</td>
+<td>套利检测表，识别<strong>套利损失</strong>（负收益）</td>
+</tr>
+<tr class="odd">
+<td>129</td>
+<td><code>_PH0_6b_member_daily.csv</code></td>
+<td>会员</td>
+<td>会员×日期</td>
+<td>PRIMARY</td>
+<td>会员日度汇总，用于计算<strong>日收益波动</strong>，支撑风险调整指标</td>
+</tr>
+</tbody>
+</table>
+<p>此外，以下表虽不是 PRIMARY，但作为 <strong>REFERENCE</strong> 或 <strong>SUPPORT</strong> 为经济效应提供参照：</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 29%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>序号</th>
+<th>表名</th>
+<th>实体</th>
+<th>用途</th>
+<th>经济含义</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>012</td>
+<td><code>D03S_daily_roi_diff.csv</code></td>
+<td>日期</td>
+<td>REFERENCE</td>
+<td>平台日度ROI差异，用于<strong>整体收益率趋势</strong>监控</td>
+</tr>
+<tr class="even">
+<td>047</td>
+<td><code>P12a_platform_daily.csv</code></td>
+<td>日期</td>
+<td>REFERENCE</td>
+<td>平台每日汇总（投注、净利、人数），是<strong>平台级损益</strong>基准</td>
+</tr>
+<tr class="odd">
+<td>072</td>
+<td><code>R03chk_settlement_form.csv</code></td>
+<td>投注面</td>
+<td>REFERENCE</td>
+<td>投注面（庄/闲）的结算结构，影响<strong>理论优势</strong>测算</td>
+</tr>
+<tr class="even">
+<td>082</td>
+<td><code>S_second_dist.csv</code></td>
+<td>桌台</td>
+<td>SUPPORT</td>
+<td>桌台级二阶分布，用于<strong>桌台收益</strong>分解</td>
+</tr>
+<tr class="odd">
+<td>098</td>
+<td><code>T_table_span.csv</code></td>
+<td>桌台</td>
+<td>SUPPORT</td>
+<td>桌台跨度（时长），用于<strong>效率增益</strong>分析</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="三这些表如何支撑待审的经济效应" class="level3">
+<h3 class="anchored" data-anchor-id="三这些表如何支撑待审的经济效应">📈 三、这些表如何支撑“待审”的经济效应？</h3>
+<p>清单中明确设计了一套<strong>逐层归因</strong>的经济指标体系，主要通过以下字段体现：</p>
+<ul>
+<li><strong>核心利润指标</strong>：<code>residual_b</code>（扣除退水和代理成本后的平台净利）、<code>ngr</code>（净游戏收入）、<code>profit</code>（会员净输赢）等，在 <code>A_anchor</code> 和 <code>B01_bt_panel</code> 等表中均有输出。</li>
+<li><strong>代理成本</strong>：通过 <code>agent_cost</code>（基于五级代理占成）计算，并在多个表中分解为 <code>agent_cost_lv1~lv5</code>，用于<strong>渠道增益分析</strong>。</li>
+<li><strong>近期 vs 非近期</strong>：通过 <code>x_rec</code> 旗标区分窗口内近期活动，并计算 <code>roi_recent</code>、<code>stake_ramp</code> 等，用于<strong>边际增益变化</strong>监测。</li>
+<li><strong>风险调整</strong>：<code>economic_value</code>（百分位排名）和 <code>action_priority</code>（A/D/E分类）直接用于<strong>待审处置优先级</strong>，依据就是平台净利贡献。</li>
+</ul>
+<p>此外，清单中 <code>net_margin=OK</code> 的表（如 <code>P13_personal_entry</code>、<code>S01_player_score</code>）均包含上述核心字段，是<strong>经济效应归因</strong>的直接来源。</p>
+<hr>
+</section>
+<section id="四关于索引的理解" class="level3">
+<h3 class="anchored" data-anchor-id="四关于索引的理解">🧩 四、关于“索引”的理解</h3>
+<p>清单中并未明确提到“索引”，但每个表都设计了 <strong><code>audit_rn</code>（全局观测编号）</strong>和 <strong><code>batch_id</code>（分批号）</strong>，这相当于<strong>行级索引</strong>，用于： - <strong>逐行对账</strong>（与审计版一致） - <strong>分批导出</strong>（每批10000行） - <strong>确保数据完整性</strong>（无重复、无缺口）</p>
+<p>这些字段是 <strong>REDTEAM 裁定的四锁之一</strong>，属于审计基础设施，不参与业务计算。</p>
+<hr>
+</section>
+<section id="五总结" class="level3">
+<h3 class="anchored" data-anchor-id="五总结">✅ 五、总结</h3>
+<p>您提供的清单定义了一个完整的<strong>数据输出规范</strong>，其中： - <strong>核心经济表</strong>（PRIMARY / SCREENING）直接输出<strong>平台净利、代理成本、ROI、近期增益</strong>等指标。 - 这些表通过统一的审计字段保证可追溯性，且明确标注了<strong>哪些表可用于净边际计算</strong>（<code>net_margin=OK</code>），哪些不能（<code>WRONG_GRAIN</code>）。 - <strong>待审经济效应</strong>主要通过 <code>residual_b</code>、<code>economic_value</code>、<code>action_priority</code> 等字段体现，用于判定会员的<strong>经济价值</strong>和<strong>处置紧迫性</strong>（A类净亏最大，D类高利润留存）。</p>
+<p>如果您需要针对某个特定表（如 <code>B01_bt_panel</code> 或 <code>A_anchor</code>）的详细字段解释，或要查看其SQL生成逻辑，我可以进一步提供。当前的清单已足够说明数据的经济分析框架。</p>
+</section>
+</section>
+</section>
+<section id="张数据表总览" class="level1">
+<h1>137张数据表总览</h1>
+<p>基于对 <code>a168_SQL总包_v12_0_0_HF9g-P5D_*版_六层商业版_OPT.sql</code> 脚本的逐表解析，以下为您呈现全部137张数据表的<strong>业务定位、经济效应与平台价值</strong>的完整梳理。</p>
+<hr>
+<section id="一数据表体系全景" class="level2">
+<h2 class="anchored" data-anchor-id="一数据表体系全景">一、数据表体系全景</h2>
+<p>137张表按<strong>业务域（A-F）</strong> 和<strong>典型学（M码/R码/Z码）</strong> 分为六大类：</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 30%">
+<col style="width: 30%">
+<col style="width: 38%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>业务域</th>
+<th>表数量</th>
+<th>核心定位</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>A 风险识别</strong></td>
+<td>44张</td>
+<td>识别各类异常行为模式（对打、尾段、IP聚集等）</td>
+</tr>
+<tr class="even">
+<td><strong>B 会员画像</strong></td>
+<td>12张</td>
+<td>构建会员的活跃度、经济价值与行为画像</td>
+</tr>
+<tr class="odd">
+<td><strong>C 平台经营</strong></td>
+<td>20张</td>
+<td>监控平台整体经营指标与实体（荷官/代理/桌台）绩效</td>
+</tr>
+<tr class="even">
+<td><strong>D 处置与因果</strong></td>
+<td>26张</td>
+<td>评估风控处置措施的效果与因果推断</td>
+</tr>
+<tr class="odd">
+<td><strong>F 元数据字典</strong></td>
+<td>27张</td>
+<td>提供字段语义、表结构、数据质量校验等基础信息</td>
+</tr>
+<tr class="even">
+<td><strong>E 事实基表</strong></td>
+<td>8张</td>
+<td>提供局级、投注面级、日序等最细粒度的事实数据</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="二逐表解析137张" class="level2">
+<h2 class="anchored" data-anchor-id="二逐表解析137张">二、逐表解析（137张）</h2>
+<section id="一a-风险识别域44张" class="level3">
+<h3 class="anchored" data-anchor-id="一a-风险识别域44张">（一）A 风险识别域（44张）</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 17%">
+<col style="width: 28%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>序号</th>
+<th>表名</th>
+<th>风险类型</th>
+<th>业务定义与用途</th>
+<th>经济效应与平台价值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>001</td>
+<td>A_anchor.csv</td>
+<td>M06 代理线</td>
+<td>IP维度汇总代理线结构与会员聚集度</td>
+<td>识别代理线下异常聚集，防范代理<strong>串通套利</strong></td>
+</tr>
+<tr class="even">
+<td>007</td>
+<td>C01_ip_chain.csv</td>
+<td>M04 IP聚集</td>
+<td>IP下多会员、多代理线的链式结构分析</td>
+<td>发现<strong>IP代理池</strong>，防范一人多账号套取优惠</td>
+</tr>
+<tr class="odd">
+<td>008</td>
+<td>C06_hedge_pairs.csv</td>
+<td>M02 对冲对打</td>
+<td>同一IP下两会员同局反向投注的对冲对</td>
+<td>直接量化<strong>对打套利</strong>损失，是反洗码套利核心证据</td>
+</tr>
+<tr class="even">
+<td>009</td>
+<td>C06d_hedge_pairs_dated.csv</td>
+<td>M02 对冲对打</td>
+<td>对冲对的时序版，含首次/末次对打日期</td>
+<td>评估对冲行为的<strong>持续性</strong>与<strong>团伙规模</strong></td>
+</tr>
+<tr class="odd">
+<td>010</td>
+<td>C08_subnet_all.csv</td>
+<td>M04 IP聚集</td>
+<td>/24网段级别的IP聚集分析</td>
+<td>识别<strong>机房/IP段</strong>级别的批量注册与作弊</td>
+</tr>
+<tr class="even">
+<td>011</td>
+<td>C08_subnet_sparse.csv</td>
+<td>M04 IP聚集</td>
+<td>稀疏网段（IP少但会员多）的异常聚集</td>
+<td>发现<strong>代理分销</strong>型异常，防范渠道作弊</td>
+</tr>
+<tr class="odd">
+<td>022</td>
+<td>I_ip_agg.csv</td>
+<td>M04 IP聚集</td>
+<td>IP维度汇总：会员数、注数、盈亏分布</td>
+<td>快速定位<strong>高异常IP</strong>，是风控初筛第一站</td>
+</tr>
+<tr class="even">
+<td>023</td>
+<td>I_ip_player.csv</td>
+<td>M04 IP聚集</td>
+<td><strong>IP↔︎会员唯一桥接表</strong>，含IP注单占比</td>
+<td>将IP级风险<strong>归因到具体会员</strong>，是证据链关键环节</td>
+</tr>
+<tr class="odd">
+<td>024</td>
+<td>K01_risk_feature_matrix.csv</td>
+<td>M11 异常告警</td>
+<td>会员级风险特征矩阵：熵、对打率、退水依赖度等</td>
+<td><strong>风险模型核心特征表</strong>，驱动自动化风控评分</td>
+</tr>
+<tr class="even">
+<td>025</td>
+<td>K01b_seed_goldip.csv</td>
+<td>M04 IP聚集</td>
+<td>风控IP名单（gold_ip）关联的会员</td>
+<td>将人工标记的<strong>黑IP</strong>扩散到关联会员</td>
+</tr>
+<tr class="odd">
+<td>026</td>
+<td>K01b_seed_manual.csv</td>
+<td>M11 异常告警</td>
+<td>人工标记的风险会员名单</td>
+<td><strong>人工经验数字化</strong>，作为模型训练的种子样本</td>
+</tr>
+<tr class="even">
+<td>027</td>
+<td>K01c_seed_dated.csv</td>
+<td>M04 IP聚集</td>
+<td>风控IP名单的详细元数据（创建人、时间、备注）</td>
+<td>审计<strong>风控标签的来源与时效性</strong></td>
+</tr>
+<tr class="odd">
+<td>028</td>
+<td>L_label_dist.csv</td>
+<td>M11 异常告警</td>
+<td>风控标签（risk/orders）的分布统计</td>
+<td>监控<strong>风控标签的覆盖率与分布偏移</strong></td>
+</tr>
+<tr class="even">
+<td>044</td>
+<td>P11_阿泽尾段投注总帐.csv</td>
+<td>M03 尾段投注</td>
+<td>尾段投注（靴位≥80%）的聚合统计与占比</td>
+<td>量化<strong>尾段异常投注</strong>对平台GGR的侵蚀</td>
+</tr>
+<tr class="odd">
+<td>045</td>
+<td>P11_阿泽尾段投注模型会员名单.csv</td>
+<td>M03 尾段投注</td>
+<td>符合尾段投注模型的会员明细名单</td>
+<td>直接输出<strong>待复核会员名单</strong>，支撑人工排查</td>
+</tr>
+<tr class="even">
+<td>046</td>
+<td>P11_雷欧尾段投注总帐.csv</td>
+<td>M03 尾段投注</td>
+<td>尾段投注的雷欧域版本（不同准入标准）</td>
+<td>多口径交叉验证，<strong>提升检出率、降低误报</strong></td>
+</tr>
+<tr class="odd">
+<td>050</td>
+<td>P13_personal_entry.csv</td>
+<td>M03 尾段投注</td>
+<td>会员级入场/退场靴位、下注密度分析</td>
+<td>识别<strong>只在靴末下注</strong>的异常模式</td>
+</tr>
+<tr class="even">
+<td>064</td>
+<td>R01_late_shoe.csv</td>
+<td>M03 尾段投注</td>
+<td>会员级尾段投注：晚注占比、晚注ROI、注额斜率</td>
+<td><strong>尾段投注行为画像</strong>，区分技术型与娱乐型</td>
+</tr>
+<tr class="odd">
+<td>065</td>
+<td>R01_late_shoe_w2.csv</td>
+<td>M03 尾段投注</td>
+<td>同上，但窗口为W2（8月7日-20日）</td>
+<td><strong>跨时段验证</strong>尾段行为是否稳定</td>
+</tr>
+<tr class="even">
+<td>066</td>
+<td>R01anm_shoe_anomaly.csv</td>
+<td>M03 尾段投注</td>
+<td>桌×靴级异常检测：超长靴、残靴（≤5局）</td>
+<td>发现<strong>数据质量问题</strong>（跨日合并）或<strong>人为操控</strong></td>
+</tr>
+<tr class="odd">
+<td>067</td>
+<td>R01chk_shoe_len_by_table.csv</td>
+<td>M03 尾段投注</td>
+<td>桌级靴长分布、相关分析（靴长vs密度）</td>
+<td>验证<strong>“密桌靴短”假说</strong>，校准尾段定义</td>
+</tr>
+<tr class="even">
+<td>068</td>
+<td>R01inv_shoe_len_census.csv</td>
+<td>M03 尾段投注</td>
+<td>全域靴长普查：分位数、缺口率、跨桌相关</td>
+<td>为尾段检测提供<strong>统计基准</strong>，支撑阈值设定</td>
+</tr>
+<tr class="odd">
+<td>069</td>
+<td>R02_same_table.csv</td>
+<td>M01 同桌团伙</td>
+<td>两会员同桌同局的共现分析（含Lift值）</td>
+<td>发现<strong>同桌团伙</strong>，防范多人串通作弊</td>
+</tr>
+<tr class="even">
+<td>084</td>
+<td>T03_arbitrage.csv</td>
+<td>M02 对冲对打</td>
+<td>会员级对冲对打检测</td>
+<td>直接输出<strong>对冲套利嫌疑会员</strong>名单</td>
+</tr>
+<tr class="odd">
+<td>029-033</td>
+<td>P01A~P01E</td>
+<td>M05 退水套利</td>
+<td>bet41/validbet/bet16三方比对、退水分层等</td>
+<td>发现<strong>退水套利</strong>（洗码量＞本金），量化套利规模</td>
+</tr>
+<tr class="even">
+<td>038-043</td>
+<td>P0C02~P0C09</td>
+<td>M05/M02</td>
+<td>标签口径、标记分布、同日泄漏检验、安慰剂检验等</td>
+<td><strong>模型验证与因果推断</strong>，确保风控模型不泄漏</td>
+</tr>
+<tr class="odd">
+<td>099-106</td>
+<td>VB_00~VB_41c2</td>
+<td>M05 退水套利</td>
+<td>validbet口径校验、退水率分层、集中度分析</td>
+<td>确保<strong>洗码量口径准确</strong>，是退水套利检测的前提</td>
+</tr>
+<tr class="even">
+<td>107</td>
+<td>V_ipmatch.csv</td>
+<td>M04 IP聚集</td>
+<td>IP与会员的匹配关系</td>
+<td>IP风险<strong>归因到会员</strong>的辅助表</td>
+</tr>
+<tr class="odd">
+<td>120</td>
+<td>Z11_sentinel_impact.csv</td>
+<td>M09 处置限额</td>
+<td>已处置vs未处置会员的注单量对比</td>
+<td>量化<strong>风控处置对平台流水的影响</strong></td>
+</tr>
+<tr class="even">
+<td>121</td>
+<td>Z14_zero_month_diagnosis.csv</td>
+<td>M12 资金轨迹</td>
+<td>会员月度零流水诊断</td>
+<td>发现<strong>僵尸会员</strong>或<strong>休眠账户</strong></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="二b-会员画像域12张" class="level3">
+<h3 class="anchored" data-anchor-id="二b-会员画像域12张">（二）B 会员画像域（12张）</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 14%">
+<col style="width: 29%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>序号</th>
+<th>表名</th>
+<th>典型学</th>
+<th>业务定义与用途</th>
+<th>经济效应与平台价值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>002</td>
+<td>B01_bt_panel.csv</td>
+<td>M15 活跃周期</td>
+<td>会员×日粒度：下注、盈亏、退水、尾段占比等</td>
+<td><strong>会员日度行为追踪</strong>，支撑流失预警与活跃度分析</td>
+</tr>
+<tr class="even">
+<td>003</td>
+<td>B01_bt_panel_delta.csv</td>
+<td>M15 活跃周期</td>
+<td>同上，但仅窗口最后3天</td>
+<td><strong>轻量级增量更新</strong>，每日只需跑3天数据</td>
+</tr>
+<tr class="odd">
+<td>012</td>
+<td>D03S_daily_roi_diff.csv</td>
+<td>M15 活跃周期</td>
+<td>日度尾段vs早段ROI差异</td>
+<td>监控<strong>尾段异常是否日间加剧</strong></td>
+</tr>
+<tr class="even">
+<td>056</td>
+<td>PI04_member_5d_profile.csv</td>
+<td>M15 活跃周期</td>
+<td>会员5维画像：注数、天数、注型数、夜间占比、延迟等</td>
+<td><strong>会员价值分层</strong>的核心输入</td>
+</tr>
+<tr class="odd">
+<td>057</td>
+<td>P_player_month.csv</td>
+<td>M15 活跃周期</td>
+<td>会员×月份粒度：局数、洗码、盈亏、ROI</td>
+<td><strong>月度趋势分析</strong>，识别会员生命周期阶段</td>
+</tr>
+<tr class="even">
+<td>075</td>
+<td>S01_player_score.csv</td>
+<td>M15 活跃周期</td>
+<td><strong>核心会员评分表</strong>：残值、ROI、退水、IP/链数、雷达三轴</td>
+<td><strong>全员经济价值与风险排序</strong>，是风控处置和营销的最终依据</td>
+</tr>
+<tr class="odd">
+<td>081</td>
+<td>S_player_tail.csv</td>
+<td>M15 活跃周期</td>
+<td>会员尾段投注专项画像</td>
+<td>尾段风险会员的<strong>专项筛查</strong></td>
+</tr>
+<tr class="even">
+<td>083</td>
+<td>T02_daily_roi.csv</td>
+<td>M15 活跃周期</td>
+<td>会员×日ROI</td>
+<td>会员<strong>日度盈亏波动</strong>监控</td>
+</tr>
+<tr class="odd">
+<td>098</td>
+<td>T_table_span.csv</td>
+<td>M15 活跃周期</td>
+<td>桌台跨度与活跃度</td>
+<td>桌台级<strong>运营健康度</strong>监控</td>
+</tr>
+<tr class="even">
+<td>004</td>
+<td>B4_2b_funnel_and_mu0.csv</td>
+<td>M14 投注形态</td>
+<td>逐gate漏斗（清洗前后）与各注型μ0</td>
+<td><strong>数据质量监控</strong>，量化脏数据对GGR的污染</td>
+</tr>
+<tr class="odd">
+<td>005</td>
+<td>B4_5b_tip_nature.csv</td>
+<td>M14 投注形态</td>
+<td>小费类注单（Tip_1_）的性质判定</td>
+<td>区分<strong>真实小费</strong>与<strong>数据异常</strong>，防止误计入GGR</td>
+</tr>
+<tr class="even">
+<td>049</td>
+<td>P12c_member_daily_pnl.csv</td>
+<td>M15 活跃周期</td>
+<td>雷欧域会员（n≥100）的日度盈亏</td>
+<td><strong>高活会员</strong>的精细化监控</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="三c-平台经营域20张" class="level3">
+<h3 class="anchored" data-anchor-id="三c-平台经营域20张">（三）C 平台经营域（20张）</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 14%">
+<col style="width: 29%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>序号</th>
+<th>表名</th>
+<th>典型学</th>
+<th>业务定义与用途</th>
+<th>经济效应与平台价值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>006</td>
+<td>B_online_base.csv</td>
+<td>Z00 基建</td>
+<td>桌台×秒级：注数、会员数、局数、盈亏</td>
+<td>监控<strong>桌台实时负载</strong>与<strong>高峰时段</strong></td>
+</tr>
+<tr class="even">
+<td>017</td>
+<td>DX04_bet09_profile.csv</td>
+<td>M14 投注形态</td>
+<td>各投注产品（23种）的盈亏、胜率、注额CV</td>
+<td><strong>产品级盈利能力分析</strong>，指导赔率与产品设计</td>
+</tr>
+<tr class="odd">
+<td>018</td>
+<td>DX05_product_panorama.csv</td>
+<td>M14 投注形态</td>
+<td>产品级全景：订单量、会员数、荷官数、GGR占比</td>
+<td>评估<strong>各产品对平台收入的贡献</strong></td>
+</tr>
+<tr class="even">
+<td>047</td>
+<td>P12a_platform_daily.csv</td>
+<td>Z00 基建</td>
+<td>平台日度：订单量、会员数、GGR、尾段占比</td>
+<td><strong>平台级每日经营看板</strong></td>
+</tr>
+<tr class="odd">
+<td>059</td>
+<td>QSB_01c_cat1_contamination.csv</td>
+<td>M14 投注形态</td>
+<td>category=1内部各注型的污染检测</td>
+<td>确保<strong>一般注单口径纯净</strong>，防止脏数据污染GGR</td>
+</tr>
+<tr class="even">
+<td>070</td>
+<td>R03_player_dealer.csv</td>
+<td>M07 荷官关联</td>
+<td>会员×荷官：胜率、Z-score、注额加权基准</td>
+<td>发现<strong>会员与特定荷官的异常关联</strong>（潜在作弊）</td>
+</tr>
+<tr class="odd">
+<td>071</td>
+<td>R03b_player_dealer_daily.csv</td>
+<td>M07 荷官关联</td>
+<td>同上，日度粒度</td>
+<td><strong>日度监控</strong>荷官-会员关联的变化</td>
+</tr>
+<tr class="even">
+<td>072</td>
+<td>R03chk_settlement_form.csv</td>
+<td>M07 荷官关联</td>
+<td>各注型的退还率（push_rate）与基准胜率</td>
+<td>验证<strong>Z-score基准</strong>的准确性</td>
+</tr>
+<tr class="odd">
+<td>073</td>
+<td>R03inv_pair_census.csv</td>
+<td>M07 荷官关联</td>
+<td>会员×荷官关系的稀疏度分层统计</td>
+<td>评估<strong>荷官关联检测的覆盖度</strong>与统计功效</td>
+</tr>
+<tr class="even">
+<td>076</td>
+<td>S02_dealer_score.csv</td>
+<td>M07 荷官关联</td>
+<td><strong>荷官评分</strong>：洗码量、客群广度、节奏稳定度、玩家复现率</td>
+<td><strong>荷官绩效与风险排序</strong>，支撑排班与风控</td>
+</tr>
+<tr class="odd">
+<td>077</td>
+<td>S02b_dealer_pace.csv</td>
+<td>M07 荷官关联</td>
+<td>荷官节奏稳定度（加权标准差）</td>
+<td>量化荷官<strong>操作节奏异常</strong>，发现潜在操控</td>
+</tr>
+<tr class="even">
+<td>078</td>
+<td>S03_agent_score.csv</td>
+<td>M06 代理线</td>
+<td>代理线评分（当前BLOCKED）</td>
+<td>代理<strong>绩效与风险排序</strong>（待完善）</td>
+</tr>
+<tr class="odd">
+<td>079</td>
+<td>S04_analyst_score.csv</td>
+<td>R01 风控专员</td>
+<td>风控专员关联的会员（当前NULL）</td>
+<td>风控专员<strong>工作台</strong>（待完善）</td>
+</tr>
+<tr class="even">
+<td>082</td>
+<td>S_second_dist.csv</td>
+<td>M15 活跃周期</td>
+<td>桌台级二次分布</td>
+<td>桌台<strong>运营效率</strong>分析</td>
+</tr>
+<tr class="odd">
+<td>110</td>
+<td>X_combo.csv</td>
+<td>M06 代理线</td>
+<td>代理线组合分析</td>
+<td>代理<strong>层级结构与利益链</strong>分析</td>
+</tr>
+<tr class="even">
+<td>135</td>
+<td>RK02_table_day_risk.csv</td>
+<td>RK 日序风险</td>
+<td>桌台×日期：日序风险指标</td>
+<td><strong>桌台级风险监控</strong>，发现异常桌台</td>
+</tr>
+<tr class="odd">
+<td>136</td>
+<td>RK03_dealer_day_risk.csv</td>
+<td>RK 日序风险</td>
+<td>荷官×日期：日序风险指标</td>
+<td><strong>荷官级风险监控</strong>，发现异常时段</td>
+</tr>
+<tr class="even">
+<td>137</td>
+<td>RK04_member_econ_by_scope.csv</td>
+<td>RK 口径分类</td>
+<td>会员按荷官/线路分类的经济指标</td>
+<td><strong>口径隔离</strong>：区分哨兵荷官与真实荷官</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="四d-处置与因果域26张" class="level3">
+<h3 class="anchored" data-anchor-id="四d-处置与因果域26张">（四）D 处置与因果域（26张）</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 14%">
+<col style="width: 29%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>序号</th>
+<th>表名</th>
+<th>典型学</th>
+<th>业务定义与用途</th>
+<th>经济效应与平台价值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>020</td>
+<td>EV01_disposal_events.csv</td>
+<td>M09 处置限额</td>
+<td>处置事件日志（踢出、桌台切换、取消局等）</td>
+<td>审计<strong>风控操作记录</strong>，追溯处置决策</td>
+</tr>
+<tr class="even">
+<td>021</td>
+<td>EV02_member_disposal.csv</td>
+<td>M09 处置限额</td>
+<td>会员处置日志（限额变更、停用、状态变更）</td>
+<td><strong>处置台账</strong>，支撑处置效果分析</td>
+</tr>
+<tr class="odd">
+<td>034</td>
+<td>P02A_lmc_samples.csv</td>
+<td>M09 处置限额</td>
+<td>会员变更日志的采样（最早/最新各200条）</td>
+<td><strong>日志质量抽样</strong>，验证日志完整性</td>
+</tr>
+<tr class="even">
+<td>035</td>
+<td>P02B_changestatus_patterns.csv</td>
+<td>M09 处置限额</td>
+<td>changestatus类变更的模式分析</td>
+<td>发现<strong>批量状态变更</strong>异常</td>
+</tr>
+<tr class="odd">
+<td>036</td>
+<td>P02C_key_check.csv</td>
+<td>M09 处置限额</td>
+<td>日志中实体ID与会员表的命中率</td>
+<td>验证<strong>日志与外键的一致性</strong></td>
+</tr>
+<tr class="even">
+<td>037</td>
+<td>P02D_events_in_window.csv</td>
+<td>M09 处置限额</td>
+<td>窗内事件统计（按类别×层级）</td>
+<td><strong>处置事件全景</strong>，监控处置频率</td>
+</tr>
+<tr class="odd">
+<td>048</td>
+<td>P12b_member_events.csv</td>
+<td>M09 处置限额</td>
+<td>会员活动跨度与首次处置标记</td>
+<td>评估<strong>处置时机</strong>（早期 vs 晚期干预）</td>
+</tr>
+<tr class="even">
+<td>053</td>
+<td>PI01_treatment_delta_member.csv</td>
+<td>M09 处置限额</td>
+<td><strong>处置前后对比</strong>：会员级ΔStake、ΔGGR、ΔROI</td>
+<td><strong>量化风控措施的效果</strong>，是因果推断核心表</td>
+</tr>
+<tr class="odd">
+<td>054</td>
+<td>PI02_treatment_delta_platform.csv</td>
+<td>M09 处置限额</td>
+<td><strong>处置前后对比</strong>：平台级（处置组vs未处置组）</td>
+<td>评估风控处置对<strong>平台整体收入的影响</strong></td>
+</tr>
+<tr class="even">
+<td>055</td>
+<td>PI03_reinvest_loop.csv</td>
+<td>M13 复投循环</td>
+<td>亏损后下一注的间隔与加码倍数</td>
+<td>识别<strong>追损型投注模式</strong>（亏损后加倍）</td>
+</tr>
+<tr class="odd">
+<td>086</td>
+<td>TL02_config_change.csv</td>
+<td>M09 处置限额</td>
+<td>配置变更日志</td>
+<td>追溯<strong>系统配置变更</strong>对数据的影响</td>
+</tr>
+<tr class="even">
+<td>087</td>
+<td>TL03_pseudo_treatment.csv</td>
+<td>M09 处置限额</td>
+<td>伪处置事件（用于因果推断的对照组）</td>
+<td><strong>因果推断对照组</strong>构建</td>
+</tr>
+<tr class="odd">
+<td>088</td>
+<td>TL03b_pseudo_treatment.csv</td>
+<td>M09 处置限额</td>
+<td>伪处置的细化版本</td>
+<td>同上，更细粒度</td>
+</tr>
+<tr class="even">
+<td>091</td>
+<td>TL07_mem_change_shape.csv</td>
+<td>M09 处置限额</td>
+<td>会员变更的形态分析</td>
+<td>发现<strong>异常变更模式</strong></td>
+</tr>
+<tr class="odd">
+<td>092</td>
+<td>TL08_treatment_events.csv</td>
+<td>M09 处置限额</td>
+<td>处置事件明细</td>
+<td>处置<strong>事件明细台账</strong></td>
+</tr>
+<tr class="even">
+<td>094</td>
+<td>TL10_treatment_ledger.csv</td>
+<td>M09 处置限额</td>
+<td>处置分类账</td>
+<td>处置<strong>会计级台账</strong></td>
+</tr>
+<tr class="odd">
+<td>095</td>
+<td>TL11_treatment_episode.csv</td>
+<td>M09 处置限额</td>
+<td>处置事件片段（按会员聚合）</td>
+<td>每个会员的<strong>完整处置历史</strong></td>
+</tr>
+<tr class="even">
+<td>096</td>
+<td>TL11c_population_reconcile.csv</td>
+<td>M09 处置限额</td>
+<td>处置人群的对账</td>
+<td>验证<strong>处置人群的完整性</strong></td>
+</tr>
+<tr class="odd">
+<td>097</td>
+<td>TL14_limit_treatment.csv</td>
+<td>M09 处置限额</td>
+<td>限额类处置</td>
+<td><strong>限额措施</strong>专项分析</td>
+</tr>
+<tr class="even">
+<td>051</td>
+<td>PH0_8r1_rg_case.csv</td>
+<td>M10 责任博彩</td>
+<td>冷静期（cooling）相关日志</td>
+<td><strong>责任博彩</strong>合规监控</td>
+</tr>
+<tr class="odd">
+<td>052</td>
+<td>PH0_8r2_rg_crosstable.csv</td>
+<td>M10 责任博彩</td>
+<td>各表中RG关键词的交叉统计</td>
+<td>评估<strong>RG数据的覆盖度</strong></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="五f-元数据字典域27张" class="level3">
+<h3 class="anchored" data-anchor-id="五f-元数据字典域27张">（五）F 元数据字典域（27张）</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 14%">
+<col style="width: 29%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>序号</th>
+<th>表名</th>
+<th>典型学</th>
+<th>业务定义与用途</th>
+<th>经济效应与平台价值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>013</td>
+<td>DICT_01a_bet41_tri.csv</td>
+<td>M05 退水套利</td>
+<td>bet41 vs validbet vs bet16三方比对</td>
+<td><strong>字段语义校验</strong>，确保退水口径正确</td>
+</tr>
+<tr class="even">
+<td>014</td>
+<td>DICT_01b_roundkey_card.csv</td>
+<td>Z00 基建</td>
+<td>局键（bet03</td>
+<td>bet04</td>
+</tr>
+<tr class="odd">
+<td>015</td>
+<td>DICT_01c_dimension.csv</td>
+<td>Z00 基建</td>
+<td>bet23~32等字段的量纲实测</td>
+<td><strong>字段量纲校验</strong>（比率vs金额），防止公式错误</td>
+</tr>
+<tr class="even">
+<td>016</td>
+<td>DICT_01d_bet_latency.csv</td>
+<td>Z00 基建</td>
+<td>下注延迟（bet06→bet08）的分布</td>
+<td><strong>系统性能监控</strong>，发现延迟异常</td>
+</tr>
+<tr class="odd">
+<td>085</td>
+<td>TL00_table_inventory.csv</td>
+<td>Z00 基建</td>
+<td>所有表的清单</td>
+<td><strong>数据资产目录</strong></td>
+</tr>
+<tr class="even">
+<td>089</td>
+<td>TL04_log_schema.csv</td>
+<td>Z00 基建</td>
+<td>日志表结构</td>
+<td><strong>日志 schema 文档</strong></td>
+</tr>
+<tr class="odd">
+<td>090</td>
+<td>TL06_log_mem_change.csv</td>
+<td>Z00 基建</td>
+<td>会员变更日志（日度汇总）</td>
+<td><strong>变更日志日度监控</strong></td>
+</tr>
+<tr class="even">
+<td>093</td>
+<td>TL09_member_schema.csv</td>
+<td>Z00 基建</td>
+<td>会员表结构</td>
+<td><strong>会员 schema 文档</strong></td>
+</tr>
+<tr class="odd">
+<td>108</td>
+<td>V_recon.csv</td>
+<td>Z00 基建</td>
+<td>数据对账（匹配局数、MAE等）</td>
+<td><strong>数据质量对账</strong></td>
+</tr>
+<tr class="even">
+<td>109</td>
+<td>V_table_counts.csv</td>
+<td>Z00 基建</td>
+<td>各表行数统计</td>
+<td><strong>数据量监控</strong></td>
+</tr>
+<tr class="odd">
+<td>111-119</td>
+<td>Z01~Z09</td>
+<td>Z00 基建</td>
+<td>表清单、排除表、列字典、重名列、探针SQL等</td>
+<td><strong>数据字典与质量校验</strong>的完整工具链</td>
+</tr>
+<tr class="even">
+<td>122-129</td>
+<td>_P12b-pre ~ _PH0_6b</td>
+<td>M09/M10/Z00</td>
+<td>预处理与中间表</td>
+<td><strong>数据加工中间层</strong>，支撑上游分析</td>
+</tr>
+<tr class="odd">
+<td>130</td>
+<td>DICT_ALL_columns.csv</td>
+<td>DIC 元数据</td>
+<td>所有表的列清单</td>
+<td><strong>全局列字典</strong></td>
+</tr>
+<tr class="even">
+<td>131</td>
+<td>DICT_ALL_tables.csv</td>
+<td>DIC 元数据</td>
+<td>所有表的清单</td>
+<td><strong>全局表字典</strong></td>
+</tr>
+<tr class="odd">
+<td>132</td>
+<td>DICT_SEMANTIC_ruling.csv</td>
+<td>DIC 元数据</td>
+<td>字段语义裁决</td>
+<td><strong>字段语义权威定义</strong>，消除歧义</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="六e-事实基表8张" class="level3">
+<h3 class="anchored" data-anchor-id="六e-事实基表8张">（六）E 事实基表（8张）</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 14%">
+<col style="width: 29%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>序号</th>
+<th>表名</th>
+<th>典型学</th>
+<th>业务定义与用途</th>
+<th>经济效应与平台价值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>133</td>
+<td>RK01_round_fact.csv</td>
+<td>RK 局级事实</td>
+<td>局级事实表（24列，不含六层商业块）</td>
+<td><strong>最细粒度事实</strong>，支撑自定义分析</td>
+</tr>
+<tr class="even">
+<td>134</td>
+<td>HE01_bet_side_edge.csv</td>
+<td>HE 投注面优势</td>
+<td>投注面级已实现优势（23面×免佣标记）</td>
+<td><strong>实测庄家优势</strong>，是理论edge的实证基准</td>
+</tr>
+<tr class="odd">
+<td>135</td>
+<td>RK02_table_day_risk.csv</td>
+<td>RK 日序风险</td>
+<td>桌台×日期风险指标</td>
+<td>桌台级<strong>日序风险监控</strong></td>
+</tr>
+<tr class="even">
+<td>136</td>
+<td>RK03_dealer_day_risk.csv</td>
+<td>RK 日序风险</td>
+<td>荷官×日期风险指标</td>
+<td>荷官级<strong>日序风险监控</strong></td>
+</tr>
+<tr class="odd">
+<td>137</td>
+<td>RK04_member_econ_by_scope.csv</td>
+<td>RK 口径分类</td>
+<td>会员按口径分类的经济指标</td>
+<td><strong>口径隔离</strong>，确保哨兵/测试线不污染真实数据</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+</section>
+<section id="三数据表体系的价值闭环" class="level2">
+<h2 class="anchored" data-anchor-id="三数据表体系的价值闭环">三、数据表体系的价值闭环</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────────────────────┐
+│                        137张表的价值传递链                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  【事实层】E事实基表（#133-#137）                                           │
+│      ↓ 提供最细粒度事实                                                    │
+│  【特征层】A风险识别（44张）+ B会员画像（12张）+ C平台经营（20张）           │
+│      ↓ 提取风险特征与行为画像                                              │
+│  【决策层】S01会员评分 + S02荷官评分 + S03代理评分                          │
+│      ↓ 输出可执行的风险评分与排序                                          │
+│  【验证层】D处置因果（26张）+ P0C标签检验（#038-#043）                      │
+│      ↓ 验证处置效果，确保模型不泄漏                                        │
+│  【基建层】F元数据字典（27张）                                              │
+│      ↓ 保障全链条的数据质量与口径一致性                                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘</code></pre>
+<p><strong>核心经济价值体现在三个层面</strong>：</p>
+<ol type="1">
+<li><p><strong>止损价值</strong>：风险识别表（对冲、尾段、IP聚集、同桌团伙）直接量化各类作弊和套利行为对平台GGR的侵蚀，是<strong>风控止损</strong>的依据。</p></li>
+<li><p><strong>增效价值</strong>：会员评分表（S01）实现<strong>精细化运营</strong>——识别高价值会员（D档）予以留存激励，识别低价值/高风险会员（A档）予以复核或处置，优化营销资源配置。</p></li>
+<li><p><strong>合规价值</strong>：责任博彩表（PH0_8r1/8r2）满足<strong>合规监管</strong>要求；元数据字典（#130-#132）确保数据<strong>可审计、可追溯</strong>。</p></li>
+</ol>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
