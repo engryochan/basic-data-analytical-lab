@@ -1,0 +1,85 @@
+redteam/ + critic/ + killcritic/ + blindspot/ + actionplan/
+
+
+
+{
+"user": "dolphinscheduler",
+"password": "******",
+"address": "jdbc:mysql://172.31.89.204:9030",
+"database": "etl_control",
+"jdbcUrl": "jdbc:mysql://172.31.89.204:9030/etl_control",
+"driverClassName": "com.mysql.cj.jdbc.Driver",
+"validationQuery": "select 1",
+"other": {
+"useSSL": "true",
+"verifyServerCertificate": "false"
+}
+}
+
+{
+"user": "risk",
+"password": "******",
+"address": "jdbc:mysql://ip-172-31-89-204.ap-northeast-1.compute.internal:9030",
+"database": "wm_live_risk",
+"jdbcUrl": "jdbc:mysql://ip-172-31-89-204.ap-northeast-1.compute.internal:9030/wm_live_risk",
+"driverClassName": "com.mysql.cj.jdbc.Driver",
+"validationQuery": "select 1",
+"other": {
+"useSSL": "true",
+"verifyServerCertificate": "false"
+}
+}
+
+{
+"user": "risk",
+"password": "******",
+"address": "jdbc:mysql://risk-db-mysql-01.c5ugqaesa5a2.ap-northeast-1.rds.amazonaws.com:3306",
+"database": "wm_live_risk",
+"jdbcUrl": "jdbc:mysql://risk-db-mysql-01.c5ugqaesa5a2.ap-northeast-1.rds.amazonaws.com:3306/wm_live_risk",
+"driverClassName": "com.mysql.cj.jdbc.Driver",
+"validationQuery": "select 1"
+}
+
+{
+"user": "dolphinscheduler",
+"password": "******",
+"address": "jdbc:mysql://ds-nlb-sr-sql-01-98eb3f01c8eb5982.elb.ap-northeast-1.amazonaws.com:9030",
+"database": "ods_tidb_2c_test",
+"jdbcUrl": "jdbc:mysql://ds-nlb-sr-sql-01-98eb3f01c8eb5982.elb.ap-northeast-1.amazonaws.com:9030/ods_tidb_2c_test",
+"driverClassName": "com.mysql.cj.jdbc.Driver",
+"validationQuery": "select 1"
+}
+
+{
+"user": "tidb_user",
+"password": "******",
+"address": "jdbc:mysql://tidb.u1s1.biz:4000",
+"database": "u1_1000",
+"jdbcUrl": "jdbc:mysql://tidb.u1s1.biz:4000/u1_1000",
+"driverClassName": "com.mysql.cj.jdbc.Driver",
+"validationQuery": "select 1"
+}
+
+{
+"user": "canal",
+"password": "******",
+"address": "jdbc:mysql://202.134.97.145:3306",
+"database": "a168",
+"jdbcUrl": "jdbc:mysql://202.134.97.145:3306/a168",
+"driverClassName": "com.mysql.cj.jdbc.Driver",
+"validationQuery": "select 1"
+}
+
+{
+"user": "dolphinscheduler",
+"password": "******",
+"address": "jdbc:mysql://ds-nlb-sr-sql-01-98eb3f01c8eb5982.elb.ap-northeast-1.amazonaws.com:9030",
+"database": "ods_mariadb_2b",
+"jdbcUrl": "jdbc:mysql://ds-nlb-sr-sql-01-98eb3f01c8eb5982.elb.ap-northeast-1.amazonaws.com:9030/ods_mariadb_2b",
+"driverClassName": "com.mysql.cj.jdbc.Driver",
+"validationQuery": "select 1",
+"other": {
+"useSSL": "true",
+"verifyServerCertificate": "false"
+}
+}
