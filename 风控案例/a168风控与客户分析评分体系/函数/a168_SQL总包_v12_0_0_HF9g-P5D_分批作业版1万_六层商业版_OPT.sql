@@ -1,8 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
--- ★ a168 SQL 总包 v12.0.0-HF9g-P5 · 模块索引【分批作业版 · 1 万行/批】（137 件 · 137 张 CSV · 含 #130~#132 字典三件 · #133 局级事实表 · #134 投注面级已实现优势表）★
--- ★ HF9g-P5D 同步校订（本次核实）：档头标题原落后于正文一版——正文之模块索引表（第 354~497 行）与 #134~#137 之完整 SQL 主体，
---   在本档中本已存在且批宽（10,000 行/批）已正确套用，仅档头标题一处仍停留于「133 件」旧值，未随 #134~#137 之新增同步更新。
---   本次仅更正此一处标题文字，不触碰任何可执行语句，故不改变任何输出结果，无须重导。
+-- ★ a168 SQL 总包 v12.0.0-HF9g-P5 · 模块索引【分批作业版 · 1 万行/批】（133 件 · 133 张 CSV · 含 #130~#132 字典三件 · #133 局级事实表）★
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- ★★ HF9g-P5 · D-14 斧正（全窗基线族之六层退化）· Ryo Eng 授权 2026-08-29 ★★
@@ -315,7 +312,13 @@
 -- 【ngr / net_margin 可信度 —— 运行前必读】129 件皆含 ngr 与两候选 net_margin：
 --   OK                    24 件  连接 1:1，本行 net_margin 即本行事实       → 可直接做商业判定
 --   WRONG_GRAIN·上卷广播   37 件  e 侧按上层粒度连接，值在多行重复          → 仅作背景，勿算比率
---   INVALID·笛卡尔广播     67 件  CROSS JOIN x_agg（会员级），值不相干      → 勿用；行数=|q|×会员数
+--   WRONG_GRAIN·会员级广播 67 件  LEFT JOIN x_agg（会员级，按member_id键值连接）  → 仅作背景，勿算比率
+--     ★ HF9g-P5D-b·W-61 斧正：本行原文写"CROSS JOIN·笛卡尔广播·值不相干·行数=|q|×会员数"，
+--       该描述对应更早期版本；现档全数 67 处实测为 LEFT JOIN（按键值连接，非笛卡尔积），
+--       值并非"不相干"而是"member_id 匹配的会员级值被逐行复制广播"，与上一行"上卷广播 37 件"
+--       同属一个力学机制的两个子类，仅连接键粒度层级不同，故合并归类描述，不再单列"INVALID"。
+--       R03b_player_dealer_daily（#071）即属此列，实测广播冗余占比 96.01%（723,496 名会员，
+--       18,139,550 行），详见另案《R03b K-1 拆件方案》。
 --   NULL·跨实体未命中       1 件  #079 creator↔bet05 连不上，六层全 NULL   → 只看前 7 列
 --
 -- 【典型学 M 码 —— 包内自带的风险机理分类】
@@ -28100,13 +28103,15 @@ FROM (
            --   ★ 本件之 e.* 仍照常供经济层／分布层／关系层／rate 层／动态层使用，仅六层置 NULL。
            --   ★ audit_rn 不受影响：其 26 个排序键之首二者 residual_b / roi 出自经济层，本段未动。
            --   ★ 副效：本段 8 个无 PARTITION BY 之窗口算子随之消失，全局排序由 9 个降为 1 个。
-           --   ⚠⚠ 待裁 · 阻断告警（本段三处字面值随模板逐字沿用，于本件**名实不符**）：
-           --        pr_qualified_population   = 'GLOBAL_BASELINE_NO_ENTITY_RANKING'
-           --        pr_calculation_method     = 'NOT_APPLICABLE_GLOBAL_BASELINE'
-           --        action_priority           = 'X 全窗基线 · 不参与实体赏罚'
-           --        本件属【行加权错粒度族】，**并非全窗基线族**；三值将随 CSV 落地，构成失实血统标签。
-           --        改之则须引入 P4D/P5D 以外之常量，违「禁引包外」之令 ⇒ 故逐字沿用并在此立案。
-           --        ★ 本项未裁定前，本件 CSV **不得进入任何对外交付或下游消费**，仅供跑通性验证。
+           --   ✅ HF9g-P5D-b · W-61 已斧正（原三处字面值随模板逐字沿用致名实不符，现改如下）：
+           --        pr_qualified_population   'GLOBAL_BASELINE_NO_ENTITY_RANKING' → CAST(NULL AS STRING)
+           --        pr_calculation_method     'NOT_APPLICABLE_GLOBAL_BASELINE'    → CAST(NULL AS STRING)
+           --        pr_calculation_version    'HF9g-P5'（血统不符）                → 'HF9g-P5D-b'（本件实际血统）
+           --        action_priority           'X 全窗基线 · 不参与实体赏罚' —— 语义核验通过，维持不变（非字面值缺陷）
+           --        改法依据：CAST(NULL) 不引入 P4D/P5D 以外常量，符合「禁引包外」之令；
+           --        version 一项因非"取值适用性"而是"取值真实性"问题，故更正而非置 NULL。
+           --   ★ 阻断解除：原阻断条件（名实不符）已不成立。K-1（会员级广播）为独立缺陷，不因本项解除而解除，
+           --     详见另案《R03b K-1 拆件方案》，本档暂未施行拆件，此点仍须在下游消费前另行确认。
            CAST(NULL AS INT)                                              AS vip_tier,                        -- 空值取值：全窗基线族无实体可分档，置 NULL（NULL＝不适用，非 0）
            CAST(NULL AS DOUBLE)                                           AS economic_value,                  -- 空值取值：同上，禁以常数百分位冒充经济价值
            CAST(NULL AS DOUBLE)                                           AS roi_pr_global,                   -- 空值取值：同上
@@ -28114,11 +28119,11 @@ FROM (
            CAST(NULL AS DOUBLE)                                           AS pr_stake,                        -- 空值取值：兼容列，同上
            CAST(NULL AS DOUBLE)                                           AS pr_global,                       -- 空值取值：同上
            CAST(NULL AS DOUBLE)                                           AS pr_qualified,                    -- 空值取值：同上
-           'GLOBAL_BASELINE_NO_ENTITY_RANKING'                            AS pr_qualified_population,         -- 字面取值：血统 —— 明示本件为全窗基线族，无实体排序总体
+           CAST(NULL AS STRING)                                           AS pr_qualified_population,         -- HF9g-P5D-b·W-61斧正：原'GLOBAL_BASELINE_NO_ENTITY_RANKING'于本件（行加权错粒度族）名实不符，改NULL
            CAST(NULL AS BIGINT)                                           AS pr_global_population_n,          -- 空值取值：血统 —— 不适用
            CAST(NULL AS BIGINT)                                           AS pr_qualified_population_n,       -- 空值取值：血统 —— 不适用
-           'NOT_APPLICABLE_GLOBAL_BASELINE'                               AS pr_calculation_method,           -- 字面取值：血统 —— 算法不适用
-           'HF9g-P5'                                                      AS pr_calculation_version,          -- 字面取值：血统 —— 算法版本
+           CAST(NULL AS STRING)                                           AS pr_calculation_method,           -- HF9g-P5D-b·W-61斧正：原'NOT_APPLICABLE_GLOBAL_BASELINE'于本件名实不符，改NULL
+           'HF9g-P5D-b'                                                   AS pr_calculation_version,          -- HF9g-P5D-b·W-61斧正：原'HF9g-P5'血统不符（本件实际血统为P5D-b），更正为实际值，非置NULL
            CAST(NULL AS STRING)                                           AS evidence_flag,                   -- 空值取值：证据旗标不适用于全窗基线
            CAST(NULL AS STRING)                                           AS evidence_rate,                   -- 空值取值：同上
            CAST(NULL AS DOUBLE)                                           AS hold_ci_halfwidth_approx,        -- 空值取值：同上

@@ -1,5 +1,8 @@
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
--- ★ a168 SQL 总包 v12.0.0-HF9g-P5 · 模块索引（137 件 · 137 张 CSV · 含 #130~#132 字典三件 · #133 局级事实表 · #134 投注面级已实现优势表）★
+-- ★ a168 SQL 总包 v12.0.0-HF9g-P5 · 模块索引【分批作业版 · 1 万行/批】（137 件 · 137 张 CSV · 含 #130~#132 字典三件 · #133 局级事实表 · #134 投注面级已实现优势表）★
+-- ★ HF9g-P5D 同步校订（本次核实）：档头标题原落后于正文一版——正文之模块索引表（第 354~497 行）与 #134~#137 之完整 SQL 主体，
+--   在本档中本已存在且批宽（10,000 行/批）已正确套用，仅档头标题一处仍停留于「133 件」旧值，未随 #134~#137 之新增同步更新。
+--   本次仅更正此一处标题文字，不触碰任何可执行语句，故不改变任何输出结果，无须重导。
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- ★★ HF9g-P5 · D-14 斧正（全窗基线族之六层退化）· Ryo Eng 授权 2026-08-29 ★★
@@ -312,13 +315,7 @@
 -- 【ngr / net_margin 可信度 —— 运行前必读】129 件皆含 ngr 与两候选 net_margin：
 --   OK                    24 件  连接 1:1，本行 net_margin 即本行事实       → 可直接做商业判定
 --   WRONG_GRAIN·上卷广播   37 件  e 侧按上层粒度连接，值在多行重复          → 仅作背景，勿算比率
---   WRONG_GRAIN·会员级广播 67 件  LEFT JOIN x_agg（会员级，按member_id键值连接）  → 仅作背景，勿算比率
---     ★ HF9g-P5D-b·W-61 斧正：本行原文写"CROSS JOIN·笛卡尔广播·值不相干·行数=|q|×会员数"，
---       该描述对应更早期版本；现档全数 67 处实测为 LEFT JOIN（按键值连接，非笛卡尔积），
---       值并非"不相干"而是"member_id 匹配的会员级值被逐行复制广播"，与上一行"上卷广播 37 件"
---       同属一个力学机制的两个子类，仅连接键粒度层级不同，故合并归类描述，不再单列"INVALID"。
---       R03b_player_dealer_daily（#071）即属此列，实测广播冗余占比 96.01%（723,496 名会员，
---       18,139,550 行），详见另案《R03b K-1 拆件方案》。
+--   INVALID·笛卡尔广播     67 件  CROSS JOIN x_agg（会员级），值不相干      → 勿用；行数=|q|×会员数
 --   NULL·跨实体未命中       1 件  #079 creator↔bet05 连不上，六层全 NULL   → 只看前 7 列
 --
 -- 【典型学 M 码 —— 包内自带的风险机理分类】
@@ -545,10 +542,10 @@
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
 -- ★★★ 分批 WHERE 阶梯 · 全档通例（每件之 ② 段内亦逐件写实一份）★★★
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
---   口诀：**上界 ＝ 下界 ＋ 100000，两数同进。** 下界＝上一批之上界；上界＝本批之上界。
---     WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---     WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---     WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批 …余批类推
+--   口诀：**上界 ＝ 下界 ＋ 10000，两数同进。** 下界＝上一批之上界；上界＝本批之上界。
+--     WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--     WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--     WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批 …余批类推
 --   ⚠ 常见误写：只推下界而上界不动 → 条件自相矛盾，恒为假，返回空集。
 --   ★ 本版与原版审计版之别，在于**分批取数**；底层计算仍为完整扫描/聚合/窗口排序后再切片。
 --     六层商业指标、连接键、audit_rn 业务排序键保持同一；批次变量只控制返回区间。
@@ -618,10 +615,10 @@
 --   FROM ods_mariadb_2b.ods_a168_bet02
 --   WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101' AND sync_time IS NULL;
 -- 【HF9c · BATCH CONTRACT】
---   0 / 100000 为本次导出区间；每批只改这两个数，不改 SQL 主体。
---   第 1 批：0 / 100000；第 2 批：100000 / 200000；依此类推。
---   某批实际返回 < 100000 行即为末批；全批完成后检查 audit_rn 是否无缺号/重号。
--- SET @a168_batch_size = 100000;   -- ★ W-58：已内联为字面常量，本行停用（保留以存血统）
+--   0 / 10000 为本次导出区间；每批只改这两个数，不改 SQL 主体。
+--   第 1 批：0 / 10000；第 2 批：10000 / 20000；依此类推。
+--   某批实际返回 < 10000 行即为末批；全批完成后检查 audit_rn 是否无缺号/重号。
+-- SET @a168_batch_size = 10000;   -- ★ W-58：已内联为字面常量，本行停用（保留以存血统）
 -- SET @a168_batch_lo = 0;   -- ★ W-58：已内联为字面常量，本行停用（保留以存血统）
 -- SET @a168_batch_hi = @a168_batch_size;   -- ★ W-58：已内联为字面常量，本行停用（保留以存血统）
 --
@@ -632,6 +629,7 @@
 --     ⇒ 第 k 批与第 1 批之峰值内存【完全相同】。
 --       把批宽由 100000 改到 50000 或 20000，省不了一个字节的 BE 内存。
 --       2026-08-30 之两次实测（50000 宽、100000 宽）同样 OOM，即为实证。
+--       ★ 本档为 1 万宽版，同理适用：1 万宽亦不降峰值内存，仅令每批回传行数更少。
 --     ⇒ 真正的解法是【算一次，取多次】：先把整件落盘（含 audit_rn），
 --       其后每批只是 `SELECT * FROM <落盘件> WHERE audit_rn BETWEEN … ORDER BY audit_rn`。
 --
@@ -723,6 +721,33 @@
 --         裁定前按包内模板逐字施行，不作自拟折中。
 --
 --
+-- 【改动 D · 批宽 100000 → 10000】★ 本档为「一万行/批」之分批作业版，与「十万行/批」版并存 ★
+--   缘由：Superset 单次下载上限为 10,000 观测值。
+--   ★ 一套三份（日后固定体例，不得混用）：
+--       ① 原版审计版            —— 不切片，一次导全；无 batch_id、无 WHERE 阶梯
+--       ② 分批作业版（10 万/批） —— 既有默认版
+--       ③ 分批作业版（ 1 万/批） —— 本档
+--     ★ 严禁把原版审计版改造为分批版；三份各守其位，各自独立留存血统。
+--   改动清单（132 件 × 2 行可执行 ＝ 264 行；注释同步重标）：
+--     D1 batch_id 除数：CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT) → / 10000
+--     D2 本批上界    ：WHERE z.audit_rn > 0 AND z.audit_rn <= 100000     → <= 10000
+--     D3 注释之逐批阶梯、末批判据、自证四数基数一并按 ÷10 重标
+--   ★★ D1 与 D2 必须同进同退。若只改 D2 而留 D1 为 100000，则
+--      batch_id = FLOOR((audit_rn-1)/100000)+1 对 audit_rn 1~100000 恒为 1
+--      ⇒ **十个物理批共用一个 batch_id**，违锁二（batch_id 须为该行所属批次）。
+--      因锁三（batch_id 不入任何业务指标计算），污染封闭于审计层：
+--      行集、audit_rn、其余全部列**逐位不变**，但批间对账机制失效。
+--   ★★ 末批判据尤须同步。若沿用「返回 < 100000 行即为末批」，则每批至多 10000 行、
+--      恒 < 100000 ⇒ **第 1 批即被误判为末批，后续批全数漏取，且不报错**。
+--      此为本项最致命之误 —— 会得到一份看似完整、实则残缺的 CSV。
+--   ★ 本改动**不降低峰值内存**：WHERE 挂最外层，须待 26 键 ROW_NUMBER 算完方生效。
+--     档头 W-61·D-2 已载 2026-08-30 之两次实测（50000 宽、100000 宽同样 OOM）；
+--     2026-09-02 复以 #071 三批（10000-20000 / 20000-30000 / 30000-40000）实测，
+--     报错逐字相同（Used 107,092,660,932 vs Limit 107,092,346,019），再证此点。
+--     降内存者为【改动 C · D-14b】，非本项。
+--   ★ 史实留档：档内凡含「实测 / 实得」之记载，其数字为历史观测值，逐字未改或另立注记保全。
+--   ★ 批数变为 10 倍：批数 = CEIL(T_true / 10000)。T_true 至今未测（UNKNOWN）。
+--
 -- 【改动 E · 注释同步（随改动 B/D 而来）】
 --   E1 §Z「等价性」段之执行顺序陈述：SET × 8 → SET × 10；同段「第 129 件」→「第 132 件」
 --      （后者为原件既有之陈旧计数，本版区块实测为 132 件，顺手校正并在此立案）。
@@ -750,7 +775,7 @@ SET SESSION query_timeout = 259200;
 SET enable_pipeline_engine = true;
 SET enable_global_runtime_filter = true;
 SET enable_spill = true;
-SET spill_mode = 'force';
+SET spill_mode = 'auto';                -- ★ 由 force 回退：只在逼近上限时才落盘
 SET spill_mem_limit_threshold = 0.3;
 SET cbo_cte_reuse = false;
 SET pipeline_dop = 4;
@@ -772,7 +797,7 @@ SET query_mem_limit = 34359738368;
 --   ★ 二元锚（与六元组同级，全 137 件、一套三份必须完全一致）：
 --     snapshot_sync_time = '2026-08-27 09:00:00'
 --     run_id             = 'A168_HF9F_20260827_0900'
---     batch_size         = 100000
+--     batch_size         = 10000
 --     ★ 改动 F 斧正：batch_size 自本版起**移出三元锚，降为「导出参数」**，理由与后果如下 ——
 --       理由：一套三份（原版审计版 / 10 万分批 / 1 万分批）共用同一 snapshot_sync_time 与
 --             run_id，却必然持有不同之 batch_size；若仍列为锚，三份即互相违锚，锚失其义。
@@ -842,12 +867,12 @@ WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101';
 --   run_id · snapshot_sync_time · module_id · batch_id · batch_lo · batch_hi
 --   n_rows · audit_rn_min · audit_rn_max · query_id · csv_md5
 --   ★ 三条机器可验证的对账式（C-3 + D-2，取代已删除的 T_true 预跑）：
---     ① batch_id 自证：batch_id = FLOOR((audit_rn - 1) / 100000) + 1   ← 本档批宽 100000
+--     ① batch_id 自证：batch_id = FLOOR((audit_rn - 1) / 10000) + 1   ← 本档批宽 10000
 --        导出所得 batch_id 必须与本批预期批次号相同。
 --        若操作员忘记推进 batch_lo/hi，SQL 完全合法、不报错，但会静默重导第 1 批 ——
 --        此时预期 batch_id = 2 而实际 = 1，本式立即抓住。变量不是可信源，audit_rn 才是。
 --     ② 总量重建：Σ n_rows（各批）= MAX(audit_rn)（末批）
---        末批判定：实际返回行数 < 100000。   ← 本档批宽 100000，与上式同源，不得错配
+--        末批判定：实际返回行数 < 10000。   ← 本档批宽 10000，与上式同源，不得错配
 --     ③ 区间完备：∪ [audit_rn_min, audit_rn_max] = 1 .. MAX(audit_rn)
 --        无缺号、无重号、无重叠、无遗漏。
 --   ★ 落盘前后各抄一次 testline_id_checksum（现值 5,802,687），不等即整批作废重跑。
@@ -927,12 +952,12 @@ WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101';
 --   1. A_anchor.csv   [总包行 2999~3009 · 原 5 列 ＋六层约 60 列]
 --     典型学：M06 代理线　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`ip`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -941,13 +966,13 @@ WHERE dt >= '2026-03-21' AND dt < '2026-08-07' AND bet02 = '101';
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -978,6 +1003,7 @@ FROM (
            CONCAT_WS('|', b.bet39, b.bet03)                               AS x_tblshoe,
            CAST(NULLIF(TRIM(b.bet04),'') AS INT)                          AS x_rno,
            CASE WHEN b.dt >= '2026-07-08' THEN 1 ELSE 0 END               AS x_rec,
+           -- CASE WHEN b.dt >= DATE_SUB(CURRENT_DATE, INTERVAL 30 DAY) THEN 1 ELSE 0 END AS x_rec,
            CASE WHEN TRIM(b.commission)='1' THEN 1 ELSE 0 END             AS x_freecomm,
            CAST(NULLIF(TRIM(b.bet13),'') AS DECIMAL(20,4))
              / CAST(NULLIF(TRIM(b.bet11),'') AS DECIMAL(20,8))            AS x_stake,
@@ -1215,24 +1241,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`ip` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -1240,11 +1266,11 @@ ORDER BY z.audit_rn;
 --   2. B01_bt_panel.csv   [总包行 5314~5392 · 原 14 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -1253,13 +1279,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -1594,24 +1620,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -1619,11 +1645,11 @@ ORDER BY z.audit_rn;
 --   3. B01_bt_panel_delta.csv   [总包行 5406~5484 · 原 14 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -1632,13 +1658,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -1973,24 +1999,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -2004,11 +2030,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -2017,13 +2043,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -2446,24 +2472,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -2471,11 +2497,11 @@ ORDER BY z.audit_rn;
 --   5. B4_5b_tip_nature.csv   [总包行 12072~12103 · 原 16 列 ＋六层约 60 列]
 --     典型学：M14 投注形态　派生旗标：freecomm（s.x_freecomm = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet09_value`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -2484,13 +2510,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -2778,24 +2804,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet09_value` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -2803,11 +2829,11 @@ ORDER BY z.audit_rn;
 --   6. B_online_base.csv   [总包行 2929~2991 · 原 7 列 ＋六层约 60 列]
 --     典型学：Z00 基建/元数据　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`table_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -2816,13 +2842,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -3142,24 +3168,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`table_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -3167,11 +3193,11 @@ ORDER BY z.audit_rn;
 --   7. C01_ip_chain.csv   [总包行 1663~1723 · 原 8 列 ＋六层约 60 列]
 --     典型学：M04 IP 聚集　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet_ip`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -3180,13 +3206,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -3513,24 +3539,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet_ip` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -3538,11 +3564,11 @@ ORDER BY z.audit_rn;
 --   8. C06_hedge_pairs.csv   [总包行 5814~5886 · 原 7 列 ＋六层约 60 列]
 --     典型学：M02 对冲对打　派生旗标：hedge（h.n_side >= 2 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet_ip`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -3551,13 +3577,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -3888,24 +3914,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet_ip` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -3913,11 +3939,11 @@ ORDER BY z.audit_rn;
 --   9. C06d_hedge_pairs_dated.csv   [总包行 8067~8133 · 原 9 列 ＋六层约 60 列]
 --     典型学：M02 对冲对打　派生旗标：hedge（h.n_side >= 2 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet_ip`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -3926,13 +3952,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -4257,24 +4283,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet_ip` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -4288,11 +4314,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -4301,13 +4327,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -4675,24 +4701,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -4706,11 +4732,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -4719,13 +4745,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -5093,24 +5119,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -5118,11 +5144,11 @@ ORDER BY z.audit_rn;
 --  12. D03S_daily_roi_diff.csv   [总包行 1991~2062 · 原 7 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet_date`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -5131,13 +5157,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -5466,24 +5492,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet_date` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -5497,11 +5523,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -5510,13 +5536,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -5853,24 +5879,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -5884,11 +5910,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -5897,13 +5923,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -6229,24 +6255,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -6260,11 +6286,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -6273,13 +6299,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -6610,24 +6636,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -6635,11 +6661,11 @@ ORDER BY z.audit_rn;
 --  16. DICT_01d_bet_latency.csv   [总包行 11893~11926 · 原 14 列 ＋六层约 60 列]
 --     典型学：Z00 基建/元数据　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`table_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -6648,13 +6674,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -6944,24 +6970,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`table_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -6969,11 +6995,11 @@ ORDER BY z.audit_rn;
 --  17. DX04_bet09_profile.csv   [总包行 5971~6005 · 原 9 列 ＋六层约 60 列]
 --     典型学：M14 投注形态　派生旗标：freecomm（s.x_freecomm = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet_side`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -6982,13 +7008,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -7279,24 +7305,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet_side` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -7304,11 +7330,11 @@ ORDER BY z.audit_rn;
 --  18. DX05_product_panorama.csv   [总包行 6020~6073 · 原 14 列 ＋六层约 60 列]
 --     典型学：M14 投注形态　派生旗标：freecomm（s.x_freecomm = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`product_code`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -7317,13 +7343,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -7634,24 +7660,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`product_code` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -7665,11 +7691,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -7678,13 +7704,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -8076,24 +8102,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -8101,11 +8127,11 @@ ORDER BY z.audit_rn;
 --  20. EV01_disposal_events.csv   [总包行 7112~7153 · 原 13 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`event_date`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -8114,13 +8140,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -8417,24 +8443,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`event_date` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -8442,11 +8468,11 @@ ORDER BY z.audit_rn;
 --  21. EV02_member_disposal.csv   [总包行 7289~7322 · 原 12 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`event_date`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -8455,13 +8481,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -8751,24 +8777,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`event_date` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -8776,11 +8802,11 @@ ORDER BY z.audit_rn;
 --  22. I_ip_agg.csv   [总包行 2695~2768 · 原 14 列 ＋六层约 60 列]
 --     典型学：M04 IP 聚集　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet_ip`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -8789,13 +8815,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -9125,24 +9151,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet_ip` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -9150,11 +9176,11 @@ ORDER BY z.audit_rn;
 --  23. I_ip_player.csv   [总包行 1589~1654 · 原 14 列 ＋六层约 60 列]
 --     典型学：M04 IP 聚集　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -9163,13 +9189,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -9493,22 +9519,25 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 已实测 = 696,403 → 共 7 批（末批实得 96,403 行）
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批（实得 96,403 行，末批）
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 已实测 = 696,403 → 本档（1 万宽）共 70 批（末批为第 70 批，实得 6,403 行）
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    ★ 史实（OBSERVED · 10 万宽版实测，勿套用于本档）：10 万宽版第 7 批
+--      （600000 / 700000）实得 96,403 行、为末批 ⇒ 本件 T_true = 696,403。
+--      换算至本档（1 万宽）：批数 = CEIL(696403/10000) = 70，末批为第 70 批，实得 6,403 行。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -9516,11 +9545,11 @@ ORDER BY z.audit_rn;
 --  24. K01_risk_feature_matrix.csv   [总包行 5499~5591 · 原 15 列 ＋六层约 60 列]
 --     典型学：M11 异常告警　派生旗标：alarm（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -9529,13 +9558,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -9884,24 +9913,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -9909,11 +9938,11 @@ ORDER BY z.audit_rn;
 --  25. K01b_seed_goldip.csv   [总包行 5637~5643 · 原 2 列 ＋六层约 60 列]
 --     典型学：M04 IP 聚集　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -9922,13 +9951,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -10191,24 +10220,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -10216,11 +10245,11 @@ ORDER BY z.audit_rn;
 --  26. K01b_seed_manual.csv   [总包行 5618~5625 · 原 2 列 ＋六层约 60 列]
 --     典型学：M11 异常告警　派生旗标：alarm（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -10229,13 +10258,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -10498,24 +10527,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -10523,11 +10552,11 @@ ORDER BY z.audit_rn;
 --  27. K01c_seed_dated.csv   [总包行 8330~8337 · 原 6 列 ＋六层约 60 列]
 --     典型学：M04 IP 聚集　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`seed_ip`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -10536,13 +10565,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -10805,24 +10834,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`seed_ip` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -10836,11 +10865,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -10849,13 +10878,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -11161,24 +11190,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -11192,11 +11221,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -11205,13 +11234,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -11534,24 +11563,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -11565,11 +11594,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -11578,13 +11607,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -11904,24 +11933,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -11935,11 +11964,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -11948,13 +11977,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -12279,24 +12308,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -12310,11 +12339,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -12323,13 +12352,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -12648,24 +12677,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -12679,11 +12708,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -12692,13 +12721,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -13036,24 +13065,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -13067,11 +13096,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -13080,13 +13109,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -13448,24 +13477,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -13479,11 +13508,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -13492,13 +13521,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -13808,24 +13837,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -13839,11 +13868,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -13852,13 +13881,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -14176,24 +14205,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -14207,11 +14236,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -14220,13 +14249,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -14535,24 +14564,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -14566,11 +14595,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -14579,13 +14608,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -14920,24 +14949,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -14951,11 +14980,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -14964,13 +14993,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -15285,24 +15314,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -15316,11 +15345,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -15329,13 +15358,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -15672,24 +15701,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -15703,11 +15732,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -15716,13 +15745,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -16055,24 +16084,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -16086,11 +16115,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -16099,13 +16128,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -16443,24 +16472,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -16474,11 +16503,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -16487,13 +16516,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -16832,24 +16861,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -16863,11 +16892,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -16876,13 +16905,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -17323,24 +17352,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -17348,11 +17377,11 @@ ORDER BY z.audit_rn;
 --  45. P11_阿泽尾段投注模型会员名单.csv   [总包行 9443~9500 · 原 9 列 ＋六层约 60 列]
 --     典型学：M03 尾段投注　派生旗标：late（s.x_rno*1.0/NULLIF(p.max_rno,0) >= 0.80 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`player_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -17361,13 +17390,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -17683,24 +17712,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`player_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -17714,11 +17743,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -17727,13 +17756,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -18140,24 +18169,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -18165,11 +18194,11 @@ ORDER BY z.audit_rn;
 --  47. P12a_platform_daily.csv   [总包行 9808~9873 · 原 9 列 ＋六层约 60 列]
 --     典型学：Z00 基建/元数据　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`dt`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -18178,13 +18207,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -18506,24 +18535,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`dt` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -18531,11 +18560,11 @@ ORDER BY z.audit_rn;
 --  48. P12b_member_events.csv   [总包行 9885~9941 · 原 8 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`uid`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -18544,13 +18573,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -18863,24 +18892,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`uid` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -18888,11 +18917,11 @@ ORDER BY z.audit_rn;
 --  49. P12c_member_daily_pnl.csv   [总包行 9954~10005 · 原 6 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`uid`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -18901,13 +18930,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -19215,24 +19244,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`uid` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -19240,11 +19269,11 @@ ORDER BY z.audit_rn;
 --  50. P13_personal_entry.csv   [总包行 10145~10204 · 原 7 列 ＋六层约 60 列]
 --     典型学：M03 尾段投注　派生旗标：late（s.x_rno*1.0/NULLIF(p.max_rno,0) >= 0.80 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`uid`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -19253,13 +19282,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -19577,24 +19606,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`uid` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -19602,11 +19631,11 @@ ORDER BY z.audit_rn;
 --  51. PH0_8r1_rg_case.csv   [总包行 13308~13322 · 原 8 列 ＋六层约 60 列]
 --     典型学：M10 责任博彩　派生旗标：pre_rg（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`target_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -19615,13 +19644,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -19890,24 +19919,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`target_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -19921,11 +19950,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -19934,13 +19963,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -20297,24 +20326,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -20322,11 +20351,11 @@ ORDER BY z.audit_rn;
 --  53. PI01_treatment_delta_member.csv   [总包行 13468~13599 · 原 21 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -20335,13 +20364,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -20729,24 +20758,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -20760,11 +20789,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -20773,13 +20802,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -21182,24 +21211,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -21213,11 +21242,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -21226,13 +21255,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -21597,24 +21626,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -21622,11 +21651,11 @@ ORDER BY z.audit_rn;
 --  56. PI04_member_5d_profile.csv   [总包行 13808~13877 · 原 20 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -21635,13 +21664,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -21967,24 +21996,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -21992,11 +22021,11 @@ ORDER BY z.audit_rn;
 --  57. P_player_month.csv   [总包行 2865~2921 · 原 9 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -22005,13 +22034,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -22330,24 +22359,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -22361,11 +22390,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -22374,13 +22403,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -22726,24 +22755,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -22751,11 +22780,11 @@ ORDER BY z.audit_rn;
 --  59. QSB_01c_cat1_contamination.csv   [总包行 11250~11283 · 原 10 列 ＋六层约 60 列]
 --     典型学：M14 投注形态　派生旗标：freecomm（s.x_freecomm = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet09_value`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -22764,13 +22793,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -23060,24 +23089,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet09_value` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -23091,11 +23120,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -23104,13 +23133,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -23434,24 +23463,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -23465,11 +23494,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -23478,13 +23507,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -24038,24 +24067,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -24069,11 +24098,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -24082,13 +24111,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -24485,24 +24514,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -24516,11 +24545,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -24529,13 +24558,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -24889,24 +24918,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -24914,11 +24943,11 @@ ORDER BY z.audit_rn;
 --  64. R01_late_shoe.csv   [总包行 3463~3539 · 原 15 列 ＋六层约 60 列]
 --     典型学：M03 尾段投注　派生旗标：late（s.x_rno*1.0/NULLIF(p.max_rno,0) >= 0.80 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`uid`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -24927,13 +24956,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -25268,24 +25297,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`uid` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -25293,11 +25322,11 @@ ORDER BY z.audit_rn;
 --  65. R01_late_shoe_w2.csv   [总包行 10048~10124 · 原 15 列 ＋六层约 60 列]
 --     典型学：M03 尾段投注　派生旗标：late（s.x_rno*1.0/NULLIF(p.max_rno,0) >= 0.80 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`uid`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -25306,13 +25335,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -25647,24 +25676,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`uid` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -25672,11 +25701,11 @@ ORDER BY z.audit_rn;
 --  66. R01anm_shoe_anomaly.csv   [总包行 3948~4009 · 原 11 列 ＋六层约 60 列]
 --     典型学：M03 尾段投注　派生旗标：late（s.x_rno*1.0/NULLIF(p.max_rno,0) >= 0.80 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`table_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -25685,13 +25714,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -26011,24 +26040,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`table_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -26036,11 +26065,11 @@ ORDER BY z.audit_rn;
 --  67. R01chk_shoe_len_by_table.csv   [总包行 3725~3855 · 原 28 列 ＋六层约 60 列]
 --     典型学：M03 尾段投注　派生旗标：late（s.x_rno*1.0/NULLIF(p.max_rno,0) >= 0.80 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`table_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -26049,13 +26078,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -26444,24 +26473,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`table_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -26475,11 +26504,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -26488,13 +26517,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -26875,24 +26904,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -26900,11 +26929,11 @@ ORDER BY z.audit_rn;
 --  69. R02_same_table.csv   [总包行 4293~4365 · 原 12 列 ＋六层约 60 列]
 --     典型学：M01 同桌团伙　派生旗标：same（c.n_seat >= 2 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`uid1`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -26913,13 +26942,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -27250,24 +27279,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`uid1` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -27275,11 +27304,11 @@ ORDER BY z.audit_rn;
 --  70. R03_player_dealer.csv   [总包行 4502~4633 · 原 33 列 ＋六层约 60 列]
 --     典型学：M07 荷官关联　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`uid`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -27288,13 +27317,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -27682,24 +27711,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`uid` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -27707,11 +27736,11 @@ ORDER BY z.audit_rn;
 --  71. R03b_player_dealer_daily.csv   [总包行 6143~6242 · 原 24 列 ＋六层约 60 列]
 --     典型学：M07 荷官关联　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`uid`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -27720,13 +27749,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -28071,15 +28100,13 @@ FROM (
            --   ★ 本件之 e.* 仍照常供经济层／分布层／关系层／rate 层／动态层使用，仅六层置 NULL。
            --   ★ audit_rn 不受影响：其 26 个排序键之首二者 residual_b / roi 出自经济层，本段未动。
            --   ★ 副效：本段 8 个无 PARTITION BY 之窗口算子随之消失，全局排序由 9 个降为 1 个。
-           --   ✅ HF9g-P5D-b · W-61 已斧正（原三处字面值随模板逐字沿用致名实不符，现改如下）：
-           --        pr_qualified_population   'GLOBAL_BASELINE_NO_ENTITY_RANKING' → CAST(NULL AS STRING)
-           --        pr_calculation_method     'NOT_APPLICABLE_GLOBAL_BASELINE'    → CAST(NULL AS STRING)
-           --        pr_calculation_version    'HF9g-P5'（血统不符）                → 'HF9g-P5D-b'（本件实际血统）
-           --        action_priority           'X 全窗基线 · 不参与实体赏罚' —— 语义核验通过，维持不变（非字面值缺陷）
-           --        改法依据：CAST(NULL) 不引入 P4D/P5D 以外常量，符合「禁引包外」之令；
-           --        version 一项因非"取值适用性"而是"取值真实性"问题，故更正而非置 NULL。
-           --   ★ 阻断解除：原阻断条件（名实不符）已不成立。K-1（会员级广播）为独立缺陷，不因本项解除而解除，
-           --     详见另案《R03b K-1 拆件方案》，本档暂未施行拆件，此点仍须在下游消费前另行确认。
+           --   ⚠⚠ 待裁 · 阻断告警（本段三处字面值随模板逐字沿用，于本件**名实不符**）：
+           --        pr_qualified_population   = 'GLOBAL_BASELINE_NO_ENTITY_RANKING'
+           --        pr_calculation_method     = 'NOT_APPLICABLE_GLOBAL_BASELINE'
+           --        action_priority           = 'X 全窗基线 · 不参与实体赏罚'
+           --        本件属【行加权错粒度族】，**并非全窗基线族**；三值将随 CSV 落地，构成失实血统标签。
+           --        改之则须引入 P4D/P5D 以外之常量，违「禁引包外」之令 ⇒ 故逐字沿用并在此立案。
+           --        ★ 本项未裁定前，本件 CSV **不得进入任何对外交付或下游消费**，仅供跑通性验证。
            CAST(NULL AS INT)                                              AS vip_tier,                        -- 空值取值：全窗基线族无实体可分档，置 NULL（NULL＝不适用，非 0）
            CAST(NULL AS DOUBLE)                                           AS economic_value,                  -- 空值取值：同上，禁以常数百分位冒充经济价值
            CAST(NULL AS DOUBLE)                                           AS roi_pr_global,                   -- 空值取值：同上
@@ -28087,11 +28114,11 @@ FROM (
            CAST(NULL AS DOUBLE)                                           AS pr_stake,                        -- 空值取值：兼容列，同上
            CAST(NULL AS DOUBLE)                                           AS pr_global,                       -- 空值取值：同上
            CAST(NULL AS DOUBLE)                                           AS pr_qualified,                    -- 空值取值：同上
-           CAST(NULL AS STRING)                                           AS pr_qualified_population,         -- HF9g-P5D-b·W-61斧正：原'GLOBAL_BASELINE_NO_ENTITY_RANKING'于本件（行加权错粒度族）名实不符，改NULL
+           'GLOBAL_BASELINE_NO_ENTITY_RANKING'                            AS pr_qualified_population,         -- 字面取值：血统 —— 明示本件为全窗基线族，无实体排序总体
            CAST(NULL AS BIGINT)                                           AS pr_global_population_n,          -- 空值取值：血统 —— 不适用
            CAST(NULL AS BIGINT)                                           AS pr_qualified_population_n,       -- 空值取值：血统 —— 不适用
-           CAST(NULL AS STRING)                                           AS pr_calculation_method,           -- HF9g-P5D-b·W-61斧正：原'NOT_APPLICABLE_GLOBAL_BASELINE'于本件名实不符，改NULL
-           'HF9g-P5D-b'                                                   AS pr_calculation_version,          -- HF9g-P5D-b·W-61斧正：原'HF9g-P5'血统不符（本件实际血统为P5D-b），更正为实际值，非置NULL
+           'NOT_APPLICABLE_GLOBAL_BASELINE'                               AS pr_calculation_method,           -- 字面取值：血统 —— 算法不适用
+           'HF9g-P5'                                                      AS pr_calculation_version,          -- 字面取值：血统 —— 算法版本
            CAST(NULL AS STRING)                                           AS evidence_flag,                   -- 空值取值：证据旗标不适用于全窗基线
            CAST(NULL AS STRING)                                           AS evidence_rate,                   -- 空值取值：同上
            CAST(NULL AS DOUBLE)                                           AS hold_ci_halfwidth_approx,        -- 空值取值：同上
@@ -28131,24 +28158,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`uid` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -28156,11 +28183,11 @@ ORDER BY z.audit_rn;
 --  72. R03chk_settlement_form.csv   [总包行 4684~4723 · 原 6 列 ＋六层约 60 列]
 --     典型学：M07 荷官关联　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet_side`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -28169,13 +28196,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -28471,24 +28498,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet_side` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -28502,11 +28529,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -28515,13 +28542,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -28874,24 +28901,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -28905,11 +28932,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -28918,13 +28945,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -29229,24 +29256,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -29254,11 +29281,11 @@ ORDER BY z.audit_rn;
 --  75. S01_player_score.csv   [总包行 2198~2320 · 原 11 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -29267,13 +29294,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -29671,24 +29698,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -29696,11 +29723,11 @@ ORDER BY z.audit_rn;
 --  76. S02_dealer_score.csv   [总包行 2339~2458 · 原 9 列 ＋六层约 60 列]
 --     典型学：M07 荷官关联　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`dealer_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -29709,13 +29736,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -30092,24 +30119,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`dealer_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -30117,11 +30144,11 @@ ORDER BY z.audit_rn;
 --  77. S02b_dealer_pace.csv   [总包行 6390~6447 · 原 3 列 ＋六层约 60 列]
 --     典型学：M07 荷官关联　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`dealer_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -30130,13 +30157,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -30450,24 +30477,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`dealer_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
 --  78. S03_agent_score.csv   [总包行 HF6 就地重写 · 原 9 列 → 现 31 列 · 五级全展开]
@@ -30498,11 +30525,11 @@ ORDER BY z.audit_rn;
 --  ★ 跨级不可相加：每级都对整条线注单摊算一次，五级相加会 5 倍重复计数。
 --    比较须在同一 agent_level 内进行。
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -30512,7 +30539,7 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝ residual_b 最小者（AG-03 未裁定，故不称「平台真净亏最多者」）。
@@ -30522,7 +30549,7 @@ ORDER BY z.audit_rn;
 --         n_bets_all = n_bets_prod + n_bets_testline
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)                 AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)                 AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -30656,24 +30683,24 @@ FROM (
   SELECT q.* FROM q
 ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键与原版审计版**逐字同一**（锁一），故两版可逐行对账。
 
@@ -30682,11 +30709,11 @@ ORDER BY z.audit_rn;
 --  79. S04_analyst_score.csv   [总包行 6277~6302 · 原 7 列 ＋六层约 60 列]
 --     典型学：R01 风控专员　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`entity_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -30695,13 +30722,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -30982,24 +31009,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`entity_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -31007,11 +31034,11 @@ ORDER BY z.audit_rn;
 --  80. S05_member_month_panel.csv   [总包行 2614~2678 · 原 10 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -31020,13 +31047,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -31351,24 +31378,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -31376,11 +31403,11 @@ ORDER BY z.audit_rn;
 --  81. S_player_tail.csv   [总包行 2077~2189 · 原 18 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -31389,13 +31416,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -31764,24 +31791,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -31789,11 +31816,11 @@ ORDER BY z.audit_rn;
 --  82. S_second_dist.csv   [总包行 1914~1982 · 原 8 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`table_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -31802,13 +31829,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -32134,24 +32161,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`table_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -32159,11 +32186,11 @@ ORDER BY z.audit_rn;
 --  83. T02_daily_roi.csv   [总包行 5146~5190 · 原 5 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -32172,13 +32199,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -32479,24 +32506,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -32504,11 +32531,11 @@ ORDER BY z.audit_rn;
 --  84. T03_arbitrage.csv   [总包行 5204~5275 · 原 10 列 ＋六层约 60 列]
 --     典型学：M02 对冲对打　派生旗标：hedge（h.n_side >= 2 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -32517,13 +32544,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -32853,24 +32880,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -32884,11 +32911,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -32897,13 +32924,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -33251,24 +33278,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -33282,11 +33309,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -33295,13 +33322,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -33633,24 +33660,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -33658,11 +33685,11 @@ ORDER BY z.audit_rn;
 --  87. TL03_pseudo_treatment.csv   [总包行 8276~8324 · 原 6 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -33671,13 +33698,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -33981,24 +34008,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -34006,11 +34033,11 @@ ORDER BY z.audit_rn;
 --  88. TL03b_pseudo_treatment.csv   [总包行 8417~8466 · 原 8 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -34019,13 +34046,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -34330,24 +34357,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -34361,11 +34388,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -34374,13 +34401,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -34687,24 +34714,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -34712,11 +34739,11 @@ ORDER BY z.audit_rn;
 --  90. TL06_log_mem_change.csv   [总包行 8473~8479 · 原 2 列 ＋六层约 60 列]
 --     典型学：Z00 基建/元数据　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`dt`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -34725,13 +34752,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -34993,24 +35020,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`dt` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -35024,11 +35051,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -35037,13 +35064,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -35358,24 +35385,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -35383,11 +35410,11 @@ ORDER BY z.audit_rn;
 --  92. TL08_treatment_events.csv   [总包行 8541~8572 · 原 9 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -35396,13 +35423,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -35690,24 +35717,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -35721,11 +35748,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -35734,13 +35761,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -36045,24 +36072,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -36070,11 +36097,11 @@ ORDER BY z.audit_rn;
 --  94. TL10_treatment_ledger.csv   [总包行 8615~8675 · 原 10 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -36083,13 +36110,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -36406,24 +36433,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -36431,11 +36458,11 @@ ORDER BY z.audit_rn;
 --  95. TL11_treatment_episode.csv   [总包行 8706~8832 · 原 24 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -36444,13 +36471,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -36833,24 +36860,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -36864,11 +36891,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -36877,13 +36904,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -37271,24 +37298,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -37296,11 +37323,11 @@ ORDER BY z.audit_rn;
 --  97. TL14_limit_treatment.csv   [总包行 5058~5136 · 原 15 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -37309,13 +37336,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -37650,24 +37677,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -37675,11 +37702,11 @@ ORDER BY z.audit_rn;
 --  98. T_table_span.csv   [总包行 1447~1455 · 原 6 列 ＋六层约 60 列]
 --     典型学：M15 活跃周期　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`table_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -37688,13 +37715,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -37959,24 +37986,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`table_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -37990,11 +38017,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -38003,13 +38030,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -38334,24 +38361,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -38365,11 +38392,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -38378,13 +38405,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -38755,24 +38782,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -38786,11 +38813,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -38799,13 +38826,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -39142,24 +39169,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -39167,11 +39194,11 @@ ORDER BY z.audit_rn;
 -- 102. VB_41b_identity_strata.csv   [总包行 10761~10792 · 原 10 列 ＋六层约 60 列]
 --     典型学：M05 退水套利　派生旗标：hiturn（s.x_valid > s.x_stake · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet09_value`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -39180,13 +39207,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -39474,24 +39501,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet09_value` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -39499,11 +39526,11 @@ ORDER BY z.audit_rn;
 -- 103. VB_41b_identity_strata_v18b.csv   [总包行 10876~10930 · 原 18 列 ＋六层约 60 列]
 --     典型学：M05 退水套利　派生旗标：hiturn（s.x_valid > s.x_stake · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`bet09_value`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -39512,13 +39539,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -39829,24 +39856,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`bet09_value` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -39854,11 +39881,11 @@ ORDER BY z.audit_rn;
 -- 104. VB_41c1_964_detail.csv   [总包行 10939~10970 · 原 22 列 ＋六层约 60 列]
 --     典型学：M05 退水套利　派生旗标：hiturn（s.x_valid > s.x_stake · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -39867,13 +39894,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -40161,24 +40188,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -40192,11 +40219,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -40205,13 +40232,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -40576,24 +40603,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -40607,11 +40634,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -40620,13 +40647,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -41016,24 +41043,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -41041,11 +41068,11 @@ ORDER BY z.audit_rn;
 -- 107. V_ipmatch.csv   [总包行 3017~3029 · 原 5 列 ＋六层约 60 列]
 --     典型学：M04 IP 聚集　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`ip`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -41054,13 +41081,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -41329,24 +41356,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`ip` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -41360,11 +41387,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -41373,13 +41400,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -41752,24 +41779,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -41783,11 +41810,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -41796,13 +41823,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -42112,24 +42139,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -42143,11 +42170,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -42156,13 +42183,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -42546,24 +42573,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -42577,11 +42604,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -42590,13 +42617,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -42915,24 +42942,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -42946,11 +42973,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -42959,13 +42986,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -43285,24 +43312,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -43316,11 +43343,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -43329,13 +43356,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -43647,24 +43674,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -43678,11 +43705,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -43691,13 +43718,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -44021,24 +44048,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -44052,11 +44079,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -44065,13 +44092,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -44391,24 +44418,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -44422,11 +44449,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -44435,13 +44462,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -44763,24 +44790,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -44794,11 +44821,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -44807,13 +44834,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -45153,24 +45180,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -45184,11 +45211,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -45197,13 +45224,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -45543,24 +45570,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -45574,11 +45601,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -45587,13 +45614,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -45927,24 +45954,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -45958,11 +45985,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -45971,13 +45998,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -46318,24 +46345,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -46343,11 +46370,11 @@ ORDER BY z.audit_rn;
 -- 121. Z14_zero_month_diagnosis.csv   [总包行 1026~1130 · 原 23 列 ＋六层约 60 列]
 --     典型学：M12 资金轨迹　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -46356,13 +46383,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -46723,24 +46750,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -46748,11 +46775,11 @@ ORDER BY z.audit_rn;
 -- 122. _P12b-pre.csv   [总包行 9791~9799 · 原 4 列 ＋六层约 60 列]
 --     典型学：M09 处置限额　派生旗标：post（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`member_id`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -46761,13 +46788,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -47032,24 +47059,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`member_id` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -47063,11 +47090,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -47076,13 +47103,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -47435,24 +47462,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -47466,11 +47493,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -47479,13 +47506,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -47834,24 +47861,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -47865,11 +47892,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -47878,13 +47905,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -48202,24 +48229,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -48233,11 +48260,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -48246,13 +48273,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -48562,24 +48589,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -48593,11 +48620,11 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
@@ -48606,13 +48633,13 @@ ORDER BY z.audit_rn;
 
 -- ── ③ 每批取回后自证四数（任一不符即停手回报，禁止放行）──
 --    n_rows        = COUNT(*)      须等于 COUNT(DISTINCT audit_rn)   （批内无重复）
---    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*100000 + 1           （与上批严丝合缝）
+--    audit_rn_min  = MIN(audit_rn) 须等于 (k-1)*10000 + 1           （与上批严丝合缝）
 --    audit_rn_max  = MAX(audit_rn) 须等于 min + n_rows - 1           （批内无缺口）
 --    全批取毕再验：各批 audit_rn 之并集 = 1 .. T_true，无缺号、无重号。
 --     ★ 首行＝平台真净亏最多者（已扣退水与代理占成）。
 --
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -48943,24 +48970,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -48974,18 +49001,18 @@ ORDER BY z.audit_rn;
 --       action_priority 每一行皆为「A 净亏最大十分位 · 优先复核」（Z 分支永不触发）；
 --       evidence_rate 恒为最高档；vip_tier 由常数键分档 ⇒ 无信息且非确定。
 --   ⇒ 本件决策层三列 **NOT_FOR_DECISION**，裁定前不得用于排班、抽查或汇报。
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
 --    ★ 锁三：二者皆为审计字段，**不得进入任何业务指标计算**。
 --    ★ 锁四：两版经 audit_rn 逐行字段核验后，方可宣布输出完全一致。
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -49309,24 +49336,24 @@ FROM (
     CROSS JOIN x_win e
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 
 
@@ -49334,18 +49361,18 @@ ORDER BY z.audit_rn;
 -- 129. _PH0_6b_member_daily.csv   [总包行 13015~13025 · 原 6 列 ＋六层约 60 列]
 --     典型学：Z00 基建/元数据　派生旗标：recent（s.x_rec = 1 · 仅供 CASE 条件聚合，全包无任何 WHERE/AND/HAVING 以此过滤）　连接：q.`dt_day`
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
--- ── ① 先跑 T_true 留档（不足 100000 者一次导全，不必分批）──
+-- ── ① 先跑 T_true 留档（不足 10000 者一次导全，不必分批）──
 -- ── ① T_true：HF9c 不再强制预跑完整 COUNT。
---    本批实际返回行数 < 100000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
+--    本批实际返回行数 < 10000 即判定为末批；全批完成后以各批 n_rows / audit_rn 范围核对总量。
 
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --    审计字段二（REDTEAM 2026-08-24 裁定 · 四锁）：
 --      audit_rn  全局观测坐标 —— 由**与原版审计版逐字同一**之排序键所生，两版可逐行对账
 --      batch_id  物理分批信息 —— 该行所属批次，由 audit_rn 算得，非引擎所赋
 --    ★ 锁三：二者皆为审计字段，**不得进入任何业务指标计算**。
 --    ★ 锁四：两版经 audit_rn 逐行字段核验后，方可宣布输出完全一致。
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -49611,24 +49638,24 @@ FROM (
     LEFT JOIN x_agg e ON CAST(e.x_key AS STRING) = CAST(q.`dt_day` AS STRING)
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    本件 T_true 未测，无需先跑 T_true；以 0 / 100000 控制本批返回区间，末批由实际行数 < 100000 判定
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    WHERE z.audit_rn >   100000 AND z.audit_rn <=   200000   -- 第 2 批
---    WHERE z.audit_rn >   200000 AND z.audit_rn <=   300000   -- 第 3 批
---    WHERE z.audit_rn >   300000 AND z.audit_rn <=   400000   -- 第 4 批
---    WHERE z.audit_rn >   400000 AND z.audit_rn <=   500000   -- 第 5 批
---    WHERE z.audit_rn >   500000 AND z.audit_rn <=   600000   -- 第 6 批
---    WHERE z.audit_rn >   600000 AND z.audit_rn <=   700000   -- 第 7 批
---    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*100000 AND z.audit_rn <= k*100000
---    某批返回 < 100000 行即为末批，其后不再取。
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    本件 T_true 未测，无需先跑 T_true；以 0 / 10000 控制本批返回区间，末批由实际行数 < 10000 判定
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    WHERE z.audit_rn >   10000 AND z.audit_rn <=   20000   -- 第 2 批
+--    WHERE z.audit_rn >   20000 AND z.audit_rn <=   30000   -- 第 3 批
+--    WHERE z.audit_rn >   30000 AND z.audit_rn <=   40000   -- 第 4 批
+--    WHERE z.audit_rn >   40000 AND z.audit_rn <=   50000   -- 第 5 批
+--    WHERE z.audit_rn >   50000 AND z.audit_rn <=   60000   -- 第 6 批
+--    WHERE z.audit_rn >   60000 AND z.audit_rn <=   70000   -- 第 7 批
+--    …余批类推。第 k 批：WHERE z.audit_rn > (k-1)*10000 AND z.audit_rn <= k*10000
+--    某批返回 < 10000 行即为末批，其后不再取。
 --
 --    ⚠ 常见误写（务必避开）：只推下界而上界不动 ——
---        WHERE z.audit_rn > 100000 AND z.audit_rn <= 100000   ← 自相矛盾，恒为假，返回空集
---        WHERE z.audit_rn > 200000 AND z.audit_rn <= 100000   ← 同上，空集
---      两个数必须**同时**前进，且始终相差 100000。
+--        WHERE z.audit_rn > 10000 AND z.audit_rn <= 10000   ← 自相矛盾，恒为假，返回空集
+--        WHERE z.audit_rn > 20000 AND z.audit_rn <= 10000   ← 同上，空集
+--      两个数必须**同时**前进，且始终相差 10000。
 --      下界 ＝ 上一批之上界；上界 ＝ 本批之上界。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
 -- 130. DICT_ALL_columns.csv   [字典补件 · 元数据 · 无六层商业块]
@@ -49639,10 +49666,10 @@ ORDER BY z.audit_rn;
 -- 【本件立意】口诀 §八「字典缺口 —— P4 无一件承载」之补件其一。
 --   全部字段直取 information_schema.columns，同名跨表统计以窗口函数**现算**，无一硬编码（铁律第九条）。
 --   同名异型者标 CROSS_TABLE_TYPE_DIVERGENT，与 #Z04_name_collision 之「义异且型异」互为交叉验证。
--- ── ① T_true：本件行数远小于 100000，一次导全即可；批次阶梯照列以保体例一致 ──
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ① T_true：本件行数远小于 10000，一次导全即可；批次阶梯照列以保体例一致 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -49678,10 +49705,10 @@ FROM (
       WHERE c.`TABLE_SCHEMA` = 'ods_mariadb_2b'
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    某批返回 < 100000 行即为末批，其后不再取。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    某批返回 < 10000 行即为末批，其后不再取。
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键与分批作业版**逐字同一**（锁一），故两版可逐行对账。
 
@@ -49695,10 +49722,10 @@ ORDER BY z.audit_rn;
 --   ★ 行数分级须并读：n_rows_engine 出自 INFORMATION_SCHEMA.TABLES.TABLE_ROWS，属**引擎统计**而非 COUNT(*) 实测，
 --     故 row_count_grade 恒标 ENGINE_STATISTIC_NOT_EXACT_COUNT；欲得精确基数，请取 probe_sql_exact_count 一栏逐条执行。
 --   此栏为**现算生成**之 SQL 字符串（与 #Z06_generated_probe_sql 同治），非人工登记，故可随表清单自动扩张。
--- ── ① T_true：本件行数远小于 100000，一次导全即可；批次阶梯照列以保体例一致 ──
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ① T_true：本件行数远小于 10000，一次导全即可；批次阶梯照列以保体例一致 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -49741,10 +49768,10 @@ FROM (
       WHERE t.`TABLE_SCHEMA` = 'ods_mariadb_2b'
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    某批返回 < 100000 行即为末批，其后不再取。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    某批返回 < 10000 行即为末批，其后不再取。
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键与分批作业版**逐字同一**（锁一），故两版可逐行对账。
 
@@ -49761,10 +49788,10 @@ ORDER BY z.audit_rn;
 --     ③ 分级层（evidence_grade / evidence_source）—— 四级分级并附出处，可逐条回溯。
 --   ★ ord_shift 一栏即「bet14 起整体错位一格」之直接量测：若该假说成立，bet14 及其后各列之 ord_shift 应现出系统性非零。
 --   ★ 未裁者一律 R-UNRULED ＋ UNKNOWN，禁以推断填充。
--- ── ① T_true：本件行数远小于 100000，一次导全即可；批次阶梯照列以保体例一致 ──
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ① T_true：本件行数远小于 10000，一次导全即可；批次阶梯照列以保体例一致 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT)          AS batch_id,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id,
        'A168_HF9F_20260827_0900' AS run_id,
        '2026-08-27 09:00:00' AS snapshot_sync_time
 FROM (
@@ -49865,10 +49892,10 @@ FROM (
         ON a.`COLUMN_NAME` = b.`COLUMN_NAME`
   ) y
 ) z
--- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 100000，两数同进）──
---    WHERE z.audit_rn >        0 AND z.audit_rn <=   100000   -- 第 1 批
---    某批返回 < 100000 行即为末批，其后不再取。
-WHERE z.audit_rn > 0 AND z.audit_rn <= 100000 -- ★ HF9c 本批区间
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+--    WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+--    某批返回 < 10000 行即为末批，其后不再取。
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ HF9c 本批区间
 ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键与分批作业版**逐字同一**（锁一），故两版可逐行对账。
 
@@ -49979,17 +50006,17 @@ ORDER BY z.audit_rn;
 --   ③ 靴内位置效应：round_seq 与 hold 之关系（T-03 尾投已 FATAL 证伪，但那是【会员行为】，
 --      本件测的是【牌局本身】，二者不同问，不受 T-03 禁令约束）。
 --   ★ 以上三项皆为【可算而未算】，非【已证有效】。本件只提供地基，不承诺增益。
--- ── 分批作业版：每批 100,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
 -- ── ① T_true ＝ **6,048,562 行**（2026-09-03 实测回填；探针 v2.0.0 §1 全窗六锁实跑）。
---      ⇒ 共 **61 批**，末批 **48,562 行**（前 60 批各 100,000 行）。
---      本批实际返回行数 < 100000 即判定为末批；末批行数须为 48,562，不符即须查。
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+--      ⇒ 共 **605 批**，末批 **8,562 行**（前 604 批各 10,000 行）。
+--      本批实际返回行数 < 10000 即判定为末批；末批行数须为 8,562，不符即须查。
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --      审计字段二（四锁）：audit_rn 全局观测坐标（排序键与原版逐字同一，两版可逐行对账）；
 --      batch_id 物理分批信息（由 audit_rn 算得，非引擎所赋）。
 --      ★ 锁三：二者皆为审计字段，不得进入任何业务指标计算。
 --      ★ 锁四：两版经 audit_rn 逐行字段核验后，方可宣布输出完全一致。
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT) AS batch_id
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT) AS batch_id
 FROM (
 SELECT w.*,
        ROW_NUMBER() OVER (ORDER BY w.`biz_date`, w.`table_id`, w.`shoe_key`, w.`round_seq`, w.`round_key`) AS audit_rn,
@@ -50069,7 +50096,7 @@ FROM (
     GROUP BY b.round_key, b.table_id, b.shoe_key, b.round_seq
 ) w
 ) z
-WHERE z.audit_rn >        0 AND z.audit_rn <= 100000   -- 第 1 批
+WHERE z.audit_rn >        0 AND z.audit_rn <= 10000   -- 第 1 批
 ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键与分批作业版**逐字同一**（锁一），故两版可逐行对账。
 --     ★ n_member_pairs 系【零模型之分子基数】：全窗 Σ n_member_pairs 即同局共现之总对次，
@@ -50162,15 +50189,15 @@ ORDER BY z.audit_rn;
 --   · 只用行注释，无块注释；一切 ID 比较 CAST 至 BIGINT；一切除法以 NULLIF 护零
 --   · NULL ≠ 0，未观测者留 NULL 不写 0
 -- ▸ 导出：需要 —— 存为「数据库/HE01_bet_side_edge.csv」
--- ── 分批作业版：每批 100,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
 -- ── ① T_true ＝ **39 行**（2026-09-03 实测回填）⇒ 共 **1 批**，末批 **39 行**。
--- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 --      审计字段二（四锁）：audit_rn 全局观测坐标（排序键与原版逐字同一，两版可逐行对账）；
 --      batch_id 物理分批信息（由 audit_rn 算得，非引擎所赋）。
 --      ★ 锁三：二者皆为审计字段，不得进入任何业务指标计算。
 --      ★ 锁四：两版经 audit_rn 逐行字段核验后，方可宣布输出完全一致。
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT) AS batch_id
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT) AS batch_id
 FROM (
 SELECT w.*,
        ROW_NUMBER() OVER (ORDER BY w.`valid_bet` DESC, w.`bet_side`, w.`is_freecomm`) AS audit_rn,
@@ -50255,7 +50282,7 @@ FROM (
     GROUP BY b.bet_side, b.is_freecomm
 ) w
 ) z
-WHERE z.audit_rn >        0 AND z.audit_rn <= 100000   -- 第 1 批
+WHERE z.audit_rn >        0 AND z.audit_rn <=  10000   -- 第 1 批
 ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键与分批作业版**逐字同一**（锁一），故两版可逐行对账。
 --     ★ 本件仅 39 行，一批即全；分批版之 batch_id 只为体例一致与两版可逐行对账，非因体量。
@@ -50265,54 +50292,98 @@ ORDER BY z.audit_rn;
 --       以本件之 realized 值代入者，对本窗近乎恒等式（Σtheo ≈ Σprofit），⛔ 只可作分摊，不可称期望。
 
 -- 135. RK02_table_day_risk.csv   [桌台 × 日 之风险调整表 · 新建 · 无六层商业块]
+
 --     典型学：桌台 日序风险　粒度：table_id × biz_date　说明：Sharpe／Sortino／MDD 之唯一无阻断来源
+
 --     ★ 本件循 ＃078 S03_agent_score ／ ＃130~＃132 字典三件 ／ ＃133 RK01 ／ ＃134 HE01 之例，
+
 --       **不套六层商业模板** —— 无 NTILE／PERCENT_RANK／vip_tier／economic_value／action_priority。
+
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
+
 -- 【本件立意 · 承 UCC 统一坐标之 TS 轴】
+
 --   UCC 登记册实测：sharpe ／ sortino ／ mdd 三者全库 **0 栏**，归「② 缺算」而非「① 缺件」——
+
 --   其所缺者只是【日序粒度】，非授权。而 桌台 系**营运单位**，其收益波动本就该管。
+
 --   ⇒ 自 ODS 按 桌台 × 日 聚合即得，**不需解 F-47、不需理论 edge、不需 x_prod**。
+
 --   ★ 这是当前**唯一无须解任何阻断即可补上之风险调整指标**。
+
 --   ★ 本件只出【事实】，不出【判定】：无旗标分档、无 action、无相对排名。
+
 --
+
 -- 【口径六锁 · 与全包逐字同一，勿改】
+
 --   ① 窗口 dt >= '2026-03-21' AND dt < '2026-08-07'　② 产品 bet02 = '101'
+
 --   ③ 快照 sync_time <= '2026-08-27 09:00:00'
+
 --   ④ 去重 PARTITION BY bet01 ORDER BY updatetime DESC, sync_time DESC, dt DESC 取 rn = 1
+
 --   ⑤ 基础闸 category='1' · UPPER(bet38)='N' · 非测试线 · bet05>0 · bet11>0 · table_id 非空
+
 --   ⑥ 归一 一切金额除以 bet11（汇率）
+
 --
+
 -- 【风险量之基准 —— ⛔ 必读】
+
 --   本件一切风险量皆以 **ggr（＝(bet13 − bet14)/bet11，牌桌毛赢，庄家视角）** 之【日序】为基，
+
 --   与 ＃133 RK01 之 ggr 逐字同式。⛔ 承 UCC 引用纪律：**引用 MDD 必带基准**——
+
 --   2026-09-03 平台层实测：以 ggr_sum 为基 MDD/累计 ＝ 0.051923%%，以 profit 为基 0.086628%%，
+
 --   以 ngr 为基 0.123954%%，三者相差逾一倍。本件恒以 ggr 为基，故列 risk_basis 一栏自证。
+
 --
+
 -- 【定义】（皆于该 桌台 之【全窗】上算，逐日行内重复携带，便于下游直接筛）
+
 --   mean_daily_ggr  日 ggr 之均值　　sd_daily_ggr  日 ggr 之样本标准差
+
 --   downside_sd     仅计 ggr < 均值 之下行离差（Sortino 之分母）
+
 --   sharpe_window   mean_daily_ggr ÷ sd_daily_ggr　　sortino_window  mean_daily_ggr ÷ downside_sd
+
 --   cum_ggr／peak_cum／drawdown 逐日累计与回撤；mdd_window 全窗最大回撤
+
 --   mdd_over_ggr_window  mdd_window ÷ |ggr_window| —— 与平台层 0.051923%% 同口径，可直接对照
+
 --   negative_day_rate    亏损日占比　　evidence_flag  n_active_days < 30 即 THIN_DAYS
+
 --   ⛔ 无风险利率一律取 0（本口径为【收益波动比】，非金融学之 Sharpe），故不得称年化夏普。
+
 ---- 【G3 桌之处置 —— 只出旗标，不代裁】
+
 --   桌号 900~913 共 14 张疑非真人（G3 族）。2026-09-03 实测（T_table_span 原生列）：
+
 --   G3 占 n_rounds **12.1450%**、占 n_bets **15.1820%**；⛔ 外部所称「占 33.2% 局数」系取自
+
 --   n_rounds_xagg（六层块广播栏，实测 32.4936%），**非本表原生局数**，引用即口径污染。
+
 --   ⇒ 本件只出 is_g3_table 旗标，**不硬剔** —— 剔与不剔属商业裁定，本件不代裁（承「只出事实」）。
+
 --   ⇒ 下游若作方差分解，**须先以 is_g3_table = 0 过滤**，否则 14 张伪桌会主导结果。
+
 --
+
 -- 【未纳入 · 候裁定】
+
 --   · 年化与无风险利率：须先定资金成本口径，未裁前不算。
+
 --   · 会员级 Sharpe／Sortino：会员日序过稀（多数会员活跃日 < 30），⛔ 强行算即以噪声充信号。
+
 --   · 与 ＃133 RK01 之关系：RK01 系【局级】事实，本件系【日级】风险；二者粒度不同，禁互冒。
+
 -- ▸ 导出：需要 —— 存为「数据库/RK02_table_day_risk.csv」
--- ── 分批作业版：每批 100,000 行 ＋ audit_rn ＋ batch_id ──
--- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT) AS batch_id
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT) AS batch_id
 FROM (
 SELECT w.*,
        ROW_NUMBER() OVER (ORDER BY w.`table_id`, w.`biz_date`) AS audit_rn,
@@ -50434,7 +50505,7 @@ FROM (
     FROM w3 x
 ) w
 ) z
-WHERE z.audit_rn >        0 AND z.audit_rn <= 100000   -- 第 1 批
+WHERE z.audit_rn >        0 AND z.audit_rn <=  10000   -- 第 1 批
 ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键与分批作业版逐字同一，两版可逐行对账。
 --     ★ ⛔ 本件系 2026-09-03 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟：
@@ -50442,47 +50513,84 @@ ORDER BY z.audit_rn;
 --       ③ sd_daily_ggr = 0 之实体（单日活跃）其 sharpe_window 须为 NULL 而非 Inf。
 
 -- 136. RK03_dealer_day_risk.csv   [荷官 × 日 之风险调整表 · 新建 · 无六层商业块]
+
 --     典型学：荷官 日序风险　粒度：dealer_id × biz_date　说明：Sharpe／Sortino／MDD 之唯一无阻断来源
+
 --     ★ 本件循 ＃078 S03_agent_score ／ ＃130~＃132 字典三件 ／ ＃133 RK01 ／ ＃134 HE01 之例，
+
 --       **不套六层商业模板** —— 无 NTILE／PERCENT_RANK／vip_tier／economic_value／action_priority。
+
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
+
 -- 【本件立意 · 承 UCC 统一坐标之 TS 轴】
+
 --   UCC 登记册实测：sharpe ／ sortino ／ mdd 三者全库 **0 栏**，归「② 缺算」而非「① 缺件」——
+
 --   其所缺者只是【日序粒度】，非授权。而 荷官 系**营运单位**，其收益波动本就该管。
+
 --   ⇒ 自 ODS 按 荷官 × 日 聚合即得，**不需解 F-47、不需理论 edge、不需 x_prod**。
+
 --   ★ 这是当前**唯一无须解任何阻断即可补上之风险调整指标**。
+
 --   ★ 本件只出【事实】，不出【判定】：无旗标分档、无 action、无相对排名。
+
 --
+
 -- 【口径六锁 · 与全包逐字同一，勿改】
+
 --   ① 窗口 dt >= '2026-03-21' AND dt < '2026-08-07'　② 产品 bet02 = '101'
+
 --   ③ 快照 sync_time <= '2026-08-27 09:00:00'
+
 --   ④ 去重 PARTITION BY bet01 ORDER BY updatetime DESC, sync_time DESC, dt DESC 取 rn = 1
+
 --   ⑤ 基础闸 category='1' · UPPER(bet38)='N' · 非测试线 · bet05>0 · bet11>0 · dealer_id 非空
+
 --   ⑥ 归一 一切金额除以 bet11（汇率）
+
 --
+
 -- 【风险量之基准 —— ⛔ 必读】
+
 --   本件一切风险量皆以 **ggr（＝(bet13 − bet14)/bet11，牌桌毛赢，庄家视角）** 之【日序】为基，
+
 --   与 ＃133 RK01 之 ggr 逐字同式。⛔ 承 UCC 引用纪律：**引用 MDD 必带基准**——
+
 --   2026-09-03 平台层实测：以 ggr_sum 为基 MDD/累计 ＝ 0.051923%%，以 profit 为基 0.086628%%，
+
 --   以 ngr 为基 0.123954%%，三者相差逾一倍。本件恒以 ggr 为基，故列 risk_basis 一栏自证。
+
 --
+
 -- 【定义】（皆于该 荷官 之【全窗】上算，逐日行内重复携带，便于下游直接筛）
+
 --   mean_daily_ggr  日 ggr 之均值　　sd_daily_ggr  日 ggr 之样本标准差
+
 --   downside_sd     仅计 ggr < 均值 之下行离差（Sortino 之分母）
+
 --   sharpe_window   mean_daily_ggr ÷ sd_daily_ggr　　sortino_window  mean_daily_ggr ÷ downside_sd
+
 --   cum_ggr／peak_cum／drawdown 逐日累计与回撤；mdd_window 全窗最大回撤
+
 --   mdd_over_ggr_window  mdd_window ÷ |ggr_window| —— 与平台层 0.051923%% 同口径，可直接对照
+
 --   negative_day_rate    亏损日占比　　evidence_flag  n_active_days < 30 即 THIN_DAYS
+
 --   ⛔ 无风险利率一律取 0（本口径为【收益波动比】，非金融学之 Sharpe），故不得称年化夏普。
+
 ---- 【未纳入 · 候裁定】
+
 --   · 年化与无风险利率：须先定资金成本口径，未裁前不算。
+
 --   · 会员级 Sharpe／Sortino：会员日序过稀（多数会员活跃日 < 30），⛔ 强行算即以噪声充信号。
+
 --   · 与 ＃133 RK01 之关系：RK01 系【局级】事实，本件系【日级】风险；二者粒度不同，禁互冒。
+
 -- ▸ 导出：需要 —— 存为「数据库/RK03_dealer_day_risk.csv」
--- ── 分批作业版：每批 100,000 行 ＋ audit_rn ＋ batch_id ──
--- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT) AS batch_id
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT) AS batch_id
 FROM (
 SELECT w.*,
        ROW_NUMBER() OVER (ORDER BY w.`dealer_id`, w.`biz_date`) AS audit_rn,
@@ -50603,7 +50711,7 @@ FROM (
     FROM w3 x
 ) w
 ) z
-WHERE z.audit_rn >        0 AND z.audit_rn <= 100000   -- 第 1 批
+WHERE z.audit_rn >        0 AND z.audit_rn <=  10000   -- 第 1 批
 ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键与分批作业版逐字同一，两版可逐行对账。
 --     ★ ⛔ 本件系 2026-09-03 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟：
@@ -50654,10 +50762,10 @@ ORDER BY z.audit_rn;
 --   · 不代裁「该以何口径为准」—— 剔哨兵与否属商业裁定，本件只把账分开摆出。
 --   · 不改 ＃070／＃071 一字。
 -- ▸ 导出：需要 —— 存为「数据库/RK04_member_econ_by_scope.csv」
--- ── 分批作业版：每批 100,000 行 ＋ audit_rn ＋ batch_id ──
--- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*100000 与 k*100000 ──
+-- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
 SELECT z.*,
-       CAST(FLOOR((z.audit_rn - 1) / 100000) + 1 AS INT) AS batch_id
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT) AS batch_id
 FROM (
 SELECT w.*,
        ROW_NUMBER() OVER (ORDER BY w.`member_id`, w.`dealer_class`, w.`line_class`) AS audit_rn,
@@ -50765,7 +50873,7 @@ FROM (
     GROUP BY s.x_member, s.dealer_class, s.line_class
 ) w
 ) z
-WHERE z.audit_rn >        0 AND z.audit_rn <=  100000   -- 第 1 批
+WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
 ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键 (member_id, dealer_class, line_class) 即本件之 GROUP BY 键，
 --       故【必然唯一】，三版逐行可对账，且无死键。
