@@ -784,7 +784,24 @@
 --         而 batch_id 依锁三不入任何业务指标计算。
 --   连带：锁四由「两版」扩为「三版」，并明示 batch_id 为预期差异列，对账须先剔除该列。
 --   ★ 原版审计版之 batch_size 一栏改标「不适用」，非改数 —— 该档本无分批机制。
--- 【未改动 · 明示】除上列 A/B/C 三项外，本档其余 131 件之查询语句**一字未增、未删、未改**。
+-- 【改动 G · #138~140 分批版缺失 batch_id 包装斧正（本轮，Claude 会话核实）】
+--   病征：核实（非推断）发现 #138 DICT_member／#139 DICT_dealer／#140 DICT_table 三件，
+--         在本档（分批作业版）与「原版审计版」逐字节比对（diff）结果为【完全相同】——
+--         即三件仍是原版审计版之「一次导全 ＋ audit_rn」写法，从未被改写为本档应有之
+--         「SELECT z.*, batch_id FROM (...) z WHERE z.audit_rn > X AND <= Y」批处理外层，
+--         既无 batch_id 列，也无逐批 WHERE 范围过滤，与本档 #130~#137 之既有写法不一致。
+--   斧正：
+--     · #138（预期行数量级同 ＃071 之 723,496，远超单批 10,000 行）——
+--       循 #137 RK04 之例，套外层 batch_id 包装 ＋ 第 1 批 WHERE 范围，
+--       并保留原有『第 k 批只改末行两数』之操作说明。
+--     · #139／#140（荷官／桌台数远小于 10,000）——
+--       循 #130／#131 字典小表之例，套同一 batch_id 包装，并明示『行数远小于批量，
+--       一次导全即可；批次阶梯照列以保体例一致』，与既有字典小表写法同一体例。
+--   ⚠ 本项斧正只补齐『分批外层结构』，未改动、未新增、未删除三件本身之任何业务列、
+--     CTE 逻辑或口径判据——SELECT 主体逐字沿用原版审计版，可与其逐行对账（剔除 batch_id 列后）。
+--   ⚠ 三件皆系 2026-09 新建，斧正后之批处理写法**仍从未在 StarRocks 上实际执行过**，
+--     全量重导前须先单跑冒烟，核对方式详见各件末尾原有之冒烟检查清单。
+-- 【未改动 · 明示】除上列 A/B/C 三项外，本档其余 130 件（131 件扣除本次改动之 #138~140，即改动 G）之查询语句**一字未增、未删、未改**。
 -- ══════════════════════════════════════════════════════════════════════════════════════════════
 
 SET SESSION query_timeout = 259200;
@@ -50928,7 +50945,11 @@ ORDER BY z.audit_rn;
 --   · 不做任何相对排名（无 NTILE／PERCENT_RANK）、无 vip_tier、无 action_priority。
 --   · 不代裁"该会员是否风险对象"——本件只回答"该会员存不存在、何时在场"。
 -- ▸ 导出：需要 —— 存为「数据库/DICT_member.csv」
--- ── 原版审计版：一次导全 ＋ audit_rn ──
+-- ── 分批作业版：每批 10,000 行 ＋ audit_rn ＋ batch_id ──
+-- ── 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
+SELECT z.*,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT) AS batch_id
+FROM (
 SELECT w.*,
        ROW_NUMBER() OVER (ORDER BY w.`member_id`) AS audit_rn,
        'A168_HF9F_20260827_0900' AS run_id,
@@ -50970,7 +50991,9 @@ FROM (
     WHERE s.x_member IS NOT NULL AND TRIM(CAST(s.x_member AS STRING)) <> ''
     GROUP BY s.x_member
 ) w
-ORDER BY audit_rn;
+) z
+WHERE z.audit_rn >        0 AND z.audit_rn <=   10000   -- 第 1 批
+ORDER BY z.audit_rn;
 --     ★ audit_rn 之排序键 (member_id) 即本件之 GROUP BY 键，故【必然唯一】。
 --     ★ ⛔ 本件系 2026-09 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟：
 --       ① 行数应等于 x_bs0 之 COUNT(DISTINCT x_member)，与 ＃071 之 723,496（或本轮实测数）同量级；
@@ -50986,6 +51009,11 @@ ORDER BY audit_rn;
 --   使 REAL／SENTINEL／UNKNOWN 三类判准全包统一，不另立标准。
 -- 【口径六锁】同 ＃138，逐字未改。
 -- ▸ 导出：需要 —— 存为「数据库/DICT_dealer.csv」
+-- ── ① 本件行数远小于 10,000（荷官数远不及会员数量级），一次导全即可；批次阶梯照列以保体例一致 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
+SELECT z.*,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id
+FROM (
 SELECT w.*,
        ROW_NUMBER() OVER (ORDER BY w.`dealer_id`) AS audit_rn,
        'A168_HF9F_20260827_0900' AS run_id,
@@ -51032,7 +51060,10 @@ FROM (
     FROM x_scope s
     GROUP BY s.x_dealer, s.dealer_class
 ) w
-ORDER BY audit_rn;
+) z
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ 本批区间
+ORDER BY z.audit_rn;
 --     ★ dealer_id 理论上应对每一 eid 恰一 dealer_class（分组含 dealer_class 系防御性写法，
 --       若某 eid 出现两种 class 属数据异常，须回报，不得视为正常多行）。
 --     ★ ⛔ 本件系 2026-09 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟，
@@ -51045,6 +51076,11 @@ ORDER BY audit_rn;
 -- 【本件立意】同 ＃138，对象换成桌台（bet39）。
 -- 【口径六锁】同 ＃138，逐字未改。
 -- ▸ 导出：需要 —— 存为「数据库/DICT_table.csv」
+-- ── ① 本件行数远小于 10,000（桌台数远不及会员数量级），一次导全即可；批次阶梯照列以保体例一致 ──
+-- ── ② 分批取数：第 1 批。第 k 批只改末行两数为 (k-1)*10000 与 k*10000 ──
+SELECT z.*,
+       CAST(FLOOR((z.audit_rn - 1) / 10000) + 1 AS INT)          AS batch_id
+FROM (
 SELECT w.*,
        ROW_NUMBER() OVER (ORDER BY w.`table_id`) AS audit_rn,
        'A168_HF9F_20260827_0900' AS run_id,
@@ -51084,5 +51120,8 @@ FROM (
     WHERE s.x_table IS NOT NULL AND TRIM(CAST(s.x_table AS STRING)) <> ''
     GROUP BY s.x_table
 ) w
-ORDER BY audit_rn;
+) z
+-- ── 逐批 WHERE 阶梯（★ 口诀：上界 ＝ 下界 ＋ 10000，两数同进）──
+WHERE z.audit_rn > 0 AND z.audit_rn <= 10000 -- ★ 本批区间
+ORDER BY z.audit_rn;
 --     ★ ⛔ 本件系 2026-09 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟。
