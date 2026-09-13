@@ -1,0 +1,2347 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>a168_137件模块_逐件维度与计算标准详解</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="a168_137件模块_逐件维度与计算标准详解_files/libs/clipboard/clipboard.min.js"></script>
+<script src="a168_137件模块_逐件维度与计算标准详解_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="a168_137件模块_逐件维度与计算标准详解_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="a168_137件模块_逐件维度与计算标准详解_files/libs/quarto-html/popper.min.js"></script>
+<script src="a168_137件模块_逐件维度与计算标准详解_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="a168_137件模块_逐件维度与计算标准详解_files/libs/quarto-html/anchor.min.js"></script>
+<link href="a168_137件模块_逐件维度与计算标准详解_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="a168_137件模块_逐件维度与计算标准详解_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="a168_137件模块_逐件维度与计算标准详解_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="a168_137件模块_逐件维度与计算标准详解_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="a168_137件模块_逐件维度与计算标准详解_files/libs/bootstrap/bootstrap-215b371544c282197b31c8aa00ce3677.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+
+
+
+<section id="a168-sql总包-v12.0.0-hf9g-p5d原版审计版137件产出表-逐件维度计算标准输出指标详解" class="level1">
+<h1>a168 SQL总包 v12.0.0-HF9g-P5D「原版审计版」137件产出表 —— 逐件维度／计算标准／输出指标详解</h1>
+<section id="redteam-critic-killcritic-blindspot-actionplan" class="level3">
+<h3 class="anchored" data-anchor-id="redteam-critic-killcritic-blindspot-actionplan">redteam / critic / killcritic / blindspot / actionplan</h3>
+<hr>
+</section>
+<section id="核查范围说明先诚实交代能做到什么程度" class="level2">
+<h2 class="anchored" data-anchor-id="核查范围说明先诚实交代能做到什么程度">〇、核查范围说明（先诚实交代能做到什么程度）</h2>
+<p>本档共137件产出（非137个”函数”——总包全篇由带编号的注释块＋SELECT语句构成，无CREATE FUNCTION/存储过程，“逐个函数”对应的实际单元是<strong>137个带编号的模块</strong>，以下按此理解作答）。每件模块平均70<sub>90列输出，137件合计逾万个字段。<strong>逐字段个别核实全部一万余个字段的业务定义，超出单次交付可负责任完成的范围</strong>——以下采用总包自身已经系统化的两层结构来回答：①137件共享的<strong>统一计算标准</strong>（本节一次说清，逐件不再重复）；②137件<strong>逐件</strong>的源表维度、所属风险机理、计算标准套用情况、输出指标类别与可信度——见下方主表，<strong>确实逐件列出、无遗漏</strong>，但受限于篇幅，逐件的”维度列”栏只列<strong>主键/切分维度</strong>（总包索引本身即如此设计），而非该件70</sub>90列的全列业务定义；若先生需要某一件或某一类（如全部18件M05退水套利）的<strong>全列级</strong>业务定义，我可以针对该子集再做一次专项深潜。</p>
+<hr>
+</section>
+<section id="一137件共享的统一计算标准一次说清逐件套用" class="level2">
+<h2 class="anchored" data-anchor-id="一137件共享的统一计算标准一次说清逐件套用">一、137件共享的统一计算标准（一次说清，逐件套用）</h2>
+<section id="源表维度总览业务定义" class="level3">
+<h3 class="anchored" data-anchor-id="源表维度总览业务定义">1.1 源表维度总览（业务定义）</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>源表</th>
+<th>关键维度字段</th>
+<th>业务定义</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>ods_a168_bet02</code>（注单明细，锁定bet02=’101’百家乐）</td>
+<td>bet01注单号｜bet03靴号｜bet04局内序号｜bet05会员号｜bet09投注面｜bet11汇率｜bet13下注金额｜bet14派彩金额｜bet15退水比例(配置)｜bet16退水金额(实付)｜bet17已含退水净利｜bet18<sub>22一至五级代理线｜bet23</sub>27各级代理抽成比例｜bet38重对标记｜bet39桌台号｜category产品大类｜eid荷官工号｜ip下注IP｜validbet有效投注(洗码量)｜updatetime/sync_time写入同步时间</td>
+<td>每一注单的完整经济与关系维度</td>
+</tr>
+<tr class="even">
+<td><code>ods_a168_agent</code>（代理主档）</td>
+<td>age001代理ID｜age022公司测试线标记</td>
+<td>剔除214条测试线，避免污染真实代理业绩</td>
+</tr>
+<tr class="odd">
+<td><code>ods_a168_bet01</code>（早期注单表）</td>
+<td>局/靴关联键</td>
+<td>供同桌自连接类模块使用</td>
+</tr>
+<tr class="even">
+<td><code>alert_ip_setting</code></td>
+<td>人工标注</td>
+<td>仅17行/6标注人，总包自警”勿作主判据”</td>
+</tr>
+<tr class="odd">
+<td><code>dailyreport_member</code></td>
+<td>bet28~32等日报字段</td>
+<td>与bet02口径不一致的历史未解问题（详见先前报告）</td>
+</tr>
+<tr class="even">
+<td><code>INFORMATION_SCHEMA</code>系列</td>
+<td>表名/列名/类型/行数</td>
+<td>供#085/#089/#093/#111~132等元数据/字典类模块使用</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="accounting层公式129件通用底层核算源自1.2节维度加工而成" class="level3">
+<h3 class="anchored" data-anchor-id="accounting层公式129件通用底层核算源自1.2节维度加工而成">1.2 ACCOUNTING层公式（129件通用底层核算，源自1.2节维度加工而成）</h3>
+<pre><code>stake        投注本金 = 原币金额 ÷ bet11(汇率)
+valid_bet    有效投注(洗码量) = validbet                实测 /stake ≈ 90.076%
+profit       平台牌桌毛赢 = -bet17(净额)                 实测 hold ≈ 1.4935%
+rebate_cost  退水支出 = bet16(退水金额)                  实测 /stake ≈ 0.0621%
+company_retain_pct  公司自留比例 = bet23                 实测均值 96.114
+agent_pct    代理实得比例 = 100 − bet23                  实测均值 3.886（AG-03候选B，仍PENDING未终裁）
+agent_cost   代理成本 = profit × agent_pct/100           实测 /stake ≈ 0.0613%
+ngr          净博彩收入 = profit − rebate_cost           实测 /stake ≈ 1.4314%
+net_margin   平台真净利 = ngr − agent_cost         ★唯一风险判据 实测 /stake ≈ 1.3701%
+hold_rate = -bet17/stake（＝-roi）；roi = bet17/stake（正＝玩家赚）</code></pre>
+<p><strong>铁律</strong>：风险判据只认net_margin，不认roi单项、不认net_pnl；net_margin裸名0栏，实为8个<code>net_margin_*_canonical</code>变体（AG-03候选未决，引用须指明具体候选）。</p>
+</section>
+<section id="六层商业模板129件套挂按m码分区特化切点非134137件全适用见1.5" class="level3">
+<h3 class="anchored" data-anchor-id="六层商业模板129件套挂按m码分区特化切点非134137件全适用见1.5">1.3 六层商业模板（129件套挂，按M码分区特化切点，非134/137件全适用——见1.5）</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>层</th>
+<th>内容要点</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>一·经济</td>
+<td>stake/valid_bet/profit/roi/roi_ex_rebate + ROI三守卫(分子/分母/分母状态)</td>
+</tr>
+<tr class="even">
+<td>二·分布</td>
+<td>7种粒度均值 + p25/p50/p75/p90/p95/p99 + 长尾比(p95/p50,p99/p50)</td>
+</tr>
+<tr class="odd">
+<td>三·关系</td>
+<td>常去牌桌数/荷官数/IP数/产品数 + 各分区占比</td>
+</tr>
+<tr class="even">
+<td>四·rate</td>
+<td>hold_rate/实际退水率/配置退水率(bet15)/流水倍数/免佣占比</td>
+</tr>
+<tr class="odd">
+<td>五·动态</td>
+<td>首末见时间/活跃天数/靴数/场次/跨度/持续性/ramp(近期vs历史节奏比)</td>
+</tr>
+<tr class="even">
+<td>六·决策</td>
+<td>vip_tier/economic_value/risk_value/action_priority（★DISPLAY ONLY排序秩，非金额）</td>
+</tr>
+</tbody>
+</table>
+<p>分区特化举例：M01同桌类=“同局≥2人”；M02对冲类=“同局庄闲并存”；M03尾段类=“靴内进度≥80%”；M05高洗码类=“洗码额&gt;本金”；M13追损类=“净额&lt;0”；其余默认近30日。所有切点由PERCENT_RANK/NTILE/PERCENTILE_APPROX动态生成，禁硬编码零金额阈值。</p>
+</section>
+<section id="ucc统一判据坐标七轴2026-09-03新增决定该件理论上该有哪些坐标而非该有哪些列" class="level3">
+<h3 class="anchored" data-anchor-id="ucc统一判据坐标七轴2026-09-03新增决定该件理论上该有哪些坐标而非该有哪些列">1.4 UCC统一判据坐标（七轴，2026-09-03新增，决定”该件理论上该有哪些坐标”而非”该有哪些列”）</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>轴</th>
+<th>内容</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>E 经济实际层</td>
+<td>profit·stake·valid_bet·ngr·hold_rate·residual_b</td>
+<td>主轴</td>
+</tr>
+<tr class="even">
+<td>T 理论经济层</td>
+<td>theo·adt·nmpt·esi</td>
+<td>⛔全库0栏，架构性缺件(未授权理论edge+缺x_prod中间粒度)</td>
+</tr>
+<tr class="odd">
+<td>R 风险偏离层</td>
+<td>roi·z-score·各类偏离量</td>
+<td>描述/辅助</td>
+</tr>
+<tr class="even">
+<td>Q 证据层</td>
+<td>n_rounds·n_bets·evidence_flag·CI半宽</td>
+<td>一切裁定之前提</td>
+</tr>
+<tr class="odd">
+<td>TS 时序风险层</td>
+<td>mdd·sharpe·sortino</td>
+<td>条件适用(须日序)，全库0栏(引擎未实作)</td>
+</tr>
+<tr class="even">
+<td>C 因果/实验层</td>
+<td>effect·wilcoxon·sign_test</td>
+<td>条件适用</td>
+</tr>
+<tr class="odd">
+<td>M 模型评价层</td>
+<td>auc·wilson·lift·pca</td>
+<td>模型侧</td>
+</tr>
+<tr class="even">
+<td>E2 实体经济层</td>
+<td>apuc</td>
+<td>条件适用</td>
+</tr>
+</tbody>
+</table>
+<p>表类→应有坐标：会员经济主表E+Q+R｜会员时序表E+Q+R+TS｜日度平台表E+Q+TS｜产品/投注面表E+T｜荷官表E+Q+R｜代理表E+Q+E2｜对打/关联表R+Q+M｜处置台账表C+Q｜画像表R｜探针/审计表Q+M｜字典/元数据表—｜局级事实表E+Q。</p>
+</section>
+<section id="m码图例包内自带风险机理分类共154类" class="level3">
+<h3 class="anchored" data-anchor-id="m码图例包内自带风险机理分类共154类">1.5 M码图例（包内自带风险机理分类，共15+4类）</h3>
+<p>同桌团伙(M01,1件)｜对冲对打(M02,4件)｜尾段投注(M03,9件)｜IP异常(M04,8件)｜退水套利(M05,18件)｜代理线(M06,3件)｜荷官关联(M07,6件)｜处置限额(M09,20件)｜责任博彩(M10,4件)｜异常告警(M11,3件)｜资金轨迹(M12,2件)｜复投循环(M13,1件)｜投注形态(M14,10件)｜活跃周期(M15,12件)｜风控专员(R01,1件)｜基建/元数据(Z00,27件)｜字典(DIC,3件)｜局/日序/口径事实(RK,4件)｜投注面事实(HE,1件)。</p>
+</section>
+<section id="net_margin可信度分类-本次核实一处重要订正hf9g-p5d-b-w-61" class="level3">
+<h3 class="anchored" data-anchor-id="net_margin可信度分类-本次核实一处重要订正hf9g-p5d-b-w-61">1.6 net_margin可信度分类 —— 本次核实一处重要订正（HF9g-P5D-b · W-61）</h3>
+<p>总包原文在本档内已<strong>自我订正</strong>一处历史表述：67件此前记作”CROSS JOIN·笛卡尔广播·值不相干”，经HF9g-P5D-b实测复核，<strong>现全数确认为LEFT JOIN（按member_id键值连接），并非笛卡尔积、值也并非”不相干”</strong>，而是”会员级的值被合法匹配后逐行重复广播”，与另37件”上卷广播”属同一力学机制的两个子类（仅连接键粒度层级不同）。<strong>我在前几轮的稽核报告里沿用了旧称”笛卡尔广播错配”来描述这67件，此处一并更正，特此说明并致歉</strong>——机制描述应为”LEFT JOIN会员级广播”，而非”笛卡尔积错配”；但<strong>结论不变</strong>：这67件与另37件”上卷广播”件，其net_margin仍只能作背景参考，不可据以计算比率或对单一会员下判定，因为同一会员/同一实体的值在多行中被重复计入，直接聚合会重复计数。</p>
+<p>分类统计：OK 24件（可直接判定）｜WRONG_GRAIN·上卷广播 37件｜WRONG_GRAIN·会员级广播 67件（原表标”INVALID”，经订正机制描述如上）｜N/A 8件（字典/事实类，无此栏位）｜NULL 1件（#079跨实体未命中）。</p>
+<hr>
+</section>
+</section>
+<section id="二137件逐件明细源表维度计算标准套用可信度用途" class="level2">
+<h2 class="anchored" data-anchor-id="二137件逐件明细源表维度计算标准套用可信度用途">二、137件逐件明细（源表维度／计算标准套用／可信度／用途）</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 10%">
+<col style="width: 10%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>CSV名</th>
+<th>风险机理(M码)</th>
+<th>主实体/粒度</th>
+<th>源表维度列(节选)</th>
+<th>列数</th>
+<th>UCC表类→应有坐标轴</th>
+<th>计算标准(套用情况)</th>
+<th>net_margin可信度(已按W-61订正)</th>
+<th>risk_usage</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>001</td>
+<td>A_anchor.csv</td>
+<td>M06=代理线</td>
+<td>IP</td>
+<td>g.ip</td>
+<td>68</td>
+<td>探针/审计表 或 对打/关联表（Q+M 或 R+Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SCREENING</td>
+</tr>
+<tr class="even">
+<td>002</td>
+<td>B01_bt_panel.csv</td>
+<td>M15=活跃周期</td>
+<td>会员</td>
+<td>member_id × bet_date</td>
+<td>77</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>003</td>
+<td>B01_bt_panel_delta.csv</td>
+<td>M15=活跃周期</td>
+<td>会员</td>
+<td>member_id × bet_date</td>
+<td>77</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>004</td>
+<td>B4_2b_funnel_and_mu0.csv</td>
+<td>M14=投注形态</td>
+<td>全窗/元数据</td>
+<td>n_raw × n_g1 × n_g2</td>
+<td>89</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>005</td>
+<td>B4_5b_tip_nature.csv</td>
+<td>M14=投注形态</td>
+<td>IP</td>
+<td>TRIM(bet09)</td>
+<td>79</td>
+<td>探针/审计表 或 对打/关联表（Q+M 或 R+Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SCREENING</td>
+</tr>
+<tr class="even">
+<td>006</td>
+<td>B_online_base.csv</td>
+<td>Z00=基建/元数据</td>
+<td>桌台</td>
+<td>table_id × sec_elapsed</td>
+<td>70</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>007</td>
+<td>C01_ip_chain.csv</td>
+<td>M04=IP异常</td>
+<td>IP</td>
+<td>bet_ip</td>
+<td>71</td>
+<td>探针/审计表 或 对打/关联表（Q+M 或 R+Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SCREENING</td>
+</tr>
+<tr class="even">
+<td>008</td>
+<td>C06_hedge_pairs.csv</td>
+<td>M02=对冲对打</td>
+<td>IP</td>
+<td>bet_ip × m_a × m_b</td>
+<td>70</td>
+<td>探针/审计表 或 对打/关联表（Q+M 或 R+Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>SCREENING</td>
+</tr>
+<tr class="odd">
+<td>009</td>
+<td>C06d_hedge_pairs_dated.csv</td>
+<td>M02=对冲对打</td>
+<td>会员</td>
+<td>a.bet_ip × a.member_id</td>
+<td>72</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>010</td>
+<td>C08_subnet_all.csv</td>
+<td>M04=IP异常</td>
+<td>网段</td>
+<td>1</td>
+<td>71</td>
+<td>探针/审计表 或 对打/关联表（Q+M 或 R+Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>SCREENING</td>
+</tr>
+<tr class="odd">
+<td>011</td>
+<td>C08_subnet_sparse.csv</td>
+<td>M04=IP异常</td>
+<td>网段</td>
+<td>1</td>
+<td>71</td>
+<td>探针/审计表 或 对打/关联表（Q+M 或 R+Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>SCREENING</td>
+</tr>
+<tr class="even">
+<td>012</td>
+<td>D03S_daily_roi_diff.csv</td>
+<td>M15=活跃周期</td>
+<td>日期</td>
+<td>bet_date</td>
+<td>70</td>
+<td>日度平台表（E+Q+TS）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>REFERENCE</td>
+</tr>
+<tr class="odd">
+<td>013</td>
+<td>DICT_01a_bet41_tri.csv</td>
+<td>M05=退水套利</td>
+<td>全窗/元数据</td>
+<td>scope × n_rows × sum_s</td>
+<td>77</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>014</td>
+<td>DICT_01b_roundkey_card.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>scope × n_rows × nd_be</td>
+<td>77</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>015</td>
+<td>DICT_01c_dimension.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>scope × n_rows × avg_v</td>
+<td>75</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>016</td>
+<td>DICT_01d_bet_latency.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>TRIM(bet39)</td>
+<td>77</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>REFERENCE</td>
+</tr>
+<tr class="odd">
+<td>017</td>
+<td>DX04_bet09_profile.csv</td>
+<td>M14=投注形态</td>
+<td>产品</td>
+<td>bet_side</td>
+<td>72</td>
+<td>产品/投注面表（E+T）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SUPPORT</td>
+</tr>
+<tr class="even">
+<td>018</td>
+<td>DX05_product_panorama.csv</td>
+<td>M14=投注形态</td>
+<td>产品</td>
+<td>product_code</td>
+<td>77</td>
+<td>产品/投注面表（E+T）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SUPPORT</td>
+</tr>
+<tr class="odd">
+<td>019</td>
+<td>E02_segment_econ.csv</td>
+<td>M05=退水套利</td>
+<td>全窗/元数据</td>
+<td>m.rebate_rate_bkt × m.</td>
+<td>72</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>020</td>
+<td>EV01_disposal_events.csv</td>
+<td>M09=处置限额</td>
+<td>日期</td>
+<td>event_id × event_time</td>
+<td>76</td>
+<td>日度平台表（E+Q+TS）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>021</td>
+<td>EV02_member_disposal.csv</td>
+<td>M09=处置限额</td>
+<td>会员</td>
+<td>event_id × event_date</td>
+<td>0</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>022</td>
+<td>I_ip_agg.csv</td>
+<td>M04=IP异常</td>
+<td>IP</td>
+<td>bet_ip</td>
+<td>77</td>
+<td>探针/审计表 或 对打/关联表（Q+M 或 R+Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SCREENING</td>
+</tr>
+<tr class="odd">
+<td>023</td>
+<td>I_ip_player.csv</td>
+<td>M04=IP异常</td>
+<td>会员</td>
+<td>b.bet_ip × b.member_id</td>
+<td>77</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>024</td>
+<td>K01_risk_feature_matrix.csv</td>
+<td>M11=异常告警</td>
+<td>会员</td>
+<td>member_id × is_seed ×</td>
+<td>78</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>025</td>
+<td>K01b_seed_goldip.csv</td>
+<td>M04=IP异常</td>
+<td>会员</td>
+<td>member_id × seed_src</td>
+<td>65</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>026</td>
+<td>K01b_seed_manual.csv</td>
+<td>M11=异常告警</td>
+<td>会员</td>
+<td>member_id × seed_src</td>
+<td>65</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>027</td>
+<td>K01c_seed_dated.csv</td>
+<td>M04=IP异常</td>
+<td>IP</td>
+<td>seed_id × seed_ip × cr</td>
+<td>69</td>
+<td>探针/审计表 或 对打/关联表（Q+M 或 R+Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>SCREENING</td>
+</tr>
+<tr class="even">
+<td>028</td>
+<td>L_label_dist.csv</td>
+<td>M11=异常告警</td>
+<td>全窗/元数据</td>
+<td>risk × orders</td>
+<td>69</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>029</td>
+<td>P01A_crosstab.csv</td>
+<td>M05=退水套利</td>
+<td>全窗/元数据</td>
+<td>n_rows × bet16_null ×</td>
+<td>76</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>030</td>
+<td>P01B_diff_ratio.csv</td>
+<td>M05=退水套利</td>
+<td>全窗/元数据</td>
+<td>n × diff_min × diff_p5</td>
+<td>74</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>031</td>
+<td>P01C_split_by_dim.csv</td>
+<td>M05=退水套利</td>
+<td>产品</td>
+<td>DATE_TRUNC(‘month’, dt</td>
+<td>77</td>
+<td>产品/投注面表（E+T）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>032</td>
+<td>P01D_vs_validbet.csv</td>
+<td>M05=退水套利</td>
+<td>全窗/元数据</td>
+<td>n × comparable_n × pla</td>
+<td>72</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>033</td>
+<td>P01E_identity_test.csv</td>
+<td>M05=退水套利</td>
+<td>风控专员</td>
+<td>hypothesis × n × exact</td>
+<td>71</td>
+<td>（按内容个案判定）（—）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>034</td>
+<td>P02A_lmc_samples.csv</td>
+<td>M09=处置限额</td>
+<td>全窗/元数据</td>
+<td>类别 × 取样端 × 異動時間</td>
+<td>72</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>035</td>
+<td>P02B_changestatus_patterns.csv</td>
+<td>M09=处置限额</td>
+<td>全窗/元数据</td>
+<td>SUBSTRING(TRIM(lmc05),</td>
+<td>69</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>036</td>
+<td>P02C_key_check.csv</td>
+<td>M09=处置限额</td>
+<td>全窗/元数据</td>
+<td>l.lmc03</td>
+<td>71</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>037</td>
+<td>P02D_events_in_window.csv</td>
+<td>M09=处置限额</td>
+<td>全窗/元数据</td>
+<td>lmc04 × lmc03</td>
+<td>67</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>038</td>
+<td>P0C02_标签口径.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>产品口径 × 正例观测数_会员日 × 正例会</td>
+<td>69</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>039</td>
+<td>P0C03_标记次数分布.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>标记次数</td>
+<td>66</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>040</td>
+<td>P0C04_同日泄漏检验.csv</td>
+<td>M05=退水套利</td>
+<td>全窗/元数据</td>
+<td>d0.mem × d0.mark_day</td>
+<td>70</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>041</td>
+<td>P0C05_标记时点定位.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>mem × mark_day × 首投日</td>
+<td>71</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>042</td>
+<td>P0C06_LabelB骨架.csv</td>
+<td>M02=对冲对打</td>
+<td>全窗/元数据</td>
+<td>a.mem × a.anchor_day</td>
+<td>71</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>043</td>
+<td>P0C09_安慰剂检验.csv</td>
+<td>M05=退水套利</td>
+<td>全窗/元数据</td>
+<td>a.mem × a.d × a.注单数 ×</td>
+<td>70</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>044</td>
+<td>P11_阿泽尾段投注总帐.csv</td>
+<td>M03=尾段投注</td>
+<td>全窗/元数据</td>
+<td>scope_def × n_orders ×</td>
+<td>84</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>045</td>
+<td>P11_阿泽尾段投注模型会员名单.csv</td>
+<td>M03=尾段投注</td>
+<td>会员</td>
+<td>player_id × total_orde</td>
+<td>72</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>046</td>
+<td>P11_雷欧尾段投注总帐.csv</td>
+<td>M03=尾段投注</td>
+<td>全窗/元数据</td>
+<td>scope_def × n_orders ×</td>
+<td>84</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>047</td>
+<td>P12a_platform_daily.csv</td>
+<td>Z00=基建/元数据</td>
+<td>日期</td>
+<td>dt</td>
+<td>72</td>
+<td>日度平台表（E+Q+TS）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>REFERENCE</td>
+</tr>
+<tr class="even">
+<td>048</td>
+<td>P12b_member_events.csv</td>
+<td>M09=处置限额</td>
+<td>会员</td>
+<td>uid × first_dt × last_</td>
+<td>71</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>049</td>
+<td>P12c_member_daily_pnl.csv</td>
+<td>M15=活跃周期</td>
+<td>会员</td>
+<td>g.uid × g.dt</td>
+<td>69</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>050</td>
+<td>P13_personal_entry.csv</td>
+<td>M03=尾段投注</td>
+<td>会员</td>
+<td>uid</td>
+<td>70</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>PRIMARY</td>
+</tr>
+<tr class="odd">
+<td>051</td>
+<td>PH0_8r1_rg_case.csv</td>
+<td>M10=责任博彩</td>
+<td>日期</td>
+<td>dt_day × category × ta</td>
+<td>71</td>
+<td>日度平台表（E+Q+TS）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>052</td>
+<td>PH0_8r2_rg_crosstable.csv</td>
+<td>M10=责任博彩</td>
+<td>桌台</td>
+<td>src × n_rows × n_rg_tr</td>
+<td>68</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>053</td>
+<td>PI01_treatment_delta_member.csv</td>
+<td>M09=处置限额</td>
+<td>会员</td>
+<td>member_id × treat_time</td>
+<td>84</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>054</td>
+<td>PI02_treatment_delta_platform.csv</td>
+<td>M09=处置限额</td>
+<td>全窗/元数据</td>
+<td>grp × phase</td>
+<td>76</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>055</td>
+<td>PI03_reinvest_loop.csv</td>
+<td>M13=复投循环</td>
+<td>全窗/元数据</td>
+<td>outcome</td>
+<td>76</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>056</td>
+<td>PI04_member_5d_profile.csv</td>
+<td>M15=活跃周期</td>
+<td>会员</td>
+<td>mid</td>
+<td>83</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>PRIMARY</td>
+</tr>
+<tr class="odd">
+<td>057</td>
+<td>P_player_month.csv</td>
+<td>M15=活跃周期</td>
+<td>会员</td>
+<td>member_id × DATE_TRUNC</td>
+<td>72</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>058</td>
+<td>QSB_01a_category_census.csv</td>
+<td>M14=投注形态</td>
+<td>全窗/元数据</td>
+<td>COALESCE(NULLIF(TRIM(c</td>
+<td>85</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>059</td>
+<td>QSB_01c_cat1_contamination.csv</td>
+<td>M14=投注形态</td>
+<td>产品</td>
+<td>TRIM(bet09)</td>
+<td>73</td>
+<td>产品/投注面表（E+T）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SUPPORT</td>
+</tr>
+<tr class="even">
+<td>060</td>
+<td>QSB_02a_lowcard_fields.csv</td>
+<td>M14=投注形态</td>
+<td>全窗/元数据</td>
+<td>scope × n_rows × nd_be</td>
+<td>81</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>061</td>
+<td>QSB_02b2_lowcard_five_gates.csv</td>
+<td>M14=投注形态</td>
+<td>全窗/元数据</td>
+<td>COALESCE(NULLIF(TRIM(b</td>
+<td>82</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>062</td>
+<td>QSB_02b_state_cross.csv</td>
+<td>M14=投注形态</td>
+<td>全窗/元数据</td>
+<td>COALESCE(NULLIF(TRIM(b</td>
+<td>72</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>063</td>
+<td>QSB_02c_push_by_family.csv</td>
+<td>M14=投注形态</td>
+<td>会员</td>
+<td>CASE WHEN TRIM(bet09)</td>
+<td>73</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>064</td>
+<td>R01_late_shoe.csv</td>
+<td>M03=尾段投注</td>
+<td>会员</td>
+<td>member_id</td>
+<td>78</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>PRIMARY</td>
+</tr>
+<tr class="odd">
+<td>065</td>
+<td>R01_late_shoe_w2.csv</td>
+<td>M03=尾段投注</td>
+<td>会员</td>
+<td>member_id</td>
+<td>78</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>PRIMARY</td>
+</tr>
+<tr class="even">
+<td>066</td>
+<td>R01anm_shoe_anomaly.csv</td>
+<td>M03=尾段投注</td>
+<td>桌台</td>
+<td>dt × table_id × shoe_i</td>
+<td>74</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>067</td>
+<td>R01chk_shoe_len_by_table.csv</td>
+<td>M03=尾段投注</td>
+<td>桌台</td>
+<td>table_id × table_flag</td>
+<td>91</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>068</td>
+<td>R01inv_shoe_len_census.csv</td>
+<td>M03=尾段投注</td>
+<td>桌台</td>
+<td>n_tables × n_shoes × m</td>
+<td>82</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>069</td>
+<td>R02_same_table.csv</td>
+<td>M01=同桌团伙</td>
+<td>会员</td>
+<td>uid1 × uid2 × n_same_o</td>
+<td>75</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>070</td>
+<td>R03_player_dealer.csv</td>
+<td>M07=荷官关联</td>
+<td>会员</td>
+<td>uid × dealer_id × is_s</td>
+<td>96</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>071</td>
+<td>R03b_player_dealer_daily.csv</td>
+<td>M07=荷官关联</td>
+<td>会员</td>
+<td>p.bet_date × p.member_</td>
+<td>87</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>072</td>
+<td>R03chk_settlement_form.csv</td>
+<td>M07=荷官关联</td>
+<td>投注面</td>
+<td>UPPER(TRIM(bet_side))</td>
+<td>69</td>
+<td>（按内容个案判定）（—）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>REFERENCE</td>
+</tr>
+<tr class="odd">
+<td>073</td>
+<td>R03inv_pair_census.csv</td>
+<td>M07=荷官关联</td>
+<td>会员配对</td>
+<td>1 × 2</td>
+<td>69</td>
+<td>（按内容个案判定）（—）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>SCREENING</td>
+</tr>
+<tr class="even">
+<td>074</td>
+<td>R_rebate_dist.csv</td>
+<td>M05=退水套利</td>
+<td>全窗/元数据</td>
+<td>mem003</td>
+<td>66</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>075</td>
+<td>S01_player_score.csv</td>
+<td>M15=活跃周期</td>
+<td>会员</td>
+<td>b.member_id</td>
+<td>74</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>PRIMARY</td>
+</tr>
+<tr class="even">
+<td>076</td>
+<td>S02_dealer_score.csv</td>
+<td>M07=荷官关联</td>
+<td>荷官</td>
+<td>b.dealer_id</td>
+<td>72</td>
+<td>（按内容个案判定）（—）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SUPPORT</td>
+</tr>
+<tr class="odd">
+<td>077</td>
+<td>S02b_dealer_pace.csv</td>
+<td>M07=荷官关联</td>
+<td>荷官</td>
+<td>d.dealer_id</td>
+<td>66</td>
+<td>（按内容个案判定）（—）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SUPPORT</td>
+</tr>
+<tr class="even">
+<td>078</td>
+<td>S03_agent_score.csv</td>
+<td>M06=代理线</td>
+<td>代理线</td>
+<td>b.lv3</td>
+<td>72</td>
+<td>（按内容个案判定）（—）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>079</td>
+<td>S04_analyst_score.csv</td>
+<td>R01=风控专员</td>
+<td>风控专员</td>
+<td>COALESCE(NULLIF(TRIM(c</td>
+<td>70</td>
+<td>（按内容个案判定）（—）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>NULL（#079 跨实体未命中，六层全NULL，只可读前7列）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>080</td>
+<td>S05_member_month_panel.csv</td>
+<td>M15=活跃周期</td>
+<td>会员</td>
+<td>b.member_id × DATE_TRU</td>
+<td>73</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>081</td>
+<td>S_player_tail.csv</td>
+<td>M15=活跃周期</td>
+<td>会员</td>
+<td>member_id</td>
+<td>81</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>PRIMARY</td>
+</tr>
+<tr class="even">
+<td>082</td>
+<td>S_second_dist.csv</td>
+<td>M15=活跃周期</td>
+<td>桌台</td>
+<td>table_id</td>
+<td>71</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SUPPORT</td>
+</tr>
+<tr class="odd">
+<td>083</td>
+<td>T02_daily_roi.csv</td>
+<td>M15=活跃周期</td>
+<td>会员</td>
+<td>o.member_id × o.bet_da</td>
+<td>68</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>084</td>
+<td>T03_arbitrage.csv</td>
+<td>M02=对冲对打</td>
+<td>会员</td>
+<td>member_id</td>
+<td>73</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>PRIMARY</td>
+</tr>
+<tr class="odd">
+<td>085</td>
+<td>TL00_table_inventory.csv</td>
+<td>Z00=基建/元数据</td>
+<td>桌台</td>
+<td>c.TABLE_NAME</td>
+<td>68</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>086</td>
+<td>TL02_config_change.csv</td>
+<td>M09=处置限额</td>
+<td>全窗/元数据</td>
+<td>变更列</td>
+<td>67</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>087</td>
+<td>TL03_pseudo_treatment.csv</td>
+<td>M09=处置限额</td>
+<td>会员</td>
+<td>member_id × change_dat</td>
+<td>69</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>088</td>
+<td>TL03b_pseudo_treatment.csv</td>
+<td>M09=处置限额</td>
+<td>会员</td>
+<td>member_id × cate × pre</td>
+<td>71</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>089</td>
+<td>TL04_log_schema.csv</td>
+<td>Z00=基建/元数据</td>
+<td>桌台</td>
+<td>TABLE_NAME × ORDINAL_P</td>
+<td>68</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>090</td>
+<td>TL06_log_mem_change.csv</td>
+<td>Z00=基建/元数据</td>
+<td>日期</td>
+<td>dt</td>
+<td>65</td>
+<td>日度平台表（E+Q+TS）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>REFERENCE</td>
+</tr>
+<tr class="odd">
+<td>091</td>
+<td>TL07_mem_change_shape.csv</td>
+<td>M09=处置限额</td>
+<td>全窗/元数据</td>
+<td>1</td>
+<td>73</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>092</td>
+<td>TL08_treatment_events.csv</td>
+<td>M09=处置限额</td>
+<td>会员</td>
+<td>member_id × action_dat</td>
+<td>72</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>093</td>
+<td>TL09_member_schema.csv</td>
+<td>Z00=基建/元数据</td>
+<td>会员</td>
+<td>ORDINAL_POSITION × COL</td>
+<td>67</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>094</td>
+<td>TL10_treatment_ledger.csv</td>
+<td>M09=处置限额</td>
+<td>会员</td>
+<td>member_id × action_dat</td>
+<td>73</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>095</td>
+<td>TL11_treatment_episode.csv</td>
+<td>M09=处置限额</td>
+<td>会员</td>
+<td>member_id × field_name</td>
+<td>87</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>096</td>
+<td>TL11c_population_reconcile.csv</td>
+<td>M09=处置限额</td>
+<td>全窗/元数据</td>
+<td>lvl × level_name × n_a</td>
+<td>70</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>097</td>
+<td>TL14_limit_treatment.csv</td>
+<td>M09=处置限额</td>
+<td>会员</td>
+<td>member_id × action_dat</td>
+<td>78</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>098</td>
+<td>T_table_span.csv</td>
+<td>M15=活跃周期</td>
+<td>桌台</td>
+<td>gi011</td>
+<td>69</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>SUPPORT</td>
+</tr>
+<tr class="odd">
+<td>099</td>
+<td>VB_00_validbet_contract.csv</td>
+<td>M05=退水套利</td>
+<td>全窗/元数据</td>
+<td>scope × n_rows × n_vb_</td>
+<td>76</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>100</td>
+<td>VB_00b_zero_five_rates.csv</td>
+<td>M05=退水套利</td>
+<td>会员</td>
+<td>scope × n_base_rows ×</td>
+<td>81</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>101</td>
+<td>VB_41_identity_global.csv</td>
+<td>M05=退水套利</td>
+<td>风控专员</td>
+<td>test × n_rows × n_both</td>
+<td>80</td>
+<td>（按内容个案判定）（—）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>102</td>
+<td>VB_41b_identity_strata.csv</td>
+<td>M05=退水套利</td>
+<td>产品</td>
+<td>TRIM(bet09) × TRIM(com</td>
+<td>73</td>
+<td>产品/投注面表（E+T）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>103</td>
+<td>VB_41b_identity_strata_v18b.csv</td>
+<td>M05=退水套利</td>
+<td>风控专员</td>
+<td>g × comm</td>
+<td>81</td>
+<td>（按内容个案判定）（—）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>104</td>
+<td>VB_41c1_964_detail.csv</td>
+<td>M05=退水套利</td>
+<td>会员</td>
+<td>grp × bet01 × member_i</td>
+<td>85</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>105</td>
+<td>VB_41c2_concentration.csv</td>
+<td>M05=退水套利</td>
+<td>全窗/元数据</td>
+<td>t.grp</td>
+<td>83</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>106</td>
+<td>VB_41c2_concentration_v2.csv</td>
+<td>M05=退水套利</td>
+<td>会员</td>
+<td>grp × n_rows × n_membe</td>
+<td>83</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>107</td>
+<td>V_ipmatch.csv</td>
+<td>M04=IP异常</td>
+<td>会员</td>
+<td>ip × n_member_log × co</td>
+<td>68</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>108</td>
+<td>V_recon.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>n_matched_round × mae_</td>
+<td>75</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>109</td>
+<td>V_table_counts.csv</td>
+<td>Z00=基建/元数据</td>
+<td>桌台</td>
+<td>表名 × 行数</td>
+<td>65</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>110</td>
+<td>X_combo.csv</td>
+<td>M06=代理线</td>
+<td>全窗/元数据</td>
+<td>1 × 2</td>
+<td>69</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>111</td>
+<td>Z01_table_inventory.csv</td>
+<td>Z00=基建/元数据</td>
+<td>桌台</td>
+<td>表名 × 表类型 × 估计行数</td>
+<td>68</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>112</td>
+<td>Z02_excluded_tables.csv</td>
+<td>Z00=基建/元数据</td>
+<td>桌台</td>
+<td>表名 × 估计行数 × 表注释</td>
+<td>67</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>113</td>
+<td>Z03_column_dictionary.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>表名 × 列序 × 列名</td>
+<td>71</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>114</td>
+<td>Z04_name_collision.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>COLUMN_NAME</td>
+<td>69</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>115</td>
+<td>Z05_missing_typehint.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>表名 × 列序 × 列名</td>
+<td>69</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>116</td>
+<td>Z06_generated_probe_sql.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>表名 × 列序 × 列名</td>
+<td>68</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>117</td>
+<td>Z07_probe_bet02.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>3</td>
+<td>68</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>118</td>
+<td>Z08_roundkey_integrity.csv</td>
+<td>Z00=基建/元数据</td>
+<td>全窗/元数据</td>
+<td>注单行数 × 局键数 × 单局最大注单行数</td>
+<td>72</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>119</td>
+<td>Z09_time_axis_recon.csv</td>
+<td>Z00=基建/元数据</td>
+<td>日期</td>
+<td>行数 × dt等于账务日 × dt等于下注日</td>
+<td>80</td>
+<td>日度平台表（E+Q+TS）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>120</td>
+<td>Z11_sentinel_impact.csv</td>
+<td>M09=处置限额</td>
+<td>全窗/元数据</td>
+<td>未处置_注单行数 × 已处置_注单行数 ×</td>
+<td>76</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>121</td>
+<td>Z14_zero_month_diagnosis.csv</td>
+<td>M12=资金轨迹</td>
+<td>会员</td>
+<td>member_id × bet_month</td>
+<td>86</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>122</td>
+<td>_P12b-pre.csv</td>
+<td>M09=处置限额</td>
+<td>会员</td>
+<td>member_id × action × c</td>
+<td>67</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN（含”上卷广播”与”会员级广播”两类，均为按键值LEFT JOIN后之合法值重复，非笛卡尔积无关值——HF9g-P5D-b W-61已订正旧称”笛卡尔广播”之表述；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>123</td>
+<td>_PH0_1b_table_inventory.csv</td>
+<td>Z00=基建/元数据</td>
+<td>会员</td>
+<td>table_name × h_src × h</td>
+<td>73</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>124</td>
+<td>_PH0_2b_column_inventory.csv</td>
+<td>Z00=基建/元数据</td>
+<td>桌台</td>
+<td>table_name × col_pos ×</td>
+<td>70</td>
+<td>荷官/桌台支撑表（E+Q+R）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>125</td>
+<td>_PH0_3_lmc_category.csv</td>
+<td>M10=责任博彩</td>
+<td>全窗/元数据</td>
+<td>COALESCE(NULLIF(TRIM(l</td>
+<td>75</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>126</td>
+<td>_PH0_4L1_member_columns.csv</td>
+<td>Z00=基建/元数据</td>
+<td>会员</td>
+<td>table_name × col_pos ×</td>
+<td>68</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>127</td>
+<td>_PH0_4b_rg_keyword.csv</td>
+<td>M10=责任博彩</td>
+<td>全窗/元数据</td>
+<td>COALESCE(NULLIF(TRIM(l</td>
+<td>74</td>
+<td>探针/审计表（Q+M）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="even">
+<td>128</td>
+<td>_PH0_4w2_balance_points.csv</td>
+<td>M12=资金轨迹</td>
+<td>日期</td>
+<td>dt_slice × n_user_acti</td>
+<td>75</td>
+<td>日度平台表（E+Q+TS）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>WRONG_GRAIN·会员级广播（原表标”INVALID”字样，经W-61订正实为LEFT JOIN member_id广播，非真”无效/笛卡尔”；仅作背景，不可算比率/下判定）</td>
+<td>NOT_FOR_DECISION</td>
+</tr>
+<tr class="odd">
+<td>129</td>
+<td>_PH0_6b_member_daily.csv</td>
+<td>Z00=基建/元数据</td>
+<td>会员</td>
+<td>dt</td>
+<td>69</td>
+<td>会员经济主表(或时序表)（E+Q+R(+TS若日序)）</td>
+<td>套用ACCOUNTING层+六层商业模板（按M码分区特化切点）</td>
+<td>OK（1:1直连，本行net_margin即本行事实，可直接商业判定）</td>
+<td>PRIMARY</td>
+</tr>
+<tr class="even">
+<td>130</td>
+<td>DICT_ALL_columns.csv</td>
+<td>DIC=字典</td>
+<td>元数据</td>
+<td>table × column</td>
+<td>26</td>
+<td>字典／元数据表（—）</td>
+<td>不套六层商业块（纯元数据枚举）</td>
+<td>N/A（字典/事实类表，无net_margin栏位，此维度不适用）</td>
+<td>DICTIONARY</td>
+</tr>
+<tr class="odd">
+<td>131</td>
+<td>DICT_ALL_tables.csv</td>
+<td>DIC=字典</td>
+<td>元数据</td>
+<td>table</td>
+<td>25</td>
+<td>字典／元数据表（—）</td>
+<td>不套六层商业块（纯元数据枚举）</td>
+<td>N/A（字典/事实类表，无net_margin栏位，此维度不适用）</td>
+<td>DICTIONARY</td>
+</tr>
+<tr class="even">
+<td>132</td>
+<td>DICT_SEMANTIC_ruling.csv</td>
+<td>DIC=字典</td>
+<td>元数据</td>
+<td>column_name</td>
+<td>21</td>
+<td>字典／元数据表（—）</td>
+<td>不套六层商业块（纯元数据枚举）</td>
+<td>N/A（字典/事实类表，无net_margin栏位，此维度不适用）</td>
+<td>DICTIONARY</td>
+</tr>
+<tr class="odd">
+<td>133</td>
+<td>RK01_round_fact.csv</td>
+<td>RK=局/日序/口径事实</td>
+<td>局</td>
+<td>round_key = bet03</td>
+<td>bet04</td>
+<td>bet39</td>
+<td>24</td>
+<td>局级/投注面级事实表（E+Q）</td>
+<td>不套六层商业块（只出事实不出判定）</td>
+</tr>
+<tr class="even">
+<td>134</td>
+<td>HE01_bet_side_edge.csv</td>
+<td>HE=投注面事实</td>
+<td>投注面</td>
+<td>bet_side × is_freecomm</td>
+<td>25</td>
+<td>局级/投注面级事实表（E+Q）</td>
+<td>不套六层商业块（只出事实不出判定）</td>
+<td>N/A（字典/事实类表，无net_margin栏位，此维度不适用）</td>
+<td>FACT_BASE</td>
+</tr>
+<tr class="odd">
+<td>135</td>
+<td>RK02_table_day_risk.csv</td>
+<td>RK=局/日序/口径事实</td>
+<td>桌台</td>
+<td>table_id × biz_date</td>
+<td>28</td>
+<td>日序风险调整表（E+Q+TS(条件)）</td>
+<td>不套六层商业块（只出事实不出判定）</td>
+<td>N/A（字典/事实类表，无net_margin栏位，此维度不适用）</td>
+<td>FACT_BASE</td>
+</tr>
+<tr class="even">
+<td>136</td>
+<td>RK03_dealer_day_risk.csv</td>
+<td>RK=局/日序/口径事实</td>
+<td>荷官</td>
+<td>dealer_id × biz_date</td>
+<td>28</td>
+<td>日序风险调整表（E+Q+TS(条件)）</td>
+<td>不套六层商业块（只出事实不出判定）</td>
+<td>N/A（字典/事实类表，无net_margin栏位，此维度不适用）</td>
+<td>FACT_BASE</td>
+</tr>
+<tr class="odd">
+<td>137</td>
+<td>RK04_member_econ_by_scope.csv</td>
+<td>RK=局/日序/口径事实</td>
+<td>会员</td>
+<td>member_id × dealer_class × line_class</td>
+<td>26</td>
+<td>口径分类表（E+Q）</td>
+<td>不套六层商业块（只出事实不出判定）</td>
+<td>N/A（字典/事实类表，无net_margin栏位，此维度不适用）</td>
+<td>FACT_BASE</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="三redteam-critic-killcritic-blindspot-综合复核" class="level2">
+<h2 class="anchored" data-anchor-id="三redteam-critic-killcritic-blindspot-综合复核">三、redteam / critic / killcritic / blindspot 综合复核</h2>
+<p><strong>redteam</strong>（先假设”137件都能逐字段深挖”这个预期，用实际体量推翻）：137件×平均<sub>80列≈逾万字段，若要求每字段都附业务定义、计算血统与实测数值（如本档对bet23</sub>27、house_edge等关键字段所做的那种深度），工作量相当于把总包HF1~HF9g的全部审计过程重新独立走一遍——这正是总包自己耗费九轮以上热修复才积累出来的成果，不是一次对话能复现的量级。</p>
+<p><strong>critic</strong>（批判”137行主表是否已经足够”）：本次主表逐件给出的”维度列”只是总包索引本身设计的<strong>主键/切分维度</strong>（如”member_id × bet_date”），不是该件全部70~90列的逐列定义——这是<strong>有意的取舍</strong>：主表价值在于让先生能<strong>按M码/可信度/用途做筛选和归类决策</strong>（例如”哪些件是M05退水套利且可信度OK”），而不是替代总包正文本身。若目的是”拿某一件去核对具体某个业务字段的计算血统”，仍须回到该件在总包正文中的具体行号定位复核。</p>
+<p><strong>killcritic</strong>（明确否决的做法）：不应把主表里”计算标准(套用情况)“一栏简化理解为”这129件公式完全相同”——同属”套用六层商业模板”的两件，其<strong>分区特化切点</strong>（M01用”同局≥2人”，M05用”洗码额&gt;本金”等）完全不同，机械地认为”同套模板＝同一份可互换的产出”是需要被否决的误读。</p>
+<p><strong>blindspot</strong>（本次发现、此前两轮报告未点出的盲区）：1.6节的W-61订正说明，<strong>“67件LEFT JOIN会员级广播”与”37件上卷广播”其实是同一次实测里被总包合并归类描述的</strong>，但两者的实际风险不完全对等——会员级广播（67件）的冗余源头是”该件本身粒度更细（如同IP多会员），需按member_id向下匹配六层商业口径”，而上卷广播（37件）的冗余源头是”该件粒度比会员级更粗（如按日/按IP汇总），需向上引用会员级口径”——<strong>两者的”正确用法”其实不同</strong>：前者理论上”选取任一去重代表行”即可还原会员级真值，后者理论上无法简单去重（因为汇总层级本身就没有会员级真值可言，六层口径只是背景参照）。总包原文未对这两个子类的”可修复性”差异做区分说明，这是一个可以向总包维护方提出的改进建议。</p>
+</section>
+<section id="四actionplan具体建议" class="level2">
+<h2 class="anchored" data-anchor-id="四actionplan具体建议">四、actionplan／具体建议</h2>
+<ol type="1">
+<li>若先生近期工作重点是某一类风险机理（如全部18件M05退水套利、或全部20件M09处置限额），建议下一轮明确指定该子集，我可针对性做<strong>全列级</strong>（70~90列全部字段业务定义+计算血统）的深潜，而不是对137件平均用力——这样置信度与可用性都会更高。</li>
+<li>主表中「UCC表类→应有坐标轴」一栏，可直接作为先生团队后续<strong>优先补件</strong>的路线图——例如”会员时序表”理论上应有TS轴（sharpe/sortino），但全库0栏（引擎未实作），若先生近期要立项补齐时序风险能力，可按此表快速圈出哪些件是”缺TS轴的会员时序表”作为改造对象清单。</li>
+<li>建议在贵司内部文档里，正式采用本报告1.6节的订正表述（“LEFT JOIN会员级/上卷广播”）取代”笛卡尔积/INVALID”这类旧称，避免团队内部对这67+37件的实际风险性质产生误判（例如误以为这些表的数据本身是错的，而非”粒度不对、需还原后才能用”）。</li>
+</ol>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

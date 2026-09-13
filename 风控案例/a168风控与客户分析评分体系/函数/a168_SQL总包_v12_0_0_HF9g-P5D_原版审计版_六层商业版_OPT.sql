@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
--- ★ a168 SQL 总包 v12.0.0-HF9g-P5 · 模块索引（137 件 · 137 张 CSV · 含 #130~#132 字典三件 · #133 局级事实表 · #134 投注面级已实现优势表）★
+-- ★ a168 SQL 总包 v12.0.0-HF9g-P5D-b · 模块索引（140 件 · 140 张 CSV · 含 #130~#132 字典三件 · #133 局级事实表 · #134 投注面级已实现优势表 · #135~#137 RK02~RK04 · #138~#140 会员/荷官/桌台纯维度字典表【2026-09 新增】）★
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- ★★ HF9g-P5 · D-14 斧正（全窗基线族之六层退化）· Ryo Eng 授权 2026-08-29 ★★
@@ -45658,3 +45658,188 @@ ORDER BY audit_rn;
 --       ③ dealer_class 之相异值须恰为 {REAL, SENTINEL, UNKNOWN}，line_class 恰为 {CLEAN, TEST_LINE}；
 --       ④ SENTINEL 之 stake 占全体之比，须与 2026-09-04 现档实测 15.8341% 同量级
 --          （现档系 residual_b ASC 之头部偏样，仅作量级参照，⛔ 不得作为期望值）。
+
+
+-- 138. DICT_member.csv   [会员纯维度字典表 · 新建 · 无六层商业块 · 无任何统计/经济指标]
+--     典型学：字典层　粒度：member_id（一会员一行）　说明：仅ID+有效期+结构性存在计数，不含任何E/T/R/Q/TS/C/M/E2轴之量
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- 【本件立意 · 2026-09（本轮）新增】
+--   ⛔ 实测揭出：137 件交付件里，「算指标」的会员级表逾 40 件，但**没有一件是纯粹的会员维度字典**——
+--     即"只列会员ID＋首末见日期＋有效期"、不掺任何 net_margin／roi／risk 判据的权威名录。
+--   ★ 本件之职：给下游一张干净的会员名录基准，供其余分析表统一 JOIN 引用，
+--     而不必各自重新从 ods_a168_bet02 派生"这个会员存不存在、何时活跃"这类基础事实。
+--   ⛔ 依《ucc_coordinate_registry v1.0.0》"字典／元数据表 应有轴：[]"之律，
+--     本件刻意不产出任何属于 E/T/R/Q/TS/C/M/E2 八轴之量——active_days／n_dealers／n_tables
+--     仅为【结构性存在计数】（该会员在本窗口内留下几笔不同维度的行迹），非风险或经济判据，
+--     不得据此四列直接做排序、分档或处置。
+--
+-- 【口径六锁 · 与全包逐字同一，勿改】
+--   ① 窗口 dt >= '2026-03-21' AND dt < '2026-08-07'　② 产品 bet02 = '101'
+--   ③ 快照 sync_time <= '2026-08-27 09:00:00'
+--   ④ 去重 PARTITION BY bet01 ORDER BY updatetime DESC, sync_time DESC, dt DESC 取 rn = 1
+--   ⑤ 基础闸 category='1' · UPPER(bet38)='N' · bet11>0　⑥ 归一（本件不涉及金额，故⑥不适用）
+--   ★ 本件之 x_ranked CTE 系【自 ＃071 逐字复制】，故与六层块同源同锁。
+--
+-- 【本件不做之事】
+--   · 不出 stake／valid_bet／profit／roi／net_margin 等任何金额或比率。
+--   · 不做任何相对排名（无 NTILE／PERCENT_RANK）、无 vip_tier、无 action_priority。
+--   · 不代裁"该会员是否风险对象"——本件只回答"该会员存不存在、何时在场"。
+-- ▸ 导出：需要 —— 存为「数据库/DICT_member.csv」
+-- ── 原版审计版：一次导全 ＋ audit_rn ──
+SELECT w.*,
+       ROW_NUMBER() OVER (ORDER BY w.`member_id`) AS audit_rn,
+       'A168_HF9F_20260827_0900' AS run_id,
+       '2026-08-27 09:00:00' AS snapshot_sync_time
+FROM (
+    WITH
+      x_ranked AS (
+    SELECT b.bet01, b.bet05, b.bet38, b.bet39, b.category, b.eid,
+           b.dt, b.updatetime, b.sync_time,
+           ROW_NUMBER() OVER (
+             PARTITION BY b.bet01
+             ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC)      AS x_rn
+    FROM ods_mariadb_2b.ods_a168_bet02 b
+    WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+      AND b.bet02 = '101'
+      AND b.sync_time <= '2026-08-27 09:00:00'
+  ),
+    x_bs0 AS (
+    SELECT b.bet05 AS x_member, b.eid AS x_dealer, b.bet39 AS x_table, b.dt AS x_date
+    FROM x_ranked b
+    WHERE b.x_rn = 1
+      AND b.category='1' AND UPPER(TRIM(b.bet38))='N'
+  )
+    SELECT s.x_member                                                        AS member_id,
+           MIN(s.x_date)                                                     AS first_seen_d,
+           MAX(s.x_date)                                                     AS last_seen_d,
+           MIN(s.x_date)                                                     AS valid_from,
+           MAX(s.x_date)                                                     AS valid_to,
+           COUNT(DISTINCT s.x_date)                                          AS active_days_struct,
+           COUNT(DISTINCT s.x_dealer)                                        AS n_dealers_struct,
+           COUNT(DISTINCT s.x_table)                                         AS n_tables_struct,
+           CASE WHEN CAST(NULLIF(TRIM(CAST(s.x_member AS STRING)),'') AS BIGINT) > 0
+                THEN 1 ELSE 0 END                                            AS f_uid_positive,
+           'MEMBER'                                                          AS grain_key,
+           'NO_SIX_LAYER_BLOCK'                                              AS six_layer_status,
+           'DICTIONARY_NO_AXIS · 依UCC字典表应有轴=[]之律，本件不产出任何E/T/R/Q/TS/C/M/E2轴之量' AS ucc_class,
+           'FALSE'                                                           AS admit_to_risk_decision
+    FROM x_bs0 s
+    WHERE s.x_member IS NOT NULL AND TRIM(CAST(s.x_member AS STRING)) <> ''
+    GROUP BY s.x_member
+) w
+ORDER BY audit_rn;
+--     ★ audit_rn 之排序键 (member_id) 即本件之 GROUP BY 键，故【必然唯一】。
+--     ★ ⛔ 本件系 2026-09 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟：
+--       ① 行数应等于 x_bs0 之 COUNT(DISTINCT x_member)，与 ＃071 之 723,496（或本轮实测数）同量级；
+--       ② member_id 应无重复（GROUP BY 保证）、无空值（WHERE 已滤）；
+--       ③ 不得反过来据本件行数断言 ＃071/＃070 是否完整——本件筛选条件（仅 category/bet38）
+--          较 ＃071 之 x_agg（另加 rn=1/bet05>0/bet11>0/is_clean）更宽松，两者行数**不保证相等**。
+
+
+-- 139. DICT_dealer.csv   [荷官纯维度字典表 · 新建 · 无六层商业块 · 无任何统计/经济指标]
+--     典型学：字典层　粒度：dealer_id（一荷官一行）　说明：含 dealer_class 分类（沿用＃137定义），不含经济量
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- 【本件立意】同 ＃138，对象换成荷官（eid）。dealer_class 分类逐字沿用 ＃137 RK04 之定义，
+--   使 REAL／SENTINEL／UNKNOWN 三类判准全包统一，不另立标准。
+-- 【口径六锁】同 ＃138，逐字未改。
+-- ▸ 导出：需要 —— 存为「数据库/DICT_dealer.csv」
+SELECT w.*,
+       ROW_NUMBER() OVER (ORDER BY w.`dealer_id`) AS audit_rn,
+       'A168_HF9F_20260827_0900' AS run_id,
+       '2026-08-27 09:00:00' AS snapshot_sync_time
+FROM (
+    WITH
+      x_ranked AS (
+    SELECT b.bet01, b.bet05, b.bet38, b.bet39, b.category, b.eid,
+           b.dt, b.updatetime, b.sync_time,
+           ROW_NUMBER() OVER (
+             PARTITION BY b.bet01
+             ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC)      AS x_rn
+    FROM ods_mariadb_2b.ods_a168_bet02 b
+    WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+      AND b.bet02 = '101'
+      AND b.sync_time <= '2026-08-27 09:00:00'
+  ),
+    x_bs0 AS (
+    SELECT b.bet05 AS x_member, b.eid AS x_dealer, b.bet39 AS x_table, b.dt AS x_date
+    FROM x_ranked b
+    WHERE b.x_rn = 1
+      AND b.category='1' AND UPPER(TRIM(b.bet38))='N'
+  ),
+  x_scope AS (
+    SELECT s.*,
+           CASE WHEN NULLIF(TRIM(CAST(s.x_dealer AS STRING)),'') IS NULL THEN 'UNKNOWN'
+                WHEN TRIM(CAST(s.x_dealer AS STRING)) IN ('-1','0')      THEN 'SENTINEL'
+                ELSE 'REAL' END                                            AS dealer_class
+    FROM x_bs0 s
+  )
+    SELECT s.x_dealer                                                        AS dealer_id,
+           s.dealer_class,
+           MIN(s.x_date)                                                     AS first_seen_d,
+           MAX(s.x_date)                                                     AS last_seen_d,
+           MIN(s.x_date)                                                     AS valid_from,
+           MAX(s.x_date)                                                     AS valid_to,
+           COUNT(DISTINCT s.x_date)                                          AS active_days_struct,
+           COUNT(DISTINCT s.x_member)                                        AS n_members_struct,
+           COUNT(DISTINCT s.x_table)                                         AS n_tables_struct,
+           'DEALER'                                                          AS grain_key,
+           'NO_SIX_LAYER_BLOCK'                                              AS six_layer_status,
+           'DICTIONARY_NO_AXIS · 依UCC字典表应有轴=[]之律，本件不产出任何E/T/R/Q/TS/C/M/E2轴之量' AS ucc_class,
+           'FALSE'                                                           AS admit_to_risk_decision
+    FROM x_scope s
+    GROUP BY s.x_dealer, s.dealer_class
+) w
+ORDER BY audit_rn;
+--     ★ dealer_id 理论上应对每一 eid 恰一 dealer_class（分组含 dealer_class 系防御性写法，
+--       若某 eid 出现两种 class 属数据异常，须回报，不得视为正常多行）。
+--     ★ ⛔ 本件系 2026-09 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟，
+--       并核对 dealer_class 相异值恰为 {REAL, SENTINEL, UNKNOWN}。
+
+
+-- 140. DICT_table.csv   [桌台纯维度字典表 · 新建 · 无六层商业块 · 无任何统计/经济指标]
+--     典型学：字典层　粒度：table_id（一桌一行）　说明：仅ID+有效期+结构性存在计数
+-- ══════════════════════════════════════════════════════════════════════════════════════════════
+-- 【本件立意】同 ＃138，对象换成桌台（bet39）。
+-- 【口径六锁】同 ＃138，逐字未改。
+-- ▸ 导出：需要 —— 存为「数据库/DICT_table.csv」
+SELECT w.*,
+       ROW_NUMBER() OVER (ORDER BY w.`table_id`) AS audit_rn,
+       'A168_HF9F_20260827_0900' AS run_id,
+       '2026-08-27 09:00:00' AS snapshot_sync_time
+FROM (
+    WITH
+      x_ranked AS (
+    SELECT b.bet01, b.bet05, b.bet38, b.bet39, b.category, b.eid,
+           b.dt, b.updatetime, b.sync_time,
+           ROW_NUMBER() OVER (
+             PARTITION BY b.bet01
+             ORDER BY b.updatetime DESC, b.sync_time DESC, b.dt DESC)      AS x_rn
+    FROM ods_mariadb_2b.ods_a168_bet02 b
+    WHERE b.dt >= '2026-03-21' AND b.dt < '2026-08-07'
+      AND b.bet02 = '101'
+      AND b.sync_time <= '2026-08-27 09:00:00'
+  ),
+    x_bs0 AS (
+    SELECT b.bet05 AS x_member, b.eid AS x_dealer, b.bet39 AS x_table, b.dt AS x_date
+    FROM x_ranked b
+    WHERE b.x_rn = 1
+      AND b.category='1' AND UPPER(TRIM(b.bet38))='N'
+  )
+    SELECT s.x_table                                                         AS table_id,
+           MIN(s.x_date)                                                     AS first_seen_d,
+           MAX(s.x_date)                                                     AS last_seen_d,
+           MIN(s.x_date)                                                     AS valid_from,
+           MAX(s.x_date)                                                     AS valid_to,
+           COUNT(DISTINCT s.x_date)                                          AS active_days_struct,
+           COUNT(DISTINCT s.x_dealer)                                        AS n_dealers_struct,
+           COUNT(DISTINCT s.x_member)                                        AS n_members_struct,
+           'TABLE'                                                           AS grain_key,
+           'NO_SIX_LAYER_BLOCK'                                              AS six_layer_status,
+           'DICTIONARY_NO_AXIS · 依UCC字典表应有轴=[]之律，本件不产出任何E/T/R/Q/TS/C/M/E2轴之量' AS ucc_class,
+           'FALSE'                                                           AS admit_to_risk_decision
+    FROM x_bs0 s
+    WHERE s.x_table IS NOT NULL AND TRIM(CAST(s.x_table AS STRING)) <> ''
+    GROUP BY s.x_table
+) w
+ORDER BY audit_rn;
+--     ★ ⛔ 本件系 2026-09 新建，**从未在 StarRocks 上执行过** —— 全量重导前须先单跑冒烟。
