@@ -510,6 +510,14 @@
 --       ⛔ 二件从未执行，全量重导前须先单跑冒烟。
 --       ⛔ caliber 恒 'REALIZED_NOT_THEORETICAL'：本件之 hold_valid_bet / hold_rate 系已实现值，
 --         **绝非** house_edge（理论优势，现状 NULL）。混称即污染 theo → ADT → NMPT → ESI 全链。
+-- 138 DICT_member.csv                   DIC  Z 会员       member_id                      16 N/A         DICTIONARY
+-- 139 DICT_dealer.csv                   DIC  Z 荷官       dealer_id                      16 N/A         DICTIONARY
+-- 140 DICT_table.csv                    DIC  Z 桌台       table_id                       15 N/A         DICTIONARY
+--     ★ #138~140 为会员/荷官/桌台纯维度字典表（2026-09 新增，HF9g-P5D-b 斧正一并补入本索引表——
+--       此前只更新过档头「140 件」总数摘要，漏改本逐件索引表，本次一并补正）。
+--       循 #130~132 之例不套六层商业块；net_margin 栏恒 N/A，用法 DICTIONARY。
+--       依 ucc_coordinate_registry「字典表应有轴：[]」之律，本三件不产出任何 E/T/R/Q/TS/C/M/E2 轴之量。
+--       ⛔ 三件从未执行，全量重导前须先单跑冒烟。
 -- ════════════════════════════════════════════════════════════════════════════════════════════════════
 -- 【异常 IP → 风险会员 · 三段证据链（本包已具备，勿另建大一统 JOIN）】
 --   ① 筛查  #022 I_ip_agg → #007 C01_ip_chain → #010/#011 C08_subnet → #107 V_ipmatch
