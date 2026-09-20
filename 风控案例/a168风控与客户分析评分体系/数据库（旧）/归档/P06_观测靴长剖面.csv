@@ -1,4 +1,0 @@
-﻿shoe_len_def,shoe_band,n_len_values,len_min,len_max,n_rows,rows_pct,n_members,stake_sum,stake_pct
-MAX(round_no) 观测口径,1_可疑短靴(<30),29,1,29,78638,0.0631,10070,9194263.41,0.0684
-MAX(round_no) 观测口径,2_常态靴(30~70),36,30,65,124634788,99.9369,723192,13426894429.69,99.9315
-MAX(round_no) 观测口径,3_可疑长靴(>70),1,110,110,117,0.0001,44,4780.24,0.0000
