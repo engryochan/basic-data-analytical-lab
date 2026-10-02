@@ -1,0 +1,38 @@
+[
+  {
+    "DiskNumber": 0,
+    "PartitionNumber": 1,
+    "DriveLetter": "\u0000",
+    "Type": "System",
+    "Size": 314572800,
+    "IsHidden": true,
+    "Offset": 2097152
+  },
+  {
+    "DiskNumber": 0,
+    "PartitionNumber": 2,
+    "DriveLetter": "\u0000",
+    "Type": "Reserved",
+    "Size": 16777216,
+    "IsHidden": true,
+    "Offset": 316669952
+  },
+  {
+    "DiskNumber": 0,
+    "PartitionNumber": 3,
+    "DriveLetter": "C",
+    "Type": "Basic",
+    "Size": 254703640064,
+    "IsHidden": false,
+    "Offset": 333447168
+  },
+  {
+    "DiskNumber": 0,
+    "PartitionNumber": 4,
+    "DriveLetter": "\u0000",
+    "Type": "Recovery",
+    "Size": 1022361600,
+    "IsHidden": true,
+    "Offset": 255037800448
+  }
+]

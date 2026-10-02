@@ -1,0 +1,16 @@
+[
+  {
+    "DriveLetter": null,
+    "FileSystem": "NTFS",
+    "Size": 1022357504,
+    "SizeRemaining": 134631424,
+    "HealthStatus": "Healthy"
+  },
+  {
+    "DriveLetter": "C",
+    "FileSystem": "NTFS",
+    "Size": 254703636480,
+    "SizeRemaining": 62120714240,
+    "HealthStatus": "Healthy"
+  }
+]

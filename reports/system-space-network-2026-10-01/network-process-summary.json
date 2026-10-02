@@ -1,0 +1,90 @@
+[
+  {
+    "Count": 1,
+    "Name": "AacAmbientLighting"
+  },
+  {
+    "Count": 1,
+    "Name": "AcPowerNotification"
+  },
+  {
+    "Count": 1,
+    "Name": "ArmouryCrate.Service"
+  },
+  {
+    "Count": 1,
+    "Name": "ArmouryCrate.UserSessionHelper"
+  },
+  {
+    "Count": 1,
+    "Name": "ArmourySocketServer"
+  },
+  {
+    "Count": 2,
+    "Name": "asus_framework"
+  },
+  {
+    "Count": 11,
+    "Name": "ChatGPT"
+  },
+  {
+    "Count": 24,
+    "Name": "chrome"
+  },
+  {
+    "Count": 3,
+    "Name": "codex"
+  },
+  {
+    "Count": 1,
+    "Name": "deno"
+  },
+  {
+    "Count": 4,
+    "Name": "git-remote-https"
+  },
+  {
+    "Count": 1,
+    "Name": "GitHubDesktop"
+  },
+  {
+    "Count": 1,
+    "Name": "LdTermDaemon"
+  },
+  {
+    "Count": 1,
+    "Name": "LightingService"
+  },
+  {
+    "Count": 1,
+    "Name": "MpDefenderCoreService"
+  },
+  {
+    "Count": 1,
+    "Name": "msedge"
+  },
+  {
+    "Count": 1,
+    "Name": "OneDrive"
+  },
+  {
+    "Count": 2,
+    "Name": "ROGLiveService"
+  },
+  {
+    "Count": 1,
+    "Name": "rsession-utf8"
+  },
+  {
+    "Count": 2,
+    "Name": "rstudio"
+  },
+  {
+    "Count": 3,
+    "Name": "svchost"
+  },
+  {
+    "Count": 1,
+    "Name": "Telegram"
+  }
+]

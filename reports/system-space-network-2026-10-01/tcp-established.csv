@@ -1,0 +1,66 @@
+"LocalAddress","LocalPort","RemoteAddress","RemotePort","PID","Process","Path"
+"127.0.0.1","50100","127.0.0.1","1032","4228","ArmouryCrate.Service",
+"127.0.0.1","41776","127.0.0.1","11333","118340","rsession-utf8","C:\Program Files\RStudio\resources\app\bin\rsession-utf8.exe"
+"192.168.103.22","14779","104.18.32.47","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","14337","172.64.155.209","443","64808","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"192.168.103.22","14214","50.19.50.5","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","14087","172.64.148.235","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","13477","172.64.155.209","443","2864","msedge","C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+"192.168.103.22","13322","104.18.39.21","443","66800","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"192.168.103.22","13097","172.64.148.235","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"127.0.0.1","13030","127.0.0.1","1024","4244","ROGLiveService",
+"192.168.103.22","12977","46.49.10.42","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"127.0.0.1","12807","127.0.0.1","5770","28524","rstudio","C:\Program Files\RStudio\rstudio.exe"
+"192.168.103.22","12035","104.18.32.47","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","12032","104.18.39.21","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","12026","74.125.143.188","5228","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","11774","74.125.143.188","5228","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"127.0.0.1","11333","127.0.0.1","41776","28524","rstudio","C:\Program Files\RStudio\rstudio.exe"
+"192.168.103.22","11271","104.18.39.21","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","11269","46.49.10.42","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","10427","172.217.218.188","5228","66800","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"192.168.103.22","10269","91.108.56.188","443","17460","Telegram","C:\Telegram\Telegram1\Telegram.exe"
+"192.168.103.22","9776","140.82.112.26","443","46348","GitHubDesktop","C:\Users\PPCCpcpc\AppData\Local\GitHubDesktop\app-3.6.6\GitHubDesktop.exe"
+"192.168.103.22","9724","172.64.148.235","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","9705","104.21.76.26","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","9398","140.82.121.3","443","123180","git-remote-https","C:\Program Files\Git\mingw64\libexec\git-core\git-remote-https.exe"
+"192.168.103.22","9322","172.64.148.235","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","9071","192.168.103.7","7680","11928","svchost",
+"192.168.103.22","9070","192.168.104.76","7680","11928","svchost",
+"192.168.103.22","8757","104.18.32.47","443","66800","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"192.168.103.22","8627","142.250.145.188","5228","66800","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"192.168.103.22","7444","104.18.32.47","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"127.0.0.1","7343","127.0.0.1","1042","2620","AcPowerNotification",
+"192.168.103.22","7078","104.18.39.21","443","66800","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"192.168.103.22","7038","160.79.104.10","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","7008","172.64.155.209","443","66800","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"192.168.103.22","6969","104.18.32.47","443","76252","codex","C:\Users\PPCCpcpc\AppData\Local\OpenAI\Codex\bin\de8a38d2100ae498\codex.exe"
+"192.168.103.22","6885","104.18.39.21","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"127.0.0.1","6850","127.0.0.1","3059","13060","AacAmbientLighting","C:\Program Files\ASUS\AacAmbientHal\AacAmbientLighting.exe"
+"192.168.103.22","6401","104.18.39.21","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","6335","104.18.32.47","443","47036","codex","C:\Users\PPCCpcpc\AppData\Local\OpenAI\Codex\bin\de8a38d2100ae498\codex.exe"
+"192.168.103.22","6284","98.66.133.186","443","18884","OneDrive","C:\Program Files\Microsoft OneDrive\OneDrive.exe"
+"127.0.0.1","5770","127.0.0.1","12807","124228","deno","C:\PROGRA~1\Quarto\bin\tools\x86_64\deno.exe"
+"192.168.103.22","5137","74.125.143.188","5228","66800","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"192.168.103.22","5078","104.18.39.21","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","4763","172.64.150.28","443","66800","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"192.168.103.22","4525","52.123.129.14","443","4204","MpDefenderCoreService",
+"192.168.103.22","4173","104.18.39.21","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","3498","104.18.32.47","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","3240","172.64.148.235","443","66800","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"127.0.0.1","3059","127.0.0.1","6850","4448","LightingService",
+"192.168.103.22","2730","104.18.39.21","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","2413","104.18.39.21","443","66800","ChatGPT","C:\Program Files\WindowsApps\OpenAI.Codex_26.928.3736.0_x64__2p2nqsd0c76g0\app\ChatGPT.exe"
+"127.0.0.1","2226","127.0.0.1","1042","7060","ArmourySocketServer",
+"192.168.103.22","1911","104.18.39.21","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"192.168.103.22","1786","172.64.155.209","443","47036","codex","C:\Users\PPCCpcpc\AppData\Local\OpenAI\Codex\bin\de8a38d2100ae498\codex.exe"
+"192.168.103.22","1488","140.82.121.3","443","124332","git-remote-https","C:\Users\PPCCpcpc\AppData\Local\GitHubDesktop\app-3.6.6\resources\app\git\mingw64\bin\git-remote-https.exe"
+"127.0.0.1","1487","127.0.0.1","1486","124332","git-remote-https","C:\Users\PPCCpcpc\AppData\Local\GitHubDesktop\app-3.6.6\resources\app\git\mingw64\bin\git-remote-https.exe"
+"127.0.0.1","1486","127.0.0.1","1487","124332","git-remote-https","C:\Users\PPCCpcpc\AppData\Local\GitHubDesktop\app-3.6.6\resources\app\git\mingw64\bin\git-remote-https.exe"
+"192.168.103.22","1364","172.64.148.235","443","14840","chrome","C:\Program Files\Google\Chrome\Application\chrome.exe"
+"127.0.0.1","1042","127.0.0.1","7343","4836","asus_framework",
+"127.0.0.1","1042","127.0.0.1","2226","4836","asus_framework",
+"192.168.103.22","1040","98.66.133.186","443","4064","svchost",
+"127.0.0.1","1032","127.0.0.1","50100","7572","ArmouryCrate.UserSessionHelper",
+"192.168.103.22","1026","192.168.7.17","20081","4184","LdTermDaemon",
+"127.0.0.1","1024","127.0.0.1","13030","4244","ROGLiveService",

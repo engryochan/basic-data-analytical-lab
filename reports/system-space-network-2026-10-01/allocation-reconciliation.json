@@ -1,0 +1,15 @@
+{
+  "TotalBytes": 254703636480,
+  "FreeClustersBytes": 64891969536,
+  "ReservedBytes": 2756808704,
+  "AllocatedBytes": 189807591424,
+  "UserFilesBytes": 183226417152,
+  "UserDirectoriesBytes": 615063552,
+  "NtfsSystemFilesBytes": 2701160448,
+  "SystemVolumeInformationBytes": 3264950272,
+  "UserFileCount": 996181,
+  "UserDirectoryCount": 230095,
+  "CategorySum": 189807591424,
+  "Reconciles": true,
+  "HeaderCounterDifferenceBytes": 4075520
+}
